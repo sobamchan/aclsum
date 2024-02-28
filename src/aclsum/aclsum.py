@@ -14,6 +14,7 @@ class Document:
     """A data point in ACLSum dataset"""
 
     id: str  # Document ID corresponding to ACL Anthology
+    title: str  # Title of the paper
     summaries: dict[str, str]  # Summaries on three aspects (aspect -> summary)
     sentences: dict[
         str, list[str]
@@ -103,6 +104,7 @@ class ACLSum:
             documents.append(
                 Document(
                     id=x["id"],
+                    title=x["title"],
                     summaries=x["summary"],
                     sentences=x["sentences"],
                     highlights=x["highlights"],
