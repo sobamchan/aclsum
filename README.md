@@ -4,7 +4,7 @@ This repository contains data for our paper "ACLSum: A New Dataset for Aspect-ba
 utility class to work with it.
 
 
-## HuggingFace datasets
+## Hugging Face datasets
 
 You can also use Huggin Face datasets to load ACLSum ([dataset link](https://huggingface.co/datasets/sobamchan/aclsum)).
 This would be convenient if you want to train transformer models using our dataset.
