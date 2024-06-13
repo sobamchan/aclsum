@@ -1,0 +1,1669 @@
+{
+    "paper_id": "P06-1073",
+    "header": {
+        "generated_with": "S2ORC 1.0.0",
+        "date_generated": "2023-06-16T12:12:06.018037Z"
+    },
+    "title": "Maximum Entropy Based Restoration of Arabic Diacritics",
+    "authors": [
+        {
+            "first": "Imed",
+            "middle": [],
+            "last": "Zitouni",
+            "suffix": "",
+            "affiliation": {},
+            "email": "izitouni@us.ibm.com"
+        },
+        {
+            "first": "Jeffrey",
+            "middle": [
+                "S"
+            ],
+            "last": "Sorensen",
+            "suffix": "",
+            "affiliation": {},
+            "email": ""
+        },
+        {
+            "first": "Ruhi",
+            "middle": [],
+            "last": "Sarikaya",
+            "suffix": "",
+            "affiliation": {},
+            "email": "sarikaya@us.ibm.com"
+        }
+    ],
+    "year": "",
+    "venue": null,
+    "identifiers": {},
+    "abstract": "Short vowels and other diacritics are not part of written Arabic scripts. Exceptions are made for important political and religious texts and in scripts for beginning students of Arabic. Script without diacritics have considerable ambiguity because many words with different diacritic patterns appear identical in a diacritic-less setting. We propose in this paper a maximum entropy approach for restoring diacritics in a document. The approach can easily integrate and make effective use of diverse types of information; the model we propose integrates a wide array of lexical, segmentbased and part-of-speech tag features. The combination of these feature types leads to a state-of-the-art diacritization model. Using a publicly available corpus (LDC's Arabic Treebank Part 3), we achieve a diacritic error rate of 5.1%, a segment error rate 8.5%, and a word error rate of 17.3%. In case-ending-less setting, we obtain a diacritic error rate of 2.2%, a segment error rate 4.0%, and a word error rate of 7.2%.",
+    "pdf_parse": {
+        "paper_id": "P06-1073",
+        "_pdf_hash": "",
+        "abstract": [
+            {
+                "text": "Short vowels and other diacritics are not part of written Arabic scripts. Exceptions are made for important political and religious texts and in scripts for beginning students of Arabic. Script without diacritics have considerable ambiguity because many words with different diacritic patterns appear identical in a diacritic-less setting. We propose in this paper a maximum entropy approach for restoring diacritics in a document. The approach can easily integrate and make effective use of diverse types of information; the model we propose integrates a wide array of lexical, segmentbased and part-of-speech tag features. The combination of these feature types leads to a state-of-the-art diacritization model. Using a publicly available corpus (LDC's Arabic Treebank Part 3), we achieve a diacritic error rate of 5.1%, a segment error rate 8.5%, and a word error rate of 17.3%. In case-ending-less setting, we obtain a diacritic error rate of 2.2%, a segment error rate 4.0%, and a word error rate of 7.2%.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            }
+        ],
+        "body_text": [
+            {
+                "text": "Modern Arabic written texts are composed of scripts without short vowels and other diacritic marks. This often leads to considerable ambiguity since several words that have different diacritic patterns may appear identical in a diacritic-less setting. Educated modern Arabic speakers are able to accurately restore diacritics in a document. This is based on the context and their knowledge of the grammar and the lexicon of Arabic. However, a text without diacritics becomes a source of confusion for beginning readers and people with learning disabilities. A text without diacritics is also problematic for applications such as text-to-speech or speech-to-text, where the lack of diacritics adds another layer of ambiguity when processing the data. As an example, full vocalization of text is required for text-to-speech applications, where the mapping from graphemes to phonemes is simple compared to languages such as English and French; where there is, in most cases, one-to-one relationship. Also, using data with diacritics shows an improvement in the accuracy of speech-recognition applications (Afify et al., 2004) . Currently, text-tospeech, speech-to-text, and other applications use data where diacritics are placed manually, which is a tedious and time consuming excercise. A diacritization system that restores the diacritics of scripts, i.e. supply the full diacritical markings, would be of interest to these applications. It also would greatly benefit nonnative speakers, sufferers of dyslexia and could assist in restoring diacritics of children's and poetry books, a task that is currently done manually.",
+                "cite_spans": [
+                    {
+                        "start": 1102,
+                        "end": 1122,
+                        "text": "(Afify et al., 2004)",
+                        "ref_id": "BIBREF0"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "We propose in this paper a statistical approach that restores diacritics in a text document. The proposed approach is based on the maximum entropy framework where several diverse sources of information are employed. The model implicitly learns the correlation between these types of information and the output diacritics.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "In the next section, we present the set of diacritics to be restored and the ambiguity we face when processing a non-diacritized text. Section 3 gives a brief summary of previous related works. Section 4 presents our diacritization model; we explain the training and decoding process as well as the different feature categories employed to restore the diacritics. Section 5 describes a clearly defined and replicable split of the LDC's Arabic Treebank Part 3 corpus, used to built and evaluate the system, so that the reproduction of the results and future comparison can accurately be established. Section 6 presents the experimental results. Section 7 reports a comparison of our approach to the finite state machine modeling technique that showed promissing results in (Nelken and Shieber, 2005) . Finally, section 8 concludes the paper and discusses future directions.",
+                "cite_spans": [
+                    {
+                        "start": 772,
+                        "end": 798,
+                        "text": "(Nelken and Shieber, 2005)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "The Arabic alphabet consists of 28 letters that can be extended to a set of 90 by additional shapes, marks, and vowels (Tayli and Al-Salamah, 1990 bic diacritics. We split the Arabic diacritics into three sets: short vowels, doubled case endings, and syllabification marks. Short vowels are written as symbols either above or below the letter in text with diacritics, and dropped all together in text without diacritics. We find three short vowels:",
+                "cite_spans": [
+                    {
+                        "start": 119,
+                        "end": 146,
+                        "text": "(Tayli and Al-Salamah, 1990",
+                        "ref_id": "BIBREF16"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Arabic Diacritics",
+                "sec_num": "2"
+            },
+            {
+                "text": "\u2022 fatha: it represents the /a/ sound and is an oblique dash over a consonant as in (c.f. fourth row of Table 1 ).",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 109,
+                        "end": 110,
+                        "text": "1",
+                        "ref_id": "TABREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Arabic Diacritics",
+                "sec_num": "2"
+            },
+            {
+                "text": "\u2022 damma: it represents the /u/ sound and is a loop over a consonant that resembles the shape of a comma (c.f. fifth row of Table 1 ).",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 129,
+                        "end": 130,
+                        "text": "1",
+                        "ref_id": "TABREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Arabic Diacritics",
+                "sec_num": "2"
+            },
+            {
+                "text": "\u2022 kasra: it represents the /i/ sound and is an oblique dash under a consonant (c.f. sixth row of Table 1 ).",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 103,
+                        "end": 104,
+                        "text": "1",
+                        "ref_id": "TABREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Arabic Diacritics",
+                "sec_num": "2"
+            },
+            {
+                "text": "The doubled case ending diacritics are vowels used at the end of the words to mark case distinction, which can be considered as a double short vowels; the term \"tanween\" is used to express this phenomenon. Similar to short vowels, there are three different diacritics for tanween: tanween al-fatha, tanween al-damma, and tanween al-kasra. They are placed on the last letter of the word and have the phonetic effect of placing an \"N\" at the end of the word. Text with diacritics contains also two syllabification marks:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Arabic Diacritics",
+                "sec_num": "2"
+            },
+            {
+                "text": "\u2022 shadda: it is a gemination mark placed above the Arabic letters as in . It denotes the doubling of the consonant. The shadda is usually combined with a short vowel such as in .",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Arabic Diacritics",
+                "sec_num": "2"
+            },
+            {
+                "text": "\u2022 sukuun: written as a small circle as in . It is used to indicate that the letter doesn't contain vowels.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Arabic Diacritics",
+                "sec_num": "2"
+            },
+            {
+                "text": "Figure 1 shows an Arabic sentence transcribed with and without diacritics. In modern Arabic, writing scripts without diacritics is the most natural way. Because many words with different vowel patterns may appear identical in a diacritic-less setting, considerable ambiguity exists at the word level. The word , for example, has 21 possible forms that have valid interpretations when adding diacritics (Kirchhoff and Vergyri, 2005) . It may have the interpretation of the verb \"to write\" in (pronounced /kataba/). Also, it can be interpreted as \"books\" in the noun form (pronounced /kutubun/). A study made by (Debili et al., 2002) shows that there is an average of 11.6 possible diacritizations for every non-diacritized word when analyzing a text of 23,000 script forms.",
+                "cite_spans": [
+                    {
+                        "start": 402,
+                        "end": 431,
+                        "text": "(Kirchhoff and Vergyri, 2005)",
+                        "ref_id": "BIBREF12"
+                    },
+                    {
+                        "start": 610,
+                        "end": 631,
+                        "text": "(Debili et al., 2002)",
+                        "ref_id": "BIBREF5"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 7,
+                        "end": 8,
+                        "text": "1",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Arabic Diacritics",
+                "sec_num": "2"
+            },
+            {
+                "text": "Figure 1 : The same Arabic sentence without (upper row) and with (lower row) diacritics. The English translation is \"the president wrote the document.\"",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 7,
+                        "end": 8,
+                        "text": "1",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Arabic Diacritics",
+                "sec_num": "2"
+            },
+            {
+                "text": "Arabic diacritic restoration is a non-trivial task as expressed in (El-Imam, 2003) . Native speakers of Arabic are able, in most cases, to accurately vocalize words in text based on their context, the speaker's knowledge of the grammar, and the lexicon of Arabic. Our goal is to convert knowledge used by native speakers into features and incorporate them into a maximum entropy model. We assume that the input text does not contain any diacritics.",
+                "cite_spans": [
+                    {
+                        "start": 67,
+                        "end": 82,
+                        "text": "(El-Imam, 2003)",
+                        "ref_id": "BIBREF6"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Arabic Diacritics",
+                "sec_num": "2"
+            },
+            {
+                "text": "Diacritic restoration has been receiving increasing attention and has been the focus of several studies. In (El-Sadany and Hashish, 1988) , a rule based method that uses morphological analyzer for vowelization was proposed. Another, rule-based grapheme to sound conversion approach was appeared in 2003 by Y. El-Imam (El-Imam, 2003) .",
+                "cite_spans": [
+                    {
+                        "start": 108,
+                        "end": 137,
+                        "text": "(El-Sadany and Hashish, 1988)",
+                        "ref_id": "BIBREF7"
+                    },
+                    {
+                        "start": 309,
+                        "end": 332,
+                        "text": "El-Imam (El-Imam, 2003)",
+                        "ref_id": "BIBREF6"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Previous Work",
+                "sec_num": "3"
+            },
+            {
+                "text": "The main drawbacks of these rule based methods is that it is difficult to maintain the rules up-to-date and extend them to other Arabic dialects. Also, new rules are required due to the changing nature of any \"living\" language.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Previous Work",
+                "sec_num": "3"
+            },
+            {
+                "text": "More recently, there have been several new studies that use alternative approaches for the diacritization problem. In (Emam and Fisher, 2004) an example based hierarchical top-down approach is proposed. First, the training data is searched hierarchically for a matching sentence. If there is a matching sentence, the whole utterance is used.",
+                "cite_spans": [
+                    {
+                        "start": 118,
+                        "end": 141,
+                        "text": "(Emam and Fisher, 2004)",
+                        "ref_id": "BIBREF8"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Previous Work",
+                "sec_num": "3"
+            },
+            {
+                "text": "Otherwise they search for matching phrases, then words to restore diacritics. If there is no match at all, character n-gram models are used to diacritize each word in the utterance.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Previous Work",
+                "sec_num": "3"
+            },
+            {
+                "text": "In (Vergyri and Kirchhoff, 2004) , diacritics in conversational Arabic are restored by combining morphological and contextual information with an acoustic signal. Diacritization is treated as an unsupervised tagging problem where each word is tagged as one of the many possible forms provided by the Buckwalter's morphological analyzer (Buckwalter, 2002) . The Expectation Maximization (EM) algorithm is used to learn the tag sequences.",
+                "cite_spans": [
+                    {
+                        "start": 3,
+                        "end": 32,
+                        "text": "(Vergyri and Kirchhoff, 2004)",
+                        "ref_id": "BIBREF17"
+                    },
+                    {
+                        "start": 336,
+                        "end": 354,
+                        "text": "(Buckwalter, 2002)",
+                        "ref_id": "BIBREF2"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Previous Work",
+                "sec_num": "3"
+            },
+            {
+                "text": "Y. Gal in (Gal, 2002 ) used a HMM-based diacritization approach. This method is a white-space delimited word based approach that restores only vowels (a subset of all diacritics).",
+                "cite_spans": [
+                    {
+                        "start": 10,
+                        "end": 20,
+                        "text": "(Gal, 2002",
+                        "ref_id": "BIBREF10"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Previous Work",
+                "sec_num": "3"
+            },
+            {
+                "text": "Most recently, a weighted finite state machine based algorithm is proposed (Nelken and Shieber, 2005) . This method employs characters and larger morphological units in addition to words. Among all the previous studies this one is more sophisticated in terms of integrating multiple information sources and formulating the problem as a search task within a unified framework. This approach also shows competitive results in terms of accuracy when compared to previous studies. In their algorithm, a character based generative diacritization scheme is enabled only for words that do not occur in the training data. It is not clearly stated in the paper whether their method predict the diacritics shedda and sukuun.",
+                "cite_spans": [
+                    {
+                        "start": 75,
+                        "end": 101,
+                        "text": "(Nelken and Shieber, 2005)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Previous Work",
+                "sec_num": "3"
+            },
+            {
+                "text": "Even though the methods proposed for diacritic restoration have been maturing and improving over time, they are still limited in terms of coverage and accuracy. In the approach we present in this paper, we propose to restore the most comprehensive list of the diacritics that are used in any Arabic text.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Previous Work",
+                "sec_num": "3"
+            },
+            {
+                "text": "Our method differs from the previous approaches in the way the diacritization problem is formulated and because multiple information sources are integrated. We view the diacritic restoration problem as sequence classification, where given a sequence of characters our goal is to assign diacritics to each character. Our appoach is based on Maximum Entropy (MaxEnt henceforth) technique (Berger et al., 1996) . MaxEnt can be used for sequence classification, by converting the activation scores into probabilities (through the soft-max function, for instance) and using the standard dynamic programming search algorithm (also known as Viterbi search). We find in the literature several other approaches of sequence classification such as (Mc-Callum et al., 2000) and (Lafferty et al., 2001) .",
+                "cite_spans": [
+                    {
+                        "start": 386,
+                        "end": 407,
+                        "text": "(Berger et al., 1996)",
+                        "ref_id": "BIBREF1"
+                    },
+                    {
+                        "start": 737,
+                        "end": 761,
+                        "text": "(Mc-Callum et al., 2000)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 766,
+                        "end": 789,
+                        "text": "(Lafferty et al., 2001)",
+                        "ref_id": "BIBREF13"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Previous Work",
+                "sec_num": "3"
+            },
+            {
+                "text": "The conditional random fields method presented in (Lafferty et al., 2001) is essentially a MaxEnt model over the entire sequence: it differs from the Maxent in that it models the sequence information, whereas the Maxent makes a decision for each state independently of the other states. The approach presented in (McCallum et al., 2000) combines Maxent with Hidden Markov models to allow observations to be presented as arbitrary overlapping features, and define the probability of state sequences given observation sequences.",
+                "cite_spans": [
+                    {
+                        "start": 50,
+                        "end": 73,
+                        "text": "(Lafferty et al., 2001)",
+                        "ref_id": "BIBREF13"
+                    },
+                    {
+                        "start": 313,
+                        "end": 336,
+                        "text": "(McCallum et al., 2000)",
+                        "ref_id": "BIBREF15"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Previous Work",
+                "sec_num": "3"
+            },
+            {
+                "text": "We report in section 7 a comparative study between our approach and the most competitive diacritic restoration method that uses finite state machine algorithm (Nelken and Shieber, 2005) . The MaxEnt framework was successfully used to combine a diverse collection of information sources and yielded a highly competitive model that achieves a 5.1% DER.",
+                "cite_spans": [
+                    {
+                        "start": 159,
+                        "end": 185,
+                        "text": "(Nelken and Shieber, 2005)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Previous Work",
+                "sec_num": "3"
+            },
+            {
+                "text": "The performance of many natural language processing tasks, such as shallow parsing (Zhang et al., 2002) and named entity recognition (Florian et al., 2004) , has been shown to depend on integrating many sources of information. Given the stated focus of integrating many feature types, we selected the MaxEnt classifier. MaxEnt has the ability to integrate arbitrary types of information and make a classification decision by aggregating all information available for a given classification.",
+                "cite_spans": [
+                    {
+                        "start": 83,
+                        "end": 103,
+                        "text": "(Zhang et al., 2002)",
+                        "ref_id": "BIBREF18"
+                    },
+                    {
+                        "start": 133,
+                        "end": 155,
+                        "text": "(Florian et al., 2004)",
+                        "ref_id": "BIBREF9"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Automatic Diacritization",
+                "sec_num": "4"
+            },
+            {
+                "text": "We formulate the task of restoring diacritics as a classification problem, where we assign to each character in the text a label (i.e., diacritic). Before formally describing the method1 , we introduce some notations: let Y = {y 1 , . . . , y n } be the set of diacritics to predict or restore, X be the example space and F = {0, 1} m be a feature space. Each example x \u2208 X has associated a vector of binary features f (x) = (f 1 (x) , . . . , f m (x)). In a supervised framework, like the one we are considering here, we have access to a set of training examples together with their classifications: {(x 1 , y 1 ) , . . . , (x k , y k )}.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Maximum Entropy Classifiers",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "The MaxEnt algorithm associates a set of weights (\u03b1 ij ) i=1...n j=1...m with the features, which are estimated during the training phase to maximize the likelihood of the data (Berger et al., 1996) . Given these weights, the model computes the probability distribution over labels for a particular example x as follows:",
+                "cite_spans": [
+                    {
+                        "start": 177,
+                        "end": 198,
+                        "text": "(Berger et al., 1996)",
+                        "ref_id": "BIBREF1"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Maximum Entropy Classifiers",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "P (y|x) = 1 Z(x) m j=1 \u03b1 fj (x) ij , Z(x) = i j \u03b1 fj (x) ij",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Maximum Entropy Classifiers",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "where Z(X ) is a normalization factor. To estimate the optimal \u03b1 j values, we train our Max-Ent model using the sequential conditional generalized iterative scaling (SCGIS) technique (Goodman, 2002) . While the MaxEnt method can nicely integrate multiple feature types seamlessly, in certain cases it is known to overestimate its confidence in especially low-frequency features. To overcome this problem, we use the regularization method based on adding Gaussian priors as described in (Chen and Rosenfeld, 2000) . After computing the class probability distribution, the chosen diacritic is the one with the most aposteriori probability. The decoding algorithm, described in section 4.2, performs sequence classification, through dynamic programming.",
+                "cite_spans": [
+                    {
+                        "start": 183,
+                        "end": 198,
+                        "text": "(Goodman, 2002)",
+                        "ref_id": "BIBREF11"
+                    },
+                    {
+                        "start": 486,
+                        "end": 512,
+                        "text": "(Chen and Rosenfeld, 2000)",
+                        "ref_id": "BIBREF4"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Maximum Entropy Classifiers",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "We are interested in finding the diacritics of all characters in a script or a sentence. These diacritics have strong interdependencies which cannot be properly modeled if the classification is performed independently for each character. We view this problem as sequence classification, as contrasted with an example-based classification problem: given a sequence of characters in a sentence x 1 x 2 . . . x L , our goal is to assign diacritics (labels) to each character, resulting in a sequence of diacritics y 1 y 2 . . . y L . We make an assumption that diacritics can be modeled as a limited order Markov sequence: the diacritic associated with the character i depends only on the diacritics associated with the k previous diacritics, where k is usually equal to 3. Given this assumption, and the notation x L 1 = x 1 . . . x L , the conditional probability of assigning the diacritic sequence y L 1 to the character sequence x L 1 becomes",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Search to Restore Diacritics",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "p y L 1 |x L 1 = p y 1 |x L 1 p y 2 |x L 1 , y 1 . . . p y L |x L 1 , y L-1 L-k+1",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Search to Restore Diacritics",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "(1) and our goal is to find the sequence that maximizes this conditional probability",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Search to Restore Diacritics",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "\u0177L 1 = arg max y L 1 p y L 1 |x L 1 (2)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Search to Restore Diacritics",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "While we restricted the conditioning on the classification tag sequence to the previous k diacritics, we do not impose any restrictions on the conditioning on the characters -the probability is computed using the entire character sequence x L 1 . To obtain the sequence in Equation ( 2), we create a classification tag lattice (also called trellis), as follows:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Search to Restore Diacritics",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "\u2022 Let x L 1 be the input sequence of character and S = {s 1 , s 2 , . . . , s m } be an enumeration of Y k (m = |Y| k ) -we will call an element s j a state. Every such state corresponds to the labeling of k successive characters. We find it useful to think of an element s i as a vector with k elements. We use the notations s i [j] for j th element of such a vector (the label associated with the token x i-k+j+1 ) and s i [j 1 . . . j 2 ] for the sequence of elements between indices j 1 and j 2 .",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Search to Restore Diacritics",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "\u2022 We conceptually associate every character",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Search to Restore Diacritics",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "x i , i = 1, . . . , L with a copy of S, S i = s i 1 , . . . , s i m ; this set represents all the possible labelings of characters x i i-k+1 at the stage where x i is examined.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Search to Restore Diacritics",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "\u2022 We then create links from the set S i to the S i+1 , for all i = 1 . . . L -1, with the property that",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Search to Restore Diacritics",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "w s i j 1 , s i+1 j 2 = \uf8f1 \uf8f2 \uf8f3 p s i+1 j 1 [k] |x L 1 , s i+1 j 2 [1..k -1] if s i j 1 [2..k] = s i+1 j 2 [1..k -1] 0 otherwise",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Search to Restore Diacritics",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "These weights correspond to probability of a transition from the state s i j1 to the state s i+1 j2 . \u2022 For every character x i , we compute recursively 2 \u03b20 (sj) = 0, j = 1, . . . , k \u03b2i (sj) = max",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Search to Restore Diacritics",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "j 1 =1,...,M \u03b2i-1 (sj 1 ) + log w s i-1 j 1 , s i j \u03b3i (sj) = arg max j 1 =1,...,M",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Search to Restore Diacritics",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "\u03b2i-1 (sj 1 ) + log w s i-1 j 1 , s i j Intuitively, \u03b2 i (s j ) represents the logprobability of the most probable path through the lattice that ends in state s j after i steps, and \u03b3 i (s j ) represents the state just before s j on that particular path.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Search to Restore Diacritics",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "\u2022 Having computed the (\u03b2 i ) i values, the algorithm for finding the best path, which corresponds to the solution of Equation ( 2) is",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Search to Restore Diacritics",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "1. Identify \u015dL L = arg max j=1...L \u03b2 L (s j ) 2. For i = L -1 . . . 1, compute \u015di i = \u03b3 i+1 \u015di+1 i+1",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Search to Restore Diacritics",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "2 For convenience, the index i associated with state s i j is moved to \u03b2; the function \u03b2i (sj) is in fact \u03b2 s i j .",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Search to Restore Diacritics",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "3. The solution for Equation ( 2) is given by",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Search to Restore Diacritics",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "\u0177 = \u015d1 1 [k], \u015d2 2 [k], . . . , \u015dL L [k]",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Search to Restore Diacritics",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "The runtime of the algorithm is \u0398 |Y| k \u2022 L , linear in the size of the sentence L but exponential in the size of the Markov dependency, k. To reduce the search space, we use beam-search.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Search to Restore Diacritics",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "Within the MaxEnt framework, any type of features can be used, enabling the system designer to experiment with interesting feature types, rather than worry about specific feature interactions. In contrast, with a rule based system, the system designer would have to consider how, for instance, lexical derived information for a particular example interacts with character context information.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Features Employed",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "That is not to say, ultimately, that rule-based systems are in some way inferior to statistical models -they are built using valuable insight which is hard to obtain from a statistical-model-only approach. Instead, we are merely suggesting that the output of such a rule-based system can be easily integrated into the MaxEnt framework as one of the input features, most likely leading to improved performance.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Features Employed",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "Features employed in our system can be divided into three different categories: lexical, segmentbased, and part-of-speech tag (POS) features. We also use the previously assigned two diacritics as additional features.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Features Employed",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "In the following, we briefly describe the different categories of features:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Features Employed",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "\u2022 Lexical Features: we include the character n-gram spanning the curent character x i , both preceding and following it in a window of 7: {x i-3 , . . . , x i+3 }. We use the current word w i and its word context in a window of 5 (forward and backward trigram): {w i-2 , . . . , w i+2 }. We specify if the character of analysis is at the beginning or at the end of a word. We also add joint features between the above source of information.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Features Employed",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "\u2022 Segment-Based Features : Arabic blankdelimited words are composed of zero or more prefixes, followed by a stem and zero or more suffixes. Each prefix, stem or suffix will be called a segment in this paper. Segments are often the subject of analysis when processing Arabic (Zitouni et al., 2005) . Syntactic information such as POS or parse information is usually computed on segments rather than words. As an example, the Arabic white-space delimited word contains a verb , a third-person feminine singular subject-marker (she), and a pronoun suffix (them); it is also a complete sentence meaning \"she met them.\" To separate the Arabic white-space delimited words into segments, we use a segmentation model similar to the one presented by (Lee et al., 2003) . The model obtains an accuracy of about 98%. In order to simulate real applications, we only use segments generated by the model rather than true segments. In the diacritization system, we include the current segment a i and its word segment context in a window of 5 (forward and backward trigram): {a i-2 , . . . , a i+2 }. We specify if the character of analysis is at the beginning or at the end of a segment. We also add joint information with lexical features.",
+                "cite_spans": [
+                    {
+                        "start": 274,
+                        "end": 296,
+                        "text": "(Zitouni et al., 2005)",
+                        "ref_id": "BIBREF19"
+                    },
+                    {
+                        "start": 741,
+                        "end": 759,
+                        "text": "(Lee et al., 2003)",
+                        "ref_id": "BIBREF14"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Features Employed",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "\u2022 POS Features : we attach to the segment a i of the current character, its POS: P OS(a i ). This is combined with joint features that include the lexical and segment-based information. We use a statistical POS tagging system built on Arabic Treebank data with MaxEnt framework (Ratnaparkhi, 1996) . The model has an accuracy of about 96%. We did not want to use the true POS tags because we would not have access to such information in real applications.",
+                "cite_spans": [
+                    {
+                        "start": 278,
+                        "end": 297,
+                        "text": "(Ratnaparkhi, 1996)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Features Employed",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "The diacritization system we present here is trained and evaluated on the LDC's Arabic Treebank of diacritized news stories -Part 3 v1.0: catalog number LDC2004T11 and ISBN 1-58563-298-8. The corpus includes complete vocalization (including case-endings). We introduce here a clearly defined and replicable split of the corpus, so that the reproduction of the results or future investigations can accurately and correctly be established. ",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Data",
+                "sec_num": "5"
+            },
+            {
+                "text": "Experiments are reported in terms of word error rate (WER), segment error rate (SER), and diacritization error rate (DER). The DER is the proportion of incorrectly restored diacritics. The WER is the percentage of incorrectly diacritized white-space delimited words: in order to be counted as incorrect, at least one character in the word must have a diacritization error. The SER is similar to WER but indicates the proportion of incorrectly diacritized segments. A segment can be a prefix, a stem, or a suffix. Segments are often the subject of analysis when processing Arabic (Zitouni et al., 2005) . Syntactic information such as POS or parse information is based on segments rather than words. Consequently, it is important to know the SER in cases where the diacritization system may be used to help disambiguate syntactic information.",
+                "cite_spans": [
+                    {
+                        "start": 579,
+                        "end": 601,
+                        "text": "(Zitouni et al., 2005)",
+                        "ref_id": "BIBREF19"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "6"
+            },
+            {
+                "text": "Several modern Arabic scripts contains the consonant doubling \"shadda\"; it is common for native speakers to write without diacritics except the shadda. In this case the role of the diacritization system will be to restore the short vowels, doubled case ending, and the vowel absence \"sukuun\". We run two batches of experiments: a first experiment where documents contain the original shadda and a second one where documents don't contain any diacritics including the shadda. The diacritization system proceeds in two steps when it has to predict the shadda: a first step where only shadda is restored and a second step where other diacritics (excluding shadda) are predicted.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "6"
+            },
+            {
+                "text": "To assess the performance of the system under different conditions, we consider three cases based on the kind of features employed:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "6"
+            },
+            {
+                "text": "1. system that has access to lexical features only;",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "6"
+            },
+            {
+                "text": "2. system that has access to lexical and segmentbased features;",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "6"
+            },
+            {
+                "text": "3. system that has access to lexical, segmentbased and POS features.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "6"
+            },
+            {
+                "text": "The different system types described above use the two previously assigned diacritics as additional feature. The DER of the shadda restoration step is equal to 5% when we use lexical features only, 0.4% when we add segment-based information, and 0.3% when we employ lexical, POS, and segment-based features. 8.5 5.1 18.0 8.9 5.5",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "6"
+            },
+            {
+                "text": "Table 2 : The impact of features on the diacritization system performance. The columns marked with \"True shadda\" represent results on documents containing the original consonant doubling \"shadda\" while columns marked with \"Predicted shadda\" represent results where the system restored all diacritics including shadda.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 6,
+                        "end": 7,
+                        "text": "2",
+                        "ref_id": "TABREF2"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "6"
+            },
+            {
+                "text": "state-of-the-art system evaluated on Arabic Treebank Part 2: in (Nelken and Shieber, 2005) a DER of 12.79% and a WER of 23.61% are reported.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "6"
+            },
+            {
+                "text": "The system they described in (Nelken and Shieber, 2005) uses lexical, segment-based, and morphological information. Table 2 also shows that, when segment-based information is added to our system, a significant improvement is achieved: 25% for WER (18.8 vs. 25.1), 38% for SER (9.4 vs. 13.0), and 41% for DER (5.8 vs. 8.2). Similar behavior is observed when the documents contain the original shadda. POS features are also helpful in improving the performance of the system. They improved the WER by 4% (18.0 vs. 18.8), SER by 5% (8.9 vs. 9.4), and DER by 5% (5.5 vs. 5.8).",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 122,
+                        "end": 123,
+                        "text": "2",
+                        "ref_id": "TABREF2"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "6"
+            },
+            {
+                "text": "Case-ending in Arabic documents consists of the diacritic attributed to the last character in a whitespace delimited word. Restoring them is the most difficult part in the diacritization of a document. Case endings are only present in formal or highly literary scripts. Only educated speakers of modern standard Arabic master their use. Technically, every noun has such an ending, although at the end of a sentence no inflection is pronounced, even in formal speech, because of the rules of 'pause'.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "6"
+            },
+            {
+                "text": "For this reason, we conduct another experiment in which case-endings were stripped throughout the training and testing data without the attempt to restore them.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "6"
+            },
+            {
+                "text": "We present in Table 3 the performance of the diacritization system on documents without caseendings. Results clearly show that when caseendings are omitted, the WER declines by 58% (7.2% vs. 17.3%), SER is decreased by 52% (4.0% vs. 8.5%), and DER is reduced by 56% (2.2% vs. 5.1%). Also, Table 3 shows again that a richer set of features results in a better performance; compared to a system using lexical features only, adding POS and segment-based features improved the WER by 38% (7.2% vs. 11.8%), the SER by 39% (4.0% vs. 6.6%), and DER by 38% (2.2% vs. Columns marked with \"True shadda\" represent results on documents containing the original consonant doubling \"shadda\" while columns marked with \"Predicted shadda\" represent results where the system restored all diacritics including shadda.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 20,
+                        "end": 21,
+                        "text": "3",
+                        "ref_id": "TABREF3"
+                    },
+                    {
+                        "start": 295,
+                        "end": 296,
+                        "text": "3",
+                        "ref_id": "TABREF3"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "6"
+            },
+            {
+                "text": "3.6%). Similar to the results reported in Table 2 , we show that the performance of the system are similar whether the document contains the original shadda or not. A system like this trained on non case-ending documents can be of interest to applications such as speech recognition, where the last state of a word HMM model can be defined to absorb all possible vowels (Afify et al., 2004) .",
+                "cite_spans": [
+                    {
+                        "start": 370,
+                        "end": 390,
+                        "text": "(Afify et al., 2004)",
+                        "ref_id": "BIBREF0"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 48,
+                        "end": 49,
+                        "text": "2",
+                        "ref_id": "TABREF2"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "6"
+            },
+            {
+                "text": "As stated in section 3, the most recent and advanced approach to diacritic restoration is the one presented in (Nelken and Shieber, 2005): they showed a DER of 12.79% and a WER of 23.61% on Arabic Treebank corpus using finite state transducers (FST) with a Katz language modeling (LM) as described in (Chen and Goodman, 1999) . Because they didn't describe how they split their corpus into training/test sets, we were not able to use the same data for comparison purpose.",
+                "cite_spans": [
+                    {
+                        "start": 301,
+                        "end": 325,
+                        "text": "(Chen and Goodman, 1999)",
+                        "ref_id": "BIBREF3"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Comparison to other approaches",
+                "sec_num": "7"
+            },
+            {
+                "text": "In this section, we want essentially to duplicate the aforementioned FST result for comparison using the identical training and testing set we use for our experiments. We also propose some new variations on the finite state machine modeling technique which improve performance considerably.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Comparison to other approaches",
+                "sec_num": "7"
+            },
+            {
+                "text": "The algorithm for FST based vowel restoration could not be simpler: between every pair of characters we insert diacritics if doing so improves the likelihood of the sequence as scored by a statistical n-gram model trained upon the training corpus. Thus, in between every pair of characters we propose and score all possible diacritical insertions. Results reported in We propose in the following an extension to the aforementioned FST model, where we jointly determines not only diacritics but segmentation into affixes as described in (Lee et al., 2003) . Table 5 gives the performance of the extended FST model where Kneser-Ney LM is used, since it produces better results. This should be a much more difficult task, as there are more than twice as many possible insertions. However, the choice of diacritics is related to and dependent upon the choice of segmentation. Thus, we demonstrate that a richer internal representation produces a more powerful model.",
+                "cite_spans": [
+                    {
+                        "start": 536,
+                        "end": 554,
+                        "text": "(Lee et al., 2003)",
+                        "ref_id": "BIBREF14"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 563,
+                        "end": 564,
+                        "text": "5",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Comparison to other approaches",
+                "sec_num": "7"
+            },
+            {
+                "text": "We presented in this paper a statistical model for Arabic diacritic restoration. The approach we propose is based on the Maximum entropy framework, which gives the system the ability to integrate different sources of knowledge. Our model has the advantage of successfully combining diverse sources of information ranging from lexical, segment-based and POS features. Both POS and segment-based features are generated by separate statistical systems -not extracted manually -in order to simulate real world applications. The segment-based features are extracted from a statistical morphological analysis system using WFST approach and the POS features are generated by a parsing model Table 5 : Error Rate in % for n-gram diacritic restoration and segmentation using FST and Kneser-Ney LM. Columns marked with \"True shadda\" represent results on documents containing the original consonant doubling \"shadda\" while columns marked with \"Predicted shadda\" represent results where the system restored all diacritics including shadda.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 690,
+                        "end": 691,
+                        "text": "5",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Conclusion",
+                "sec_num": "8"
+            },
+            {
+                "text": "that also uses Maximum entropy framework. Evaluation results show that combining these sources of information lead to state-of-the-art performance.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion",
+                "sec_num": "8"
+            },
+            {
+                "text": "As future work, we plan to incorporate Buckwalter morphological analyzer information to extract new features that reduce the search space. One idea will be to reduce the search to the number of hypotheses, if any, proposed by the morphological analyzer.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion",
+                "sec_num": "8"
+            },
+            {
+                "text": "We also plan to investigate additional conjunction features to improve the accuracy of the model.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion",
+                "sec_num": "8"
+            },
+            {
+                "text": "This is not meant to be an in-depth introduction to the method, but a brief overview to familiarize the reader with them.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            }
+        ],
+        "back_matter": [
+            {
+                "text": "Grateful thanks are extended to Radu Florian for his constructive comments regarding the maximum entropy classifier.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Acknowledgments",
+                "sec_num": null
+            }
+        ],
+        "bib_entries": {
+            "BIBREF0": {
+                "ref_id": "b0",
+                "title": "The BBN RT04 BN Arabic System",
+                "authors": [
+                    {
+                        "first": "M",
+                        "middle": [],
+                        "last": "Afify",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "S",
+                        "middle": [],
+                        "last": "Abdou",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "J",
+                        "middle": [],
+                        "last": "Makhoul",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "L",
+                        "middle": [],
+                        "last": "Nguyen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "B",
+                        "middle": [],
+                        "last": "Xiang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2004,
+                "venue": "RT04 Workshop",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "M. Afify, S. Abdou, J. Makhoul, L. Nguyen, and B. Xi- ang. 2004. The BBN RT04 BN Arabic System. In RT04 Workshop, Palisades NY.",
+                "links": null
+            },
+            "BIBREF1": {
+                "ref_id": "b1",
+                "title": "A maximum entropy approach to natural language processing",
+                "authors": [
+                    {
+                        "first": "A",
+                        "middle": [],
+                        "last": "Berger",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "S",
+                        "middle": [
+                            "Della"
+                        ],
+                        "last": "Pietra",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "V",
+                        "middle": [],
+                        "last": "Della Pietra",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1996,
+                "venue": "Computational Linguistics",
+                "volume": "22",
+                "issue": "1",
+                "pages": "39--71",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "A. Berger, S. Della Pietra, and V. Della Pietra. 1996. A maximum entropy approach to natural language pro- cessing. Computational Linguistics, 22(1):39-71.",
+                "links": null
+            },
+            "BIBREF2": {
+                "ref_id": "b2",
+                "title": "Buckwalter Arabic morphological analyzer version 1.0. Technical report, Linguistic Data Consortium",
+                "authors": [
+                    {
+                        "first": "T",
+                        "middle": [],
+                        "last": "Buckwalter",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2002,
+                "venue": "LDC2002L49 and",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "T. Buckwalter. 2002. Buckwalter Arabic morpholog- ical analyzer version 1.0. Technical report, Linguis- tic Data Consortium, LDC2002L49 and ISBN 1-58563- 257-0.",
+                "links": null
+            },
+            "BIBREF3": {
+                "ref_id": "b3",
+                "title": "An empirical study of smoothing techniques for language modeling. computer speech and language",
+                "authors": [
+                    {
+                        "first": "Stanley",
+                        "middle": [
+                            "F"
+                        ],
+                        "last": "Chen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Joshua",
+                        "middle": [],
+                        "last": "Goodman",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1999,
+                "venue": "Computer Speech and Language",
+                "volume": "4",
+                "issue": "13",
+                "pages": "359--393",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Stanley F. Chen and Joshua Goodman. 1999. An empirical study of smoothing techniques for language modeling. computer speech and language. Computer Speech and Language, 4(13):359-393.",
+                "links": null
+            },
+            "BIBREF4": {
+                "ref_id": "b4",
+                "title": "A survey of smoothing techniques for me models",
+                "authors": [
+                    {
+                        "first": "Stanley",
+                        "middle": [],
+                        "last": "Chen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ronald",
+                        "middle": [],
+                        "last": "Rosenfeld",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2000,
+                "venue": "IEEE Trans. on Speech and Audio Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Stanley Chen and Ronald Rosenfeld. 2000. A survey of smoothing techniques for me models. IEEE Trans. on Speech and Audio Processing.",
+                "links": null
+            },
+            "BIBREF5": {
+                "ref_id": "b5",
+                "title": "De l'etiquetage grammatical a' la voyellation automatique de l'arabe",
+                "authors": [
+                    {
+                        "first": "F",
+                        "middle": [],
+                        "last": "Debili",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "H",
+                        "middle": [],
+                        "last": "Achour",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "E",
+                        "middle": [],
+                        "last": "Souissi",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2002,
+                "venue": "Correspondances de l'Institut de Recherche sur le Maghreb Contemporain",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "F. Debili, H. Achour, and E. Souissi. 2002. De l'etiquetage grammatical a' la voyellation automatique de l'arabe. Technical report, Correspondances de l'Institut de Recherche sur le Maghreb Contemporain",
+                "links": null
+            },
+            "BIBREF6": {
+                "ref_id": "b6",
+                "title": "Phonetization of arabic: rules and algorithms",
+                "authors": [
+                    {
+                        "first": "Y",
+                        "middle": [],
+                        "last": "El-Imam",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2003,
+                "venue": "Computer Speech and Language",
+                "volume": "18",
+                "issue": "",
+                "pages": "339--373",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Y. El-Imam. 2003. Phonetization of arabic: rules and algorithms. Computer Speech and Language, 18:339- 373.",
+                "links": null
+            },
+            "BIBREF7": {
+                "ref_id": "b7",
+                "title": "Semi-automatic vowelization of Arabic verbs",
+                "authors": [
+                    {
+                        "first": "T",
+                        "middle": [],
+                        "last": "El-Sadany",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "M",
+                        "middle": [],
+                        "last": "Hashish",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1988,
+                "venue": "10th NC Conference",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "T. El-Sadany and M. Hashish. 1988. Semi-automatic vowelization of Arabic verbs. In 10th NC Conference, Jeddah, Saudi Arabia.",
+                "links": null
+            },
+            "BIBREF8": {
+                "ref_id": "b8",
+                "title": "A hierarchical approach for the statistical vowelization of Arabic text",
+                "authors": [
+                    {
+                        "first": "O",
+                        "middle": [],
+                        "last": "Emam",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "V",
+                        "middle": [],
+                        "last": "Fisher",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2004,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "O. Emam and V. Fisher. 2004. A hierarchical ap- proach for the statistical vowelization of Arabic text. Technical report, IBM patent filed, DE9-2004-0006, US patent application US2005/0192809 A1.",
+                "links": null
+            },
+            "BIBREF9": {
+                "ref_id": "b9",
+                "title": "A statistical model for multilingual entity detection and tracking",
+                "authors": [
+                    {
+                        "first": "R",
+                        "middle": [],
+                        "last": "Florian",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "H",
+                        "middle": [],
+                        "last": "Hassan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "A",
+                        "middle": [],
+                        "last": "Ittycheriah",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "H",
+                        "middle": [],
+                        "last": "Jing",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "N",
+                        "middle": [],
+                        "last": "Kambhatla",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "X",
+                        "middle": [],
+                        "last": "Luo",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Nicolov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Roukos",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2004,
+                "venue": "Proceedings of HLT-NAACL 2004",
+                "volume": "",
+                "issue": "",
+                "pages": "1--8",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "R. Florian, H. Hassan, A. Ittycheriah, H. Jing, N. Kambhatla, X. Luo, N Nicolov, and S Roukos. 2004. A statistical model for multilingual entity detection and tracking. In Proceedings of HLT-NAACL 2004, pages 1-8.",
+                "links": null
+            },
+            "BIBREF10": {
+                "ref_id": "b10",
+                "title": "An HMM approach to vowel restoration in Arabic and Hebrew",
+                "authors": [
+                    {
+                        "first": "Y",
+                        "middle": [],
+                        "last": "",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2002,
+                "venue": "ACL-02 Workshop on Computational Approaches to Semitic Languages",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Y. Gal. 2002. An HMM approach to vowel restora- tion in Arabic and Hebrew. In ACL-02 Workshop on Computational Approaches to Semitic Languages.",
+                "links": null
+            },
+            "BIBREF11": {
+                "ref_id": "b11",
+                "title": "Sequential conditional generalized iterative scaling",
+                "authors": [
+                    {
+                        "first": "Joshua",
+                        "middle": [],
+                        "last": "Goodman",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2002,
+                "venue": "Proceedings of ACL'02",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Joshua Goodman. 2002. Sequential conditional gener- alized iterative scaling. In Proceedings of ACL'02.",
+                "links": null
+            },
+            "BIBREF12": {
+                "ref_id": "b12",
+                "title": "Cross-dialectal data sharing for acoustic modeling in Arabic speech recognition",
+                "authors": [
+                    {
+                        "first": "K",
+                        "middle": [],
+                        "last": "Kirchhoff",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "D",
+                        "middle": [],
+                        "last": "Vergyri",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2005,
+                "venue": "Speech Communication",
+                "volume": "46",
+                "issue": "1",
+                "pages": "37--51",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "K. Kirchhoff and D. Vergyri. 2005. Cross-dialectal data sharing for acoustic modeling in Arabic speech recognition. Speech Communication, 46(1):37-51, May.",
+                "links": null
+            },
+            "BIBREF13": {
+                "ref_id": "b13",
+                "title": "Conditional random fields: Probabilistic models for segmenting and labeling sequence data",
+                "authors": [
+                    {
+                        "first": "John",
+                        "middle": [],
+                        "last": "Lafferty",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Andrew",
+                        "middle": [],
+                        "last": "Mccallum",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Fernando",
+                        "middle": [],
+                        "last": "Pereira",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2001,
+                "venue": "ICML",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "John Lafferty, Andrew McCallum, and Fernando Pereira. 2001. Conditional random fields: Probabilis- tic models for segmenting and labeling sequence data. In ICML.",
+                "links": null
+            },
+            "BIBREF14": {
+                "ref_id": "b14",
+                "title": "Language model based Arabic word segmentation",
+                "authors": [
+                    {
+                        "first": "Y.-S",
+                        "middle": [],
+                        "last": "Lee",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "K",
+                        "middle": [],
+                        "last": "Papineni",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "S",
+                        "middle": [],
+                        "last": "Roukos",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "O",
+                        "middle": [],
+                        "last": "Emam",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "H",
+                        "middle": [],
+                        "last": "Hassan",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2003,
+                "venue": "Proceedings of the ACL'03",
+                "volume": "",
+                "issue": "",
+                "pages": "399--406",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Y.-S. Lee, K. Papineni, S. Roukos, O. Emam, and H. Hassan. 2003. Language model based Arabic word segmentation. In Proceedings of the ACL'03, pages 399-406.",
+                "links": null
+            },
+            "BIBREF15": {
+                "ref_id": "b15",
+                "title": "Adwait Ratnaparkhi. 1996. A maximum entropy model for part-of-speech tagging",
+                "authors": [
+                    {
+                        "first": "Andrew",
+                        "middle": [],
+                        "last": "Mccallum",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dayne",
+                        "middle": [],
+                        "last": "Freitag",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Fernando",
+                        "middle": [],
+                        "last": "Pereira",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2000,
+                "venue": "ACL-05 Workshop on Computational Approaches to Semitic Languages",
+                "volume": "",
+                "issue": "",
+                "pages": "79--86",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Andrew McCallum, Dayne Freitag, and Fernando Pereira. 2000. Maximum entropy markov models for information extraction and segmentation. In ICML. Rani Nelken and Stuart M. Shieber. 2005. Arabic diacritization using weighted finite-state transducers. In ACL-05 Workshop on Computational Approaches to Semitic Languages, pages 79-86, Ann Arbor, Michigan. Adwait Ratnaparkhi. 1996. A maximum entropy model for part-of-speech tagging. In Conference on Empirical Methods in Natural Language Processing.",
+                "links": null
+            },
+            "BIBREF16": {
+                "ref_id": "b16",
+                "title": "Building bilingual microcomputer systems",
+                "authors": [
+                    {
+                        "first": "M",
+                        "middle": [],
+                        "last": "Tayli",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "A",
+                        "middle": [],
+                        "last": "Al-Salamah",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1990,
+                "venue": "Communications of the ACM",
+                "volume": "33",
+                "issue": "5",
+                "pages": "495--505",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "M. Tayli and A. Al-Salamah. 1990. Building bilingual microcomputer systems. Communications of the ACM, 33(5):495-505.",
+                "links": null
+            },
+            "BIBREF17": {
+                "ref_id": "b17",
+                "title": "Automatic diacritization of Arabic for acoustic modeling in speech recognition",
+                "authors": [
+                    {
+                        "first": "D",
+                        "middle": [],
+                        "last": "Vergyri",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "K",
+                        "middle": [],
+                        "last": "Kirchhoff",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2004,
+                "venue": "COLING Workshop on Arabic-script Based Languages",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "D. Vergyri and K. Kirchhoff. 2004. Automatic dia- critization of Arabic for acoustic modeling in speech recognition. In COLING Workshop on Arabic-script Based Languages, Geneva, Switzerland.",
+                "links": null
+            },
+            "BIBREF18": {
+                "ref_id": "b18",
+                "title": "Text chunking based on a generalization of Winnow",
+                "authors": [
+                    {
+                        "first": "Tong",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Fred",
+                        "middle": [],
+                        "last": "Damerau",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "David",
+                        "middle": [
+                            "E"
+                        ],
+                        "last": "Johnson",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2002,
+                "venue": "Journal of Machine Learning Research",
+                "volume": "2",
+                "issue": "",
+                "pages": "615--637",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Tong Zhang, Fred Damerau, and David E. Johnson. 2002. Text chunking based on a generalization of Win- now. Journal of Machine Learning Research, 2:615- 637.",
+                "links": null
+            },
+            "BIBREF19": {
+                "ref_id": "b19",
+                "title": "The impact of morphological stemming on Arabic mention detection and coreference resolution",
+                "authors": [
+                    {
+                        "first": "Imed",
+                        "middle": [],
+                        "last": "Zitouni",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jeff",
+                        "middle": [],
+                        "last": "Sorensen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xiaoqiang",
+                        "middle": [],
+                        "last": "Luo",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Radu",
+                        "middle": [],
+                        "last": "Florian",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2005,
+                "venue": "Proceedings of the ACL Workshop on Computational Approaches to Semitic Languages",
+                "volume": "",
+                "issue": "",
+                "pages": "63--70",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Imed Zitouni, Jeff Sorensen, Xiaoqiang Luo, and Radu Florian. 2005. The impact of morphological stemming on Arabic mention detection and coreference resolu- tion. In Proceedings of the ACL Workshop on Compu- tational Approaches to Semitic Languages, pages 63- 70, Ann Arbor, June.",
+                "links": null
+            }
+        },
+        "ref_entries": {
+            "TABREF0": {
+                "content": "<table><tr><td>).</td></tr></table>",
+                "type_str": "table",
+                "text": "Arabic diacritics on the letter -consonant -(pronounced as /t/).",
+                "html": null,
+                "num": null
+            },
+            "TABREF2": {
+                "content": "<table><tr><td colspan=\"3\">True shadda</td><td colspan=\"3\">Predicted shadda</td></tr><tr><td colspan=\"5\">WER SER DER WER SER</td><td>DER</td></tr><tr><td colspan=\"3\">Lexical features</td><td/><td/><td/></tr><tr><td>24.8</td><td>12.6</td><td>7.9</td><td>25.1</td><td>13.0</td><td>8.2</td></tr><tr><td colspan=\"5\">Lexical + segment-based features</td><td/></tr><tr><td>18.2</td><td>9.0</td><td>5.5</td><td>18.8</td><td>9.4</td><td>5.8</td></tr><tr><td colspan=\"6\">Lexical + segment-based + POS features</td></tr><tr><td>17.3</td><td/><td/><td/><td/><td/></tr></table>",
+                "type_str": "table",
+                "text": "",
+                "html": null,
+                "num": null
+            },
+            "TABREF3": {
+                "content": "<table><tr><td colspan=\"3\">True shadda</td><td colspan=\"3\">Predicted shadda</td></tr><tr><td colspan=\"5\">WER SER DER WER SER</td><td>DER</td></tr><tr><td colspan=\"3\">Lexical features</td><td/><td/><td/></tr><tr><td>11.8</td><td>6.6</td><td>3.6</td><td>12.4</td><td>7.0</td><td>3.9</td></tr><tr><td colspan=\"5\">Lexical + segment-based features</td><td/></tr><tr><td>7.8</td><td>4.4</td><td>2.4</td><td>8.6</td><td>4.8</td><td>2.7</td></tr><tr><td colspan=\"6\">Lexical + segment-based + POS features</td></tr><tr><td>7.2</td><td>4.0</td><td>2.2</td><td>7.9</td><td>4.4</td><td>2.5</td></tr></table>",
+                "type_str": "table",
+                "text": "Performance of the diacritization system based on employed features. System is trained and evaluated on documents without case-ending.",
+                "html": null,
+                "num": null
+            },
+            "TABREF4": {
+                "content": "<table><tr><td colspan=\"5\">These results still under-perform those obtained</td></tr><tr><td colspan=\"5\">by MaxEnt approach presented in Table 2. When</td></tr><tr><td colspan=\"5\">all sources of information are included, the Max-</td></tr><tr><td colspan=\"5\">Ent technique outperforms the FST model by 21%</td></tr><tr><td colspan=\"5\">(22% vs. 18%) in terms of WER and 39% (9% vs.</td></tr><tr><td colspan=\"2\">5.5%) in terms of DER.</td><td/><td/><td/></tr><tr><td/><td colspan=\"2\">Katz LM</td><td colspan=\"2\">Kneser-Ney LM</td></tr><tr><td>n-gram size</td><td colspan=\"2\">WER DER</td><td>WER</td><td>DER</td></tr><tr><td>3</td><td>63</td><td>31</td><td>55</td><td>28</td></tr><tr><td>4</td><td>54</td><td>25</td><td>38</td><td>19</td></tr><tr><td>5</td><td>51</td><td>21</td><td>28</td><td>13</td></tr><tr><td>6</td><td>44</td><td>18</td><td>24</td><td>11</td></tr><tr><td>7</td><td>39</td><td>16</td><td>23</td><td>11</td></tr><tr><td>8</td><td>37</td><td>15</td><td>23</td><td>10</td></tr></table>",
+                "type_str": "table",
+                "text": "Table4indicate the error rates of diacritic restoration (including shadda). We show performance using both Kneser-Ney and Katz LMs(Chen and Goodman, 1999) with increasingly large n-grams. It is our opinion that large n-grams effectively duplicate the use of a lexicon. It is unfortunate but true that, even for a rich resource like the Arabic Treebank, the choice of modeling heuristic and the effects of small sample size are considerable. Using the finite state machine modeling technique, we obtain similar results to those reported in(Nelken and Shieber, 2005): a WER of 23% and a DER of 15%. Better performance is reached with the use of Kneser-Ney LM.The SER reported on Table2and Table3are based on the Arabic segmentation system we use in the MaxEnt approach. Since, the FST model doesn't use such a system, we found inappropriate to report SER in this section. Error Rate in % for n-gram diacritic restoration using FST.",
+                "html": null,
+                "num": null
+            }
+        }
+    }
+}

@@ -1,0 +1,1584 @@
+{
+    "paper_id": "H05-1023",
+    "header": {
+        "generated_with": "S2ORC 1.0.0",
+        "date_generated": "2023-06-16T12:00:43.017890Z"
+    },
+    "title": "Inner-Outer Bracket Models for Word Alignment using Hidden Blocks",
+    "authors": [
+        {
+            "first": "Bing",
+            "middle": [],
+            "last": "Zhao",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "Carnegie Mellon University",
+                "location": {}
+            },
+            "email": "bzhao@cs.cmu.edu"
+        },
+        {
+            "first": "Niyu",
+            "middle": [],
+            "last": "Ge",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "IBM T. J. Watson Research Center Yorktown Heights",
+                "location": {
+                    "postCode": "10598",
+                    "region": "NY",
+                    "country": "USA"
+                }
+            },
+            "email": "niyuge@us.ibm.com"
+        },
+        {
+            "first": "Kishore",
+            "middle": [],
+            "last": "Papineni",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "IBM T. J. Watson Research Center Yorktown Heights",
+                "location": {
+                    "postCode": "10598",
+                    "region": "NY",
+                    "country": "USA"
+                }
+            },
+            "email": "papineni@us.ibm.com"
+        }
+    ],
+    "year": "",
+    "venue": null,
+    "identifiers": {},
+    "abstract": "Most statistical translation systems are based on phrase translation pairs, or \"blocks\", which are obtained mainly from word alignment. We use blocks to infer better word alignment and improved word alignment which, in turn, leads to better inference of blocks. We propose two new probabilistic models based on the innerouter segmentations and use EM algorithms for estimating the models' parameters. The first model recovers IBM Model-1 as a special case. Both models outperform bidirectional IBM Model-4 in terms of word alignment accuracy by 10% absolute on the F-measure. Using blocks obtained from the models in actual translation systems yields statistically significant improvements in Chinese-English SMT evaluation.",
+    "pdf_parse": {
+        "paper_id": "H05-1023",
+        "_pdf_hash": "",
+        "abstract": [
+            {
+                "text": "Most statistical translation systems are based on phrase translation pairs, or \"blocks\", which are obtained mainly from word alignment. We use blocks to infer better word alignment and improved word alignment which, in turn, leads to better inference of blocks. We propose two new probabilistic models based on the innerouter segmentations and use EM algorithms for estimating the models' parameters. The first model recovers IBM Model-1 as a special case. Both models outperform bidirectional IBM Model-4 in terms of word alignment accuracy by 10% absolute on the F-measure. Using blocks obtained from the models in actual translation systems yields statistically significant improvements in Chinese-English SMT evaluation.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            }
+        ],
+        "body_text": [
+            {
+                "text": "Today's statistical machine translation systems rely on high quality phrase translation pairs to acquire state-of-the-art performance, see (Koehn et al., 2003; Zens and Ney, 2004; Och and Ney, 2003) . Here, phrase pairs, or \"blocks\" are obtained automatically from parallel sentence pairs via the underlying word alignments. Word alignments traditionally are based on IBM Models 1-5 (Brown et al., 1993) or on HMMs (Vogel et al., 1996) . Automatic word alignment is challenging in that its accuracy is not yet close to inter-annotator agreement in some language pairs: for Chinese-English, inter-annotator agreement exceeds 90 on F-measure whereas IBM Model-4 or HMM accuracy is typically below 80s. HMMs assume that words \"close-in-source\" are aligned to words \"close-in-target\". While this locality assumption is generally sound, HMMs do have limitations: the self-transition probability of a state (word) is the only control on the duration in the state, the length of the phrase aligned to the word. Also there is no natural way to control repeated non-contiguous visits to a state. Despite these problems, HMMs remain attractive for their speed and reasonable accuracy.",
+                "cite_spans": [
+                    {
+                        "start": 139,
+                        "end": 159,
+                        "text": "(Koehn et al., 2003;",
+                        "ref_id": "BIBREF3"
+                    },
+                    {
+                        "start": 160,
+                        "end": 179,
+                        "text": "Zens and Ney, 2004;",
+                        "ref_id": "BIBREF17"
+                    },
+                    {
+                        "start": 180,
+                        "end": 198,
+                        "text": "Och and Ney, 2003)",
+                        "ref_id": "BIBREF7"
+                    },
+                    {
+                        "start": 383,
+                        "end": 403,
+                        "text": "(Brown et al., 1993)",
+                        "ref_id": "BIBREF0"
+                    },
+                    {
+                        "start": 415,
+                        "end": 435,
+                        "text": "(Vogel et al., 1996)",
+                        "ref_id": "BIBREF12"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "We propose a new method for localizing word alignments. We use blocks to achieve locality in the following manner: a block in a sentence pair is a source phrase aligned to a target phrase. We assume that words inside the source phrase cannot align to words outside the target phrase and that words outside the source phrase cannot align to words inside the target phrase. Furthermore, a block divides the sentence pair into two smaller regions: the inner part of the block, which corresponds to the source and target phrase in the block, and the outer part of the block, which corresponds to the remaining source and target words in the parallel sentence pair. The two regions are non-overlapping; and each of them is shorter than the original parallel sentence pair. The regions are thus easier to align than the original sentence pairs (e.g., using IBM Model-1). While the model uses a single block to split the sentence pair into two independent regions, it is not clear which block we should select for this purpose. Therefore, we treat the splitting block as a hidden variable.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "This proposed approach is far simpler than treating the entire sentence as a sequence of nonoverlapping phrases (or chunks) and considering such sequential segmentation either explicitly or implicitly. For example, (Marcu and Wong, 2002) for a joint phrase based model, (Huang et al., 2003) for a translation memory system; and (Watanabe et al., 2003) for a complex model of insertion, deletion and head-word driven chunk reordering. Other approaches including (Watanabe et al., 2002) treat extracted phrase-pairs as new parallel data with limited success. Typically, they share a similar architecture of phrase level segmentation, reordering, translation as in (Och and Ney, 2002; Koehn and Knight, 2002; Yamada and Knight, 2001) . The phrase level interaction has to be taken care of for the non-overlapping sequential segmentation in a complicated way. Our models model such interactions in a soft way. The hidden blocks are allowed to overlap with each other, while each block induced two non-overlapping regions, i.e. the model brackets the sentence pair into two independent parts which are generated synchronously. In this respect, it resembles bilingual bracketing (Wu, 1997 ), but our model has more lexical items in the blocks with many-to-many word alignment freedom in both inner and outer parts.",
+                "cite_spans": [
+                    {
+                        "start": 215,
+                        "end": 237,
+                        "text": "(Marcu and Wong, 2002)",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 270,
+                        "end": 290,
+                        "text": "(Huang et al., 2003)",
+                        "ref_id": "BIBREF2"
+                    },
+                    {
+                        "start": 328,
+                        "end": 351,
+                        "text": "(Watanabe et al., 2003)",
+                        "ref_id": "BIBREF14"
+                    },
+                    {
+                        "start": 461,
+                        "end": 484,
+                        "text": "(Watanabe et al., 2002)",
+                        "ref_id": "BIBREF13"
+                    },
+                    {
+                        "start": 662,
+                        "end": 681,
+                        "text": "(Och and Ney, 2002;",
+                        "ref_id": "BIBREF6"
+                    },
+                    {
+                        "start": 682,
+                        "end": 705,
+                        "text": "Koehn and Knight, 2002;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 706,
+                        "end": 730,
+                        "text": "Yamada and Knight, 2001)",
+                        "ref_id": "BIBREF16"
+                    },
+                    {
+                        "start": 1173,
+                        "end": 1182,
+                        "text": "(Wu, 1997",
+                        "ref_id": "BIBREF15"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "We present our localization constraints using blocks for word alignment in Section 2; we detail our two new probabilistic models and their EM training algorithms in Section 3; our baseline system, a maximum-posterior inference for word alignment, is explained in Section 4; experimental results of alignments and translations are in Section 5; and Section 6 contains discussion and conclusions.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "We use the following notation in the remainder of this paper: e and f denote the English and foreign sentences with sentence lengthes of I and J, respectively. e i is an English word at position i in e; f j is a foreign word at position j in f . a is the alignment vector with a j mapping the position of the English word e a j to which f j connects. Therefore, we have the standard limitation that one foreign word cannot be connected to more than one English word. A block \u03b4 [] is defined as a pair of brackets as follows:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Segmentation by a Block",
+                "sec_num": "2"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "\u03b4 [] = (\u03b4 e , \u03b4 f ) = ([i l , i r ], [j l , j r ]),",
+                        "eq_num": "(1)"
+                    }
+                ],
+                "section": "Segmentation by a Block",
+                "sec_num": "2"
+            },
+            {
+                "text": "where \u03b4 e = [i l , i r ] is a bracket in English sentence defined by a pair of indices: the left position i l and the right position i r , corresponding to a English phrase e i r i l . Similar notations are for \u03b4 f = [j l , j r ], which is one possible projection of \u03b4 e in f . The subscript l and r are abbreviations of left and right, respectively. \u2208 parts (see Figure 1 ). With this segmentation, we assume the words in the inner part are aligned to inner part only:",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 371,
+                        "end": 372,
+                        "text": "1",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Segmentation by a Block",
+                "sec_num": "2"
+            },
+            {
+                "text": "\u03b4 [] \u2208 = \u03b4 e \u2208 \u2194 \u03b4 f \u2208 : {e i , i \u2208 [i l , i r ]} \u2194 {f j , j \u2208 [j l , j",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Segmentation by a Block",
+                "sec_num": "2"
+            },
+            {
+                "text": "r ]}; and words in the outer part are aligned to outer part only:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Segmentation by a Block",
+                "sec_num": "2"
+            },
+            {
+                "text": "\u03b4 [] / \u2208 = \u03b4 e / \u2208 \u2194 \u03b4 f / \u2208 : {e i , i / \u2208 [i l , i r ]} \u2194 {f j , j / \u2208 [j l , j r ]}.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Segmentation by a Block",
+                "sec_num": "2"
+            },
+            {
+                "text": "We do not allow alignments to cross block boundaries. Words inside a block \u03b4 [] can be aligned using a variety of models (IBM models 1-5, HMM, etc). We choose Model1 for simplicity. If the block boundaries are accurate, we can expect high quality word alignment. This is our proposed new localization method. We treat the constraining block as a hidden variable in a generative model shown in Eqn. 2.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Segmentation by a Block",
+                "sec_num": "2"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "P (f |e) = {\u03b4 [] } P (f , \u03b4 [] |e) = {\u03b4 e } {\u03b4 f } P (f , \u03b4 f |\u03b4 e , e)P (\u03b4 e |e),",
+                        "eq_num": "(2)"
+                    }
+                ],
+                "section": "Segmentation by a Block",
+                "sec_num": "2"
+            },
+            {
+                "text": "where \u03b4 [] = (\u03b4 e , \u03b4 f ) is the hidden block. In the generative process, the model first generates a bracket \u03b4 e for e with a monolingual bracketing model of P (\u03b4 e |e). It then uses the segmentation of the English (\u03b4 e , e) to generate the projected bracket \u03b4 f of f using a generative translation model",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Segmentation by a Block",
+                "sec_num": "2"
+            },
+            {
+                "text": "P (f , \u03b4 f |\u03b4 e , e) = P (\u03b4 f / \u2208 , \u03b4 f \u2208 |\u03b4 e / \u2208",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Segmentation by a Block",
+                "sec_num": "2"
+            },
+            {
+                "text": ", \u03b4 e \u2208 ) -the key model to implement our proposed inner-outer constraints. With the hidden block \u03b4 [] inferred, the model then generates word alignments within the inner and outer parts separately. We present two generating processes for the inner and outer parts induced by \u03b4 [] and corresponding two models of P (f , \u03b4 f |\u03b4 e , e). These models are described in the following secions.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Segmentation by a Block",
+                "sec_num": "2"
+            },
+            {
+                "text": "The first model assumes that the inner part and the outer part are generated independently. By the formal equivalence of (f, \u03b4 f ) with (\u03b4 f \u2208 , \u03b4 f / \u2208 ), Eqn. 2 can be approximated as:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inner-Outer Bracket Model-A",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "P (f |e)\u2248 {\u03b4 e } {\u03b4 f } P (\u03b4 f \u2208 |\u03b4 e \u2208 )P (\u03b4 f / \u2208 |\u03b4 e / \u2208 )P (\u03b4 e |e)P (\u03b4 f |\u03b4 e ),",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inner-Outer Bracket Model-A",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "(3) where P (\u03b4 f \u2208 |\u03b4 e \u2208 ) and P (\u03b4 f / \u2208 |\u03b4 e / \u2208 ) are two independent generative models for inner and outer parts, respec-tively and are futher decompsed into:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inner-Outer Bracket Model-A",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "P (\u03b4 f \u2208 |\u03b4 e \u2208 ) = {a j \u2208\u03b4 e \u2208 } f j \u2208\u03b4 f \u2208 P (f j |e aj )P (e aj |\u03b4 e \u2208 ) P (\u03b4 f / \u2208 |\u03b4 e / \u2208 ) = {a j \u2208\u03b4 e / \u2208 } fj \u2208\u03b4 f / \u2208 P (f j |e a j )P (e a j |\u03b4 e / \u2208 ),",
+                        "eq_num": "(4)"
+                    }
+                ],
+                "section": "Inner-Outer Bracket Model-A",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "where {a J 1 } is the word alignment vector. Given the block segmentation and word alignment, the generative process first randomly selects a e i according to either P (e i |\u03b4 e \u2208 ) or P (e i |\u03b4 e / \u2208 ); and then generates f j indexed by word alignment a j with i = a j according to a word level lexicon P (f j |e a j ). This generative process using the two models of Because the model in Eqn. 3 is essentially a twolevel (\u03b4 [] and a) mixture model similar to IBM Models, the EM algorithm is quite straight forward as in IBM models. Shown in the following are several key E-step computations of the posteriors. The Mstep (optimization) is simply the normalization of the fractional counts collected using the posteriors through the inference results from E-step:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inner-Outer Bracket Model-A",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "P \u03b4 [] \u2208 (a j |\u03b4 f \u2208 , \u03b4 e \u2208 ) = P (f j |e aj ) e k \u2208\u03b4 e \u2208 P (f j |e k ) P \u03b4 [] / \u2208 (a j |\u03b4 f / \u2208 , \u03b4 e / \u2208 ) = P (f j |e a j ) e k \u2208\u03b4 e / \u2208 P (f j |e k ) (5)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inner-Outer Bracket Model-A",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "The posterior probability of",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inner-Outer Bracket Model-A",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "P (a J 1 |f , \u03b4 f , \u03b4 e , e) = J j=1 P (a j |f , \u03b4 f , \u03b4 e , e), where P (a j |f , \u03b4 f , \u03b4 e , e) is ei- ther P \u03b4 [] \u2208 (a j |\u03b4 f \u2208 , \u03b4 e \u2208 ) when (f j , e a j ) \u2208 \u03b4 [] \u2208 , or oth- erwise P \u03b4 [] / \u2208 (a j |\u03b4 f / \u2208 , \u03b4 e / \u2208 ) when (f j , e aj ) \u2208 \u03b4 [] /",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inner-Outer Bracket Model-A",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "\u2208 . Assuming P (\u03b4 e |e) to be a uniform distribution, the posterior of selecting a hidden block given observations:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inner-Outer Bracket Model-A",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "P (\u03b4 [] = (\u03b4 e , \u03b4 f )|e, f ) is proportional to block level relative frequency P rel (\u03b4 f",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inner-Outer Bracket Model-A",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "\u2208 |\u03b4 e \u2208 ) updated in each iteration; and can be smoothed with",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inner-Outer Bracket Model-A",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "P (\u03b4 f |\u03b4 e , f , e) = P (\u03b4 f \u2208 |\u03b4 e \u2208 )P (\u03b4 f / \u2208 |\u03b4 e / \u2208 )/ {\u03b4 f } P (\u03b4 f \u2208 |\u03b4 e \u2208 )P (\u03b4 f / \u2208 |\u03b4 e / \u2208",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inner-Outer Bracket Model-A",
+                "sec_num": "3.1"
+            },
+            {
+                "text": ") assuming Model-1 alignment in the inner and outer parts independently to reduce the risks of data sparseness in estimations.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inner-Outer Bracket Model-A",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "In principle, \u03b4 e can be a bracket of any length not exceeding the sentence length. If we restrict the bracket length to that of the sentence length, we recover IBM Model-1. Figure 2 summarizes the generation process for Inner-Outer Bracket Model-A. ",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 181,
+                        "end": 182,
+                        "text": "2",
+                        "ref_id": "FIGREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Inner-Outer Bracket Model-A",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "f1 f2 f3 f4 e1 e2 e3 [e1] e2 e3 e1 [e2] e3 [e1 e2] e3 e1 [e2 e3] \u2026. f1 f4 e1 e3 f2 f3 e2 f1 f3 f4 e1 e3 f2 e2 \u2026 \u2026 ] 3 , 2 [ = f \u03b4 ] 2 , 2 [ = f \u03b4 [.,.] = f \u03b4 ] 2 , 2 [ = e \u03b4 ] 1 , 1 [ = e \u03b4 ] 2 , 1 [ = e \u03b4 ] 3 , 2 [ = e \u03b4 inner outer inner outer",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inner-Outer Bracket Model-A",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "A block \u03b4 [] invokes both the inner and outer generations simultaneously in Bracket Model A (BM-A). However, the generative process is usually more effective in the inner part as \u03b4 [] is generally small and accurate. We can build a model focusing on generating only the inner part with careful inferences to avoid errors from noisy blocks. To ensure that all f J 1 are generated, we need to propose enough blocks to cover each observation f j . This constraint can be met by treating the whole sentence pair as one block.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inner-Outer Bracket Model-B",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "The generative process is as follows: First the model generates an English bracket \u03b4 e as before. The model then generates a projection \u03b4 f in f to localize all a j 's for the given \u03b4 e according to P (\u03b4 f |\u03b4 e , e). \u03b4 e and \u03b4 f forms a hidden block \u03b4 [] . Given \u03b4 [] , the model then generates only the inner part",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inner-Outer Bracket Model-B",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "f j \u2208 \u03b4 f \u2208 via P (f |\u03b4 f , \u03b4 e , e) P (\u03b4 f \u2208 |\u03b4 f , \u03b4 e , e).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inner-Outer Bracket Model-B",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "Eqn. 6 summarizes this by rewriting P (f , \u03b4 f |\u03b4 e , e):",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inner-Outer Bracket Model-B",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "P (f , \u03b4 f |\u03b4 e , e) = P (f |\u03b4 f , \u03b4 e , e)P (\u03b4 f |\u03b4 e , e) (6) = P (f |\u03b4 f , \u03b4 e , e)P ([j l , j r ]|\u03b4 e , e) P (\u03b4 f \u2208 |\u03b4 f , \u03b4 e , e)P ([j l , j r ]|\u03b4 e , e). P (\u03b4 f \u2208 |\u03b4 f , \u03b4 e , e",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inner-Outer Bracket Model-B",
+                "sec_num": "3.2"
+            },
+            {
+                "text": ") is a bracket level emission probabilistic model which generates a bag of contiguous words f j \u2208 \u03b4 f \u2208 under the constraints from the given hidden block \u03b4 [] = (\u03b4 f , \u03b4 e ). The model is simplified in Eqn. 7 with the assumption of bag-of-words' independence within the bracket \u03b4 f :",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inner-Outer Bracket Model-B",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "P (\u03b4 f \u2208 |\u03b4 f , \u03b4 e , e) = a J 1 j\u2208\u03b4 f \u2208 P (f j |e aj )P (e aj |\u03b4 f , \u03b4 e , e).",
+                        "eq_num": "(7)"
+                    }
+                ],
+                "section": "Inner-Outer Bracket Model-B",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "The P ([j l , j r ]|\u03b4 e , e) in Eqn. 6 is a localization probabilistic model, which has resemblances to an HMM's transition probability, P (a j |a j-1 ), implementing the assumption \"close-in-source\" is aligned to \"close-intarget\". However, instead of using the simple position variable a j , P ([j l , j r ]|\u03b4 e , e) is more expressive with word identities to localize words {f j } aligned to \u03b4 e \u2208 . To model P ([j l , j r ]|\u03b4 e , e) reliably, \u03b4 f = [j l , j r ] is equivalently defined as the center and width of the bracket \u03b4 f : ( \u03b4 f , w \u03b4 f ). To simplify it further, we assume that w \u03b4 f and \u03b4 f can be predicted independently.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inner-Outer Bracket Model-B",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "The width model, P (w \u03b4 f |\u03b4 e , e), depends on the length of the English bracket and the fertilities of English words in it. To simplify M-step computations, we can compute the expected width as in Eqn. 8.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inner-Outer Bracket Model-B",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "E{w \u03b4 f |\u03b4 e , e} \u03b3 \u2022 |i r -i l + 1|, (",
+                        "eq_num": "8"
+                    }
+                ],
+                "section": "Inner-Outer Bracket Model-B",
+                "sec_num": "3.2"
+            },
+            {
+                "text": ")",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inner-Outer Bracket Model-B",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "where \u03b3 is the expected bracket length ratio and is approximated by the average sentence length ratio computed using the whole parallel corpus. For Chinese-English, \u03b3 = 1/1.3 = 0.77. In practice, this estimation is quite reliable.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inner-Outer Bracket Model-B",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "The center model P ( \u03b4 f |\u03b4 e , e) is harder. It is conditioned on the translational equivalence between the English bracket and its projection. We compute the expected \u03b4 f by averaging the weighted expected centers from all the English words in \u03b4 e as in Eqn. 9.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inner-Outer Bracket Model-B",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "E{ \u03b4 f |\u03b4 e , e} = J j=0 j \u2022 P (j|\u03b4 e , e) J j=0 j \u2022 i\u2208\u03b4 e P (f j |e i ) J j =0 i\u2208\u03b4 e P (f j |e i ) . (9)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inner-Outer Bracket Model-B",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "The expectations of ( \u03b4 f , w \u03b4 f ) from Eqn. 8 and Eqn. 9 give a reliable starting point for a local search for the optimal estimation of ( \u02c6 \u03b4 f , \u0175\u03b4 f ) as in Eqn 10:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inner-Outer Bracket Model-B",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "( \u02c6 \u03b4 f , \u0175\u03b4 f ) = arg max {( \u03b4 f ,w \u03b4 f )} P (\u03b4 f \u2208 |\u03b4 e \u2208 )P (\u03b4 f / \u2208 |\u03b4 e / \u2208 ), (",
+                        "eq_num": "10"
+                    }
+                ],
+                "section": "Inner-Outer Bracket Model-B",
+                "sec_num": "3.2"
+            },
+            {
+                "text": ")",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inner-Outer Bracket Model-B",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "where the score functions of",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inner-Outer Bracket Model-B",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "P (\u03b4 f \u2208 |\u03b4 e \u2208 )P (\u03b4 f / \u2208 |\u03b4 e / \u2208",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inner-Outer Bracket Model-B",
+                "sec_num": "3.2"
+            },
+            {
+                "text": ") are in Eqn. 4 with the word alignment explicitly given from the previous iteration. For the very first iteration, full alignment is assumed; this means that every word pair is connected in the parallel sentences. During the local search in Eqn. 10, one can choose the top-1 (Viterbi) ( \u02c6 \u03b4 f , \u0175\u03b4 f ) or top-N candidates and normalize over these candidates to obtain the posteriors. Except for the local search of ( \u02c6 \u03b4 f , \u0175\u03b4 f ), the remainder EM steps are similar to Bracket Model-A, though with different interpretations.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inner-Outer Bracket Model-B",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "By performing local search in Eqn. 10, Model-B localizes hidden blocks more accurately than the scheme of the smoothed relative frequency in Model-A's EM iterations. The model is also more focused on the predictions in the inner part. Figure 3 summarizes the generative process of Model-B (BM-B).",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 242,
+                        "end": 243,
+                        "text": "3",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Inner-Outer Bracket Model-B",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "f1 f2 f3 f4 e1 e2 e3 [e1] e2 e3 e1 [e2] e3 [e1 e2] e3 e1 [e2 e3] \u2026. f2 f3 f4 e1 e2 f2 f3 e2 f2 e2 \u2026 \u2026 ) , ( f f w \u03b4 \u03b4 \u0398 ] 2 , 2 [ = e \u03b4 ] 1 , 1 [ = e \u03b4 ] 2 , 1 [ = e \u03b4 ] 3 , 2 [ = e \u03b4 inner inner ) , ( f f w \u03b4 \u03b4 \u0398 \u2026 \u2026 inner Figure 3: Generative Bracket Model-B",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inner-Outer Bracket Model-B",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "The null word model allows words to be aligned to nothing. In the traditional IBM models, there is a universal null word which is attached to every sentence pair to compete with word generators. In our inner-outer bracket models, we use two contextspecific null word models which use both the left and right context as competitors in the generative process for each observation f j : P (f j |f j-1 , e) and P (f j |f j+1 , e). This is similar to the approach in (Toutanova et al., 2002) , in which the null word model is part of an extended HMM using left context only. With two null word models, we can associate f j with its left or right context (i.e., a null link) when the null word models are very strong, or when the word's alignment is too far from the expected center \u02c6 \u03b4 f in Eqn. 9.",
+                "cite_spans": [
+                    {
+                        "start": 462,
+                        "end": 486,
+                        "text": "(Toutanova et al., 2002)",
+                        "ref_id": "BIBREF11"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "A Null Word Model",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "In the HMM framework, (Ge, 2004) proposed a maximum-posterior method which worked much better than Viterbi for Arabic to English translations. The difference between maximum-posterior and Viterbi, in a nutshell, is that while Viterbi computes the best state sequence given the observation, the maximum-posterior computes the best state one at a time.",
+                "cite_spans": [
+                    {
+                        "start": 22,
+                        "end": 32,
+                        "text": "(Ge, 2004)",
+                        "ref_id": "BIBREF1"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "A Max-Posterior for Word Alignment",
+                "sec_num": "4"
+            },
+            {
+                "text": "In the terminology of HMM, let the states be the words in the foreign sentence f J 1 and observations be the words in the English sentence e T 1 . We use the subscript t to note the fact that e t is observed (or emitted) at time step t. The posterior probabilities P (f j |e t ) (state given observation) are obtained after the forward-backward training. The maximumposterior word alignments are obtained by first com-puting a pair (j, t) * : (j, t) * = arg max (j,t)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "A Max-Posterior for Word Alignment",
+                "sec_num": "4"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "P (f j |e t ),",
+                        "eq_num": "(11)"
+                    }
+                ],
+                "section": "A Max-Posterior for Word Alignment",
+                "sec_num": "4"
+            },
+            {
+                "text": "that is, the point at which the posterior is maximum. The pair (j, t) defines a word pair (f j , e t ) which is then aligned. The procedure continues to find the next maximum in the posterior matrix. Contrast this with Viterbi alignment where one computes",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "A Max-Posterior for Word Alignment",
+                "sec_num": "4"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "f T 1 = arg max {f T 1 } P (f 1 , f 2 , \u2022 \u2022 \u2022 , f T |e T 1 ), (",
+                        "eq_num": "12"
+                    }
+                ],
+                "section": "A Max-Posterior for Word Alignment",
+                "sec_num": "4"
+            },
+            {
+                "text": ")",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "A Max-Posterior for Word Alignment",
+                "sec_num": "4"
+            },
+            {
+                "text": "We observe, in parallel corpora, that when one word translates into multiple words in another language, it usually translates into a contiguous sequence of words. Therefore, we impose a contiguity constraint on word alignments. When one word f j aligns to multiple English words, the English words must be contiguous in e and vice versa. The algorithm to find word alignments using maxposterior with contiguity constraint is illustrated in Algorithm 1. end if 7: end while",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "A Max-Posterior for Word Alignment",
+                "sec_num": "4"
+            },
+            {
+                "text": "The algorithm terminates when there isn't any 'next' posterior maximum to be found. By definition, there are at most JxT 'next' maximums in the posterior matrix. And because of the contiguity constraint, not all (f j , e t ) pairs are valid alignments. The algorithm is sure to terminate. The algorithm is, in a sense, directionless, for one f j can align to multiple e t 's and vise versa as long as the multiple connections are contiguous. Viterbi, however, is directional in which one state can emit multiple observations but one observation can only come from one state.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "A Max-Posterior for Word Alignment",
+                "sec_num": "4"
+            },
+            {
+                "text": "We evaluate the performances of our proposed models in terms of word alignment accuracy and translation quality. For word alignment, we have 260 hand-aligned sentence pairs with a total of 4676 word pair links. The 260 sentence pairs are randomly selected from the CTTP 1 corpus. They were then word aligned by eight bilingual speakers. In this set, we have one-to-one, one-to-many and many-to-many alignment links. If a link has one target functional word, it is considered to be a functional link (Examples of funbctional words are prepositions, determiners, etc. There are in total 87 such functional words in our experiments). We report the overall Fmeasures as well as F-measures for both content and functional word links. Our significance test shows an overall interval of \u00b11.56% F-measure at a 95% confidence level.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "5"
+            },
+            {
+                "text": "For training data, the small training set has 5000 sentence pairs selected from XinHua news stories with a total of 131K English words and 125K Chinese words. The large training set has 181K sentence pairs (5k+176K); and the additional 176K sentence pairs are from FBIS and Sinorama, which has in total 6.7 million English words and 5.8 million Chinese words.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "5"
+            },
+            {
+                "text": "The baseline is our implementation of HMM with the maximum-posterior algorithm introduced in section 4. The HMMs are trained unidirectionally. IBM Model-4 is trained with GIZA++ using the best reported settings in (Och and Ney, 2003) . A few parameters, especially the maximum fertility, are tuned for GIZA++'s optimal performance. We collect bidirectional (bi) refined word alignment by growing the intersection of Chinese-to-English (CE) alignments and English-to-Chinese (EC) alignments with the neighboring unaligned word pairs which appear in the union similar to the \"final-and\" approaches (Koehn, 2003; Och and Ney, 2003; Tillmann, 2003) . best baseline, better than bidirectional refined word alignments from GIZA M4 and the HMM Viterbi aligners.",
+                "cite_spans": [
+                    {
+                        "start": 214,
+                        "end": 233,
+                        "text": "(Och and Ney, 2003)",
+                        "ref_id": "BIBREF7"
+                    },
+                    {
+                        "start": 596,
+                        "end": 609,
+                        "text": "(Koehn, 2003;",
+                        "ref_id": "BIBREF4"
+                    },
+                    {
+                        "start": 610,
+                        "end": 628,
+                        "text": "Och and Ney, 2003;",
+                        "ref_id": "BIBREF7"
+                    },
+                    {
+                        "start": 629,
+                        "end": 644,
+                        "text": "Tillmann, 2003)",
+                        "ref_id": "BIBREF10"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Baseline Systems",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "We trained HMM lexicon P (f |e) to initialize the inner-outer Bracket models. Afterwards, up to 15-20 EM iterations are carried out. Iteration starts from the fully aligned 2 sentence pairs, which give an F-measure of 9.28% at iteration one.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inner-Outer Bracket Models",
+                "sec_num": "5.2"
+            },
+            {
+                "text": "Figure 4 shows the performance of Model-A (BM-A) trained on the small data set. For each English bracket, Top-1 means only the fractional counts from the Top-1 projection are collected, Top-all means counts from all possible projections are collected. Inside means the fractional counts are collected from the inner part of the block only; and outside means they are collected from the outer parts only. Using the Top-1 projection from the inner parts of the block (top-1-inside) gives the best performance: an Fmeasure of 72.29%, or a 7.5% absolute improvement over the best baseline at iteration 5. Figure 5 shows w/null means we applied the proposed Null word model in section 3.3 to infer null links. We also predefined a list of 15 English function words, for which there might be no corresponding Chinese words as translations. These 15 English words are \"a, an, the, of, to, for, by, up, be, been, being, does, do, did, -\". In the drop-null experiments, the links containing these predefined function words are simply dropped Empirically we found that doing more than 5 iterations lead to overfitting. The peak performance in our model is usually achieved around iteration 4\u223c5. At iteration 5, setting \"BM-B Top-1\" gives an F-measure of 73.93% which is better than BM-A's best performance (72.29%). This is because Model B leverages a local search for less noisy blocks and hence the inner part is more accurately generated (which in turn means the outer part is also more accurate). From this point on, all of our experiments are using Model B. With smoothing, BM-B improves to 74.46%. After applying the null word model, we get 75.20%. By simply dropping links containing the 15 English functional words, we get 76.24%, which is significantly better than our best baseline obtained from even the large training set (HMM EC-P: 71.92%). ",
+                "cite_spans": [
+                    {
+                        "start": 861,
+                        "end": 930,
+                        "text": "\"a, an, the, of, to, for, by, up, be, been, being, does, do, did, -\".",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 7,
+                        "end": 8,
+                        "text": "4",
+                        "ref_id": "FIGREF3"
+                    },
+                    {
+                        "start": 608,
+                        "end": 609,
+                        "text": "5",
+                        "ref_id": "FIGREF4"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Small Data Track",
+                "sec_num": "5.2.1"
+            },
+            {
+                "text": "Figure 6 shows performance pictures of model BM-B on the large training set. Without dropping English functional words, the best performance is 80.38% at iteration 4 using the Top-1 projection together with the null word models. By additionally dropping the links containing the 15 functional English words, we get 81.47%. These results are all significantly better than our strongest baseline system: 71.92% F-measure using HMM EC-P (70.24% using bidirectional Model-4 for comparisons).",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 7,
+                        "end": 8,
+                        "text": "6",
+                        "ref_id": "FIGREF6"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Large Data Track",
+                "sec_num": "5.2.2"
+            },
+            {
+                "text": "On this data set, we experimented with different maximum bracket length limits, from one word (unigram) to nine-gram. Results show that a maximum bracket length of four is already optimal (79.3% with top-1 projection), increased from 62.4% when maximum length is limited to one. No improvements are observed using longer than five-gram.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Large Data Track",
+                "sec_num": "5.2.2"
+            },
+            {
+                "text": "Our intuition was that good blocks can improve word alignment and, in turn, good word alignment can lead to better block selection. The experimental results above support the first claim. Now we consider the second claim that good word alignment leads to better block selection.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Evaluate Blocks in the EM Iterations",
+                "sec_num": "5.3"
+            },
+            {
+                "text": "Given reference human word alignment, we extract reference blocks up to five-gram phrases on Chinese. The block extraction procedure is based on the procedures in (Tillmann, 2003) .",
+                "cite_spans": [
+                    {
+                        "start": 163,
+                        "end": 179,
+                        "text": "(Tillmann, 2003)",
+                        "ref_id": "BIBREF10"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Evaluate Blocks in the EM Iterations",
+                "sec_num": "5.3"
+            },
+            {
+                "text": "During EM, we output all the hidden blocks actually inferred at each iteration, then we evaluate the precision, recall and F-measure of the hidden blocks according to the extracted reference blocks. The results are shown in Figure 7 . Because we extract all with a confidence interval of \u00b11.56%.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 231,
+                        "end": 232,
+                        "text": "7",
+                        "ref_id": "FIGREF7"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Evaluate Blocks in the EM Iterations",
+                "sec_num": "5.3"
+            },
+            {
+                "text": "We also carried out the translation experiments using the best settings for Inner-Outer BM-B (i.e. BM-Bdrop) on the TIDES Chinese-English 2003 test set. We trained our models on 354,252 test-specific sentence pairs drawn from LDC-supplied parallel corpora. On this training data, we ran 5 iterations of EM using BM-B to infer word alignments. A monotone decoder similar to (Tillmann and Ney, 2003) with a trigram language model3 is set up for translations. We report case sensitive Bleu (Papineni et al., 2002) ",
+                "cite_spans": [
+                    {
+                        "start": 373,
+                        "end": 397,
+                        "text": "(Tillmann and Ney, 2003)",
+                        "ref_id": "BIBREF9"
+                    },
+                    {
+                        "start": 487,
+                        "end": 510,
+                        "text": "(Papineni et al., 2002)",
+                        "ref_id": "BIBREF8"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Translation Quality Evaluations",
+                "sec_num": "5.4"
+            },
+            {
+                "text": "Our main contributions are two novel Inner-Outer Bracket models based on segmentations induced by hidden blocks. Modeling the Inner-Outer hidden segmentations, we get significantly improved word alignments for both the small training set and the large training set over the widely-practiced bidirectional IBM Model-4 alignment. We also show significant improvements in translation quality using our proposed bracket models. Robustness to noisy blocks merits further investigation.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion",
+                "sec_num": "6"
+            },
+            {
+                "text": "This work is supported by DARPA under contract number N66001-99-28916.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Acknowledgement",
+                "sec_num": "7"
+            },
+            {
+                "text": "Trained on 1-billion-word ViaVoice English data; the same data is used to build our True Caser.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            }
+        ],
+        "back_matter": [],
+        "bib_entries": {
+            "BIBREF0": {
+                "ref_id": "b0",
+                "title": "The mathematics of statistical machine translation: Parameter estimation",
+                "authors": [
+                    {
+                        "first": "F",
+                        "middle": [],
+                        "last": "Brown",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Stephen",
+                        "middle": [
+                            "A"
+                        ],
+                        "last": "Della Pietra",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Vincent",
+                        "middle": [
+                            "J"
+                        ],
+                        "last": "Della Pietra",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Robert",
+                        "middle": [
+                            "L"
+                        ],
+                        "last": "Mercer",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1993,
+                "venue": "Computational Linguistics",
+                "volume": "19",
+                "issue": "",
+                "pages": "263--331",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "F. Brown, Stephen A. Della Pietra, Vincent. J. Della Pietra, and Robert L. Mercer. 1993. The mathematics of statistical machine translation: Parameter estimation. In Computational Linguis- tics, volume 19(2), pages 263-331.",
+                "links": null
+            },
+            "BIBREF1": {
+                "ref_id": "b1",
+                "title": "A maximum posterior method for word alignment",
+                "authors": [
+                    {
+                        "first": "Niyu",
+                        "middle": [],
+                        "last": "Ge",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2004,
+                "venue": "Presentation given at DARPA/TIDES MT workshop",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Niyu Ge. 2004. A maximum posterior method for word alignment. In Presentation given at DARPA/TIDES MT workshop.",
+                "links": null
+            },
+            "BIBREF2": {
+                "ref_id": "b2",
+                "title": "A unified statistical model for generalized translation memory system",
+                "authors": [
+                    {
+                        "first": "J",
+                        "middle": [
+                            "X"
+                        ],
+                        "last": "Huang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "W",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "M",
+                        "middle": [],
+                        "last": "Zhou",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2002,
+                "venue": "Chunkmt: Statistical machine translation",
+                "volume": "",
+                "issue": "",
+                "pages": "173--180",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "J.X. Huang, W. Wang, and M. Zhou. 2003. A unified statistical model for generalized translation mem- ory system. In Machine Translation Summit IX, pages 173-180, New Orleans, USA, September 23- 27. Philipp Koehn and Kevin Knight. 2002. Chunkmt: Statistical machine translation with richer linguis- tic knowledge. Draft, Unpublished.",
+                "links": null
+            },
+            "BIBREF3": {
+                "ref_id": "b3",
+                "title": "Statistical phrase-based machine translation",
+                "authors": [
+                    {
+                        "first": "Philipp",
+                        "middle": [],
+                        "last": "Koehn",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Franz",
+                        "middle": [],
+                        "last": "",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Josef",
+                        "middle": [],
+                        "last": "Och",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Daniel",
+                        "middle": [],
+                        "last": "Marcu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2003,
+                "venue": "Proc. of HLT-NAACL 2003",
+                "volume": "",
+                "issue": "",
+                "pages": "48--54",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Philipp Koehn, Franz Josef Och, and Daniel Marcu. 2003. Statistical phrase-based machine transla- tion. In Proc. of HLT-NAACL 2003, pages 48-54, Edmonton, Canada, May-June.",
+                "links": null
+            },
+            "BIBREF4": {
+                "ref_id": "b4",
+                "title": "Noun phrase translation",
+                "authors": [
+                    {
+                        "first": "Philipp",
+                        "middle": [],
+                        "last": "Koehn",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2003,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Philipp Koehn. 2003. Noun phrase translation. In Ph.D. Thesis, University of Southern California, ISI.",
+                "links": null
+            },
+            "BIBREF5": {
+                "ref_id": "b5",
+                "title": "A phrasebased, joint probability model for statistical machine translation",
+                "authors": [
+                    {
+                        "first": "Daniel",
+                        "middle": [],
+                        "last": "Marcu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "William",
+                        "middle": [],
+                        "last": "Wong",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2002,
+                "venue": "Proc. of the Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "133--139",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Daniel Marcu and William Wong. 2002. A phrase- based, joint probability model for statistical ma- chine translation. In Proc. of the Conference on Empirical Methods in Natural Language Process- ing, pages 133-139, Philadelphia, PA, July 6-7.",
+                "links": null
+            },
+            "BIBREF6": {
+                "ref_id": "b6",
+                "title": "Discriminative training and maximum entropy models for statistical machine translation",
+                "authors": [
+                    {
+                        "first": "Franz",
+                        "middle": [
+                            "J"
+                        ],
+                        "last": "Och",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hermann",
+                        "middle": [],
+                        "last": "Ney",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2002,
+                "venue": "Proceedings of the 40th Annual Meeting of ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "440--447",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Franz J. Och and Hermann Ney. 2002. Discrimi- native training and maximum entropy models for statistical machine translation. In Proceedings of the 40th Annual Meeting of ACL, pages 440-447.",
+                "links": null
+            },
+            "BIBREF7": {
+                "ref_id": "b7",
+                "title": "A systematic comparison of various statistical alignment models",
+                "authors": [
+                    {
+                        "first": "Franz",
+                        "middle": [
+                            "J"
+                        ],
+                        "last": "Och",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hermann",
+                        "middle": [],
+                        "last": "Ney",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2003,
+                "venue": "Computational Linguistics",
+                "volume": "29",
+                "issue": "",
+                "pages": "19--51",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Franz J. Och and Hermann Ney. 2003. A system- atic comparison of various statistical alignment models. In Computational Linguistics, volume 29, pages 19-51.",
+                "links": null
+            },
+            "BIBREF8": {
+                "ref_id": "b8",
+                "title": "Bleu: a method for automatic evaluation of machine translation",
+                "authors": [
+                    {
+                        "first": "Kishore",
+                        "middle": [],
+                        "last": "Papineni",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Salim",
+                        "middle": [],
+                        "last": "Roukos",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Todd",
+                        "middle": [],
+                        "last": "Ward",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Wei-Jing",
+                        "middle": [],
+                        "last": "Zhu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2002,
+                "venue": "Proc. of the 40th Annual Conf. of the ACL (ACL 02)",
+                "volume": "",
+                "issue": "",
+                "pages": "311--318",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Kishore Papineni, Salim Roukos, Todd Ward, and Wei-Jing Zhu. 2002. Bleu: a method for auto- matic evaluation of machine translation. In Proc. of the 40th Annual Conf. of the ACL (ACL 02), pages 311-318, Philadelphia, PA, July.",
+                "links": null
+            },
+            "BIBREF9": {
+                "ref_id": "b9",
+                "title": "Word reordering and a dp beam search algorithm for statistical machine translation",
+                "authors": [
+                    {
+                        "first": "Christoph",
+                        "middle": [],
+                        "last": "Tillmann",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hermann",
+                        "middle": [],
+                        "last": "Ney",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2003,
+                "venue": "In Computational Linguistics",
+                "volume": "29",
+                "issue": "1",
+                "pages": "97--133",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Christoph Tillmann and Hermann Ney. 2003. Word reordering and a dp beam search algorithm for statistical machine translation. In Computational Linguistics, volume 29(1), pages 97-133.",
+                "links": null
+            },
+            "BIBREF10": {
+                "ref_id": "b10",
+                "title": "A projection extension algorithm for statistical machine translation",
+                "authors": [
+                    {
+                        "first": "Christoph",
+                        "middle": [],
+                        "last": "Tillmann",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2003,
+                "venue": "Proc. of the Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Christoph Tillmann. 2003. A projection extension algorithm for statistical machine translation. In Proc. of the Conference on Empirical Methods in Natural Language Processing.",
+                "links": null
+            },
+            "BIBREF11": {
+                "ref_id": "b11",
+                "title": "Extensions to hmm-based statistical word alignment models",
+                "authors": [
+                    {
+                        "first": "Kristina",
+                        "middle": [],
+                        "last": "Toutanova",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "H",
+                        "middle": [],
+                        "last": "Tolga Ilhan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [
+                            "D"
+                        ],
+                        "last": "Manning",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2002,
+                "venue": "Proc. of the Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Kristina Toutanova, H. Tolga Ilhan, and Christo- pher D. Manning. 2002. Extensions to hmm-based statistical word alignment models. In Proc. of the Conference on Empirical Methods in Natural Lan- guage Processing, Philadelphia, PA, July 6-7.",
+                "links": null
+            },
+            "BIBREF12": {
+                "ref_id": "b12",
+                "title": "Hmm based word alignment in statistical machine translation",
+                "authors": [
+                    {
+                        "first": "S",
+                        "middle": [],
+                        "last": "Vogel",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hermann",
+                        "middle": [],
+                        "last": "Ney",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "C",
+                        "middle": [],
+                        "last": "Tillmann",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1996,
+                "venue": "Proc. The 16th Int. Conf. on Computational Lingustics, (Coling'96)",
+                "volume": "",
+                "issue": "",
+                "pages": "836--841",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "S. Vogel, Hermann Ney, and C. Tillmann. 1996. Hmm based word alignment in statistical machine translation. In Proc. The 16th Int. Conf. on Com- putational Lingustics, (Coling'96), pages 836-841, Copenhagen, Denmark.",
+                "links": null
+            },
+            "BIBREF13": {
+                "ref_id": "b13",
+                "title": "Statistical machine translation based on hierarchical phrases",
+                "authors": [
+                    {
+                        "first": "Taro",
+                        "middle": [],
+                        "last": "Watanabe",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kenji",
+                        "middle": [],
+                        "last": "Imamura",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Eiichiro",
+                        "middle": [],
+                        "last": "Sumita",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2002,
+                "venue": "9th International Conference on Theoretical and Methodological Issues",
+                "volume": "",
+                "issue": "",
+                "pages": "188--198",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Taro Watanabe, Kenji Imamura, and Eiichiro Sumita. 2002. Statistical machine translation based on hierarchical phrases. In 9th International Conference on Theoretical and Methodological Is- sues, pages 188-198, Keihanna, Japan, March.",
+                "links": null
+            },
+            "BIBREF14": {
+                "ref_id": "b14",
+                "title": "Chunk-based statistical translation",
+                "authors": [
+                    {
+                        "first": "Taro",
+                        "middle": [],
+                        "last": "Watanabe",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Eiichiro",
+                        "middle": [],
+                        "last": "Sumita",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hiroshi",
+                        "middle": [
+                            "G"
+                        ],
+                        "last": "Okuno",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2003,
+                "venue": "41st Annual Meeting of the ACL (ACL 2003)",
+                "volume": "",
+                "issue": "",
+                "pages": "303--310",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Taro Watanabe, Eiichiro Sumita, and Hiroshi G. Okuno. 2003. Chunk-based statistical transla- tion. In In 41st Annual Meeting of the ACL (ACL 2003), pages 303-310, Sapporo, Japan.",
+                "links": null
+            },
+            "BIBREF15": {
+                "ref_id": "b15",
+                "title": "Stochastic inversion transduction grammars and bilingual parsing of parallel corpora",
+                "authors": [
+                    {
+                        "first": "Dekai",
+                        "middle": [],
+                        "last": "Wu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1997,
+                "venue": "Computational Linguistics",
+                "volume": "23",
+                "issue": "",
+                "pages": "377--403",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Dekai Wu. 1997. Stochastic inversion transduction grammars and bilingual parsing of parallel cor- pora. In Computational Linguistics, volume 23(3), pages 377-403.",
+                "links": null
+            },
+            "BIBREF16": {
+                "ref_id": "b16",
+                "title": "Syntax-based statistical translation model",
+                "authors": [
+                    {
+                        "first": "K",
+                        "middle": [],
+                        "last": "Yamada",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kevin",
+                        "middle": [],
+                        "last": "Knight",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2001,
+                "venue": "Proceedings of the Conference of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "K. Yamada and Kevin. Knight. 2001. Syntax-based statistical translation model. In Proceedings of the Conference of the Association for Computational Linguistics (ACL-2001).",
+                "links": null
+            },
+            "BIBREF17": {
+                "ref_id": "b17",
+                "title": "Improvements in phrasebased statistical machine translation",
+                "authors": [
+                    {
+                        "first": "R",
+                        "middle": [],
+                        "last": "Zens",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "H",
+                        "middle": [],
+                        "last": "Ney",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2004,
+                "venue": "Proceedings of the Human Language Technology Conference (HLT-NAACL)s",
+                "volume": "",
+                "issue": "",
+                "pages": "257--264",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "R. Zens and H. Ney. 2004. Improvements in phrase- based statistical machine translation. In Pro- ceedings of the Human Language Technology Con- ference (HLT-NAACL)s, pages 257-264, Boston, MA, May.",
+                "links": null
+            }
+        },
+        "ref_entries": {
+            "FIGREF0": {
+                "num": null,
+                "text": "Figure 1: Segmentation by a Block",
+                "uris": null,
+                "fig_num": null,
+                "type_str": "figure"
+            },
+            "FIGREF1": {
+                "num": null,
+                "text": "Figure 2: Illustration of generative Bracket Model-A",
+                "uris": null,
+                "fig_num": "2",
+                "type_str": "figure"
+            },
+            "FIGREF3": {
+                "num": null,
+                "text": "Figure 4: BM-A with different settings on small data",
+                "uris": null,
+                "fig_num": "4",
+                "type_str": "figure"
+            },
+            "FIGREF4": {
+                "num": null,
+                "text": "Figure 5: BM-B with different settings on small data",
+                "uris": null,
+                "fig_num": "5",
+                "type_str": "figure"
+            },
+            "FIGREF6": {
+                "num": null,
+                "text": "Figure 6: BM-B with different settings on large data",
+                "uris": null,
+                "fig_num": "6",
+                "type_str": "figure"
+            },
+            "FIGREF7": {
+                "num": null,
+                "text": "Figure 7: A Direct Eval. of Blocks in BM-B",
+                "uris": null,
+                "fig_num": "7",
+                "type_str": "figure"
+            },
+            "TABREF1": {
+                "content": "<table><tr><td>P (\u03b4 f \u2208 |\u03b4 e \u2208 ) and P (\u03b4 f / \u2208 |\u03b4 e / \u2208 ) must satisfy the / \u2208 only generates \u03b4 f /</td></tr></table>",
+                "type_str": "table",
+                "text": "constraints of segmentations induced by the hidden block \u03b4 [] = (\u03b4 e , \u03b4 f ). The English words \u03b4 e \u2208 inside the block can only generate the words in \u03b4 f \u2208 and nothing else; likewise \u03b4 e Therefore, our proposed model in Eqn. 3 combines the two costs and requires both inner and outer parts to be explained well at the same time.",
+                "html": null,
+                "num": null
+            },
+            "TABREF3": {
+                "content": "<table><tr><td colspan=\"2\">F-measure(%)</td><td colspan=\"3\">Func Cont Both</td></tr><tr><td/><td colspan=\"4\">HMM EC-P 54.69 69.99 64.78</td></tr><tr><td>Small</td><td>HMM EC-V HMM CE-P</td><td>31.38 51.44</td><td>53.56 69.35</td><td>55.59 62.69</td></tr><tr><td/><td>HMM CE-V</td><td>31.43</td><td>63.84</td><td>55.45</td></tr><tr><td/><td colspan=\"3\">HMM EC-P 60.08 78.01</td><td>71.92</td></tr><tr><td>Large</td><td>HMM EC-V HMM CE-P</td><td>32.80 58.45</td><td colspan=\"2\">74.10 79.44 71.84 64.26</td></tr><tr><td/><td>HMM CE-V</td><td>35.41</td><td>79.12</td><td>68.33</td></tr><tr><td>Small</td><td>GIZA MH-bi GIZA M4-bi</td><td>45.63 48.80</td><td>69.48 73.68</td><td>60.08 63.75</td></tr><tr><td>Large</td><td>GIZA MH-bi GIZA M4-bi</td><td>49.13 52.88</td><td>76.51 81.76</td><td>65.67 70.24</td></tr><tr><td>-</td><td>Fully-Align 2</td><td>5.10</td><td>15.84</td><td>9.28</td></tr></table>",
+                "type_str": "table",
+                "text": "Table 1 summarizes our baseline with different settings. Table 1 shows that HMM EC-P gives the",
+                "html": null,
+                "num": null
+            },
+            "TABREF4": {
+                "content": "<table><tr><td>summarizes word alignment performances</td></tr><tr><td>of Inner-Outer BM-B in different settings. Overall,</td></tr><tr><td>without the handcrafted function word list, BM-B</td></tr><tr><td>gives about 8% absolute improvement in F-measure</td></tr><tr><td>on the large training set and 9% for the small set</td></tr></table>",
+                "type_str": "table",
+                "text": "",
+                "html": null,
+                "num": null
+            },
+            "TABREF5": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "BM-B with different settings",
+                "html": null,
+                "num": null
+            },
+            "TABREF6": {
+                "content": "<table><tr><td>Settings</td><td>BleuC</td></tr><tr><td colspan=\"2\">Baseline (HMM phrases and lexicon) 0.2276</td></tr><tr><td>Bracket phrases and HMM lexicon</td><td>0.2526</td></tr><tr><td>Bracket lexicon and HMM phrases</td><td>0.2325</td></tr><tr><td>Bracket (phrases and lexicon)</td><td>0.2750</td></tr></table>",
+                "type_str": "table",
+                "text": "score BleuC for all experiments. The baseline system (HMM ) used phrase pairs built from the HMM-EC-P maximum posterior word alignment and the corresponding lexicons. The baseline BleuC score is 0.2276 \u00b1 0.015. If we use the phrase pairs built from the bracket model instead (but keep the HMM trained lexicons), we get case sensitive BleuC score 0.2526. The improvement is statistically significant. If on the other hand, we use baseline phrase pairs with bracket model lexicons, we get a BleuC score 0.2325, which is only a marginal improvement. If we use both phrase pairs and lexicons from the bracket model, we get a case sensitive BleuC score 0.2750, which is a statistically significant improvement. The results are summarized in Table3. Improved case sensitive BleuC using BM-B Overall, using Model-B, we improve translation quality from 0.2276 to 0.2750 in case sensitive BleuC score.",
+                "html": null,
+                "num": null
+            }
+        }
+    }
+}

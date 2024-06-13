@@ -1,0 +1,2898 @@
+{
+    "paper_id": "D16-1165",
+    "header": {
+        "generated_with": "S2ORC 1.0.0",
+        "date_generated": "2023-06-16T12:31:41.546226Z"
+    },
+    "title": "It Takes Three to Tango: Triangulation Approach to Answer Ranking in Community Question Answering",
+    "authors": [
+        {
+            "first": "Preslav",
+            "middle": [],
+            "last": "Nakov",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "Arabic Language Technologies Research Group",
+                "institution": "HBKU",
+                "location": {}
+            },
+            "email": "pnakov@qf.org.qa"
+        },
+        {
+            "first": "Llu\u00eds",
+            "middle": [],
+            "last": "M\u00e0rquez",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "Arabic Language Technologies Research Group",
+                "institution": "HBKU",
+                "location": {}
+            },
+            "email": "lmarquez@qf.org.qa"
+        },
+        {
+            "first": "Francisco",
+            "middle": [],
+            "last": "Guzm\u00e1n",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "Arabic Language Technologies Research Group",
+                "institution": "HBKU",
+                "location": {}
+            },
+            "email": "fguzman@qf.org.qa"
+        }
+    ],
+    "year": "",
+    "venue": null,
+    "identifiers": {},
+    "abstract": "We address the problem of answering new questions in community forums, by selecting suitable answers to already asked questions. We approach the task as an answer ranking problem, adopting a pairwise neural network architecture that selects which of two competing answers is better. We focus on the utility of the three types of similarities occurring in the triangle formed by the original question, the related question, and an answer to the related comment, which we call relevance, relatedness, and appropriateness. Our proposed neural network models the interactions among all input components using syntactic and semantic embeddings, lexical matching, and domain-specific features. It achieves state-of-the-art results, showing that the three similarities are important and need to be modeled together. Our experiments demonstrate that all feature types are relevant, but the most important ones are the lexical similarity features, the domain-specific features, and the syntactic and semantic embeddings.",
+    "pdf_parse": {
+        "paper_id": "D16-1165",
+        "_pdf_hash": "",
+        "abstract": [
+            {
+                "text": "We address the problem of answering new questions in community forums, by selecting suitable answers to already asked questions. We approach the task as an answer ranking problem, adopting a pairwise neural network architecture that selects which of two competing answers is better. We focus on the utility of the three types of similarities occurring in the triangle formed by the original question, the related question, and an answer to the related comment, which we call relevance, relatedness, and appropriateness. Our proposed neural network models the interactions among all input components using syntactic and semantic embeddings, lexical matching, and domain-specific features. It achieves state-of-the-art results, showing that the three similarities are important and need to be modeled together. Our experiments demonstrate that all feature types are relevant, but the most important ones are the lexical similarity features, the domain-specific features, and the syntactic and semantic embeddings.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            }
+        ],
+        "body_text": [
+            {
+                "text": "In recent years, community Question Answering (cQA) forums, such as StackOverflow, Quora, Qatar Living, etc., have gained a lot of popularity as a source of knowledge and information. These forums typically organize their content in the form of multiple topic-oriented question-comment threads, where a question posed by a user is followed by a list of other users' comments, which intend to answer the question.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Many of such on-line forums are not moderated, which often results in (a) noisy and (b) redundant content, as users tend to deviate from the question and start asking new questions or engage in conversations, fights, etc.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Web forums try to solve problem (a) in various ways, most often by allowing users to up/downvote answers according to their perceived usefulness, which makes it easier to retrieve useful answers in the future. Unfortunately, this negatively penalizes recent comments, which might be the most relevant and updated ones. This is due to the time it takes for a comment to accumulate votes. Moreover, voting is prone to abuse by forum trolls (Mihaylov et al., 2015; Mihaylov and Nakov, 2016a) .",
+                "cite_spans": [
+                    {
+                        "start": 438,
+                        "end": 461,
+                        "text": "(Mihaylov et al., 2015;",
+                        "ref_id": "BIBREF20"
+                    },
+                    {
+                        "start": 462,
+                        "end": 488,
+                        "text": "Mihaylov and Nakov, 2016a)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Problem (b) is harder to solve, as it requires that users verify that their question has not been asked before, possibly in a slightly different way. This search can be hard, especially for less experienced users as most sites only offer basic search, e.g., a site search by Google. Yet, solving problem (b) automatically is important both for site owners, as they want to prevent question duplication as much as possible, and for users, as finding an answer to their questions without posting means immediate satisfaction of their information needs.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "In this paper, we address the general problem of finding good answers to a given new question (referred to as original question) in one such community-created forum. More specifically, we use a pairwise deep neural network to rank comments retrieved from different question-comment threads according to their relevance as answers to the original question being asked.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "A key feature of our approach is that we investigate the contribution of the edges in the triangle formed by the pairwise interactions between the original question, the related question, and the related comments to rank comments in a unified fashion. Additionally, we use three different sets of features that capture such similarity: lexical, distributed (semantics/syntax), and domain-specific knowledge.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "The experimental results show that addressing the answer ranking task directly, i.e., modelling only the similarity between the original question and the answer-candidate comments, yields very low results. The other two edges of the triangle are needed to obtain good results, i.e., the similarity between the original question and the related question and the similarity between the related question and the related comments. Both aspects add significant and cumulative improvements to the overall performance. Finally, we show that the full network, including the three pairs of similarities, outperforms the state-of-the-art on a benchmark dataset.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "The rest of the paper is organized as follows: Section 2 discusses the similarity triangle in answer ranking for cQA, Section 3 presents our pairwise neural network model for answering new questions in community forums, which integrates multiple levels of interaction, Section 4 describes the features we used, Section 5 presents our evaluation setup, the experiments and the results, Section 6 discusses some related work, and Section 7 wraps up the paper with a brief summary of the contributions and some possible directions for future work.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "2 The Similarity Triangle in cQA Figure 1 presents an example illustrating the similarity triangle that we use when solving the answer ranking problem in cQA. In the figure, q stands for the new question, q is an existing related question, and c is a comment within the thread of question q .",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 40,
+                        "end": 41,
+                        "text": "1",
+                        "ref_id": "FIGREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "The edge qc relates to the main cQA task addressed in this paper, i.e., deciding whether a comment for a potentially related question is a good answer to the original question. We will say that the relation captures the relevance of c for q.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "The edge qq represents the similarity between the original and the related questions. We will call this relation relatedness. ",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "depends on the insurer, Qatar Insurance Company said this in email to me:\"Thank you for your email! With regards to your query below, a foreigner is valid to drive in Doha with the following conditions: Foreign driver with his country valid driving license allowed driving only for one week from entry date Foreign driver with international valid driving license allowed driving for 6 months from entry date Foreign driver with GCC driving license allowed driving for 3 months from entry\". As an Aussie your driving licence should be transferable to a Qatar one with only the eyetest (temporary, then permanent once RP sorted). Finally, the edge q c represents the decision of whether c is a good answer for the question from its thread, q . We will call this relation appropriateness.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "c:",
+                "sec_num": null
+            },
+            {
+                "text": "In this particular example, q and q are indeed related, and c is a good answer for both q and q. 1In the past, the approaches to cQA were focused on using information from the new question q, an existing related question q , and a comment c within the thread of q , to solve different cQA sub-tasks.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "c:",
+                "sec_num": null
+            },
+            {
+                "text": "For example, answer selection, which selects the most appropriate comment c within the thread q , was addressed in SemEval-2015 Task 3 (Nakov et al., 2015) . Similarly, question-question similarity, which looks for the most related questions to a given question, was addressed by many authors (Jeon et al., 2005; Duan et al., 2008; Li and Manandhar, 2011; Zhou et al., 2015; dos Santos et al., 2015) .",
+                "cite_spans": [
+                    {
+                        "start": 135,
+                        "end": 155,
+                        "text": "(Nakov et al., 2015)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 293,
+                        "end": 312,
+                        "text": "(Jeon et al., 2005;",
+                        "ref_id": "BIBREF15"
+                    },
+                    {
+                        "start": 313,
+                        "end": 331,
+                        "text": "Duan et al., 2008;",
+                        "ref_id": "BIBREF6"
+                    },
+                    {
+                        "start": 332,
+                        "end": 355,
+                        "text": "Li and Manandhar, 2011;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 356,
+                        "end": 374,
+                        "text": "Zhou et al., 2015;",
+                        "ref_id": "BIBREF36"
+                    },
+                    {
+                        "start": 375,
+                        "end": 399,
+                        "text": "dos Santos et al., 2015)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "c:",
+                "sec_num": null
+            },
+            {
+                "text": "In this paper, we solve the cQA task problem 2 in a novel way by using the three types of similarities jointly. Our main hypothesis is that relevance, appropriateness, and relatedness are essential to finding the best answer in a community Question Answering setting. Below we present experimental results that support this hypothesis.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "c:",
+                "sec_num": null
+            },
+            {
+                "text": "As explained above, we tackle answer ranking as a three-way similarity problem, exploring similarity features that capture lexical, distributed (semantics and syntax), and domain-specific knowledge. To achieve this, we propose a pairwise neural network (NN) approach for the cQA task, which is inspired by our NN framework for machine translation evaluation (Guzm\u00e1n et al., 2015) . 3 The input of the NN consists of the original question q, two competing comments, c 1 and c 2 , and the questions from the threads of the two comments, q 1 and q 2 . The output of the network is a decision about which of the two comments is a better answer to q.",
+                "cite_spans": [
+                    {
+                        "start": 358,
+                        "end": 379,
+                        "text": "(Guzm\u00e1n et al., 2015)",
+                        "ref_id": "BIBREF11"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Neural Model for Answer Ranking",
+                "sec_num": "3"
+            },
+            {
+                "text": "The main properties of our NN approach can be summarized as follows: (i) it works in a pairwise fashion, which is appropriate for the ranking nature of the cQA problem; (ii) it allows for an easy incorporation of rich syntactic and semantic embedded representations of the input texts; (iii) it models non-linear relationships between all input elements (q, c 1 , c 2 , q 1 and q 2 ), which allows us to study the interactions and the impact of the three types of similarity (relevance, relatedness and appropriateness) when solving the answer ranking task.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Neural Model for Answer Ranking",
+                "sec_num": "3"
+            },
+            {
+                "text": "Our full NN model for pairwise answer ranking is depicted in Figure 2 . We have a binary classification task with input x = (q, q 1 , c 1 , q 2 , c 2 ), which should output 1 if c 1 is a better answer to the original question q than c 2 , and 0 otherwise. 4 In this setting, q 1 and q 2 are questions related to q, whose threads contain the comments c 1 and c 2 , respectively. They provide useful information to link the two comments to the original question. On the one hand, they allow to predict whether the comments are good answers within their respective threads. On the other hand, they allow to infer whether the questions for which the comments were produced are closely related to the original question. The pair of comments can belong to the same thread (i.e., q 1 \u2261 q 2 ) or they can come from different threads.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 68,
+                        "end": 69,
+                        "text": "2",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Architecture",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "f(q,q' 1 ,c 1 ,q' 2 ,c 2 ) \u03c8(q,q' 1 ) \u03c8(q,c 1 )",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Architecture",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "h q1 h q2 h 12 v x c1 x c2",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Architecture",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "x q q c1 c2 sentences embeddings pairwise nodes pairwise features output layer q'1 x q'2 q'2 x q'1 \u03c8(q' 1 ,c 1 )",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Architecture",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "\u03c8(q,q' 2 ) \u03c8(q,c 2 ) \u03c8(q' 2 ,c 2 )",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Architecture",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "Figure 2 : The overall architecture of our neural network model for pairwise answer ranking in community question answering.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 7,
+                        "end": 8,
+                        "text": "2",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Architecture",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "The feed-forward neural network computes a sigmoid function",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Architecture",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "f (q, q 1 , c 1 , q 2 , c 2 ) = sig(w T v \u03c6(q, q 1 , c 1 , q 2 , c 2 ) + b v )",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Architecture",
+                "sec_num": "3.1"
+            },
+            {
+                "text": ", where \u03c6(.) transforms the input through the hidden layer, w v are the weights from the hidden layer to the output layer, and b v is a bias term. The function \u03c6(.) is actually a concatenation of three subfunctions:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Architecture",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "\u03c6(q, q 1 , c 1 , q 2 , c 2 ) = [\u03c6 1 (q, q 1 , c 1 ), \u03c6 2 (q, q 2 , c 2 ), \u03c6 1,2 (q 1 , c 1 , q 2 , c 2 )].",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Architecture",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "We first map the question and the comments to a fixed-length vector [x q , x q 1 , x c 1 , x q 2 , x c 2 ] using syntactic and semantic embeddings. Then, we feed this vector as input to the neural network, which models several types of interactions, using different groups of nodes in the hidden layer. Overall, we make use of three different groups of nodes in the hidden layer.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Architecture",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "The first two groups include the relevance nodes h q1 and h q2 . These groups of hidden nodes model how relevant comment c j is to the original question q given that it belongs to the thread of the related question q j . In these hidden nodes, we model complex non-linear interactions between the distributed representations of q, q j and c j . Intuitively, these nodes are designed to learn to distinguish a relevant comment by extracting features from the distributed representations of a comment and of the question it is supposed to answer.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Architecture",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "The last group of nodes in the hidden layer is the similarity node h 12 . It measures the similarity between c 1 and c 2 and their respective questions q 1 and q 2 . This node is designed to compute the nonlinear interactions between the syntactic and semantic representations of comment-comment, commentquestion and question-question pairs. Intuitively, this can help disambiguate when comments are very similar or were generated from the same or from very similar questions.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Architecture",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "The model further allows to incorporate external sources of information in the form of skip arcs that go directly from the input to the output layer, skipping the hidden layer. These arcs represent pairwise similarity feature vectors inspired by the edges of the triangle in Figure 1 . In Figure 2 , we indicate these pairwise external feature sets as: \u03c8(q, q 1 ), \u03c8(q, q 2 ) for relatedness; \u03c8(q 1 , c 1 ), \u03c8(q 2 , c 2 ) for appropriateness; and \u03c8(q, c 1 ), \u03c8(q, c 2 ) for relevance. When including the skip-arc features, the activation at the output is",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 282,
+                        "end": 283,
+                        "text": "1",
+                        "ref_id": "FIGREF1"
+                    },
+                    {
+                        "start": 296,
+                        "end": 297,
+                        "text": "2",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Architecture",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "f (q, q 1 , c 1 , q 2 , c 2 ) = sig(w T v [\u03c6(q, q 1 , c 1 , q 2 , c 2 ), \u03c8(q, q 1 ), \u03c8(q, q 2 ), \u03c8(q 1 , c 1 ), \u03c8(q 2 , c 2 ), \u03c8(q, c 1 ), \u03c8(q, c 2 )] + b v ).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Architecture",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "We use these feature vectors to encode machine translation evaluation measures, components thereof, cQA task-specific features, etc. The next section gives more detail about these features.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Architecture",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "We experiment with three kinds of features: (i) lexical features that measure similarity at a word, word n-gram, and paraphrase level, (ii) distributed representations that measure similarity at a syntactic and semantic level, (iii) domain-specific knowledge features, which capture similarity using thread-level information and other features that have proven valuable to solve similar tasks (Nicosia et al., 2015) .",
+                "cite_spans": [
+                    {
+                        "start": 393,
+                        "end": 415,
+                        "text": "(Nicosia et al., 2015)",
+                        "ref_id": "BIBREF26"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Features",
+                "sec_num": "4"
+            },
+            {
+                "text": "These types of features measure similarity at a surface level between the following pairs: (q,q 1 ), (q,q 2 ), (q 1 , c 1 ), (q 2 , c 2 ), (q 1 , c 1 ), and (q 2 , c 2 ). They are inspired by our previous work on Machine Translation Evaluation (MTE) (Guzm\u00e1n et al., 2015) , and we previously found them useful for finding good answers in a question-comment thread (Guzm\u00e1n et al., 2016a; Guzm\u00e1n et al., 2016b) .",
+                "cite_spans": [
+                    {
+                        "start": 250,
+                        "end": 271,
+                        "text": "(Guzm\u00e1n et al., 2015)",
+                        "ref_id": "BIBREF11"
+                    },
+                    {
+                        "start": 364,
+                        "end": 386,
+                        "text": "(Guzm\u00e1n et al., 2016a;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 387,
+                        "end": 408,
+                        "text": "Guzm\u00e1n et al., 2016b)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Lexical similarity features",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "MTFEATS We use (as pairwise features) the following six machine translation evaluation features: (i) BLEU: This is the most commonly used measure for machine translation evaluation, which is based on n-gram overlap and length ratios (Papineni et al., 2002) . (ii) NIST: This measure is similar to BLEU, and is used at evaluation campaigns run by NIST (Doddington, 2002) . (iii) TER: Translation error rate; it is based on the edit distance between a translation hypothesis and the reference (Snover et al., 2006) . (iv) METEOR: A complex measure, which matches the hypothesis and the reference using synonyms and paraphrases (Lavie and Denkowski, 2009) . (v) Unigram PRECISION and RECALL.",
+                "cite_spans": [
+                    {
+                        "start": 233,
+                        "end": 256,
+                        "text": "(Papineni et al., 2002)",
+                        "ref_id": "BIBREF27"
+                    },
+                    {
+                        "start": 351,
+                        "end": 369,
+                        "text": "(Doddington, 2002)",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 491,
+                        "end": 512,
+                        "text": "(Snover et al., 2006)",
+                        "ref_id": "BIBREF28"
+                    },
+                    {
+                        "start": 625,
+                        "end": 652,
+                        "text": "(Lavie and Denkowski, 2009)",
+                        "ref_id": "BIBREF16"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Lexical similarity features",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "BLEUCOMP Following (Guzm\u00e1n et al., 2015) , we further use as features various components that are involved in the computation of BLEU: n-gram precisions, n-gram matches, total number of ngrams (n=1,2,3,4), lengths of the hypotheses and of the reference, length ratio between them, and BLEU's brevity penalty. Again, these are computed over the same six pairs of vectors as before.",
+                "cite_spans": [
+                    {
+                        "start": 19,
+                        "end": 40,
+                        "text": "(Guzm\u00e1n et al., 2015)",
+                        "ref_id": "BIBREF11"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Lexical similarity features",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "We use the following vector-based embeddings of all input components: q, c 1 , c 2 , q 1 , and q 2 . GOOGLE VEC We use the pre-trained, 300dimensional embedding vectors from WORD2VEC (Mikolov et al., 2013) . We compute a vector representation of the text by simply averaging over the embeddings of all words in the text.",
+                "cite_spans": [
+                    {
+                        "start": 183,
+                        "end": 205,
+                        "text": "(Mikolov et al., 2013)",
+                        "ref_id": "BIBREF22"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Distributed representations",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "QL VEC We train in-domain word embeddings using WORD2VEC on all available QatarLiving data. Again, we use these embeddings to compute 100dimensional vector representations for all input components by averaging over all words in the texts.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Distributed representations",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "SYNTAX VEC We parse the entire question/comment using the Stanford neural parser (Socher et al., 2013) , and we use the final 25dimensional vector that is produced internally as a by-product of parsing.",
+                "cite_spans": [
+                    {
+                        "start": 81,
+                        "end": 102,
+                        "text": "(Socher et al., 2013)",
+                        "ref_id": "BIBREF29"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Distributed representations",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "Moreover, we use the above vectors to calculate pairwise similarity features, i.e., the cosine between the following six vector pairs: (q, c 1 ), (q, c 2 ), (q 1 , c 1 ), (q 2 , c 2 ), (q, q 1 ) and (q, q 2 ).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Distributed representations",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "We extract various domain-specific features that use thread-level and other useful information known to capture relatedness and appropriateness.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Domain-specific features",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "We have a thread-level metafeature, which we apply to the pairs (q 1 , c 1 ), (q 2 , c 2 ). It checks whether the person answering the question is also the one who asked it, i.e., do the related question and the comment have the same author. The idea is that the person asking a question is unlikely to answer his/her own question, but s/he could ask a clarification question or thank another person who has provided a useful answer earlier in the thread.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "SAME AUTHOR",
+                "sec_num": null
+            },
+            {
+                "text": "CQ RANK FEAT We further have two threadlevel meta-features related to the rank of the comment in the thread, which we apply to the pairs (q 1 , c 1 ) and (q 2 , c 2 ): (i) reciprocal rank of the comment in the thread, i.e., 1/\u03c1, where \u03c1 is the rank of the comment; (ii) percentile of the number of comments in the thread, calculated as follows: the first comment gets the score of 1.0, the second one gets 0.9, and so on. Note that in our dataset, there are exactly ten comments per thread.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "SAME AUTHOR",
+                "sec_num": null
+            },
+            {
+                "text": "QQ RANK FEAT We also have three features modeling the rank of the related question in the list of related questions for the original question, which we apply to the pairs (q, q 1 ) and (q, q 2 ).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "SAME AUTHOR",
+                "sec_num": null
+            },
+            {
+                "text": "In total, use the following six features: (i) the reciprocal rank of q 1 or q 2 in the list of related questions for q; (ii) the reciprocal ordinal rank5 of q 1 or q 2 in the list of related questions for q; (iii) the percentile of the q 1 or q 2 in the list of related questions for q, calculated as for the comments.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "SAME AUTHOR",
+                "sec_num": null
+            },
+            {
+                "text": "CQRANK FEAT. Finally, we have features for the rank of the comment in the list of 100 comments for the original question, which we apply to the pairs (q, c 1 ) and (q, c 2 ): (i) reciprocal rank of the comment in the list; (ii) percentile of the comment in the list.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "SAME AUTHOR",
+                "sec_num": null
+            },
+            {
+                "text": "TASK FEAT. We further have features that have been proven useful in the answer selection task from SemEval 2015 Task 3 (Nakov et al., 2015) . This includes some comment-specific features, which refer to c 1 and c 2 only, but which we apply twice, to generate features for the pairs (q 1 , c 1 ), (q 2 , c 2 ), (q 1 , c 1 ), and (q 2 , c 2 ): number of URLs/images/emails/phone numbers; number of occurrences of the string thank;6 number of tokens/sentences; average number of tokens; number of nouns/verbs/adjectives/adverbs/pronouns; number of positive/negative smileys; number of single/double/triple exclamation/ interrogation symbols; number of interrogative sentences (based on parsing); number of words that are not in word2vec's Google News vocabulary. 7And also some question-comment pair features, which we apply to the pairs (q 1 , c 1 ), (q 2 , c 2 ), (q 1 , c 1 ), and (q 2 , c 2 ): (i) question to comment count ratio in terms of sentences/tokens/ nouns/verbs/adjectives/adverbs/pronouns; (ii) question to comment count ratio of words that are not in word2vec's Google News vocabulary.",
+                "cite_spans": [
+                    {
+                        "start": 119,
+                        "end": 139,
+                        "text": "(Nakov et al., 2015)",
+                        "ref_id": "BIBREF24"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "SAME AUTHOR",
+                "sec_num": null
+            },
+            {
+                "text": "We experimented with the data from SemEval-2016 Task 3 on \"Community Question Answering\". More precisely, the problem addressed is subtask C (Question-External Comment Similarity), which is the primary cQA task. For a given new question (referred to as the original question), the task provides the set of the first ten related questions (retrieved by a search engine), each associated with the first ten comments appearing in the question-comment thread. The goal then is to rank the total of 100 comments according to their appropriateness with respect to the original question.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments and Results",
+                "sec_num": "5"
+            },
+            {
+                "text": "In this framework, the retrieval part of the task is done as a pre-processing step, and the challenge is to learn to rank all good comments above all bad ones. All the data comes from the QatarLiving forum, and the related questions are obtained using Google search with the original question's text limited to the www.qatarliving.com domain.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments and Results",
+                "sec_num": "5"
+            },
+            {
+                "text": "The task offers a higher quality training dataset TRAIN-PART1, which includes 200 original questions, 1,999 related questions and 19,990 comments, and a lower-quality TRAIN-PART2, which we did not use. Additionally, it provides a development set (DEV, with 50 original questions, 500 related questions and 5,000 related comments) and a TEST set (70 original questions, 700 related questions and 7,000 related comments). Apart from the class labels for subtask C, the datasets also offer class labels for subtask A (i.e., whether a comment is a good answer to the question in the thread) and subtask B (i.e., whether the related questions is relevant for the original question).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments and Results",
+                "sec_num": "5"
+            },
+            {
+                "text": "we use Theano (Bergstra et al., 2010) to train our model on TRAIN-PART1 with hidden layers of size 3 for 100 epochs with minibatches of size 30, regularization of 0.05, and a learning rate of 0.01, using stochastic gradient descent with adagrad (Duchi et al., 2011) . We normalize the input feature values to the [-1; 1] interval using minmax, and we initialize the NN weights by sampling from a uniform distribution as in (Bengio and Glorot, 2010) .",
+                "cite_spans": [
+                    {
+                        "start": 14,
+                        "end": 37,
+                        "text": "(Bergstra et al., 2010)",
+                        "ref_id": "BIBREF3"
+                    },
+                    {
+                        "start": 245,
+                        "end": 265,
+                        "text": "(Duchi et al., 2011)",
+                        "ref_id": "BIBREF7"
+                    },
+                    {
+                        "start": 423,
+                        "end": 448,
+                        "text": "(Bengio and Glorot, 2010)",
+                        "ref_id": "BIBREF1"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Setting",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "We evaluate the model on DEV after each epoch, and ultimately we keep the model that achieves the highest accuracy; 8 in case of a tie, we prefer the parameters from a later epoch. We selected the above parameter values on the DEV dataset using the full model, and we use them for all experiments in Section 5.3, where we evaluate on the TEST dataset.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Setting",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "Note that, we train the NN using all pairs of (Good, Bad) comments, in both orders, ignoring ties. At test time, we compute the full ranking of comments by scoring all possible pairs, and by then accumulating the scores at the comment level.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Setting",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "The results are calculated with the official scorer from the SemEval-2016 Task 3. We report three ranking-based measures that are commonly accepted in the IR community: Mean average precision (MAP), which is the official evaluation measure of the task, average recall (AvgRec), and mean reciprocal rank (MRR). 8 We tried Kendall's Tau (\u03c4 ), but it performed slightly worse.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Evaluation and baselines",
+                "sec_num": "5.2"
+            },
+            {
+                "text": "For comparison purposes, we report the results for two baselines. One corresponds to a random ordering of the comments, assuming zero knowledge of the task. The second one is a more realistic baseline, which keeps the question ranking from the search engine (Google search) and the chronological order of the comments within the thread of teh related question. Although this may be considered a very na\u00efve baseline, it is actually notably informed. The question ranking from Google search takes into account the relevance of the entire thread (question and comments) to the original question. Moreover, there is a natural concentration of the best answers in the first comments of the threads.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Evaluation and baselines",
+                "sec_num": "5.2"
+            },
+            {
+                "text": "Table 1 shows the evaluation results on the TEST dataset for several variants of our pairwise neural network architecture. Regarding our network configurations, we present the results from simpler to more complex.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 6,
+                        "end": 7,
+                        "text": "1",
+                        "ref_id": "TABREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Main results",
+                "sec_num": "5.3"
+            },
+            {
+                "text": "The \"Relevance only\" network contains only the relevance relations and features corresponding to q, c 1 and c 2 . The rest of the components are deactivated in the network. This corresponds to solving the task without any information about the related questions and the appropriateness of the comments in their threads, i.e., just by comparing the texts of the comments and of the original question. In some sense, this setup is largely less informed than the IR baseline. The results are very low, being only \u223c7 MAP points higher than the random baseline.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Relevance",
+                "sec_num": null
+            },
+            {
+                "text": "Relevance + appropriateness Adding the appropriateness interactions between c 1 and q 1 , and between c 2 and q 2 improves MAP by \u223c9 points. Although more informed, as some information from the related questions is taken indirectly, the results of this system are still below the IR baseline.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Relevance",
+                "sec_num": null
+            },
+            {
+                "text": "Relevance + relatedness Adding the relatedness interactions and features between q and q 1 , and q and q 2 , turns out to be crucial. When added to the \"Relevance only\" basic system, the MAP score jumps to 52.43, significantly above the IR baseline. This shows that question-question similarity plays an important role in solving the cQA task. Results on the answer ranking task of our full NN vs. variants using partial information.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Relevance",
+                "sec_num": null
+            },
+            {
+                "text": "Full Network Adding both appropriateness and relatedness interactions yields an improvement of another two MAP points absolute (to 54.51), which shows that appropriateness features encode information that is complementary to the information modeled by relevance and relatedness. Note that the results with the other evaluation metrics (Av-gRec and MRR) follow exactly the same pattern. In summary, we can conclude that in order to solve the community question answering problem, we need to (i) find the best related questions, and (ii) judge the relevance of individual comments with respect to the new question.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Relevance",
+                "sec_num": null
+            },
+            {
+                "text": "Table 2 shows the results of an ablation study when removing some groups of features. 9 More specifically, we drop lexical similarities, domain-specific features, and the complex semantic-syntactic interactions modeled in the hidden layer between the embeddings and the domain-specific features. We can see that the lexical similarity features (which we modeled by MT evaluation metrics), have a large impact: excluding them from the network yields a decrease of over eight MAP points. This can be explained as the strong dependence that relatedness has over strict word matching. Since questions are relatively short, a better related question will be one that matches better the original question. 9 Note that here we only show the impact of groups of features, e.g., we do not consider experiments with different embeddings such as GOOGLE VEC, QL VEC, and SYNTAX VEC, which all belong to the lexical similarity group of features. This is because in previous work (which was limited to subtask A), our ablation study has shown that all features in a group clearly contribute to the overall performance (Guzm\u00e1n et al., 2016a; Guzm\u00e1n et al., 2016b Table 2 : Results of the ablation study. As expected, eliminating the domain-specific features also hurts the performance greatly: by six MAP points absolute. Eliminating the use of distributed representation has a lesser impact: 3.3 MAP points absolute. This is in line with our previous findings (Guzm\u00e1n et al., 2015; Guzm\u00e1n et al., 2016a; Guzm\u00e1n et al., 2016b ) that semantic and syntactic embeddings are useful to make a fine-grained distinction between comments (relevance, appropriateness), which are usually longer.",
+                "cite_spans": [
+                    {
+                        "start": 1104,
+                        "end": 1126,
+                        "text": "(Guzm\u00e1n et al., 2016a;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 1127,
+                        "end": 1147,
+                        "text": "Guzm\u00e1n et al., 2016b",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 1446,
+                        "end": 1467,
+                        "text": "(Guzm\u00e1n et al., 2015;",
+                        "ref_id": "BIBREF11"
+                    },
+                    {
+                        "start": 1468,
+                        "end": 1489,
+                        "text": "Guzm\u00e1n et al., 2016a;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 1490,
+                        "end": 1510,
+                        "text": "Guzm\u00e1n et al., 2016b",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 6,
+                        "end": 7,
+                        "text": "2",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 1154,
+                        "end": 1155,
+                        "text": "2",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Features in perspective",
+                "sec_num": "5.4"
+            },
+            {
+                "text": "We have also found that there is an interaction between features and similarity relations. For example, for relatedness, lexical similarity is 2.6 MAP points more informative10 than distributed representations. In contrast, for relevance, distributed representations are 0.7 MAP points more informative than lexical similarities.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Features in perspective",
+                "sec_num": "5.4"
+            },
+            {
+                "text": "Table 2 also presents the results of a system that has the full set of features, but eliminates the hidden layer from the neural network. This is equivalent to training a Maximum Entropy classifier with the complete set of features. This simplified system performs consistently worse than the full NN model , which shows that using the hidden layer to model the non-linear interactions between information sources has a decent overall contribution.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Impact of the hidden layer",
+                "sec_num": "5.5"
+            },
+            {
+                "text": "Since the SemEval-2016 Task 3 datasets also provide labeled examples for the so called \"subtask A\" (q c; appropriateness) and \"subtask B\" (qq ; relatedness), one could use this supervision to help train the neural network for the primary cQA task. We observed that relatedness has proven quite informative. However, the improvements observed from using appropriateness were more modest. We present here a stacked experiment in which an additional neural network trained to predict appropriateness is used to inform the full network model. More concretely, we train a feed-forward pairwise neural network for subtask A, which is a simplification of the architecture from Figure 2 . The input is reduced to three elements (q , c 1 , c 2 ), where q is the thread question and c 1 and c 2 are a pair of comments in the thread. The output consists of deciding whether c 1 is a better answer to q than c 2 . All the pairwise interactions between input components are included in the hidden layer, and we use the same features to train the network as the ones described in Section 4 (obviously, this time the input and the features are reduced to those involving q , c 1 and c 2 ). We used this exact setting in previous work for solving subtask A (Guzm\u00e1n et al., 2016a; Guzm\u00e1n et al., 2016b) .",
+                "cite_spans": [
+                    {
+                        "start": 1241,
+                        "end": 1263,
+                        "text": "(Guzm\u00e1n et al., 2016a;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 1264,
+                        "end": 1285,
+                        "text": "Guzm\u00e1n et al., 2016b)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 677,
+                        "end": 678,
+                        "text": "2",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Making appropriateness more useful",
+                "sec_num": "5.6"
+            },
+            {
+                "text": "We used the network to classify all subtask A examples in TRAIN-PART1, DEV and TEST, and we used the resulting scores at the comment level as skip-arc features for the full NN model: (a) alone, included in \u03c8(q 1 , c 1 ) and \u03c8(q 2 , c 2 ), and (b) multiplied by each of the QQ Rank feat features, included in \u03c8(q, c 1 ) and \u03c8(q, c 2 ).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Making appropriateness more useful",
+                "sec_num": "5.6"
+            },
+            {
+                "text": "In Table 3 , we observe that using the pre-trained network to incorporate subtask A predictions as features yields another sizable improvement to a final MAP of 55.82 (the increase is smaller for AvgRec, and MRR is slightly hurt), which suggests that pretraining parts of the NN with labeled examples to perform a dedicated task, is a promising direction for future work.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 9,
+                        "end": 10,
+                        "text": "3",
+                        "ref_id": "TABREF3"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Making appropriateness more useful",
+                "sec_num": "5.6"
+            },
+            {
+                "text": "Next, in order to put our results in perspective, we compare them to the state of the art for this problem, represented by the systems that participated in SemEval-2016 Task 3, subtask C. The comparison is shown in Table 4 , where we list the top-3 systems, as well as the average and the worst scores for the official runs of all participating teams. (Filice et al., 2016) 52.95 59.27 59.23 * 3rd (Mihaylov and Nakov, 2016b) 51 We can see that all systems in the competition performed over the IR baseline with MAP scores ranging from 43.20 to 55.41. We can further see that our full network with subtask A predictions achieves the best results with 55.82 MAP. The margin over the best SemEval system is small in terms of MAP but more noticeable in terms of AvgRec and MRR. Note that, even without the Subtask A predictions, our pairwise neural network still produces results that are on par with the state of the art (with improvements slightly over one point in both cases).",
+                "cite_spans": [
+                    {
+                        "start": 352,
+                        "end": 373,
+                        "text": "(Filice et al., 2016)",
+                        "ref_id": "BIBREF10"
+                    },
+                    {
+                        "start": 398,
+                        "end": 425,
+                        "text": "(Mihaylov and Nakov, 2016b)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 221,
+                        "end": 222,
+                        "text": "4",
+                        "ref_id": "TABREF5"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Results in perspective",
+                "sec_num": "5.7"
+            },
+            {
+                "text": "Recently, a variety of neural network models have been applied to community question answering tasks such as question-question similarity (Zhou et al., 2015; dos Santos et al., 2015; Lei et al., 2015) and answer selection (Severyn and Moschitti, 2015; Wang and Nyberg, 2015; Feng et al., 2015; Tan et al., 2015; Filice et al., 2016; Barr\u00f3n-Cede\u00f1o et al., 2016; Mohtarami et al., 2016) . Most of these papers concentrate on constructing advanced neural network architectures in order to model the problem at hand better.",
+                "cite_spans": [
+                    {
+                        "start": 138,
+                        "end": 157,
+                        "text": "(Zhou et al., 2015;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 158,
+                        "end": 182,
+                        "text": "dos Santos et al., 2015;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 183,
+                        "end": 200,
+                        "text": "Lei et al., 2015)",
+                        "ref_id": "BIBREF17"
+                    },
+                    {
+                        "start": 222,
+                        "end": 251,
+                        "text": "(Severyn and Moschitti, 2015;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 252,
+                        "end": 274,
+                        "text": "Wang and Nyberg, 2015;",
+                        "ref_id": "BIBREF34"
+                    },
+                    {
+                        "start": 275,
+                        "end": 293,
+                        "text": "Feng et al., 2015;",
+                        "ref_id": "BIBREF9"
+                    },
+                    {
+                        "start": 294,
+                        "end": 311,
+                        "text": "Tan et al., 2015;",
+                        "ref_id": "BIBREF32"
+                    },
+                    {
+                        "start": 312,
+                        "end": 332,
+                        "text": "Filice et al., 2016;",
+                        "ref_id": "BIBREF10"
+                    },
+                    {
+                        "start": 333,
+                        "end": 360,
+                        "text": "Barr\u00f3n-Cede\u00f1o et al., 2016;",
+                        "ref_id": "BIBREF0"
+                    },
+                    {
+                        "start": 361,
+                        "end": 384,
+                        "text": "Mohtarami et al., 2016)",
+                        "ref_id": "BIBREF23"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "6"
+            },
+            {
+                "text": "For instance, dos Santos et al. (2015) propose a neural network approach combining a convolutional neural network and a bag-of-words representation for modeling question-question similarity. Similarly, Tan et al. (2015) adopt a neural attention mechanism over bidirectional long short-term memory (LSTM) neural network to generate better answer representations given the questions.",
+                "cite_spans": [
+                    {
+                        "start": 18,
+                        "end": 38,
+                        "text": "Santos et al. (2015)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 202,
+                        "end": 219,
+                        "text": "Tan et al. (2015)",
+                        "ref_id": "BIBREF32"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "6"
+            },
+            {
+                "text": "Similarly, Lei et al. (2015) use a combination of recurrent and convolutional neural models to map questions to semantic representations. The models are pre-trained within an encoder-decoder framework (from body to title) in order to de-noise the long question body from irrelevant text.",
+                "cite_spans": [
+                    {
+                        "start": 11,
+                        "end": 28,
+                        "text": "Lei et al. (2015)",
+                        "ref_id": "BIBREF17"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "6"
+            },
+            {
+                "text": "The main objective of our work here is different: we focus on studying the impact of the different input components in a novel cQA setting of ranking answers for new questions, and we use a more standard neural network.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "6"
+            },
+            {
+                "text": "The setting of cQA as a triangle of three interrelated subtasks, which we use here, has been recently proposed in SemEval-2016 Task 3 on Community Question Answering (Nakov et al., 2016) . Above, we empirically compared our results to those of the best participating systems. Unfortunately, most of the systems that took part in the competition, including the winning system of the SUper team (Mihaylova et al., 2016) , approached the task indirectly by solving subtask A at the thread level and then using these predictions together with the reciprocal rank of the related questions to produce a final ranking for subtask C.",
+                "cite_spans": [
+                    {
+                        "start": 166,
+                        "end": 186,
+                        "text": "(Nakov et al., 2016)",
+                        "ref_id": "BIBREF25"
+                    },
+                    {
+                        "start": 393,
+                        "end": 417,
+                        "text": "(Mihaylova et al., 2016)",
+                        "ref_id": "BIBREF21"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "6"
+            },
+            {
+                "text": "One exception is the Kelp system (Filice et al., 2016) , which was ranked second in the competition. Their approach is most similar to ours, as it also tries to combine information from different subtasks and from all input components. It does so in a modular kernel function, including stacking from independent subtask A and B classifiers, and it applies SVMs to train a Good vs. Bad classifier (Filice et al., 2016) . In contrast, our approach here proceeds in a pairwise setting, it is lighter in terms of features engineering, and presents a direct way to combine the relations between the different subtasks in an integrated neural network model. Finally, our model uses lexical features derived from machine translation evaluation. Some previous work also used MT model(s) as a feature(s) (Berger et al., 2000; Echihabi and Marcu, 2003; Jeon et al., 2005; Soricut and Brill, 2006; Riezler et al., 2007; Li and Manandhar, 2011; Surdeanu et al., 2011; Tran et al., 2015; Hoogeveen et al., 2016; Wu and Zhang, 2016) , e.g., a variation of IBM model 1 (Brown et al., 1993) , to compute the probability that the question is a \"translation\" of the candidate answer.",
+                "cite_spans": [
+                    {
+                        "start": 33,
+                        "end": 54,
+                        "text": "(Filice et al., 2016)",
+                        "ref_id": "BIBREF10"
+                    },
+                    {
+                        "start": 397,
+                        "end": 418,
+                        "text": "(Filice et al., 2016)",
+                        "ref_id": "BIBREF10"
+                    },
+                    {
+                        "start": 796,
+                        "end": 817,
+                        "text": "(Berger et al., 2000;",
+                        "ref_id": "BIBREF2"
+                    },
+                    {
+                        "start": 818,
+                        "end": 843,
+                        "text": "Echihabi and Marcu, 2003;",
+                        "ref_id": "BIBREF8"
+                    },
+                    {
+                        "start": 844,
+                        "end": 862,
+                        "text": "Jeon et al., 2005;",
+                        "ref_id": "BIBREF15"
+                    },
+                    {
+                        "start": 863,
+                        "end": 887,
+                        "text": "Soricut and Brill, 2006;",
+                        "ref_id": "BIBREF30"
+                    },
+                    {
+                        "start": 888,
+                        "end": 909,
+                        "text": "Riezler et al., 2007;",
+                        "ref_id": "BIBREF27"
+                    },
+                    {
+                        "start": 910,
+                        "end": 933,
+                        "text": "Li and Manandhar, 2011;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 934,
+                        "end": 956,
+                        "text": "Surdeanu et al., 2011;",
+                        "ref_id": "BIBREF31"
+                    },
+                    {
+                        "start": 957,
+                        "end": 975,
+                        "text": "Tran et al., 2015;",
+                        "ref_id": "BIBREF33"
+                    },
+                    {
+                        "start": 976,
+                        "end": 999,
+                        "text": "Hoogeveen et al., 2016;",
+                        "ref_id": "BIBREF14"
+                    },
+                    {
+                        "start": 1000,
+                        "end": 1019,
+                        "text": "Wu and Zhang, 2016)",
+                        "ref_id": "BIBREF35"
+                    },
+                    {
+                        "start": 1055,
+                        "end": 1075,
+                        "text": "(Brown et al., 1993)",
+                        "ref_id": "BIBREF4"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "6"
+            },
+            {
+                "text": "We presented a neural-based approach to a novel problem in cQA, where given a new question, the task is to rank comments from related questionthreads according to their relevance as answers to the original question. We explored the utility of three types of similarities between the original question, the related question, and the related comment.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion",
+                "sec_num": "7"
+            },
+            {
+                "text": "We adopted a pairwise feed-forward neural network architecture, which takes as input the original question and two comments together with their corresponding related questions. This allowed us to study the impact and the interaction effects of the question-question relatedness and commentto-related question appropriateness relations when solving the primary cQA relevance task. The large performance gains obtained from using relatedness features show that question-question similarity plays a crucial role in finding relevant comments (+30 MAP points). Yet, including appropriateness relations is needed to achieve state-of-the-art results (+3.3 MAP) on benchmark datasets.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion",
+                "sec_num": "7"
+            },
+            {
+                "text": "We also studied the impact of several types of features, especially domain-specific features, but also lexical features and syntactic embeddings. We observed that lexical similarity MTE features prove the most important, followed by domain-specific features, and syntactic and semantic embeddings. Overall, they all showed to be necessary to achieve state-of-the-art results.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion",
+                "sec_num": "7"
+            },
+            {
+                "text": "In future work, we plan to use the labels for subtasks A and B, which are provided in the datasets in order to pre-train the corresponding components of the full network for answer ranking. We further want to apply a similar network to other semantic similarity problems, such as textual entailment.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion",
+                "sec_num": "7"
+            },
+            {
+                "text": "The essence of this triangle is also described in SemEval",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "Task 3 to motivate a three-subtask setting for cQA(Nakov et al., 2016). In that evaluation exercise, q c and qq are presented as subtask A and subtask B, respectively. In this paper, we mainly use them as similarity relations to be modeled in the learning architecture to solve the answer ranking task.2 We use the task setup and the datasets from SemEval-2016 Task 3, focusing on subtask C(Nakov et al., 2016).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "Also, we previously used a similar framework for finding good answers in a question-comment thread(Guzm\u00e1n et al., 2016a; Guzm\u00e1n et al., 2016b).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "In this work, we do not learn to predict ties, and ties are excluded from our training data.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "The related questions are obtained using a query to a search engine (using words from the original question), with results limited to QatarLiving. However, some of the returned results pointed to the wrong (non-forum) sections of the website or to questions with less than ten comments, and these were skipped. Suppose that the surviving top ten related questions were at ranks 3, 7, 18, ... in the original list. Now, we can use these ranks \u03c1, or we can use instead the ordinal ranks r: 1, 2, 3, ...",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "When an author thanks somebody, this post is typically a bad answer to the original question.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "Can detect slang, foreign language, etc., which would indicate a bad answer.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "As measured by the relative drop in MAP performance.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            }
+        ],
+        "back_matter": [
+            {
+                "text": "This research was performed by the Arabic Language Technologies (ALT) group at the Qatar Computing Research Institute (QCRI), HBKU, part of Qatar Foundation. It is part of the Interactive sYstems for Answer Search (Iyas) project, which is developed in collaboration with MIT-CSAIL.Last but not least, we would also like to thank the anonymous reviewers for their constructive comments, which have helped us improve the paper.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Acknowledgments",
+                "sec_num": null
+            }
+        ],
+        "bib_entries": {
+            "BIBREF0": {
+                "ref_id": "b0",
+                "title": "ConvKN at SemEval-2016 Task 3: Answer and question selection for question answering on Arabic and English fora",
+                "authors": [
+                    {
+                        "first": "Alberto",
+                        "middle": [],
+                        "last": "Barr\u00f3n-Cede\u00f1o",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Giovanni",
+                        "middle": [],
+                        "last": "Da San",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Shafiq",
+                        "middle": [],
+                        "last": "Martino",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alessandro",
+                        "middle": [],
+                        "last": "Joty",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Fahad",
+                        "middle": [
+                            "A Al"
+                        ],
+                        "last": "Moschitti",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Salvatore",
+                        "middle": [],
+                        "last": "Obaidli",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kateryna",
+                        "middle": [],
+                        "last": "Romeo",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Antonio",
+                        "middle": [],
+                        "last": "Tymoshenko",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Uva",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of the 10th International Workshop on Semantic Evaluation, SemEval '16",
+                "volume": "",
+                "issue": "",
+                "pages": "896--903",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Alberto Barr\u00f3n-Cede\u00f1o, Giovanni Da San Martino, Shafiq Joty, Alessandro Moschitti, Fahad A. Al Obaidli, Salvatore Romeo, Kateryna Tymoshenko, and Antonio Uva. 2016. ConvKN at SemEval-2016 Task 3: Answer and question selection for question answer- ing on Arabic and English fora. In Proceedings of the 10th International Workshop on Semantic Evaluation, SemEval '16, pages 896-903, San Diego, CA.",
+                "links": null
+            },
+            "BIBREF1": {
+                "ref_id": "b1",
+                "title": "Understanding the difficulty of training deep feedforward neural networks",
+                "authors": [
+                    {
+                        "first": "Yoshua",
+                        "middle": [],
+                        "last": "Bengio",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xavier",
+                        "middle": [],
+                        "last": "Glorot",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2010,
+                "venue": "Proceedings of Artificial Intelligence and Statistics, AISTATS '10",
+                "volume": "",
+                "issue": "",
+                "pages": "249--256",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Yoshua Bengio and Xavier Glorot. 2010. Understanding the difficulty of training deep feedforward neural net- works. In Proceedings of Artificial Intelligence and Statistics, AISTATS '10, pages 249-256, Chia Laguna Resort, Sardinia, Italy.",
+                "links": null
+            },
+            "BIBREF2": {
+                "ref_id": "b2",
+                "title": "Bridging the lexical chasm: Statistical approaches to answer-finding",
+                "authors": [
+                    {
+                        "first": "Adam",
+                        "middle": [],
+                        "last": "Berger",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Rich",
+                        "middle": [],
+                        "last": "Caruana",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "David",
+                        "middle": [],
+                        "last": "Cohn",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dayne",
+                        "middle": [],
+                        "last": "Freitag",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Vibhu",
+                        "middle": [],
+                        "last": "Mittal",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2000,
+                "venue": "Proceedings of the 23rd Annual International ACM SIGIR Conference on Research and Development in Information Retrieval, SIGIR '00",
+                "volume": "",
+                "issue": "",
+                "pages": "192--199",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Adam Berger, Rich Caruana, David Cohn, Dayne Freitag, and Vibhu Mittal. 2000. Bridging the lexical chasm: Statistical approaches to answer-finding. In Proceed- ings of the 23rd Annual International ACM SIGIR Conference on Research and Development in Infor- mation Retrieval, SIGIR '00, pages 192-199, Athens, Greece.",
+                "links": null
+            },
+            "BIBREF3": {
+                "ref_id": "b3",
+                "title": "Theano: a CPU and GPU math expression compiler",
+                "authors": [
+                    {
+                        "first": "James",
+                        "middle": [],
+                        "last": "Bergstra",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Olivier",
+                        "middle": [],
+                        "last": "Breuleux",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Fr\u00e9d\u00e9ric",
+                        "middle": [],
+                        "last": "Bastien",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Pascal",
+                        "middle": [],
+                        "last": "Lamblin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Razvan",
+                        "middle": [],
+                        "last": "Pascanu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Guillaume",
+                        "middle": [],
+                        "last": "Desjardins",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Joseph",
+                        "middle": [],
+                        "last": "Turian",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "David",
+                        "middle": [],
+                        "last": "Warde-Farley",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yoshua",
+                        "middle": [],
+                        "last": "Bengio",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2010,
+                "venue": "Proceedings of the Python for Scientific Computing Conference, SciPy '10",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "James Bergstra, Olivier Breuleux, Fr\u00e9d\u00e9ric Bastien, Pas- cal Lamblin, Razvan Pascanu, Guillaume Desjardins, Joseph Turian, David Warde-Farley, and Yoshua Ben- gio. 2010. Theano: a CPU and GPU math expression compiler. In Proceedings of the Python for Scientific Computing Conference, SciPy '10, Austin, TX.",
+                "links": null
+            },
+            "BIBREF4": {
+                "ref_id": "b4",
+                "title": "The mathematics of statistical machine translation: Parameter estimation",
+                "authors": [
+                    {
+                        "first": "F",
+                        "middle": [],
+                        "last": "Peter",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Brown",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "J",
+                        "middle": [],
+                        "last": "Vincent",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Stephen",
+                        "middle": [
+                            "A"
+                        ],
+                        "last": "Della Pietra",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Robert",
+                        "middle": [
+                            "L"
+                        ],
+                        "last": "Della Pietra",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Mercer",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1993,
+                "venue": "Comput. Linguist",
+                "volume": "19",
+                "issue": "2",
+                "pages": "263--311",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Peter F. Brown, Vincent J. Della Pietra, Stephen A. Della Pietra, and Robert L. Mercer. 1993. The mathematics of statistical machine translation: Parameter estima- tion. Comput. Linguist., 19(2):263-311.",
+                "links": null
+            },
+            "BIBREF5": {
+                "ref_id": "b5",
+                "title": "Automatic evaluation of machine translation quality using n-gram co-occurrence statistics",
+                "authors": [
+                    {
+                        "first": "George",
+                        "middle": [],
+                        "last": "Doddington",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2002,
+                "venue": "Proceedings of the 53rd Annual Meeting of the Association for Computational Linguistics and the 7th International Joint Conference on Natural Language Processing, ACL-IJCNLP '15",
+                "volume": "",
+                "issue": "",
+                "pages": "694--699",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "George Doddington. 2002. Automatic evaluation of ma- chine translation quality using n-gram co-occurrence statistics. In Proceedings of the Second Interna- tional Conference on Human Language Technology Research, HLT '02, pages 138-145, San Diego, CA. Cicero dos Santos, Luciano Barbosa, Dasha Bogdanova, and Bianca Zadrozny. 2015. Learning hybrid rep- resentations to retrieve semantically equivalent ques- tions. In Proceedings of the 53rd Annual Meeting of the Association for Computational Linguistics and the 7th International Joint Conference on Natural Lan- guage Processing, ACL-IJCNLP '15, pages 694-699, Beijing, China.",
+                "links": null
+            },
+            "BIBREF6": {
+                "ref_id": "b6",
+                "title": "Searching questions by identifying question topic and question focus",
+                "authors": [
+                    {
+                        "first": "Yunbo",
+                        "middle": [],
+                        "last": "Huizhong Duan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chin-Yew",
+                        "middle": [],
+                        "last": "Cao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yong",
+                        "middle": [],
+                        "last": "Lin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Yu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2008,
+                "venue": "Proceedings of the 45th Annual Meeting of the Association of Computational Linguistics, ACL '08",
+                "volume": "",
+                "issue": "",
+                "pages": "156--164",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Huizhong Duan, Yunbo Cao, Chin-Yew Lin, and Yong Yu. 2008. Searching questions by identifying question topic and question focus. In Proceedings of the 45th Annual Meeting of the Association of Computational Linguistics, ACL '08, pages 156-164, Columbus, OH.",
+                "links": null
+            },
+            "BIBREF7": {
+                "ref_id": "b7",
+                "title": "Adaptive subgradient methods for online learning and stochastic optimization",
+                "authors": [
+                    {
+                        "first": "John",
+                        "middle": [],
+                        "last": "Duchi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Elad",
+                        "middle": [],
+                        "last": "Hazan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yoram",
+                        "middle": [],
+                        "last": "Singer",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2011,
+                "venue": "Journal of Machine Learning Research",
+                "volume": "12",
+                "issue": "",
+                "pages": "2121--2159",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "John Duchi, Elad Hazan, and Yoram Singer. 2011. Adaptive subgradient methods for online learning and stochastic optimization. Journal of Machine Learning Research, 12:2121-2159.",
+                "links": null
+            },
+            "BIBREF8": {
+                "ref_id": "b8",
+                "title": "A noisy-channel approach to question answering",
+                "authors": [
+                    {
+                        "first": "Abdessamad",
+                        "middle": [],
+                        "last": "Echihabi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Daniel",
+                        "middle": [],
+                        "last": "Marcu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2003,
+                "venue": "Proceedings of the 41st Annual Meeting of the Association for Computational Linguistics, ACL '03",
+                "volume": "",
+                "issue": "",
+                "pages": "16--23",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Abdessamad Echihabi and Daniel Marcu. 2003. A noisy-channel approach to question answering. In Proceedings of the 41st Annual Meeting of the Associ- ation for Computational Linguistics, ACL '03, pages 16-23, Sapporo, Japan.",
+                "links": null
+            },
+            "BIBREF9": {
+                "ref_id": "b9",
+                "title": "Applying deep learning to answer selection: A study and an open task",
+                "authors": [
+                    {
+                        "first": "Minwei",
+                        "middle": [],
+                        "last": "Feng",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Bing",
+                        "middle": [],
+                        "last": "Xiang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Michael",
+                        "middle": [
+                            "R"
+                        ],
+                        "last": "Glass",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Lidan",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Bowen",
+                        "middle": [],
+                        "last": "Zhou",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Proceedings of the 2015 IEEE Workshop on Automatic Speech Recognition and Understanding, ASRU '15",
+                "volume": "",
+                "issue": "",
+                "pages": "813--820",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Minwei Feng, Bing Xiang, Michael R. Glass, Lidan Wang, and Bowen Zhou. 2015. Applying deep learn- ing to answer selection: A study and an open task. In Proceedings of the 2015 IEEE Workshop on Automatic Speech Recognition and Understanding, ASRU '15, pages 813-820, Scottsdale, AZ.",
+                "links": null
+            },
+            "BIBREF10": {
+                "ref_id": "b10",
+                "title": "KeLP at SemEval-2016 Task 3: Learning semantic relations between questions and answers",
+                "authors": [
+                    {
+                        "first": "Simone",
+                        "middle": [],
+                        "last": "Filice",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Danilo",
+                        "middle": [],
+                        "last": "Croce",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alessandro",
+                        "middle": [],
+                        "last": "Moschitti",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Roberto",
+                        "middle": [],
+                        "last": "Basili",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of the 10th International Workshop on Semantic Evaluation, SemEval '16",
+                "volume": "",
+                "issue": "",
+                "pages": "1116--1123",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Simone Filice, Danilo Croce, Alessandro Moschitti, and Roberto Basili. 2016. KeLP at SemEval-2016 Task 3: Learning semantic relations between questions and an- swers. In Proceedings of the 10th International Work- shop on Semantic Evaluation, SemEval '16, pages 1116-1123, San Diego, CA.",
+                "links": null
+            },
+            "BIBREF11": {
+                "ref_id": "b11",
+                "title": "Pairwise neural machine translation evaluation",
+                "authors": [
+                    {
+                        "first": "Francisco",
+                        "middle": [],
+                        "last": "Guzm\u00e1n",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Shafiq",
+                        "middle": [],
+                        "last": "Joty",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Llu\u00eds",
+                        "middle": [],
+                        "last": "M\u00e0rquez",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Preslav",
+                        "middle": [],
+                        "last": "Nakov",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Proceedings of the 53rd Annual Meeting of the Association for Computational Linguistics and the 7th International Joint Conference on Natural Language Processing, ACL-IJCNLP '15",
+                "volume": "",
+                "issue": "",
+                "pages": "805--814",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Francisco Guzm\u00e1n, Shafiq Joty, Llu\u00eds M\u00e0rquez, and Preslav Nakov. 2015. Pairwise neural machine trans- lation evaluation. In Proceedings of the 53rd Annual Meeting of the Association for Computational Linguis- tics and the 7th International Joint Conference on Nat- ural Language Processing, ACL-IJCNLP '15, pages 805-814, Beijing, China.",
+                "links": null
+            },
+            "BIBREF12": {
+                "ref_id": "b12",
+                "title": "2016a. Machine translation evaluation meets community question answering",
+                "authors": [
+                    {
+                        "first": "Francisco",
+                        "middle": [],
+                        "last": "Guzm\u00e1n",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Llu\u00eds",
+                        "middle": [],
+                        "last": "M\u00e0rquez",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Preslav",
+                        "middle": [],
+                        "last": "Nakov",
+                        "suffix": ""
+                    }
+                ],
+                "year": null,
+                "venue": "Proceedings of the 54th Annual Meeting of the Association for Computational Linguistics, ACL '16",
+                "volume": "",
+                "issue": "",
+                "pages": "460--466",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Francisco Guzm\u00e1n, Llu\u00eds M\u00e0rquez, and Preslav Nakov. 2016a. Machine translation evaluation meets commu- nity question answering. In Proceedings of the 54th Annual Meeting of the Association for Computational Linguistics, ACL '16, pages 460-466, Berlin, Ger- many.",
+                "links": null
+            },
+            "BIBREF13": {
+                "ref_id": "b13",
+                "title": "MTE-NN at SemEval-2016 Task 3: Can machine translation evaluation help community question answering?",
+                "authors": [
+                    {
+                        "first": "Francisco",
+                        "middle": [],
+                        "last": "Guzm\u00e1n",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Preslav",
+                        "middle": [],
+                        "last": "Nakov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Llu\u00eds",
+                        "middle": [],
+                        "last": "M\u00e0rquez",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of the 10th International Workshop on Semantic Evaluation, Se-mEval '16",
+                "volume": "",
+                "issue": "",
+                "pages": "887--895",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Francisco Guzm\u00e1n, Preslav Nakov, and Llu\u00eds M\u00e0rquez. 2016b. MTE-NN at SemEval-2016 Task 3: Can machine translation evaluation help community ques- tion answering? In Proceedings of the 10th In- ternational Workshop on Semantic Evaluation, Se- mEval '16, pages 887-895, San Diego, CA.",
+                "links": null
+            },
+            "BIBREF14": {
+                "ref_id": "b14",
+                "title": "UniMelb at SemEval-2016 Task 3: Identifying similar questions by combining a CNN with string similarity measures",
+                "authors": [
+                    {
+                        "first": "Doris",
+                        "middle": [],
+                        "last": "Hoogeveen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yitong",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Huizhi",
+                        "middle": [],
+                        "last": "Liang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Bahar",
+                        "middle": [],
+                        "last": "Salehi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Timothy",
+                        "middle": [],
+                        "last": "Baldwin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Long",
+                        "middle": [],
+                        "last": "Duong",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of the 10th International Workshop on Semantic Evaluation, SemEval '16",
+                "volume": "",
+                "issue": "",
+                "pages": "851--856",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Doris Hoogeveen, Yitong Li, Huizhi Liang, Bahar Salehi, Timothy Baldwin, and Long Duong. 2016. UniMelb at SemEval-2016 Task 3: Identifying similar questions by combining a CNN with string similarity measures. In Proceedings of the 10th International Workshop on Semantic Evaluation, SemEval '16, pages 851-856, San Diego, CA.",
+                "links": null
+            },
+            "BIBREF15": {
+                "ref_id": "b15",
+                "title": "Finding similar questions in large question and answer archives",
+                "authors": [
+                    {
+                        "first": "W",
+                        "middle": [
+                            "Bruce"
+                        ],
+                        "last": "Jiwoon Jeon",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Joon",
+                        "middle": [],
+                        "last": "Croft",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Lee",
+                        "middle": [],
+                        "last": "Ho",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2005,
+                "venue": "Proceedings of the 14th ACM International Conference on Information and Knowledge Management, CIKM '05",
+                "volume": "",
+                "issue": "",
+                "pages": "84--90",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jiwoon Jeon, W. Bruce Croft, and Joon Ho Lee. 2005. Finding similar questions in large question and an- swer archives. In Proceedings of the 14th ACM Inter- national Conference on Information and Knowledge Management, CIKM '05, pages 84-90, Bremen, Ger- many.",
+                "links": null
+            },
+            "BIBREF16": {
+                "ref_id": "b16",
+                "title": "The ME-TEOR metric for automatic evaluation of machine translation",
+                "authors": [
+                    {
+                        "first": "Alon",
+                        "middle": [],
+                        "last": "Lavie",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Michael",
+                        "middle": [],
+                        "last": "Denkowski",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "Machine Translation",
+                "volume": "23",
+                "issue": "2-3",
+                "pages": "105--115",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Alon Lavie and Michael Denkowski. 2009. The ME- TEOR metric for automatic evaluation of machine translation. Machine Translation, 23(2-3):105-115.",
+                "links": null
+            },
+            "BIBREF17": {
+                "ref_id": "b17",
+                "title": "Shuguang Li and Suresh Manandhar. 2011. Improving question recommendation by exploiting information need",
+                "authors": [
+                    {
+                        "first": "Tao",
+                        "middle": [],
+                        "last": "Lei",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hrishikesh",
+                        "middle": [],
+                        "last": "Joshi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Regina",
+                        "middle": [],
+                        "last": "Barzilay",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tommi",
+                        "middle": [
+                            "S"
+                        ],
+                        "last": "Jaakkola",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kateryna",
+                        "middle": [],
+                        "last": "Tymoshenko",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Proceedings of the 49th Annual Meeting of the Association for Computational Linguistics: Human Language Technologies, ACL '11",
+                "volume": "",
+                "issue": "",
+                "pages": "1425--1434",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1512.05726"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Tao Lei, Hrishikesh Joshi, Regina Barzilay, Tommi S. Jaakkola, Kateryna Tymoshenko, Alessandro Mos- chitti, and Llu\u00eds M\u00e0rquez. 2015. Denoising bodies to titles: Retrieving similar questions with recurrent con- volutional models. arXiv preprint arXiv:1512.05726. Shuguang Li and Suresh Manandhar. 2011. Improv- ing question recommendation by exploiting informa- tion need. In Proceedings of the 49th Annual Meeting of the Association for Computational Linguistics: Hu- man Language Technologies, ACL '11, pages 1425- 1434, Portland, OR.",
+                "links": null
+            },
+            "BIBREF18": {
+                "ref_id": "b18",
+                "title": "Hunting for troll comments in news community forums",
+                "authors": [
+                    {
+                        "first": "Todor",
+                        "middle": [],
+                        "last": "Mihaylov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Preslav",
+                        "middle": [],
+                        "last": "Nakov",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of the 54th Annual Meeting of the Association for Computational Linguistics, ACL '16",
+                "volume": "",
+                "issue": "",
+                "pages": "399--405",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Todor Mihaylov and Preslav Nakov. 2016a. Hunting for troll comments in news community forums. In Pro- ceedings of the 54th Annual Meeting of the Association for Computational Linguistics, ACL '16, pages 399- 405, Berlin, Germany.",
+                "links": null
+            },
+            "BIBREF19": {
+                "ref_id": "b19",
+                "title": "SemanticZ at SemEval-2016 Task 3: Ranking relevant answers in community question answering using semantic similarity based on fine-tuned word embeddings",
+                "authors": [
+                    {
+                        "first": "Todor",
+                        "middle": [],
+                        "last": "Mihaylov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Preslav",
+                        "middle": [],
+                        "last": "Nakov",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of the 10th International Workshop on Semantic Evaluation, SemEval '16",
+                "volume": "",
+                "issue": "",
+                "pages": "879--886",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Todor Mihaylov and Preslav Nakov. 2016b. SemanticZ at SemEval-2016 Task 3: Ranking relevant answers in community question answering using semantic simi- larity based on fine-tuned word embeddings. In Pro- ceedings of the 10th International Workshop on Se- mantic Evaluation, SemEval '16, pages 879-886, San Diego, CA.",
+                "links": null
+            },
+            "BIBREF20": {
+                "ref_id": "b20",
+                "title": "Finding opinion manipulation trolls in news community forums",
+                "authors": [
+                    {
+                        "first": "Todor",
+                        "middle": [],
+                        "last": "Mihaylov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Georgi",
+                        "middle": [],
+                        "last": "Georgiev",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Preslav",
+                        "middle": [],
+                        "last": "Nakov",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Proceedings of the Nineteenth Conference on Computational Natural Language Learning, CoNLL '15",
+                "volume": "",
+                "issue": "",
+                "pages": "310--314",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Todor Mihaylov, Georgi Georgiev, and Preslav Nakov. 2015. Finding opinion manipulation trolls in news community forums. In Proceedings of the Nine- teenth Conference on Computational Natural Lan- guage Learning, CoNLL '15, pages 310-314, Beijing, China.",
+                "links": null
+            },
+            "BIBREF21": {
+                "ref_id": "b21",
+                "title": "SUper Team at SemEval-2016 Task 3: Building a feature-rich system for community question answering",
+                "authors": [
+                    {
+                        "first": "Tsvetomila",
+                        "middle": [],
+                        "last": "Mihaylova",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Pepa",
+                        "middle": [],
+                        "last": "Gencheva",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Martin",
+                        "middle": [],
+                        "last": "Boyanov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ivana",
+                        "middle": [],
+                        "last": "Yovcheva",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Todor",
+                        "middle": [],
+                        "last": "Mihaylov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Momchil",
+                        "middle": [],
+                        "last": "Hardalov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yasen",
+                        "middle": [],
+                        "last": "Kiprov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Daniel",
+                        "middle": [],
+                        "last": "Balchev",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ivan",
+                        "middle": [],
+                        "last": "Koychev",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Preslav",
+                        "middle": [],
+                        "last": "Nakov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ivelina",
+                        "middle": [],
+                        "last": "Nikolova",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Galia",
+                        "middle": [],
+                        "last": "Angelova",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of the 10th International Workshop on Semantic Evaluation, SemEval '16",
+                "volume": "",
+                "issue": "",
+                "pages": "836--843",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Tsvetomila Mihaylova, Pepa Gencheva, Martin Boyanov, Ivana Yovcheva, Todor Mihaylov, Momchil Hardalov, Yasen Kiprov, Daniel Balchev, Ivan Koychev, Preslav Nakov, Ivelina Nikolova, and Galia Angelova. 2016. SUper Team at SemEval-2016 Task 3: Building a feature-rich system for community question answer- ing. In Proceedings of the 10th International Work- shop on Semantic Evaluation, SemEval '16, pages 836-843, San Diego, CA.",
+                "links": null
+            },
+            "BIBREF22": {
+                "ref_id": "b22",
+                "title": "Linguistic regularities in continuous space word representations",
+                "authors": [
+                    {
+                        "first": "Tomas",
+                        "middle": [],
+                        "last": "Mikolov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Wen-Tau",
+                        "middle": [],
+                        "last": "Yih",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Geoffrey",
+                        "middle": [],
+                        "last": "Zweig",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "Proceedings of the 2013 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies, NAACL-HLT '13",
+                "volume": "",
+                "issue": "",
+                "pages": "746--751",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Tomas Mikolov, Wen-tau Yih, and Geoffrey Zweig. 2013. Linguistic regularities in continuous space word representations. In Proceedings of the 2013 Confer- ence of the North American Chapter of the Associa- tion for Computational Linguistics: Human Language Technologies, NAACL-HLT '13, pages 746-751, At- lanta, GA.",
+                "links": null
+            },
+            "BIBREF23": {
+                "ref_id": "b23",
+                "title": "SLS at SemEval-2016 Task 3: Neural-based approaches for ranking in community question answering",
+                "authors": [
+                    {
+                        "first": "Mitra",
+                        "middle": [],
+                        "last": "Mohtarami",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yonatan",
+                        "middle": [],
+                        "last": "Belinkov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Wei-Ning",
+                        "middle": [],
+                        "last": "Hsu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yu",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tao",
+                        "middle": [],
+                        "last": "Lei",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kfir",
+                        "middle": [],
+                        "last": "Bar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Scott",
+                        "middle": [],
+                        "last": "Cyphers",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jim",
+                        "middle": [],
+                        "last": "Glass",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of the 10th International Workshop on Semantic Evaluation, Se-mEval '16",
+                "volume": "",
+                "issue": "",
+                "pages": "828--835",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Mitra Mohtarami, Yonatan Belinkov, Wei-Ning Hsu, Yu Zhang, Tao Lei, Kfir Bar, Scott Cyphers, and Jim Glass. 2016. SLS at SemEval-2016 Task 3: Neural-based approaches for ranking in community question answering. In Proceedings of the 10th In- ternational Workshop on Semantic Evaluation, Se- mEval '16, pages 828-835, San Diego, CA.",
+                "links": null
+            },
+            "BIBREF24": {
+                "ref_id": "b24",
+                "title": "SemEval-2015 Task 3: Answer selection in community question answering",
+                "authors": [
+                    {
+                        "first": "Preslav",
+                        "middle": [],
+                        "last": "Nakov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Llu\u00eds",
+                        "middle": [],
+                        "last": "M\u00e0rquez",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Walid",
+                        "middle": [],
+                        "last": "Magdy",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Proceedings of the 9th International Workshop on Semantic Evaluation, Se-mEval '15",
+                "volume": "",
+                "issue": "",
+                "pages": "269--281",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Preslav Nakov, Llu\u00eds M\u00e0rquez, Walid Magdy, Alessan- dro Moschitti, Jim Glass, and Bilal Randeree. 2015. SemEval-2015 Task 3: Answer selection in commu- nity question answering. In Proceedings of the 9th International Workshop on Semantic Evaluation, Se- mEval '15, pages 269-281, Denver, CO.",
+                "links": null
+            },
+            "BIBREF25": {
+                "ref_id": "b25",
+                "title": "Abed Alhakim Freihat, Jim Glass, and Bilal Randeree",
+                "authors": [
+                    {
+                        "first": "Preslav",
+                        "middle": [],
+                        "last": "Nakov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Llu\u00eds",
+                        "middle": [],
+                        "last": "M\u00e0rquez",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alessandro",
+                        "middle": [],
+                        "last": "Moschitti",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Walid",
+                        "middle": [],
+                        "last": "Magdy",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hamdy",
+                        "middle": [],
+                        "last": "Mubarak",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of the 10th International Workshop on Semantic Evaluation, SemEval '16",
+                "volume": "",
+                "issue": "",
+                "pages": "525--545",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Preslav Nakov, Llu\u00eds M\u00e0rquez, Alessandro Moschitti, Walid Magdy, Hamdy Mubarak, Abed Alhakim Frei- hat, Jim Glass, and Bilal Randeree. 2016. SemEval- 2016 task 3: Community question answering. In Pro- ceedings of the 10th International Workshop on Se- mantic Evaluation, SemEval '16, pages 525-545, San Diego, CA.",
+                "links": null
+            },
+            "BIBREF26": {
+                "ref_id": "b26",
+                "title": "QCRI: Answer selection for community question answering -experiments for Arabic and English",
+                "authors": [
+                    {
+                        "first": "Massimo",
+                        "middle": [],
+                        "last": "Nicosia",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Simone",
+                        "middle": [],
+                        "last": "Filice",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alberto",
+                        "middle": [],
+                        "last": "Barr\u00f3n-Cede\u00f1o",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Iman",
+                        "middle": [],
+                        "last": "Saleh",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hamdy",
+                        "middle": [],
+                        "last": "Mubarak",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Wei",
+                        "middle": [],
+                        "last": "Gao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Preslav",
+                        "middle": [],
+                        "last": "Nakov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Giovanni",
+                        "middle": [],
+                        "last": "Da San",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alessandro",
+                        "middle": [],
+                        "last": "Martino",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kareem",
+                        "middle": [],
+                        "last": "Moschitti",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Llu\u00eds",
+                        "middle": [],
+                        "last": "Darwish",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Shafiq",
+                        "middle": [],
+                        "last": "M\u00e0rquez",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Walid",
+                        "middle": [],
+                        "last": "Joty",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Magdy",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Proceedings of the 9th International Workshop on Semantic Evaluation, Se-mEval '2015",
+                "volume": "",
+                "issue": "",
+                "pages": "203--209",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Massimo Nicosia, Simone Filice, Alberto Barr\u00f3n- Cede\u00f1o, Iman Saleh, Hamdy Mubarak, Wei Gao, Preslav Nakov, Giovanni Da San Martino, Alessandro Moschitti, Kareem Darwish, Llu\u00eds M\u00e0rquez, Shafiq Joty, and Walid Magdy. 2015. QCRI: Answer selec- tion for community question answering -experiments for Arabic and English. In Proceedings of the 9th International Workshop on Semantic Evaluation, Se- mEval '2015, pages 203-209, Denver, CO.",
+                "links": null
+            },
+            "BIBREF27": {
+                "ref_id": "b27",
+                "title": "Learning to rank short text pairs with convolutional deep neural networks",
+                "authors": [
+                    {
+                        "first": "Kishore",
+                        "middle": [],
+                        "last": "Papineni",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Salim",
+                        "middle": [],
+                        "last": "Roukos",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Todd",
+                        "middle": [],
+                        "last": "Ward",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Wei-Jing",
+                        "middle": [],
+                        "last": "Zhu ; Philadelphia",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Pa",
+                        "middle": [
+                            "Stefan"
+                        ],
+                        "last": "Riezler",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alexander",
+                        "middle": [],
+                        "last": "Vasserman",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ioannis",
+                        "middle": [],
+                        "last": "Tsochantaridis",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Vibhu",
+                        "middle": [],
+                        "last": "Mittal",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yi",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2002,
+                "venue": "Proceedings of the 38th International ACM SIGIR Conference on Research and Development in Information Retrieval, SIGIR '15",
+                "volume": "",
+                "issue": "",
+                "pages": "373--382",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Kishore Papineni, Salim Roukos, Todd Ward, and Wei- Jing Zhu. 2002. BLEU: a method for automatic eval- uation of machine translation. In Proceedings of 40th Annual Meeting of the Association for Computational Linguistics, ACL '02, pages 311-318, Philadelphia, PA. Stefan Riezler, Alexander Vasserman, Ioannis Tsochan- taridis, Vibhu Mittal, and Yi Liu. 2007. Statisti- cal machine translation for query expansion in answer retrieval. In Proceedings of the 45th Annual Meet- ing of the Association of Computational Linguistics, ACL '07, pages 464-471, Prague, Czech Republic. Aliaksei Severyn and Alessandro Moschitti. 2015. Learning to rank short text pairs with convolutional deep neural networks. In Proceedings of the 38th International ACM SIGIR Conference on Research and Development in Information Retrieval, SIGIR '15, pages 373-382, Santiago, Chile.",
+                "links": null
+            },
+            "BIBREF28": {
+                "ref_id": "b28",
+                "title": "A study of translation edit rate with targeted human annotation",
+                "authors": [
+                    {
+                        "first": "Matthew",
+                        "middle": [],
+                        "last": "Snover",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Bonnie",
+                        "middle": [],
+                        "last": "Dorr",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Richard",
+                        "middle": [],
+                        "last": "Schwartz",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Linnea",
+                        "middle": [],
+                        "last": "Micciulla",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "John",
+                        "middle": [],
+                        "last": "Makhoul",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2006,
+                "venue": "Proceedings of the 7th Biennial Conference of the Association for Machine Translation in the Americas, AMTA '06",
+                "volume": "",
+                "issue": "",
+                "pages": "223--231",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Matthew Snover, Bonnie Dorr, Richard Schwartz, Lin- nea Micciulla, and John Makhoul. 2006. A study of translation edit rate with targeted human annotation. In Proceedings of the 7th Biennial Conference of the Association for Machine Translation in the Americas, AMTA '06, pages 223-231, Cambridge, MA.",
+                "links": null
+            },
+            "BIBREF29": {
+                "ref_id": "b29",
+                "title": "Parsing with compositional vector grammars",
+                "authors": [
+                    {
+                        "first": "Richard",
+                        "middle": [],
+                        "last": "Socher",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "John",
+                        "middle": [],
+                        "last": "Bauer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [
+                            "D"
+                        ],
+                        "last": "Manning",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Andrew",
+                        "middle": [
+                            "Y"
+                        ],
+                        "last": "Ng",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "Proceedings of the 51st Annual Meeting of the Association for Computational Linguistics, ACL '13",
+                "volume": "",
+                "issue": "",
+                "pages": "455--465",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Richard Socher, John Bauer, Christopher D. Manning, and Andrew Y. Ng. 2013. Parsing with compositional vector grammars. In Proceedings of the 51st Annual Meeting of the Association for Computational Linguis- tics, ACL '13, pages 455-465, Sofia, Bulgaria.",
+                "links": null
+            },
+            "BIBREF30": {
+                "ref_id": "b30",
+                "title": "Automatic question answering using the web: Beyond the factoid",
+                "authors": [
+                    {
+                        "first": "Radu",
+                        "middle": [],
+                        "last": "Soricut",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Eric",
+                        "middle": [],
+                        "last": "Brill",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2006,
+                "venue": "Inf. Retr",
+                "volume": "9",
+                "issue": "2",
+                "pages": "191--206",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Radu Soricut and Eric Brill. 2006. Automatic question answering using the web: Beyond the factoid. Inf. Retr., 9(2):191-206.",
+                "links": null
+            },
+            "BIBREF31": {
+                "ref_id": "b31",
+                "title": "Learning to rank answers to nonfactoid questions from web collections",
+                "authors": [
+                    {
+                        "first": "Mihai",
+                        "middle": [],
+                        "last": "Surdeanu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Massimiliano",
+                        "middle": [],
+                        "last": "Ciaramita",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hugo",
+                        "middle": [],
+                        "last": "Zaragoza",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2011,
+                "venue": "Comput. Linguist",
+                "volume": "37",
+                "issue": "2",
+                "pages": "351--383",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Mihai Surdeanu, Massimiliano Ciaramita, and Hugo Zaragoza. 2011. Learning to rank answers to non- factoid questions from web collections. Comput. Lin- guist., 37(2):351-383.",
+                "links": null
+            },
+            "BIBREF32": {
+                "ref_id": "b32",
+                "title": "LSTMbased deep learning models for non-factoid answer selection",
+                "authors": [
+                    {
+                        "first": "Ming",
+                        "middle": [],
+                        "last": "Tan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Bing",
+                        "middle": [],
+                        "last": "Xiang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Bowen",
+                        "middle": [],
+                        "last": "Zhou",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1511.04108"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Ming Tan, Bing Xiang, and Bowen Zhou. 2015. LSTM- based deep learning models for non-factoid answer se- lection. arXiv preprint arXiv:1511.04108.",
+                "links": null
+            },
+            "BIBREF33": {
+                "ref_id": "b33",
+                "title": "JAIST: Combining multiple features for answer selection in community question answering",
+                "authors": [
+                    {
+                        "first": "Hung",
+                        "middle": [],
+                        "last": "Quan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Vu",
+                        "middle": [],
+                        "last": "Tran",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tu",
+                        "middle": [],
+                        "last": "Tran",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Minh",
+                        "middle": [],
+                        "last": "Vu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Son",
+                        "middle": [
+                            "Bao"
+                        ],
+                        "last": "Nguyen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Pham",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Proceedings of the 9th International Workshop on Semantic Evaluation, Se-mEval '15",
+                "volume": "",
+                "issue": "",
+                "pages": "215--219",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Quan Hung Tran, Vu Tran, Tu Vu, Minh Nguyen, and Son Bao Pham. 2015. JAIST: Combining multiple features for answer selection in community question answering. In Proceedings of the 9th In- ternational Workshop on Semantic Evaluation, Se- mEval '15, pages 215-219, Denver, CO.",
+                "links": null
+            },
+            "BIBREF34": {
+                "ref_id": "b34",
+                "title": "A long short-term memory model for answer sentence selection in question answering",
+                "authors": [
+                    {
+                        "first": "Di",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Eric",
+                        "middle": [],
+                        "last": "Nyberg",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Proceedings of the 53rd Annual Meeting of the Association for Computational Linguistics and the 7th International Joint Conference on Natural Language Processing, ACL-IJCNLP '15",
+                "volume": "",
+                "issue": "",
+                "pages": "707--712",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Di Wang and Eric Nyberg. 2015. A long short-term memory model for answer sentence selection in ques- tion answering. In Proceedings of the 53rd Annual Meeting of the Association for Computational Linguis- tics and the 7th International Joint Conference on Nat- ural Language Processing, ACL-IJCNLP '15, pages 707-712, Beijing, China.",
+                "links": null
+            },
+            "BIBREF35": {
+                "ref_id": "b35",
+                "title": "ICL00 at SemEval-2016 Task 3: Translation-based method for CQA system",
+                "authors": [
+                    {
+                        "first": "Yunfang",
+                        "middle": [],
+                        "last": "Wu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Minghua",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of the 10th International Workshop on Semantic Evaluation, Se-mEval '16",
+                "volume": "",
+                "issue": "",
+                "pages": "857--860",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Yunfang Wu and Minghua Zhang. 2016. ICL00 at SemEval-2016 Task 3: Translation-based method for CQA system. In Proceedings of the 10th In- ternational Workshop on Semantic Evaluation, Se- mEval '16, pages 857-860, San Diego, CA.",
+                "links": null
+            },
+            "BIBREF36": {
+                "ref_id": "b36",
+                "title": "Learning continuous word embedding with metadata for question retrieval in community question answering",
+                "authors": [
+                    {
+                        "first": "Guangyou",
+                        "middle": [],
+                        "last": "Zhou",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tingting",
+                        "middle": [],
+                        "last": "He",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jun",
+                        "middle": [],
+                        "last": "Zhao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Po",
+                        "middle": [],
+                        "last": "Hu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Proceedings of the 53rd Annual Meeting of the Association for Computational Linguistics and the 7th International Joint Conference on Natural Language Processing, ACL-IJCNLP '15",
+                "volume": "",
+                "issue": "",
+                "pages": "250--259",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Guangyou Zhou, Tingting He, Jun Zhao, and Po Hu. 2015. Learning continuous word embedding with metadata for question retrieval in community question answering. In Proceedings of the 53rd Annual Meet- ing of the Association for Computational Linguistics and the 7th International Joint Conference on Natural Language Processing, ACL-IJCNLP '15, pages 250- 259, Beijing, China.",
+                "links": null
+            }
+        },
+        "ref_entries": {
+            "FIGREF0": {
+                "num": null,
+                "text": "How long can i drive inQatar with my international driver's permit before I'm forced to change my Australian license to a Qatari one? When I do change over to a Qatar license do I actually lose my Australian license? I'd prefer to keep it if possible...",
+                "uris": null,
+                "fig_num": null,
+                "type_str": "figure"
+            },
+            "FIGREF1": {
+                "num": null,
+                "text": "Figure 1: The similarity triangle in cQA.",
+                "uris": null,
+                "fig_num": "1",
+                "type_str": "figure"
+            },
+            "TABREF0": {
+                "content": "<table><tr><td>System</td><td colspan=\"3\">MAP AvgRec MRR</td></tr><tr><td colspan=\"2\">Relevance relations only 21.78 + Appropriateness 30.94 + Relatedness 52.43 Full Network 54.51</td><td>20.66 29.86 57.05 60.93</td><td>22.59 35.02 60.14 62.94</td></tr><tr><td>Baseline 1 (random) Baseline 2 (IR+chron.)</td><td>15.01 40.36</td><td>11.44 45.97</td><td>15.19 45.83</td></tr></table>",
+                "type_str": "table",
+                "text": "",
+                "html": null,
+                "num": null
+            },
+            "TABREF1": {
+                "content": "<table><tr><td>System</td><td>MAP AvgRec MRR \u2206 MAP</td></tr><tr><td colspan=\"2\">Full Network -Lexical similarity 45.89 51.54 53.29 -8.62 54.51 60.93 62.94 -Domain-specific 48.48 50.46 53.78 -6.03 -Distributed rep. 51.17 56.63 56.91 -3.34 No hidden layer 52.19 58.23 59.95 -2.32</td></tr></table>",
+                "type_str": "table",
+                "text": ").",
+                "html": null,
+                "num": null
+            },
+            "TABREF3": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "Using appropriateness predictions.",
+                "html": null,
+                "num": null
+            },
+            "TABREF5": {
+                "content": "<table><tr><td>.68 53.43 55.96</td></tr></table>",
+                "type_str": "table",
+                "text": "Comparative results with the state of the art, i.e., the top-3 systems that participated in SemEval-2016 Task 3, subtask C.",
+                "html": null,
+                "num": null
+            }
+        }
+    }
+}

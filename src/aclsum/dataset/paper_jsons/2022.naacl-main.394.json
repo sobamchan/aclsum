@@ -1,0 +1,2354 @@
+{
+    "paper_id": "2022",
+    "header": {
+        "generated_with": "S2ORC 1.0.0",
+        "date_generated": "2023-06-16T12:34:20.170048Z"
+    },
+    "title": "When Does Syntax Mediate Neural Language Model Performance? Evidence from Dropout Probes",
+    "authors": [
+        {
+            "first": "Mycal",
+            "middle": [],
+            "last": "Tucker",
+            "suffix": "",
+            "affiliation": {},
+            "email": ""
+        },
+        {
+            "first": "Peng",
+            "middle": [],
+            "last": "Qian",
+            "suffix": "",
+            "affiliation": {},
+            "email": "pqian@mit.edu"
+        },
+        {
+            "first": "Roger",
+            "middle": [],
+            "last": "Levy",
+            "suffix": "",
+            "affiliation": {},
+            "email": "rplevy@mit.edu"
+        },
+        {
+            "first": "Julie",
+            "middle": [],
+            "last": "Shah",
+            "suffix": "",
+            "affiliation": {},
+            "email": "julie_a_shah@csail.mit.edu"
+        }
+    ],
+    "year": "",
+    "venue": null,
+    "identifiers": {},
+    "abstract": "Recent causal probing literature reveals when language models and syntactic probes use similar representations. Such techniques may yield \"false negative\" causality results: models may use representations of syntax, but probes may have learned to use redundant encodings of the same syntactic information. We demonstrate that models do encode syntactic information redundantly and introduce a new probe design that guides probes to consider all syntactic information present in embeddings. Using these probes, we find evidence for the use of syntax in models where prior methods did not, allowing us to boost model performance by injecting syntactic information into representations.\nHere, we identify a limitation of prior causal probing art in which redundant information in embeddings could lead to probes and models using different representations of the same information, which in turn could lead to uninformative causal analysis results. We propose a new probe architecture that addresses this limitation by encouraging probes to use all sources of information in embeddings.",
+    "pdf_parse": {
+        "paper_id": "2022",
+        "_pdf_hash": "",
+        "abstract": [
+            {
+                "text": "Recent causal probing literature reveals when language models and syntactic probes use similar representations. Such techniques may yield \"false negative\" causality results: models may use representations of syntax, but probes may have learned to use redundant encodings of the same syntactic information. We demonstrate that models do encode syntactic information redundantly and introduce a new probe design that guides probes to consider all syntactic information present in embeddings. Using these probes, we find evidence for the use of syntax in models where prior methods did not, allowing us to boost model performance by injecting syntactic information into representations.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            },
+            {
+                "text": "Here, we identify a limitation of prior causal probing art in which redundant information in embeddings could lead to probes and models using different representations of the same information, which in turn could lead to uninformative causal analysis results. We propose a new probe architecture that addresses this limitation by encouraging probes to use all sources of information in embeddings.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            }
+        ],
+        "body_text": [
+            {
+                "text": "Recent large neural models like BERT and GPT-3 exhibit impressive performance on a large variety of linguistic tasks, from sentiment analysis to question-answering (Devlin et al., 2019; Brown et al., 2020) . Given the models' impressive performance, but also their complexity, researchers have developed tools to understand what patterns models have learned. In probing literature, researchers develop \"probes:\" models designed to extract information from the representations of trained models (Linzen et al., 2016; Conneau et al., 2018; Hall Maudslay et al., 2020) . For example, Hewitt and Manning (2019) demonstrated that one can train accurate linear classifiers to predict syntactic structure from BERT or ELMO embeddings. These probes reveal what information is present in model embeddings but not how or if models use that information (Belinkov, 2021) .",
+                "cite_spans": [
+                    {
+                        "start": 164,
+                        "end": 185,
+                        "text": "(Devlin et al., 2019;",
+                        "ref_id": "BIBREF6"
+                    },
+                    {
+                        "start": 186,
+                        "end": 205,
+                        "text": "Brown et al., 2020)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 494,
+                        "end": 515,
+                        "text": "(Linzen et al., 2016;",
+                        "ref_id": "BIBREF14"
+                    },
+                    {
+                        "start": 516,
+                        "end": 537,
+                        "text": "Conneau et al., 2018;",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 538,
+                        "end": 565,
+                        "text": "Hall Maudslay et al., 2020)",
+                        "ref_id": "BIBREF11"
+                    },
+                    {
+                        "start": 842,
+                        "end": 858,
+                        "text": "(Belinkov, 2021)",
+                        "ref_id": "BIBREF2"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "To address this gap, new research in causal analysis seeks to understand how aspects of models' representations affect their behavior (Elazar et al., 2020; Ravfogel et al., 2020; Giulianelli et al., 2018; Tucker et al., 2021; Feder et al., 2021) . Typically, these techniques create counterfactual representations that differ from the original according to some Figure 1 : In a 2D embedding space, a model might redundantly encode syntactic representations of a sentence like \"the girl saw the boy with the telescope.\" Redundant encodings could cause misalignment between the model's decision boundary (blue) and a probe's (red). We introduce dropout probes (green) to use all informative dimensions.",
+                "cite_spans": [
+                    {
+                        "start": 134,
+                        "end": 155,
+                        "text": "(Elazar et al., 2020;",
+                        "ref_id": "BIBREF7"
+                    },
+                    {
+                        "start": 156,
+                        "end": 178,
+                        "text": "Ravfogel et al., 2020;",
+                        "ref_id": "BIBREF20"
+                    },
+                    {
+                        "start": 179,
+                        "end": 204,
+                        "text": "Giulianelli et al., 2018;",
+                        "ref_id": "BIBREF10"
+                    },
+                    {
+                        "start": 205,
+                        "end": 225,
+                        "text": "Tucker et al., 2021;",
+                        "ref_id": "BIBREF23"
+                    },
+                    {
+                        "start": 226,
+                        "end": 245,
+                        "text": "Feder et al., 2021)",
+                        "ref_id": "BIBREF8"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 369,
+                        "end": 370,
+                        "text": "1",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "property (e.g., syntactic interpretation of the sentence). Researchers then compare outputs when using original and counterfactual embeddings to assess whether a property encoded in the representation is causally related to model behavior.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Unfortunately, negative results -wherein researchers report that models do not appear to use a property causally -are difficult to interpret. Such failures can be attributed to a model truly not using the property (true negatives), or to a failure of the technique (false negatives). For example, as depicted in Figure 1 , if a language model encodes syntactic information redundantly (here illustrated in two-dimensions), the model and probe may differentiate among parses along orthogonal dimensions. When creating counterfactual representations with such probes, researchers could incorrectly conclude that the model does not use syntactic information.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 319,
+                        "end": 320,
+                        "text": "1",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "In this work, we present new evidence for the causal use of syntactic representations on task performance in BERT, using newly-designed probes that take into account the potential redundancy in a model's internal representation. First, we find evidence for representational redundancy in BERTbased models. Based on these findings, we propose a new probe design that encourages the probe to use all relevant representations of syntax in model embeddings. These probes are then used to assess if language models use representations of syntax causally, and, unlike prior art, we find that some fine-tuned models do exhibit signatures of causal use of syntactic information. Lastly, having found that these models causally use representations of syntax, we used our probes to boost a questionanswering model's performance by \"injecting\" syntactic information at test time.1 2 Related Work",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Probing literature seeks to expose learned patterns of a neural language model by training small neural networks to map from model representations to human-interpretable properties (Alain and Bengio, 2017; Conneau et al., 2018; Reif et al., 2019) . For example, Hewitt and Manning (2019) propose single-layered neural nets that map from embeddings to syntactic representations of sentences. Such probing methods are correlative rather than causal because they depict what information is present in representations instead of how that information is used (Hall Maudslay et al., 2020; Pearl and Mackenzie, 2018) . Understanding when language models use structural information causally is an important question given the central role structure appears to play in human understanding of natural language (Chomsky, 1965) . In this work, we perform causal analysis by combining causal methods with a new probe design.",
+                "cite_spans": [
+                    {
+                        "start": 181,
+                        "end": 205,
+                        "text": "(Alain and Bengio, 2017;",
+                        "ref_id": "BIBREF0"
+                    },
+                    {
+                        "start": 206,
+                        "end": 227,
+                        "text": "Conneau et al., 2018;",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 228,
+                        "end": 246,
+                        "text": "Reif et al., 2019)",
+                        "ref_id": "BIBREF21"
+                    },
+                    {
+                        "start": 262,
+                        "end": 287,
+                        "text": "Hewitt and Manning (2019)",
+                        "ref_id": "BIBREF12"
+                    },
+                    {
+                        "start": 554,
+                        "end": 582,
+                        "text": "(Hall Maudslay et al., 2020;",
+                        "ref_id": "BIBREF11"
+                    },
+                    {
+                        "start": 583,
+                        "end": 609,
+                        "text": "Pearl and Mackenzie, 2018)",
+                        "ref_id": "BIBREF18"
+                    },
+                    {
+                        "start": 800,
+                        "end": 815,
+                        "text": "(Chomsky, 1965)",
+                        "ref_id": "BIBREF4"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Language Model Probing",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "Recently, researchers have begun applying causal analysis to language models to understand if and how they use human-interpretable properties in their decision making. While direct text manipulations are sometimes possible (e.g., modifying \"The man works as a...\" to \"The woman works as a ...\"), several methods rely on constructing counterfactual representations to measure model behavior (Kaushik et al., 2020; Ravfogel et al., 2020) . Prior art has often found that standard models learn undesirable causal relationships by encoding unwanted biases or by not learning to rely upon syntactic principles (Feder et al., 2021; Elazar et al., 2020) .",
+                "cite_spans": [
+                    {
+                        "start": 390,
+                        "end": 412,
+                        "text": "(Kaushik et al., 2020;",
+                        "ref_id": "BIBREF13"
+                    },
+                    {
+                        "start": 413,
+                        "end": 435,
+                        "text": "Ravfogel et al., 2020)",
+                        "ref_id": "BIBREF20"
+                    },
+                    {
+                        "start": 605,
+                        "end": 625,
+                        "text": "(Feder et al., 2021;",
+                        "ref_id": "BIBREF8"
+                    },
+                    {
+                        "start": 626,
+                        "end": 646,
+                        "text": "Elazar et al., 2020)",
+                        "ref_id": "BIBREF7"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Causal Analysis of Language Models",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "Our work is most closely related to Tucker et al. (2021) , so we explain their technical approach here. Tucker et al. (2021) train non-linear structural probes (based on those designed by Hewitt and Manning (2019) ) to predict aspects of a sentence's syntactic structure from model embeddings. That is, a probe p maps from an embedding, z, to a representation of syntax, s. Trained probes are used to create counterfactual embeddings, z \u2032 , by updating z \u2032 from z via gradient descent to minimize a loss function, L, evaluated on the probe's output and a desired output based on an alternative syntactic interpretation, s \u2032 : \u2207 z \u2032 L(p(z \u2032 ), s \u2032 ). Intuitively, these z \u2032 are meant to represent \"what z would have been if the structure of the sentence were s \u2032 .\" Using suites of syntactically ambiguous sentences, the authors measured how a model's outputs differed when using z \u2032 generated from different syntactic interpretations.",
+                "cite_spans": [
+                    {
+                        "start": 36,
+                        "end": 56,
+                        "text": "Tucker et al. (2021)",
+                        "ref_id": "BIBREF23"
+                    },
+                    {
+                        "start": 104,
+                        "end": 124,
+                        "text": "Tucker et al. (2021)",
+                        "ref_id": "BIBREF23"
+                    },
+                    {
+                        "start": 188,
+                        "end": 213,
+                        "text": "Hewitt and Manning (2019)",
+                        "ref_id": "BIBREF12"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Causal Analysis of Language Models",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "While Tucker et al. (2021) find that a pretrained BERT model does use representations of syntax causally (i.e., model outputs change when using different syntactic interpretations), the authors find that a BERT model fine-tuned on a questionanswering task does not show similar behavior. Identifying causal mechanisms in models is important not only for fairness and robustness measures, but also for improving model performance. In specific cases of subject-verb agreement, Giulianelli et al. (2018) found that changing representations of a subject's plurality affected the plurality of verbs predicted by an LSTM.",
+                "cite_spans": [
+                    {
+                        "start": 6,
+                        "end": 26,
+                        "text": "Tucker et al. (2021)",
+                        "ref_id": "BIBREF23"
+                    },
+                    {
+                        "start": 475,
+                        "end": 500,
+                        "text": "Giulianelli et al. (2018)",
+                        "ref_id": "BIBREF10"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Causal Analysis of Language Models",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "In this work, we use the gradient-descent method proposed by Tucker et al. (2021) , but we use a new probe design. We identify several cases in which their method fails to uncover a causal relationship, whereas ours does. Furthermore, compared to Giulianelli et al. (2018) , we use more general representations of syntax instead of only plurality. In such cases, the gradient of s with respect to the embedding (dashed orange) only flows from one of the copies, so only that copy will be updated in counterfactual embeddings (b). However, by introducing a dropout layer that masks random inputs to the probe, dropout probes learn to use all informative parts of embeddings, which distributes the gradient across the whole embedding (c).",
+                "cite_spans": [
+                    {
+                        "start": 61,
+                        "end": 81,
+                        "text": "Tucker et al. (2021)",
+                        "ref_id": "BIBREF23"
+                    },
+                    {
+                        "start": 247,
+                        "end": 272,
+                        "text": "Giulianelli et al. (2018)",
+                        "ref_id": "BIBREF10"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Causal Analysis of Language Models",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "We show by example how prior art in causal probing may fail to reveal causal uses of syntactic information in language models. Here, we use a simplified example; in later experiments we demonstrate that trained models exhibit similar phenomena.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Limitations from Redundancy",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "In neural network probing literature, a probe, p \u03b8 , is a neural network parametrized by weights, \u03b8, that maps from representations, z, to a predicted property, \u015d: \u015d = p \u03b8 (z). Hewitt and Manning (2019) define two types of structural probes that map from z to representations of a sentence's syntax. The \"depth\" probe predicts words' depths in a parse tree; the \"distance\" probe predicts the distance between pairs of words in a parse tree. In this paper, we assume s refers to syntactic information, but probing techniques are general. Given a corpus comprising (z, s) pairs, probes are trained using supervised learning to minimize some loss.",
+                "cite_spans": [
+                    {
+                        "start": 177,
+                        "end": 202,
+                        "text": "Hewitt and Manning (2019)",
+                        "ref_id": "BIBREF12"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Limitations from Redundancy",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "Suppose that there exists a trained model, M ; M k-(the first k layers of M ) encodes an input, x, into an embedding z. The layers of M after k, dubbed M k+ , produce a prediction, \u0177, from z. For the purposes of this example, we state that M uses syntactic information, and specifically that z is informative of the syntactic structure of x.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Limitations from Redundancy",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "Let us assume that the dependency structure of x may be represented by within a vector, z dep , and that M k-produces embeddings, z, which are two identical copies of z dep . Using pythonic notation, z = [z dep ] + [z dep ]. Thus, z contains syntactic information and, when we state that M \"uses\" syntactic information, we formally mean that \u2207 z dep M k+ (z) \u0338 = 0.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Limitations from Redundancy",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "Building upon this example, let us label the two copies of z dep as z dep 1 and z dep 2 , although the two vectors remain identical. If we train a probe to predict syntactic forms from z, it may arbitrarily learn to use any aspects of z that are informative of its prediction, s. Let us say that the probe learns to use only z dep 2 , again defined as \u2207 z dep 2 p(z) \u0338 = 0. However, M k+ may only use z dep 1 : the copy that the probe does not use. We claim that this example, while simplified, demonstrates a potential scenario in which causal probing techniques could return a false negative. Specifically, if one generates counterfactual embeddings, z \u2032 , by changing z according to the activations that change the probe's outputs, only z dep 2 will change. Because M k+ uses only z dep 1 for predictions, the model's output will not change. This example is depicted in Figure 2 . Ultimately, without considering the redundancy in a model's internal representation, prior methods will fail to uncover the fact that M actually does use representations of syntax causally.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 880,
+                        "end": 881,
+                        "text": "2",
+                        "ref_id": "FIGREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Limitations from Redundancy",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "In this section, we propose a neural probe architecture to address the limitations of prior art by encouraging probes to use all syntactic information present in z. The desired behavior is depicted in Figure 2c : if the probe uses all activations that are informative of syntax, that will necessarily be a superset of the activations that the model uses for downstream processing (if the model uses syntax). Therefore, when generating counterfactual embeddings using such probes, every activation encoding syntactic information would be updated, which in turn would change the model's output.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 208,
+                        "end": 210,
+                        "text": "2c",
+                        "ref_id": "FIGREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Dropout Probes",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "Our approach was inspired by an idea of creating a mixture of probes, each trained to use a different masked subset of activations in z. The full set of such probes would have to learn to use all activations in z that are informative of s. One may approximate creating such a set by introducing a dropout layer as the first layer to a single probe. At training time, the dropout layer masks a random subset of the input; the mask itself changes with every training batch. We dub such probes \"dropout probes.\" This probe design, and our resulting findings when using them, are the main contributions of our work. We note that adding a dropout layer to probes introduces a new hyperparameter but, in experiments, we found consistent results over a wide range of positive dropout values.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Dropout Probes",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "Here, we report the results from three experiments establishing the benefits of dropout probes. First, we found evidence supporting our hypothesis of redundantly-encoded syntactic information by calculating the mutual information between various activations in trained networks. Second, we compared dropout probes to standard probes in a set of syntactically-ambiguous test domains. We found that our method revealed evidence supporting the causal use of syntax in models where other methods did not (Tucker et al., 2021) . Lastly, given our findings that models used syntax causally, we demonstrated how one could \"inject\" syntactic information into models to improve performance in syntactically-challenging tasks.",
+                "cite_spans": [
+                    {
+                        "start": 500,
+                        "end": 521,
+                        "text": "(Tucker et al., 2021)",
+                        "ref_id": "BIBREF23"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "4"
+            },
+            {
+                "text": "Experiments were conducted on four models, all based on huggingface's bert-base-uncased (Wolf et al., 2019) . The Mask model was the original model, trained on a masked language modeling task and next-sentence prediction (Devlin et al., 2019) . The QA model was fine-tuned on the Stanford Question Answering Dataset 2.0 (Rajpurkar et al., 2016) .2 Lastly, we trained two models, dubbed NLI and NLI-HANS, that were finetuned on the Multi-Genre Natural Language Inference dataset or that dataset augmented with the Heuristic Analysis for NLI Systems (HANS) dataset, respectively (Williams et al., 2018; McCoy et al., 2019) .",
+                "cite_spans": [
+                    {
+                        "start": 88,
+                        "end": 107,
+                        "text": "(Wolf et al., 2019)",
+                        "ref_id": "BIBREF25"
+                    },
+                    {
+                        "start": 221,
+                        "end": 242,
+                        "text": "(Devlin et al., 2019)",
+                        "ref_id": "BIBREF6"
+                    },
+                    {
+                        "start": 320,
+                        "end": 344,
+                        "text": "(Rajpurkar et al., 2016)",
+                        "ref_id": "BIBREF19"
+                    },
+                    {
+                        "start": 577,
+                        "end": 600,
+                        "text": "(Williams et al., 2018;",
+                        "ref_id": "BIBREF24"
+                    },
+                    {
+                        "start": 601,
+                        "end": 620,
+                        "text": "McCoy et al., 2019)",
+                        "ref_id": "BIBREF16"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "4"
+            },
+            {
+                "text": "The Mask model was used to compare our method to Tucker et al. (2021) , who found that such models used syntactic information causally. The QA model was used to study a finetuned model; prior art did not find evidence of causal use. Lastly, the NLI models were used because Natural Language Inference is recognized as a difficult linguistic task that models appear to \"cheat\" on by leveraging spurious correlations in datasets (McCoy et al., 2019; Naik et al., 2018; Sanchez et al., 2018) .",
+                "cite_spans": [
+                    {
+                        "start": 49,
+                        "end": 69,
+                        "text": "Tucker et al. (2021)",
+                        "ref_id": "BIBREF23"
+                    },
+                    {
+                        "start": 448,
+                        "end": 466,
+                        "text": "Naik et al., 2018;",
+                        "ref_id": "BIBREF17"
+                    },
+                    {
+                        "start": 467,
+                        "end": 488,
+                        "text": "Sanchez et al., 2018)",
+                        "ref_id": "BIBREF22"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "4"
+            },
+            {
+                "text": "I(Z 1 , D) I(Z 2 , D) I(Z, D) Mask 2.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "4"
+            },
+            {
+                "text": "First, we found that language models redundantly encoded syntactic information in their embeddings, which motivated using dropout probes.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Measuring Redundancy in Embeddings",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "We used a technique from prior art, Mutual Information Neural Estimator (MINE), which is a neural-network based approach for estimating the mutual information between two random variables (Belghazi et al., 2018) . It does so by computing a lower bound of mutual information and training a neural network to maximize that value. This provides a conservative but tight estimate of mutual information. We refer readers to Appendix A for further details of our implementation.",
+                "cite_spans": [
+                    {
+                        "start": 188,
+                        "end": 211,
+                        "text": "(Belghazi et al., 2018)",
+                        "ref_id": "BIBREF1"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Measuring Redundancy in Embeddings",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "We defined four random variables of interest. The first, D, was the depth of each word in a sentence's parse tree; in other words, the labels used to train depth probes in prior literature (Hewitt and Manning, 2019) . The second random variable, Z, was the 768-dimensional embeddings generated by a language model for each token in an input sentence. Lastly, the third and fourth random variables (Z 1 and Z 2 ) corresponded to the first and second halves of Z for each token. That is, these variables comprised the starting and ending 384 units for each token's embedding. By measuring the mutual information between different pairs of these variables, one may formalize our redundancy hypothesis into the following test:",
+                "cite_spans": [
+                    {
+                        "start": 189,
+                        "end": 215,
+                        "text": "(Hewitt and Manning, 2019)",
+                        "ref_id": "BIBREF12"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Measuring Redundancy in Embeddings",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "I(Z, D) < I(Z 1 , D) + I(Z 2 , D).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Measuring Redundancy in Embeddings",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "Intuitively, if the test holds, there is shared syntactic information between Z 1 and Z 2 .",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Measuring Redundancy in Embeddings",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "We trained a MINE neural network on the first 5000 examples from the Penn TreeBank to estimate mutual information between random variables (Marcus et al., 1993) . Embeddings were taken from the fourth layer of the MASK, QA, and NLI models, although they may be generated elsewhere. Our results are presented in Table 1 . For all models, I(D, Z) < I(D, Z 1 ) + I(D, Z 2 ); i.e., one gains little to no information for predicting D from the full Z instead of from just Z 1 or just Z 2 . This is evidence of redundant syntactic information in Z.",
+                "cite_spans": [
+                    {
+                        "start": 139,
+                        "end": 160,
+                        "text": "(Marcus et al., 1993)",
+                        "ref_id": "BIBREF15"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 317,
+                        "end": 318,
+                        "text": "1",
+                        "ref_id": "TABREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Measuring Redundancy in Embeddings",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "In these experiments using MINE, we demonstrated how Z 1 and Z 2 could be defined as the subsets of redundant activations depicted in Figure 2 . One could define other Z 1 and Z 2 to better characterize redundancy; here, we merely claim that at least some redundancy is present in the model embeddings.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 141,
+                        "end": 142,
+                        "text": "2",
+                        "ref_id": "FIGREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Measuring Redundancy in Embeddings",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "The prior section established that language models encode syntactic information redundantly; here, we showed that dropout probes overcame the challenges introduced by this redundancy by better aligning with models' true causal usage of syntax. We compared dropout probes to the probes used in prior art via counterfactual experiments inspired by those used by Tucker et al. (2021) .",
+                "cite_spans": [
+                    {
+                        "start": 360,
+                        "end": 380,
+                        "text": "Tucker et al. (2021)",
+                        "ref_id": "BIBREF23"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Ambiguity Suite Experiments",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "We trained both distance-and depth-based probes, the two types of syntactic probes proposed by Hewitt and Manning (2019) . We trained a new probe for each layer of each model, conducting 5 trials with random seeds 0 through 4. All probes were implemented as 3-layer, non-linear neural nets that mapped from model embeddings (of dimension 768) through 2 ReLU layers of dimension 1024, to a final layer to predict a word's depth or distance in the parse tree from other words. Probes were trained for up to 100 epochs, with early stopping based on validation set loss, using the Penn TreeBank dataset (Marcus et al., 1993) . We found that this produced more accurate probes than prior art, which capped training at 30 epochs, and that these resulting probes did better than prior reported results, even without using dropout. Each probe was prefixed by a dropout layer with a parameter, \u03b1, that specified the proportion of inputs that were masked before being fed to the probe. By setting \u03b1 = 0, we recreated prior art of standard probes. We additionally investigated positive values of \u03b1 to measure the benefit of dropout. Counterfactual embeddings were created via gradient descent through trained probes (with dropout disabled), as in prior art (Tucker et al., 2021) . That is, new embeddings, z \u2032 , were generated to decrease the loss between p(z \u2032 ) and a desired parse. We called this loss the counterfactual loss.",
+                "cite_spans": [
+                    {
+                        "start": 95,
+                        "end": 120,
+                        "text": "Hewitt and Manning (2019)",
+                        "ref_id": "BIBREF12"
+                    },
+                    {
+                        "start": 599,
+                        "end": 620,
+                        "text": "(Marcus et al., 1993)",
+                        "ref_id": "BIBREF15"
+                    },
+                    {
+                        "start": 1246,
+                        "end": 1267,
+                        "text": "(Tucker et al., 2021)",
+                        "ref_id": "BIBREF23"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Ambiguity Suite Experiments",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "In these experiments, we reported two types of results. First, we visualized the effect of interventions, by layer, for a particular dropout rate and counterfactual loss. This revealed that, typically, earlier layers in models were more susceptible to interventions. Second, we devised an aggregate metric for the average difference, across all layers, in model outputs for counterfactuals generated with different parses. This showed how lower counterfactual losses (i.e., more interventions) and higher dropout typically revealed larger effects.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Ambiguity Suite Experiments",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "Additionally, we note that the probes were trained to parse single sentences, but two of the models (QA and NLI) accepted two sentences as inputs. For both models, counterfactual embeddings were creating by only updating the syntacticallyambiguous sentence and then concatenating it to the unaltered other embeddings.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Ambiguity Suite Experiments",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "In testing the Mask model, we largely reproduced patterns in prior results that such models use representations of syntax causally, although we found new results with dropout depth probes. We tested the model with ambiguity test suites inspired by the Coordination and NP/Z suites from Tucker et al. (2021) . For example, in the Coordination suite, one sentence reads, \"The man saw the girl and the dog [MASK] tall.\" One may plausibly insert either a plural or singular noun in the masked location, depending upon the syntactic interpretation of the sentence. We generated sentences using a template-based method; details of the prompts (and all prompts in this work) are included in Appendix B.",
+                "cite_spans": [
+                    {
+                        "start": 286,
+                        "end": 306,
+                        "text": "Tucker et al. (2021)",
+                        "ref_id": "BIBREF23"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Masked Language Model",
+                "sec_num": "4.2.1"
+            },
+            {
+                "text": "The results of passing z \u2032 generated from different parses in the Coordination suite through the rest of the Mask model are plotted in Figure 3 . The three plotted lines correspond to the model output using the normal embeddings (green), using z \u2032 generated according to a parse favoring plural verbs (red dashed), or using z \u2032 generated using parses implying singular verbs (blue solid). The y axis corresponds to the probability the model assigned to words implying a plural interpretation (\"were,\" \"are,\" and \"as\") fitting in the masked location, normalized by the sum of probabilities assigned to those plural words or singular words (\"was\" and \"is\"). If the Mask model uses syntactic representations correctly, counterfactuals from plural parses should increase the probability of plural words.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 142,
+                        "end": 143,
+                        "text": "3",
+                        "ref_id": "FIGREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Masked Language Model",
+                "sec_num": "4.2.1"
+            },
+            {
+                "text": "We indeed found that effect, although it is clearest when using dropout probes. The causal effects using standard probes are plotted in the left column; we reproduced the findings from prior art that distance-based probes create the desired effect, but depth-based probes had little to no effect. Conversely, when using dropout probes with \u03b1 = 0.4 (right column), we found much larger effects.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Masked Language Model",
+                "sec_num": "4.2.1"
+            },
+            {
+                "text": "Averaging across all layers, we also measured the mean difference in output when using counterfactual embeddings generated according to different parses. Intuitively, this generated a single number that captured the average difference between the red and blue lines in the plots in Figure 3 .",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 289,
+                        "end": 290,
+                        "text": "3",
+                        "ref_id": "FIGREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Masked Language Model",
+                "sec_num": "4.2.1"
+            },
+            {
+                "text": "For a range of dropout values and counterfactual losses, we plotted the mean causal effect for the Coordination and NP/Z suites in Figure 4 , using distance probes. For a given counterfactual loss, using higher dropout probes produced larger effects. In addition, lower counterfactual losses (corresponding to more gradient steps) induced greater effects. These trends also held true for depth-based probes (Appendix D). Overall, using the Mask model, we recreated prior art and found new evidence that models also use a depth-based representation of syntax.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 138,
+                        "end": 139,
+                        "text": "4",
+                        "ref_id": "FIGREF2"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Masked Language Model",
+                "sec_num": "4.2.1"
+            },
+            {
+                "text": "We also found that the QA model used representations of syntax causally, contrary to prior findings, through a series of similar causal analysis experiments using syntactically-ambiguous inputs. The QA model is a BERT-based model fine-tuned on a question-answering task to map from context and a question to a continuous span of the context that answered the question (Rajpurkar et al., 2016) .",
+                "cite_spans": [
+                    {
+                        "start": 368,
+                        "end": 392,
+                        "text": "(Rajpurkar et al., 2016)",
+                        "ref_id": "BIBREF19"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "QA Model",
+                "sec_num": "4.2.2"
+            },
+            {
+                "text": "We performed experiments using depth-and distance-based probes, using dropout values at increments of 0.1 from 0 to 0.9. We used three test suites for analyzing the causal use of syntax in the QA model: \"Coordination\", \"Relative Clause\" (RC), and a \"Noun Phrase/Verb Phrase\" (NP/VP) suite. The Coordination suite consisted of 256 prompts with coordination ambiguity like, \"I saw the men and the women were tall. Who was tall?\" The RC suite consisted of 193 prompts with attachment ambiguity of a relative clause like, \"I saw the women and the men who were tall. Who was tall?\" The NP/VP suite consisted of 256 prompts like, \"The girl saw the boy with the telescope. Who had the telescope?\" Prompts were designed such that answers were dictated by syntactic interpretations. Unlike prior art, we found evidence that QA models use representations of syntax causally. In the left column of Figure 5 , we found similar results to prior art: using standard depth-based probes produced noisy results, and distance-based probes had a small effect. (In fact, this effect size shrank if we only trained the distance probe for 30 epochs, as in prior art, instead of the 100 epochs we used, indicating the importance of well-trained probes.) In contrast to the standard probes, the dropout probes, plotted in the right column, revealed much larger effects of syntactic interventions.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 894,
+                        "end": 895,
+                        "text": "5",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "QA Model",
+                "sec_num": "4.2.2"
+            },
+            {
+                "text": "More systematic analysis for all dropout rates, using distance and depth-based probes for all 3 test suites confirmed these trends. We plotted the aggregate metrics for all suites using depth probes in Figure 6 . The causal effects were smaller in the RC and NP/VP suites than in the Coordination suite, indicating that the model may have learned a weaker causal link for these syntactic relations. Nevertheless, all suites demonstrate the importance of using dropout in probes: without dropout (solid black curve), the causal effects were smaller than for any positive dropout rate.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 209,
+                        "end": 210,
+                        "text": "6",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "QA Model",
+                "sec_num": "4.2.2"
+            },
+            {
+                "text": "We note briefly that the causal effects uncovered by dropout probes may not be solely attributed to dropout probes performing better at their parsing task. In fact, adding dropout worsened probe performance according to typical probe performance metrics (Appendix E).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "QA Model",
+                "sec_num": "4.2.2"
+            },
+            {
+                "text": "Lastly, we performed similar causal analysis on the NLI and NLI-HANS models and, in contrast to the Mask and QA models, we found no evidence for the causal use of syntax using any of our probes for either model. The NLI model was finetuned on just the MNLI corpus, and the NLI-HANS model was finetuned with both the MNLI and HANS corpora, QA F1 via Interventions We used a test suite based on the Coordination suite already introduced in this work: an example prompt was \"The person saw the keys in the cabinets which are green. The keys are green.\" The models had to classify these inputs among three classes of entailment, contradiction, or neutrality.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "NLI Model",
+                "sec_num": "4.2.3"
+            },
+            {
+                "text": "Ultimately, we failed to find any evidence that either the NLI or the NLI-HANS model used syntactic information causally. The models always predicted entailment for all prompts, whether using original embeddings or counterfactuals generated for different parses. We used distance probes with dropout values from 0 to 0.9 and created counterfactuals for losses from 0.05 to 0.3 and never observed a shift in predicted probability mass of more than 1% when using counterfactuals. Unfortunately, this suggests that simply augmenting the MNLI dataset with HANS may not be enough to produce a model that uses syntactic information causally.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "NLI Model",
+                "sec_num": "4.2.3"
+            },
+            {
+                "text": "Earlier, we demonstrated that the QA model causally used representations of syntax for predictions; here, we showed that we could improve QA model performance at test time by \"injecting\" syntactic information into embeddings. Because prior art had not found that QA models used syntax causally, such interventions were not previously pursued, as far as we are aware.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Boosting Performance with Probes",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "We designed a new, syntactically challenging \"Intervene\" test suite of 288 prompts for the QA model. Example prompts are \"The person saw the keys by the cabinet which was green. What was green?\" and \"The person saw the keys by the cabinet which were green. What was green?\" An-swering correctly (\"the cabinet\" first and \"the keys\" second) depends upon using noun-verb agreement. We used template-generated parse trees for each sentence and distance probes to create counterfactual embeddings for each sentence at layer 4 of the QA model. Layer 4 was chosen based on performance on a validation dataset (Appendix C).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Boosting Performance with Probes",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "We passed the original and counterfactual embeddings through the QA model and measured performance on a test suite. F1 performance is plotted in Figure 7 ; exact match metrics had similar trends. Typically, higher-dropout probes improved performance more, although the highest-dropout probes deteriorated for the lowest counterfactual losses. We hypothesize that this deterioration corresponded to generating out-of-distribution embeddings, but this topic warrants further study.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 152,
+                        "end": 153,
+                        "text": "7",
+                        "ref_id": "FIGREF4"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Boosting Performance with Probes",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "Lastly, we performed a similar experiment using the NLI and NLI-HANS models using 486 prompts drawn from the HANS dataset like \"The doctor near the actor danced. The actor danced\" (McCoy et al., 2019) . The NLI model achieved 50% accuracy (always predicting entailment) and the NLI-HANS model achieved 99% accuracy. Neither model's accuracy changed significantly when using counterfactuals with the correct parse for the first sentence, yet again indicating that these models may not use representations of syntax causally.",
+                "cite_spans": [
+                    {
+                        "start": 180,
+                        "end": 200,
+                        "text": "(McCoy et al., 2019)",
+                        "ref_id": "BIBREF16"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Boosting Performance with Probes",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "In this work, we designed and evaluated \"dropout probes,\" a new neural probing architecture for generating useful causal analysis of trained language models. Our technical contribution -adding a dropout layer before probes -was inspired by a theory of redundant syntactic encodings in models. Our results fit within three categories: we showed that 1) models encoded syntactic information redundantly, 2) dropout probes, unlike standard probes, revealed that QA models used syntactic representations causally, and 3) by injecting syntactic information at test time in syntacticallychallenging domains, we could increase model performance without retraining.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Contributions and Conclusion",
+                "sec_num": "5"
+            },
+            {
+                "text": "Despite our step towards better understanding of pretrained models, future work remains. Natural extensions include studying pretrained models beyond those considered in this work, further research into redundancy in embeddings, more investigation into inserting symbolic knowledge into neural representations, and new methods for training models to respond appropriately to interventions.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Contributions and Conclusion",
+                "sec_num": "5"
+            },
+            {
+                "text": "While the majority of this paper details the technical contributions of our work, here, we briefly consider some of the possible consequences of our findings based on transparency and causal modeling.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Ethical and Broader Impacts",
+                "sec_num": "6"
+            },
+            {
+                "text": "Fundamentally, we believe that causal analysis of models is a powerful tool towards more ethical AI. Our dropout probes enable better inspection of models, providing possible mechanisms for regulators, ethicists, and even the general public to better understand AI systems with which they interact. By injecting information into models at test time, as demonstrated in Section 4.3, we provide another mechanism for people to control model behavior. Thus, our tool may reinforce values of transparency and value-alignment in AI, contingent upon access to the model for probing.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Ethical and Broader Impacts",
+                "sec_num": "6"
+            },
+            {
+                "text": "While we hope that our probing mechanism will be used for good, misuse of the tool is certainly possible. In particular, the very causal rules that our tool uncovers may be used to reinforce biases. For example, people may attempt to argue that a gender bias exhibited by a model are evidence of the \"correctness\" of that bias. We urge readers to remember that models likely reflect biases present in human-generated data and certainly not \"true\" stereotypes.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Ethical and Broader Impacts",
+                "sec_num": "6"
+            },
+            {
+                "text": "We also note that the transparency benefits of our technique are not universally accessible. Training a single probe on a single layer took approximately 2 minutes on an NVIDIA GeForce 3080; generating counterfactuals took approximately 1 second per counterfactul on similar hardware. Although these operations individually are relatively lightweight (and certainly less computationally intensive than finetuning a whole model), systematic evaluation of models for many layers, multiple probes, and many counterfactuals is more challenging. Furthermore, all analysis assumes access to the internals of the pretrained model itself.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Ethical and Broader Impacts",
+                "sec_num": "6"
+            },
+            {
+                "text": "Lastly, while our work is limited to diagnosis of existing models, we hope that it will enable important future research in causally-motivated models. We hope to ultimately develop models that blend causal rules based on human guidance with emergent learned patterns from data. Our work can complement such research by certifying that models have indeed learned the desired rules.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Ethical and Broader Impacts",
+                "sec_num": "6"
+            },
+            {
+                "text": "TE acknowledges support from the GEM consortium and the National Science Foundation Graduate Research Fellowship under Grant No. 1745302.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Acknowledgements",
+                "sec_num": "7"
+            },
+            {
+                "text": "The mutual information between two variables is defined via the KL Divergence between the joint distribution of the variables and the product of their marginals: I(X, Y ) = D KL (P (XY )||P (X)P (Y )). For notational simplicity, we describe the joint distribution as P and the product of the marginals as Q. Let us further state that P and Q define outputs that are jointly in R D .",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Acknowledgements",
+                "sec_num": "7"
+            },
+            {
+                "text": "A lower-bound for the KL divergence is as follows, setting F as any class of functions that maps from R D to R:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Acknowledgements",
+                "sec_num": "7"
+            },
+            {
+                "text": "D KL (P ||Q) \u2265 sup T \u2208F E P [T ] -( E Q [e T ]) (1)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Acknowledgements",
+                "sec_num": "7"
+            },
+            {
+                "text": "In other words, one can lower bound the mutual information by finding a function, T , that maximizes the difference between the two terms in Equation 1. Belghazi et al. (2018) do so with functions parametrized as a neural net that maps from the concatenation of two inputs (one for each random variable) to a single-valued output. Training the neural net is conducted to maximize the value described by Equation 1.",
+                "cite_spans": [
+                    {
+                        "start": 153,
+                        "end": 175,
+                        "text": "Belghazi et al. (2018)",
+                        "ref_id": "BIBREF1"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Acknowledgements",
+                "sec_num": "7"
+            },
+            {
+                "text": "In our experiments, we create neural networks with separate, linear layers of size 64 for each input. The embeddings from those two layers are concatenated, passed through two 1024-dimensional layers with ReLU activations, and then passed through a linear layer with a single output. We thus mapedp from the two inputs to a single, real-valued output.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Acknowledgements",
+                "sec_num": "7"
+            },
+            {
+                "text": "Training was performed using batch size 32 over 50 epochs, at which point the mutual information estimates appeared to have converged.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Acknowledgements",
+                "sec_num": "7"
+            },
+            {
+                "text": "Here, we specify the details of the test suites used to evaluate models for reproducibility.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "B Test Suite Creation",
+                "sec_num": null
+            },
+            {
+                "text": "The Mask model Coordination test suite comprised sentences like \"The man saw the girl and the dog [MASK] tall.\" More generally, sentences followed the following template: \"The NN1 V the NN2 and the NN3 [MASK] ADJ.\" We created all sentences by iterating through the combinations of the words described in Table 2 . This generated 243 sentences, and each sentence was associated with 2 parses: one described as a conjunction of sentences (e.g., \"(The man saw the girl) and (the dog [MASK] tall.)\") and one as a single sentence with a conjunction of noun phrases (e.g., \"The man saw (the girl and the dog) [MASK] tall.\"). The mask model NP/Z test suite comprised sentences like, \"When the dog scratched the vet [MASK] ran.\" More generally, sentences followed the following template: \"When the NN1 V1 the NN2 [MASK] V2.\" Each sentence was associated with two parses, favoring either adverbs (e.g., \"When the dog scratched the vet quickly ran\" or nouns, \"When the dog scratch the vet she ran\"). We used the word tuples described in Table 3 , inspired by prior art, to generate 150 sentences.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 310,
+                        "end": 311,
+                        "text": "2",
+                        "ref_id": "TABREF2"
+                    },
+                    {
+                        "start": 1033,
+                        "end": 1034,
+                        "text": "3",
+                        "ref_id": "TABREF4"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "B Test Suite Creation",
+                "sec_num": null
+            },
+            {
+                "text": "The QA model Coordination test suite comprised prompts like \"Who was tall? The happy stranger saw the angry men and the angry women were tall.\" More generally, the prompts followed the following template: \"Who was ADJ1? The ADJ2 NN1 V the ADJ3 NN3 and the ADJ4 NN4 were ADJ1.\" We created 256 prompts by iterating through combinations of the words in Table 4 . \"None\" adjectives were excluded from the text.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 356,
+                        "end": 357,
+                        "text": "4",
+                        "ref_id": "TABREF5"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "B Test Suite Creation",
+                "sec_num": null
+            },
+            {
+                "text": "The QA model NP/VP suite comprised prompts like \"Who had the telescope? The girl saw the boy with the telescope.\" The prompts followed the following template: \"Who had the NN1? The ADJ1 NN2 ADV V the ADJ2 NN3 with the ADJ3 NN4.\" In this suite, the choice of V and NN4 was tightly coupled -one may see with a telescope but not see with a stick, for example. Table 5 details the combinations of words used to fill out the template, including V-NN4 pairs. Overall, we generated 256 prompts.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 363,
+                        "end": 364,
+                        "text": "5",
+                        "ref_id": "TABREF6"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "B Test Suite Creation",
+                "sec_num": null
+            },
+            {
+                "text": "The QA model RC suite comprised prompts like \"Who was desperate? The women and the men who were desperate bribed the politician.\" The prompts followed the following template: \"Who was ADJ1? The ADJ2 NN1 and the ADJ3 NN2 who were ADJ1 V the NN3.\" We generated 192 example prompts by iterating over combinations of the words listed in prised prompts like \"What was green? The human saw the keys by the cabinet which were green.\" More generally, prompts were created via the following template: \"What was ADJ1? The NN1 V the NN2 by the NN3 which was/were ADJ1.\" By changing the plurality of NN2 or NN3 and replacing \"was\" with \"were,\" the correct answer should change. Overall, we generated 288 sentences by iterating over all combinations of the words listed in Table 7 , such that exactly one of NN1 and NN2 was plural at a time.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 766,
+                        "end": 767,
+                        "text": "7",
+                        "ref_id": "TABREF9"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "B Test Suite Creation",
+                "sec_num": null
+            },
+            {
+                "text": "In the intervention experiments in Section 4. the results for probes with different dropout rates and for varying counterfactual losses, but we had to choose the layer of the QA model at which to perform interventions. Therefore, we created a validation suite based on the Intervention template, using new nouns, verbs, and adjectives. For dropout rates from 0.0 to 0.3, ranging over counterfactual losses, and layers from 1 to 7, we computed the QA model's F1 and Exact Match scores on the validation suite. These results are included in Table 8 , and strongly suggested that performance, for all probes, was most increased via interventions at layer 4.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 545,
+                        "end": 546,
+                        "text": "8",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "C Hyperparameter Selection",
+                "sec_num": null
+            },
+            {
+                "text": "In the main paper, we reported included only some of the results for distance-and depth-based probe interventions. Here, we first show, in more detail, how increasing the dropout rate grows the causal effect with the QA attachment suite and distance dropout in counterfactual generation arose from a phenomenon other than higher-performing probes.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "D Varying Dropout Rates",
+                "sec_num": null
+            },
+            {
+                "text": "In this work, we built upon pre-existing scientific artifacts, including datasets and publicly-avaible code. Here, we briefly list their licenses and in-tended use cases. We used all artifacts for purely academic purposes.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "F Scientific Artifacts",
+                "sec_num": null
+            },
+            {
+                "text": "The Penn TreeBank is licensed under the \"LDC User Agreement for Non-Members\" (Marcus et al., 1993) . The dataset is commonly used in many academic settings (e.g., Hewitt and Manning (2019) ; Tucker et al. (2021) ).",
+                "cite_spans": [
+                    {
+                        "start": 77,
+                        "end": 98,
+                        "text": "(Marcus et al., 1993)",
+                        "ref_id": "BIBREF15"
+                    },
+                    {
+                        "start": 163,
+                        "end": 188,
+                        "text": "Hewitt and Manning (2019)",
+                        "ref_id": "BIBREF12"
+                    },
+                    {
+                        "start": 191,
+                        "end": 211,
+                        "text": "Tucker et al. (2021)",
+                        "ref_id": "BIBREF23"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "F Scientific Artifacts",
+                "sec_num": null
+            },
+            {
+                "text": "Code at https://github.com/mycal-tucker/ mlm_dropout_probes",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "The QA model was downloaded from huggingface model repository under \"twmkn9/bert-base-uncased-squad2\"",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            }
+        ],
+        "back_matter": [
+            {
+                "text": "The Mutual Information Neural Estimator technique works by training a neural net to compute and maximize a lower bound on mutual information between two random variables (Belghazi et al., 2018) . We describe the intuition of the technique, as well as our implementation, in this section; we refer readers to the full paper for theoretical analysis of MINE. \u03b1/Loss Layer 0.05 0.1 0.2 0.3 Dist. 0.0 1 71.9/59.4 72.7/60.9 73.4/60.9 73.4/60.9 2 69.5/56.3 71.9/60.9 71.9/60.9 71.9/59. probes of varying \u03b1. Next, we include the mean causal effect plots for Mask and QA models using both types of probes on the 5 total suites.First, we plotted an example of how increasing the dropout rate grew the causal effect in the QA attachment quite in Figure 8 . We found that positive dropout values consistently outperformed probes with no dropout. Furthermore, for \u03b1 ranging from 0.1 to 0.4, increasing the dropout rate seemed to increase the effect size. Considering only interventions at layer 2, for example, vanilla probes shifted model predictions by at most 2% for different parses; for probes with dropout 0.5, probabilities shifted by roughly 20%.Finally, we included results for all dropout rates and counterfactual losses in Figures 9 and 10 .",
+                "cite_spans": [
+                    {
+                        "start": 170,
+                        "end": 193,
+                        "text": "(Belghazi et al., 2018)",
+                        "ref_id": "BIBREF1"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 743,
+                        "end": 744,
+                        "text": "8",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 1230,
+                        "end": 1231,
+                        "text": "9",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 1236,
+                        "end": 1238,
+                        "text": "10",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "A MINE Details",
+                "sec_num": null
+            },
+            {
+                "text": "In the main paper, we demonstrated the benefits of using dropout probes for creating counterfactual embeddings. One could hypothesize that the dropout enables better counterfactuals because the probes are prevented from overfitting to the training data. We found that that was not the case.In Figure 11 , we plotted probe performance metrics for the distance-and depth-based probes. For the distance probe, we reported the spearman correlation coefficient between predicted and actual pairwise distances between words in a sentence's parse tree. For the depth probe, we reported the accuracy of the probe in predicting the word at the root of the syntax tree. Both metrics were used in prior probing literature (Hewitt and Manning, 2019) . We found that, while using non-linear probes boosted probe performance compared to linear probes, adding dropout actually worsened probe performance. This suggests that the benefits from The Stanford Question Answering Dataset 2.0 is under a creative commons license and is commonly used in academic settings (Rajpurkar et al., 2016) .The MNLI dataset is under an OANC license, \"which allows all content to be freely used, modified, and shared under permissive terms\" (Williams et al., 2018) . The HANS dataset is under an MIT license (McCoy et al., 2019) . Both datasets are commonly used in academic settings (McCoy et al., 2019) .The code we used to train the NLI and NLI-HANS models is under an Apache License 2.0 (Gao et al., 2021) and was developed for academic use.",
+                "cite_spans": [
+                    {
+                        "start": 711,
+                        "end": 737,
+                        "text": "(Hewitt and Manning, 2019)",
+                        "ref_id": "BIBREF12"
+                    },
+                    {
+                        "start": 1049,
+                        "end": 1073,
+                        "text": "(Rajpurkar et al., 2016)",
+                        "ref_id": "BIBREF19"
+                    },
+                    {
+                        "start": 1208,
+                        "end": 1231,
+                        "text": "(Williams et al., 2018)",
+                        "ref_id": "BIBREF24"
+                    },
+                    {
+                        "start": 1275,
+                        "end": 1295,
+                        "text": "(McCoy et al., 2019)",
+                        "ref_id": "BIBREF16"
+                    },
+                    {
+                        "start": 1351,
+                        "end": 1371,
+                        "text": "(McCoy et al., 2019)",
+                        "ref_id": "BIBREF16"
+                    },
+                    {
+                        "start": 1458,
+                        "end": 1476,
+                        "text": "(Gao et al., 2021)",
+                        "ref_id": "BIBREF9"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 300,
+                        "end": 302,
+                        "text": "11",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "E Probe Performance Metrics",
+                "sec_num": null
+            }
+        ],
+        "bib_entries": {
+            "BIBREF0": {
+                "ref_id": "b0",
+                "title": "Understanding intermediate layers using linear classifier probes",
+                "authors": [
+                    {
+                        "first": "Guillaume",
+                        "middle": [],
+                        "last": "Alain",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yoshua",
+                        "middle": [],
+                        "last": "Bengio",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Guillaume Alain and Yoshua Bengio. 2017. Under- standing intermediate layers using linear classifier probes. ArXiv, abs/1610.01644.",
+                "links": null
+            },
+            "BIBREF1": {
+                "ref_id": "b1",
+                "title": "Mutual information neural estimation",
+                "authors": [
+                    {
+                        "first": "Mohamed",
+                        "middle": [],
+                        "last": "Ishmael Belghazi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Aristide",
+                        "middle": [],
+                        "last": "Baratin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sai",
+                        "middle": [],
+                        "last": "Rajeshwar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sherjil",
+                        "middle": [],
+                        "last": "Ozair",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yoshua",
+                        "middle": [],
+                        "last": "Bengio",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Aaron",
+                        "middle": [],
+                        "last": "Courville",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Devon",
+                        "middle": [],
+                        "last": "Hjelm",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 35th International Conference on Machine Learning",
+                "volume": "80",
+                "issue": "",
+                "pages": "531--540",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Mohamed Ishmael Belghazi, Aristide Baratin, Sai Rajeshwar, Sherjil Ozair, Yoshua Bengio, Aaron Courville, and Devon Hjelm. 2018. Mutual infor- mation neural estimation. In Proceedings of the 35th International Conference on Machine Learn- ing, volume 80 of Proceedings of Machine Learning Research, pages 531-540. PMLR.",
+                "links": null
+            },
+            "BIBREF2": {
+                "ref_id": "b2",
+                "title": "Probing Classifiers: Promises, Shortcomings, and Advances. Computational Linguistics",
+                "authors": [
+                    {
+                        "first": "Yonatan",
+                        "middle": [],
+                        "last": "Belinkov",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2021,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "1--13",
+                "other_ids": {
+                    "DOI": [
+                        "10.1162/coli_a_00422"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Yonatan Belinkov. 2021. Probing Classifiers: Promises, Shortcomings, and Advances. Computational Lin- guistics, pages 1-13.",
+                "links": null
+            },
+            "BIBREF4": {
+                "ref_id": "b4",
+                "title": "Aspects of the Theory of Syntax",
+                "authors": [
+                    {
+                        "first": "Noam",
+                        "middle": [],
+                        "last": "Chomsky",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1965,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Noam Chomsky. 1965. Aspects of the Theory of Syntax. MIT press.",
+                "links": null
+            },
+            "BIBREF5": {
+                "ref_id": "b5",
+                "title": "What you can cram into a single $&!#* vector: Probing sentence embeddings for linguistic properties",
+                "authors": [
+                    {
+                        "first": "Alexis",
+                        "middle": [],
+                        "last": "Conneau",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "German",
+                        "middle": [],
+                        "last": "Kruszewski",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Guillaume",
+                        "middle": [],
+                        "last": "Lample",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Lo\u00efc",
+                        "middle": [],
+                        "last": "Barrault",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Marco",
+                        "middle": [],
+                        "last": "Baroni",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 56th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "1",
+                "issue": "",
+                "pages": "2126--2136",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/P18-1198"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Alexis Conneau, German Kruszewski, Guillaume Lam- ple, Lo\u00efc Barrault, and Marco Baroni. 2018. What you can cram into a single $&!#* vector: Probing sentence embeddings for linguistic properties. In Proceedings of the 56th Annual Meeting of the As- sociation for Computational Linguistics (Volume 1: Long Papers), pages 2126-2136, Melbourne, Aus- tralia. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF6": {
+                "ref_id": "b6",
+                "title": "BERT: Pre-training of deep bidirectional transformers for language understanding",
+                "authors": [
+                    {
+                        "first": "Jacob",
+                        "middle": [],
+                        "last": "Devlin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ming-Wei",
+                        "middle": [],
+                        "last": "Chang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kenton",
+                        "middle": [],
+                        "last": "Lee",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kristina",
+                        "middle": [],
+                        "last": "Toutanova",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies",
+                "volume": "1",
+                "issue": "",
+                "pages": "4171--4186",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/N19-1423"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Jacob Devlin, Ming-Wei Chang, Kenton Lee, and Kristina Toutanova. 2019. BERT: Pre-training of deep bidirectional transformers for language under- standing. In Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Tech- nologies, Volume 1 (Long and Short Papers), pages 4171-4186, Minneapolis, Minnesota. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF7": {
+                "ref_id": "b7",
+                "title": "Amnesic Probing: Behavioral Explanation with Amnesic Counterfactuals. arXiv eprints",
+                "authors": [
+                    {
+                        "first": "Yanai",
+                        "middle": [],
+                        "last": "Elazar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Shauli",
+                        "middle": [],
+                        "last": "Ravfogel",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alon",
+                        "middle": [],
+                        "last": "Jacovi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yoav",
+                        "middle": [],
+                        "last": "Goldberg",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:2006.00995"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Yanai Elazar, Shauli Ravfogel, Alon Jacovi, and Yoav Goldberg. 2020. Amnesic Probing: Behavioral Ex- planation with Amnesic Counterfactuals. arXiv e- prints, page arXiv:2006.00995.",
+                "links": null
+            },
+            "BIBREF8": {
+                "ref_id": "b8",
+                "title": "CausaLM: Causal model explanation through counterfactual language models",
+                "authors": [
+                    {
+                        "first": "Amir",
+                        "middle": [],
+                        "last": "Feder",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nadav",
+                        "middle": [],
+                        "last": "Oved",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Uri",
+                        "middle": [],
+                        "last": "Shalit",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Roi",
+                        "middle": [],
+                        "last": "Reichart",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2021,
+                "venue": "Computational Linguistics",
+                "volume": "47",
+                "issue": "2",
+                "pages": "333--386",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Amir Feder, Nadav Oved, Uri Shalit, and Roi Reichart. 2021. CausaLM: Causal model explanation through counterfactual language models. Computational Lin- guistics, 47(2):333-386.",
+                "links": null
+            },
+            "BIBREF9": {
+                "ref_id": "b9",
+                "title": "Adapting by pruning: A case study on BERT",
+                "authors": [
+                    {
+                        "first": "Yang",
+                        "middle": [],
+                        "last": "Gao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nicol\u00f2",
+                        "middle": [],
+                        "last": "Colombo",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Wei",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2021,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Yang Gao, Nicol\u00f2 Colombo, and Wei Wang. 2021. Adapting by pruning: A case study on BERT. CoRR, abs/2105.03343.",
+                "links": null
+            },
+            "BIBREF10": {
+                "ref_id": "b10",
+                "title": "Under the hood: Using diagnostic classifiers to investigate and improve how language models track agreement information",
+                "authors": [
+                    {
+                        "first": "Mario",
+                        "middle": [],
+                        "last": "Giulianelli",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jack",
+                        "middle": [],
+                        "last": "Harding",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Florian",
+                        "middle": [],
+                        "last": "Mohnert",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dieuwke",
+                        "middle": [],
+                        "last": "Hupkes",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Willem",
+                        "middle": [],
+                        "last": "Zuidema",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 2018 EMNLP Workshop BlackboxNLP: Analyzing and Interpreting Neural Networks for NLP",
+                "volume": "",
+                "issue": "",
+                "pages": "240--248",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/W18-5426"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Mario Giulianelli, Jack Harding, Florian Mohnert, Dieuwke Hupkes, and Willem Zuidema. 2018. Under the hood: Using diagnostic classifiers to investigate and improve how language models track agreement information. In Proceedings of the 2018 EMNLP Workshop BlackboxNLP: Analyzing and Interpreting Neural Networks for NLP, pages 240-248, Brussels, Belgium. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF11": {
+                "ref_id": "b11",
+                "title": "Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics",
+                "authors": [
+                    {
+                        "first": "Rowan",
+                        "middle": [],
+                        "last": "Hall Maudslay",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Josef",
+                        "middle": [],
+                        "last": "Valvoda",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tiago",
+                        "middle": [],
+                        "last": "Pimentel",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Adina",
+                        "middle": [],
+                        "last": "Williams",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ryan",
+                        "middle": [],
+                        "last": "Cotterell",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "7389--7395",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/2020.acl-main.659"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Rowan Hall Maudslay, Josef Valvoda, Tiago Pimentel, Adina Williams, and Ryan Cotterell. 2020. A tale of a probe and a parser. In Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics, pages 7389-7395, Online. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF12": {
+                "ref_id": "b12",
+                "title": "A structural probe for finding syntax in word representations",
+                "authors": [
+                    {
+                        "first": "John",
+                        "middle": [],
+                        "last": "Hewitt",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [
+                            "D"
+                        ],
+                        "last": "Manning",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies",
+                "volume": "1",
+                "issue": "",
+                "pages": "4129--4138",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "John Hewitt and Christopher D Manning. 2019. A struc- tural probe for finding syntax in word representations. In Proceedings of the 2019 Conference of the North American Chapter of the Association for Computa- tional Linguistics: Human Language Technologies, Volume 1 (Long and Short Papers), pages 4129-4138.",
+                "links": null
+            },
+            "BIBREF13": {
+                "ref_id": "b13",
+                "title": "Learning the difference that makes a difference with counterfactually-augmented data",
+                "authors": [
+                    {
+                        "first": "Divyansh",
+                        "middle": [],
+                        "last": "Kaushik",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Eduard",
+                        "middle": [],
+                        "last": "Hovy",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zachary",
+                        "middle": [],
+                        "last": "Lipton",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "International Conference on Learning Representations",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Divyansh Kaushik, Eduard Hovy, and Zachary Lipton. 2020. Learning the difference that makes a differ- ence with counterfactually-augmented data. In Inter- national Conference on Learning Representations.",
+                "links": null
+            },
+            "BIBREF14": {
+                "ref_id": "b14",
+                "title": "Assessing the ability of lstms to learn syntaxsensitive dependencies",
+                "authors": [
+                    {
+                        "first": "Tal",
+                        "middle": [],
+                        "last": "Linzen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Emmanuel",
+                        "middle": [],
+                        "last": "Dupoux",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yoav",
+                        "middle": [],
+                        "last": "Goldberg",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Transactions of the Association for Computational Linguistics",
+                "volume": "4",
+                "issue": "",
+                "pages": "521--535",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Tal Linzen, Emmanuel Dupoux, and Yoav Goldberg. 2016. Assessing the ability of lstms to learn syntax- sensitive dependencies. Transactions of the Associa- tion for Computational Linguistics, 4:521-535.",
+                "links": null
+            },
+            "BIBREF15": {
+                "ref_id": "b15",
+                "title": "Building a large annotated corpus of English: The Penn Treebank",
+                "authors": [
+                    {
+                        "first": "Mitchell",
+                        "middle": [
+                            "P"
+                        ],
+                        "last": "Marcus",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Beatrice",
+                        "middle": [],
+                        "last": "Santorini",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mary",
+                        "middle": [
+                            "Ann"
+                        ],
+                        "last": "Marcinkiewicz",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1993,
+                "venue": "Computational Linguistics",
+                "volume": "19",
+                "issue": "2",
+                "pages": "313--330",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Mitchell P. Marcus, Beatrice Santorini, and Mary Ann Marcinkiewicz. 1993. Building a large annotated cor- pus of English: The Penn Treebank. Computational Linguistics, 19(2):313-330.",
+                "links": null
+            },
+            "BIBREF16": {
+                "ref_id": "b16",
+                "title": "Right for the wrong reasons: Diagnosing syntactic heuristics in natural language inference",
+                "authors": [
+                    {
+                        "first": "Tom",
+                        "middle": [],
+                        "last": "Mccoy",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ellie",
+                        "middle": [],
+                        "last": "Pavlick",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tal",
+                        "middle": [],
+                        "last": "Linzen",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "3428--3448",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/P19-1334"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Tom McCoy, Ellie Pavlick, and Tal Linzen. 2019. Right for the wrong reasons: Diagnosing syntactic heuris- tics in natural language inference. In Proceedings of the 57th Annual Meeting of the Association for Com- putational Linguistics, pages 3428-3448, Florence, Italy. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF17": {
+                "ref_id": "b17",
+                "title": "Stress test evaluation for natural language inference",
+                "authors": [
+                    {
+                        "first": "Aakanksha",
+                        "middle": [],
+                        "last": "Naik",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Abhilasha",
+                        "middle": [],
+                        "last": "Ravichander",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Norman",
+                        "middle": [],
+                        "last": "Sadeh",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Carolyn",
+                        "middle": [],
+                        "last": "Rose",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Graham",
+                        "middle": [],
+                        "last": "Neubig",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 27th International Conference on Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "2340--2353",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Aakanksha Naik, Abhilasha Ravichander, Norman Sadeh, Carolyn Rose, and Graham Neubig. 2018. Stress test evaluation for natural language inference. In Proceedings of the 27th International Conference on Computational Linguistics, pages 2340-2353, Santa Fe, New Mexico, USA. Association for Com- putational Linguistics.",
+                "links": null
+            },
+            "BIBREF18": {
+                "ref_id": "b18",
+                "title": "The Book of Why: The New Science of Cause and Effect, 1st edition",
+                "authors": [
+                    {
+                        "first": "Judea",
+                        "middle": [],
+                        "last": "Pearl",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dana",
+                        "middle": [],
+                        "last": "Mackenzie",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Judea Pearl and Dana Mackenzie. 2018. The Book of Why: The New Science of Cause and Effect, 1st edition. Basic Books, Inc., USA.",
+                "links": null
+            },
+            "BIBREF19": {
+                "ref_id": "b19",
+                "title": "SQuAD: 100,000+ Questions for Machine Comprehension of Text",
+                "authors": [
+                    {
+                        "first": "Pranav",
+                        "middle": [],
+                        "last": "Rajpurkar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jian",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Konstantin",
+                        "middle": [],
+                        "last": "Lopyrev",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Percy",
+                        "middle": [],
+                        "last": "Liang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1606.05250"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Pranav Rajpurkar, Jian Zhang, Konstantin Lopyrev, and Percy Liang. 2016. SQuAD: 100,000+ Questions for Machine Comprehension of Text. arXiv e-prints, page arXiv:1606.05250.",
+                "links": null
+            },
+            "BIBREF20": {
+                "ref_id": "b20",
+                "title": "Null it out: Guarding protected attributes by iterative nullspace projection",
+                "authors": [
+                    {
+                        "first": "Shauli",
+                        "middle": [],
+                        "last": "Ravfogel",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yanai",
+                        "middle": [],
+                        "last": "Elazar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hila",
+                        "middle": [],
+                        "last": "Gonen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Michael",
+                        "middle": [],
+                        "last": "Twiton",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yoav",
+                        "middle": [],
+                        "last": "Goldberg",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "7237--7256",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/2020.acl-main.647"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Shauli Ravfogel, Yanai Elazar, Hila Gonen, Michael Twiton, and Yoav Goldberg. 2020. Null it out: Guard- ing protected attributes by iterative nullspace projec- tion. In Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics, pages 7237-7256, Online. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF21": {
+                "ref_id": "b21",
+                "title": "Visualizing and measuring the geometry of bert",
+                "authors": [
+                    {
+                        "first": "Emily",
+                        "middle": [],
+                        "last": "Reif",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ann",
+                        "middle": [],
+                        "last": "Yuan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Martin",
+                        "middle": [],
+                        "last": "Wattenberg",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Fernanda",
+                        "middle": [
+                            "B"
+                        ],
+                        "last": "Viegas",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Andy",
+                        "middle": [],
+                        "last": "Coenen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Adam",
+                        "middle": [],
+                        "last": "Pearce",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Been",
+                        "middle": [],
+                        "last": "Kim",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Advances in Neural Information Processing Systems",
+                "volume": "32",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Emily Reif, Ann Yuan, Martin Wattenberg, Fernanda B Viegas, Andy Coenen, Adam Pearce, and Been Kim. 2019. Visualizing and measuring the geometry of bert. In Advances in Neural Information Processing Systems, volume 32. Curran Associates, Inc.",
+                "links": null
+            },
+            "BIBREF22": {
+                "ref_id": "b22",
+                "title": "Behavior analysis of NLI models: Uncovering the influence of three factors on robustness",
+                "authors": [
+                    {
+                        "first": "Ivan",
+                        "middle": [],
+                        "last": "Sanchez",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jeff",
+                        "middle": [],
+                        "last": "Mitchell",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sebastian",
+                        "middle": [],
+                        "last": "Riedel",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 2018 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies",
+                "volume": "1",
+                "issue": "",
+                "pages": "1975--1985",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/N18-1179"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Ivan Sanchez, Jeff Mitchell, and Sebastian Riedel. 2018. Behavior analysis of NLI models: Uncovering the in- fluence of three factors on robustness. In Proceedings of the 2018 Conference of the North American Chap- ter of the Association for Computational Linguistics: Human Language Technologies, Volume 1 (Long Pa- pers), pages 1975-1985, New Orleans, Louisiana. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF23": {
+                "ref_id": "b23",
+                "title": "What if this modified that? syntactic interventions with counterfactual embeddings",
+                "authors": [
+                    {
+                        "first": "Mycal",
+                        "middle": [],
+                        "last": "Tucker",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Peng",
+                        "middle": [],
+                        "last": "Qian",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Roger",
+                        "middle": [],
+                        "last": "Levy",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2021,
+                "venue": "Findings of the Association for Computational Linguistics: ACL-IJCNLP 2021",
+                "volume": "",
+                "issue": "",
+                "pages": "862--875",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/2021.findings-acl.76"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Mycal Tucker, Peng Qian, and Roger Levy. 2021. What if this modified that? syntactic interventions with counterfactual embeddings. In Findings of the Asso- ciation for Computational Linguistics: ACL-IJCNLP 2021, pages 862-875, Online. Association for Com- putational Linguistics.",
+                "links": null
+            },
+            "BIBREF24": {
+                "ref_id": "b24",
+                "title": "A broad-coverage challenge corpus for sentence understanding through inference",
+                "authors": [
+                    {
+                        "first": "Adina",
+                        "middle": [],
+                        "last": "Williams",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nikita",
+                        "middle": [],
+                        "last": "Nangia",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Samuel",
+                        "middle": [],
+                        "last": "Bowman",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 2018 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies",
+                "volume": "1",
+                "issue": "",
+                "pages": "1112--1122",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Adina Williams, Nikita Nangia, and Samuel Bowman. 2018. A broad-coverage challenge corpus for sen- tence understanding through inference. In Proceed- ings of the 2018 Conference of the North American Chapter of the Association for Computational Lin- guistics: Human Language Technologies, Volume 1 (Long Papers), pages 1112-1122. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF25": {
+                "ref_id": "b25",
+                "title": "Huggingface's transformers: State-of-the-art natural language processing",
+                "authors": [
+                    {
+                        "first": "Thomas",
+                        "middle": [],
+                        "last": "Wolf",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Lysandre",
+                        "middle": [],
+                        "last": "Debut",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Victor",
+                        "middle": [],
+                        "last": "Sanh",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Julien",
+                        "middle": [],
+                        "last": "Chaumond",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Clement",
+                        "middle": [],
+                        "last": "Delangue",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Anthony",
+                        "middle": [],
+                        "last": "Moi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Pierric",
+                        "middle": [],
+                        "last": "Cistac",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tim",
+                        "middle": [],
+                        "last": "Rault",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "R\u00e9mi",
+                        "middle": [],
+                        "last": "Louf",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Morgan",
+                        "middle": [],
+                        "last": "Funtowicz",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jamie",
+                        "middle": [],
+                        "last": "Brew",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Thomas Wolf, Lysandre Debut, Victor Sanh, Julien Chaumond, Clement Delangue, Anthony Moi, Pier- ric Cistac, Tim Rault, R\u00e9mi Louf, Morgan Funtowicz, and Jamie Brew. 2019. Huggingface's transformers: State-of-the-art natural language processing. CoRR, abs/1910.03771.",
+                "links": null
+            }
+        },
+        "ref_entries": {
+            "FIGREF0": {
+                "num": null,
+                "text": "Figure2: If a model encodes the dependency structure of a sentence twice its embedding, a probe, p, may learn to ignore one copy of the information (indicated by learned weight 0) and only use the other (via learned weight 1) to predict s (a). In such cases, the gradient of s with respect to the embedding (dashed orange) only flows from one of the copies, so only that copy will be updated in counterfactual embeddings (b). However, by introducing a dropout layer that masks random inputs to the probe, dropout probes learn to use all informative parts of embeddings, which distributes the gradient across the whole embedding (c).",
+                "uris": null,
+                "fig_num": "2",
+                "type_str": "figure"
+            },
+            "FIGREF1": {
+                "num": null,
+                "text": "Figure 3: Mean and standard deviation probabilities over 5 trials for plural candidates using the original embeddings (green) or counterfactual embeddings favoring plural (dashed red) or singular (solid blue) parses. Counterfactual embeddings generated by both depth-and distance-based probes caused the greatest shift in model predictions.",
+                "uris": null,
+                "fig_num": "3",
+                "type_str": "figure"
+            },
+            "FIGREF2": {
+                "num": null,
+                "text": "Figure 4: For the Coordination (left) and NP/Z (right) suites, interventions to a lower counterfactual loss (x axis) and with higher-dropout probes (different curves) revealed the greatest causal effects. Means and standard errors.",
+                "uris": null,
+                "fig_num": "4",
+                "type_str": "figure"
+            },
+            "FIGREF3": {
+                "num": null,
+                "text": "Figure 5: Causal effects for the QA model using depth-(top row) and distance-(bottom row) based probes with dropout of 0 (left column) or 0.4 (right column) on the Coordination corpus to counterfactual loss 0.05. Dropout probes produce more stable and larger effect sizes. Means and standard deviations over 5 trials plotted.",
+                "uris": null,
+                "fig_num": "56",
+                "type_str": "figure"
+            },
+            "FIGREF4": {
+                "num": null,
+                "text": "Figure 7: Using dropout probes over a range of dropout values (different curves) and counterfactual stopping losses improved model performance, and dropout typically improved performance. Medians and quartiles plotted over 5 trials.",
+                "uris": null,
+                "fig_num": "7",
+                "type_str": "figure"
+            },
+            "FIGREF6": {
+                "num": null,
+                "text": "Figure9: Mask mean causal effects using depth-(top) or distance-based (bottom) probes. Depth probes revealed smaller effects than distance-based probes, but a similar pattern of benefiting from lower counterfactual loss and higher dropout.",
+                "uris": null,
+                "fig_num": "9",
+                "type_str": "figure"
+            },
+            "FIGREF7": {
+                "num": null,
+                "text": "Figure 10: QA mean causal effects using depth-based (top) or distance-based (bottom) probes.",
+                "uris": null,
+                "fig_num": "10",
+                "type_str": "figure"
+            },
+            "TABREF0": {
+                "content": "<table><tr><td/><td>2</td><td>2.6</td><td>2.7</td></tr><tr><td>QA</td><td>2.7</td><td>2.8</td><td>2.8</td></tr><tr><td>NLI</td><td>2.3</td><td>2.7</td><td>2.8</td></tr></table>",
+                "type_str": "table",
+                "text": "The mean in nats of I(Z, D) is less than I(Z 1 , D) + I(Z 2 , D), indicating that information about D is redundantly encoded in embeddings. Standard deviation under 0.2 for all values over 5 trials.",
+                "html": null,
+                "num": null
+            },
+            "TABREF2": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "Words used for sentence generation in the Mask Coordination test suite.",
+                "html": null,
+                "num": null
+            },
+            "TABREF3": {
+                "content": "<table><tr><td>, excluding sentences</td></tr></table>",
+                "type_str": "table",
+                "text": "",
+                "html": null,
+                "num": null
+            },
+            "TABREF4": {
+                "content": "<table><tr><td colspan=\"2\">Category Words</td></tr><tr><td>ADJ1</td><td>tall, short</td></tr><tr><td>ADJ2</td><td>happy, None</td></tr><tr><td>ADJ3</td><td>angry, None</td></tr><tr><td>ADJ4</td><td>angry, None</td></tr><tr><td>NN1</td><td>stranger, child</td></tr><tr><td>NN2</td><td>men, women</td></tr><tr><td>NN3</td><td>women, men</td></tr><tr><td>V</td><td>saw, believed</td></tr></table>",
+                "type_str": "table",
+                "text": "Words used for sentence generation in the Mask NP/Z test suite.",
+                "html": null,
+                "num": null
+            },
+            "TABREF5": {
+                "content": "<table><tr><td colspan=\"2\">Category Words</td></tr><tr><td colspan=\"2\">V -NN4 (saw, telescope), (poked, stick)</td></tr><tr><td>ADJ1</td><td>tall, None</td></tr><tr><td>ADJ2</td><td>short, None</td></tr><tr><td>ADJ3</td><td>special, None</td></tr><tr><td>NN1</td><td>man, woman</td></tr><tr><td>NN2</td><td>boy, girl</td></tr></table>",
+                "type_str": "table",
+                "text": "Words used for sentence generation in the QA Coordination test suite.",
+                "html": null,
+                "num": null
+            },
+            "TABREF6": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "Words used for sentence generation in the QA NP/VP test suite.",
+                "html": null,
+                "num": null
+            },
+            "TABREF7": {
+                "content": "<table><tr><td colspan=\"2\">Category Words</td></tr><tr><td>ADJ1</td><td>corrupt, desperate</td></tr><tr><td>ADJ2</td><td>tall, smart, rich</td></tr><tr><td>ADJ3</td><td>tall, smart, rich</td></tr><tr><td>NN1</td><td>men, women</td></tr><tr><td>NN2</td><td>men, women</td></tr><tr><td>NN3</td><td>judge, politician</td></tr></table>",
+                "type_str": "table",
+                "text": "3, we performed interventions at layer 4, based on results of a validation study shown below. We reported",
+                "html": null,
+                "num": null
+            },
+            "TABREF8": {
+                "content": "<table><tr><td colspan=\"2\">Category Words</td></tr><tr><td>ADJ1</td><td>green, large, dirty</td></tr><tr><td>NN1</td><td>human, stranger, child</td></tr><tr><td>NN2</td><td>key, keys, gadget, gadgets</td></tr><tr><td>NN3</td><td>cabinet, cabinets, vase, vases</td></tr></table>",
+                "type_str": "table",
+                "text": "Words used for sentence generation in the QA RC test suite.",
+                "html": null,
+                "num": null
+            },
+            "TABREF9": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "Words used for sentence generation in the QA intervention experiments.",
+                "html": null,
+                "num": null
+            }
+        }
+    }
+}

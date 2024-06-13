@@ -1,0 +1,2799 @@
+{
+    "paper_id": "2022",
+    "header": {
+        "generated_with": "S2ORC 1.0.0",
+        "date_generated": "2023-06-16T12:14:18.570760Z"
+    },
+    "title": "From Simultaneous to Streaming Machine Translation by Leveraging Streaming History",
+    "authors": [
+        {
+            "first": "Javier",
+            "middle": [],
+            "last": "Iranzo-S\u00e1nchez",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "Machine Learning and Language Processing Group Valencian Research",
+                "institution": "",
+                "location": {
+                    "postCode": "46022",
+                    "settlement": "Val\u00e8ncia",
+                    "country": "Spain"
+                }
+            },
+            "email": ""
+        },
+        {
+            "first": "Jorge",
+            "middle": [],
+            "last": "Civera",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "Machine Learning and Language Processing Group Valencian Research",
+                "institution": "",
+                "location": {
+                    "postCode": "46022",
+                    "settlement": "Val\u00e8ncia",
+                    "country": "Spain"
+                }
+            },
+            "email": ""
+        },
+        {
+            "first": "Alfons",
+            "middle": [],
+            "last": "Juan",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "Machine Learning and Language Processing Group Valencian Research",
+                "institution": "",
+                "location": {
+                    "postCode": "46022",
+                    "settlement": "Val\u00e8ncia",
+                    "country": "Spain"
+                }
+            },
+            "email": ""
+        }
+    ],
+    "year": "",
+    "venue": null,
+    "identifiers": {},
+    "abstract": "Simultaneous Machine Translation is the task of incrementally translating an input sentence before it is fully available. Currently, simultaneous translation is carried out by translating each sentence independently of the previously translated text. More generally, Streaming MT can be understood as an extension of Simultaneous MT to the incremental translation of a continuous input text stream. In this work, a state-of-the-art simultaneous sentencelevel MT system is extended to the streaming setup by leveraging the streaming history. Extensive empirical results are reported on IWSLT Translation Tasks, showing that leveraging the streaming history leads to significant quality gains. In particular, the proposed system proves to compare favorably to the best performing systems.",
+    "pdf_parse": {
+        "paper_id": "2022",
+        "_pdf_hash": "",
+        "abstract": [
+            {
+                "text": "Simultaneous Machine Translation is the task of incrementally translating an input sentence before it is fully available. Currently, simultaneous translation is carried out by translating each sentence independently of the previously translated text. More generally, Streaming MT can be understood as an extension of Simultaneous MT to the incremental translation of a continuous input text stream. In this work, a state-of-the-art simultaneous sentencelevel MT system is extended to the streaming setup by leveraging the streaming history. Extensive empirical results are reported on IWSLT Translation Tasks, showing that leveraging the streaming history leads to significant quality gains. In particular, the proposed system proves to compare favorably to the best performing systems.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            }
+        ],
+        "body_text": [
+            {
+                "text": "Simultaneous Machine Translation (MT) is the task of incrementally translating an input sentence before it is fully available. Indeed, simultaneous MT can be naturally understood in the scenario of translating a text stream as a result of an upstream Automatic Speech Recognition (ASR) process. This setup defines a simultaneous Speech Translation (ST) scenario that is gaining momentum due to the vast number of industry applications that could be exploited based on this technology, from person-toperson communication to subtitling of audiovisual content, just to mention two main applications.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "These real-world streaming applications motivate us to move from simultaneous to streaming MT, understanding streaming MT as the task of simultaneously translating a potentially unbounded and unsegmented text stream. Streaming MT poses two main additional challenges over simultaneous MT. First, the MT system must be able to leverage the streaming history beyond the sentence level both at training and inference time. Second, the system must work under latency constraints over the entire stream.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "With regard to exploiting streaming history, or more generally sentence context, it is worth mentioning the significant amount of previous work in offline MT at sentence level (Tiedemann and Scherrer, 2017; Agrawal et al., 2018) , document level (Scherrer et al., 2019; Ma et al., 2020a; Zheng et al., 2020b; Li et al., 2020; Maruf et al., 2021; Zhang et al., 2021) , and in related areas such as language modelling (Dai et al., 2019) that has proved to lead to quality gains. Also, as reported in (Li et al., 2020) , more robust ST systems can be trained by taking advantage of the context across sentence boundaries using a data augmentation strategy similar to the prefix training methods proposed in (Niehues et al., 2018; Ma et al., 2019) . This data augmentation strategy was suspected to boost re-translation performance when compared to conventional simultaneous MT systems (Arivazhagan et al., 2020) .",
+                "cite_spans": [
+                    {
+                        "start": 176,
+                        "end": 206,
+                        "text": "(Tiedemann and Scherrer, 2017;",
+                        "ref_id": "BIBREF30"
+                    },
+                    {
+                        "start": 207,
+                        "end": 228,
+                        "text": "Agrawal et al., 2018)",
+                        "ref_id": "BIBREF0"
+                    },
+                    {
+                        "start": 246,
+                        "end": 269,
+                        "text": "(Scherrer et al., 2019;",
+                        "ref_id": "BIBREF27"
+                    },
+                    {
+                        "start": 270,
+                        "end": 287,
+                        "text": "Ma et al., 2020a;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 288,
+                        "end": 308,
+                        "text": "Zheng et al., 2020b;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 309,
+                        "end": 325,
+                        "text": "Li et al., 2020;",
+                        "ref_id": "BIBREF17"
+                    },
+                    {
+                        "start": 326,
+                        "end": 345,
+                        "text": "Maruf et al., 2021;",
+                        "ref_id": "BIBREF22"
+                    },
+                    {
+                        "start": 346,
+                        "end": 365,
+                        "text": "Zhang et al., 2021)",
+                        "ref_id": "BIBREF32"
+                    },
+                    {
+                        "start": 416,
+                        "end": 434,
+                        "text": "(Dai et al., 2019)",
+                        "ref_id": "BIBREF8"
+                    },
+                    {
+                        "start": 498,
+                        "end": 515,
+                        "text": "(Li et al., 2020)",
+                        "ref_id": "BIBREF17"
+                    },
+                    {
+                        "start": 704,
+                        "end": 726,
+                        "text": "(Niehues et al., 2018;",
+                        "ref_id": "BIBREF24"
+                    },
+                    {
+                        "start": 727,
+                        "end": 743,
+                        "text": "Ma et al., 2019)",
+                        "ref_id": "BIBREF19"
+                    },
+                    {
+                        "start": 882,
+                        "end": 908,
+                        "text": "(Arivazhagan et al., 2020)",
+                        "ref_id": "BIBREF3"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Nonetheless, with the notable exception of (Schneider and Waibel, 2020) , sentences in simultaneous MT are still translated independently from each other ignoring the streaming history. (Schneider and Waibel, 2020) proposed an end-to-end streaming MT model with a Transformer architecture based on an Adaptive Computation Time method with a monotonic encoderdecoder attention. This model successfully uses the streaming history and a relative attention mechanism inspired by Transformer-XL (Dai et al., 2019) . Indeed, this is an MT model that sequentially translates the input stream without the need for a segmentation model. However, it is hard to interpret the latency of their streaming MT model because the authors observe that the current sentence-level latency measures, Average Proportion (AP) (Cho and Esipova, 2016) , Average Lagging (AL) (Ma et al., 2019) and Differentiable Average Lagging (DAL) (Cherry and Foster, 2019) do not perform well on a streaming setup. This fact is closely related to the second challenge mentioned above, which is that the system must work under latency constraints over the entire stream. Indeed, current sentence-level latency measures do not allow us to appropriately gauge the latency of streaming MT systems. To this purpose, (Iranzo-S\u00e1nchez et al., 2021) recently proposed a stream-level adaptation of the sentence-level latency measures based on the conventional re-segmentation approach applied to the ST output in order to evaluate translation quality (Matusov et al., 2005) .",
+                "cite_spans": [
+                    {
+                        "start": 43,
+                        "end": 71,
+                        "text": "(Schneider and Waibel, 2020)",
+                        "ref_id": "BIBREF26"
+                    },
+                    {
+                        "start": 186,
+                        "end": 214,
+                        "text": "(Schneider and Waibel, 2020)",
+                        "ref_id": "BIBREF26"
+                    },
+                    {
+                        "start": 490,
+                        "end": 508,
+                        "text": "(Dai et al., 2019)",
+                        "ref_id": "BIBREF8"
+                    },
+                    {
+                        "start": 803,
+                        "end": 826,
+                        "text": "(Cho and Esipova, 2016)",
+                        "ref_id": "BIBREF7"
+                    },
+                    {
+                        "start": 850,
+                        "end": 867,
+                        "text": "(Ma et al., 2019)",
+                        "ref_id": "BIBREF19"
+                    },
+                    {
+                        "start": 909,
+                        "end": 934,
+                        "text": "(Cherry and Foster, 2019)",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 1273,
+                        "end": 1302,
+                        "text": "(Iranzo-S\u00e1nchez et al., 2021)",
+                        "ref_id": "BIBREF13"
+                    },
+                    {
+                        "start": 1503,
+                        "end": 1525,
+                        "text": "(Matusov et al., 2005)",
+                        "ref_id": "BIBREF23"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "In this work, the simultaneous MT model based on a unidirectional encoder-decoder and training along multiple wait-k paths proposed by (Elbayad et al., 2020a) is evolved into a streamingready simultaneous MT model. To achieve this, model training is performed following a sentenceboundary sliding-window strategy over the parallel stream that exploits the idea of prefix training, while inference is carried out in a single forward pass on the source stream that is segmented by a Direct Segmentation (DS) model (Iranzo-S\u00e1nchez et al., 2020) . In addition, a refinement of the unidirectional encoder-decoder that takes advantage of longer context for encoding the initial positions of the streaming MT process is proposed. This streaming MT system is thoroughly assessed on IWSLT translation tasks to show how leveraging the streaming history provides systematic and significant BLEU improvements over the baseline, while reported stream-adapted latency measures are fully consistent and interpretable. Finally, our system favourably compares in terms of translation quality and latency to the latest state-of-the-art simultaneous MT systems (Ansari et al., 2020) .",
+                "cite_spans": [
+                    {
+                        "start": 135,
+                        "end": 158,
+                        "text": "(Elbayad et al., 2020a)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 512,
+                        "end": 541,
+                        "text": "(Iranzo-S\u00e1nchez et al., 2020)",
+                        "ref_id": "BIBREF14"
+                    },
+                    {
+                        "start": 1142,
+                        "end": 1163,
+                        "text": "(Ansari et al., 2020)",
+                        "ref_id": "BIBREF1"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "This paper is organized as follows. Next section provides a formal framework for streaming MT to accommodate streaming history in simultaneous MT. Section 3 presents the streaming experimental setup whose results are reported and discussed in Section 4. Finally, conclusions and future work are drawn in Section 5.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "In streaming MT, the source stream X to be translated into Y comes as an unsegmented and unbounded sequence of tokens. In this setup, the decoding process usually takes the greedy decision of which token appears next at the i-th position of the translation being generated",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Streaming MT",
+                "sec_num": "2"
+            },
+            {
+                "text": "\u0176i = argmax y\u2208Y p y X G(i) 1 , Y i-1 1 (1)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Streaming MT",
+                "sec_num": "2"
+            },
+            {
+                "text": "where G(i) is a global delay function that tells us the last position in the source stream that was available when the i-th target token was output, and Y is the target vocabulary. However, taking into account the entire source and target streams can be prohibitive from a computational viewpoint, so the generation of the next token can be conditioned to the last H(i) tokens of the stream as",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Streaming MT",
+                "sec_num": "2"
+            },
+            {
+                "text": "\u0176i = argmax y\u2208Y p y X G(i) G(i)-H(i)+1 , Y i-1 i-H(i) . (2)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Streaming MT",
+                "sec_num": "2"
+            },
+            {
+                "text": "Nevertheless, for practical purposes, the concept of sentence segmentation is usually introduced to explicitly indicate a monotonic alignment between source and target sentences in streaming MT. Let us consider for this purpose the random variables a and b for the source and target segmentation of the stream, respectively. Variables a and b can be understood as two vectors of equal length denoting that the n-th source sentence starts at position a n , while the n-th target sentence does so at position b n .",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Streaming MT",
+                "sec_num": "2"
+            },
+            {
+                "text": "In the next sections, we reformulate simultaneous MT in terms of the more general framework of streaming MT. This reformulation allows us to consider opportunities for improvement of previous simultaneous MT models.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Streaming MT",
+                "sec_num": "2"
+            },
+            {
+                "text": "In the conventional simultaneous MT setup, the aforementioned variables a and b are uncovered at training and inference time, while in streaming MT a and b are considered hidden variables at inference time that may be uncovered by a segmentation model. In fact, in conventional simultaneous MT the history is limited to the current sentence being translated, while in streaming MT we could exploit the fact that the history could potentially span over all the previous tokens before the current sentence.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Simultaneous MT with streaming history",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "To this purpose, the global delay function G(i) introduced above would replace the sentence-level delay function g(i) commonly used in simultaneous MT. However, it should be noticed that we could express g(i) as G(i) -a n with b n \u2264 i < b n+1 . Delay functions are defined as a result of the policy being applied. This policy decides what action to take at each timestep, whether to read a token from the input or to write a target token. Policies can be either fixed (Ma et al., 2019; Dalvi et al., 2018) depending only on the current timestep, or adaptive (Arivazhagan et al., 2019; Ma et al., 2020b; Zheng et al., 2020a) being also conditioned on the available input source words. Among those fixed policies, the sentence-level wait-k policy proposed by (Ma et al., 2019) is widely used in simultaneous MT with the simple local delay function",
+                "cite_spans": [
+                    {
+                        "start": 468,
+                        "end": 485,
+                        "text": "(Ma et al., 2019;",
+                        "ref_id": "BIBREF19"
+                    },
+                    {
+                        "start": 486,
+                        "end": 505,
+                        "text": "Dalvi et al., 2018)",
+                        "ref_id": "BIBREF9"
+                    },
+                    {
+                        "start": 558,
+                        "end": 584,
+                        "text": "(Arivazhagan et al., 2019;",
+                        "ref_id": "BIBREF2"
+                    },
+                    {
+                        "start": 585,
+                        "end": 602,
+                        "text": "Ma et al., 2020b;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 603,
+                        "end": 623,
+                        "text": "Zheng et al., 2020a)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 757,
+                        "end": 774,
+                        "text": "(Ma et al., 2019)",
+                        "ref_id": "BIBREF19"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Simultaneous MT with streaming history",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "g(i) = k + i -1.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Simultaneous MT with streaming history",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "(3)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Simultaneous MT with streaming history",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "This policy initially reads k source tokens without writing a target token, and then outputs a target token every time a source token is read. This is true in the case that the ratio between the source and target sentence lengths is one. However, in the general case, a catch-up factor \u03b3 computed as the inverse of the source-target length ratio defines how many target tokens are written for every read token, that generalises Eq. 3 as",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Simultaneous MT with streaming history",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "g(i) = k + i -1 \u03b3 .",
+                        "eq_num": "(4)"
+                    }
+                ],
+                "section": "Simultaneous MT with streaming history",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "The wait-k policy can be reformulated in streaming MT so that the wait-k behaviour is carried out for each sentence as",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Simultaneous MT with streaming history",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "G(i) = k + i -b n \u03b3 + a n -1 (5)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Simultaneous MT with streaming history",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "where b n \u2264 i < b n+1 .",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Simultaneous MT with streaming history",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "In streaming MT, we could take advantage of the streaming history by learning the probability distribution stated in Eq. 2, whenever streaming samples would be available. However, training such a model with arbitrarily long streaming samples poses a series of challenges that need to be addressed. Firstly, it would be necessary to carefully define G(i) and H(i) functions so that, at each timestep, the available source and target streams are perfectly aligned. Given that the source-target length ratio may vary over the stream, if one uses a wait-k policy with a fixed \u03b3, there is a significant chance that source and target are misaligned at some points over the stream. Secondly, every target token can potentially have a different G(i) and H(i), so the encoder-decoder representation and contribution to the loss would need to be recomputed for each target token at a significant computational expense. Lastly, current MT architectures and training procedures have evolved conditioned by the availability of sentence-level parallel corpora for training, so they need to be adapted to learn from parallel streams.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Simultaneous MT with streaming history",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "To tackle the aforementioned challenges in streaming MT, a compromise practical solution is to uncover the source and target sentence segmentations. At training time, parallel samples are extracted by a sentence-boundary sliding window spanning over several sentences of the stream that shifts to the right one sentence at a time. In other words, each sentence pair is concatenated with its corresponding streaming history that includes previous sentence pairs simulating long-span prefix training. Doing so, we ensure that source and target streams are properly aligned at all times, and training can be efficiently carried out by considering a limited history. The inference process is performed in a purely streaming fashion in a single forward pass as defined in Eq. 2 with H(i) being consistently defined in line with training, so that the streaming history spans over previous sentences already translated.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Simultaneous MT with streaming history",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "In simultaneous MT, the conventional Transformerbased bidirectional encoder representation (of the l-th layer) of a source token at any position j is constrained to the current n-th sentence e (l)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Partial Bidirectional Encoder",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "j = Enc e (l-1) an:G(i) (6)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Partial Bidirectional Encoder",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "where a n \u2264 j \u2264 G(i), while the decoder can only attend to previous target words and the encoding of those source words that are available at each timestep",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Partial Bidirectional Encoder",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "s (l) i = Dec s (l-1) bn:i-1 , e (l-1) an:G(i) .",
+                        "eq_num": "(7)"
+                    }
+                ],
+                "section": "Partial Bidirectional Encoder",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "As a result, the encoder and decoder representations for positions j and i, respectively, could be computed taking advantage of subsequent positions to position j up to position G(i) at inference time. However, at training time, this means that this bidirectional encoding-decoding of the source sentence has to be computed for every timestep, taking up to |y| times longer than the conventional Transformer model.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Partial Bidirectional Encoder",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "To alleviate this problem, (Elbayad et al., 2020a) proposes a wait-k simultaneous MT model based on a modification of the Transformer architecture that uses unidirectional encoders and multiple values of k at training time. In this way, the model is consistent with the limited-input restriction of simultaneous MT at inference time. The proposed unidirectional encoder can be stated as",
+                "cite_spans": [
+                    {
+                        "start": 27,
+                        "end": 50,
+                        "text": "(Elbayad et al., 2020a)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Partial Bidirectional Encoder",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "e (l) j = Enc e (l-1) an:j ,",
+                        "eq_num": "(8)"
+                    }
+                ],
+                "section": "Partial Bidirectional Encoder",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "that is more restrictive than that in Eq. 6, and it consequently conditions the decoder representation, since G(i) in Eq. 7 depends on the specific k value employed at each training step.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Partial Bidirectional Encoder",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "As mentioned above, the unidirectional encoder just requires a single forward pass of the encoder at training time, and therefore there is no additional computational cost compared with a conventional Transformer. However, it does not take into account all possible input tokens for different values of k. Indeed, the encoding of the j-th input token will not consider those tokens beyond the j-th position, even if including them into the encoding process does not prevent us from performing a single forward pass.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Partial Bidirectional Encoder",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "A trade-off between the unidirectional and bidirectional encoders is what we have dubbed Partial Bidirectional Encoder (PBE), which modifies the unidirectional encoder to allow the first k-1 source positions to have access to succeeding tokens according to e (l) j = Enc e (l-1) an:max(an+k-1,j) .",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Partial Bidirectional Encoder",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "(9)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Partial Bidirectional Encoder",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "PBE allows for a longer context when encoding the initial positions and is consistent with Eq. 7. At training time a single forward pass of the encoderdecoder is still possible as in the unidirectional encoder, and therefore no additional training cost is incurred. At inference time, we fall back to the bidirectional encoder.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Partial Bidirectional Encoder",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "Figure 1 shows a graphical comparison of the attention mechanism in j = 3 across the bidirectional (left), unidirectional (center) and PBE (right) encoders with k = 4 for two consecutive timesteps i = 1 with G(1) = 4 (top) and i = 2 with G(2) = 5 (bottom). As observed, PBE can take advantage of additional positions from j + 1 up to k with respect to the unidirectional encoder.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 7,
+                        "end": 8,
+                        "text": "1",
+                        "ref_id": "FIGREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Partial Bidirectional Encoder",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "In a streaming setup, the bidirectional encoderdecoder of Eqs. 6 and 7 are not necessarily constrained to the current sentence and could exploit a streaming history of H(i) tokens e (l)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Partial Bidirectional Encoder",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "j = Enc e (l-1) G(i)-H(i)+1:G(i) (10) s (l) i = Dec s (l-1) i-H(i):i-1 , e (l-1) G(i)-H(i)+1:G(i) . (11)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Partial Bidirectional Encoder",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "Likewise, the proposed PBE with streaming history states as follows e (l)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Partial Bidirectional Encoder",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "j =Enc e (l-1) G(i)-H(i)+1:max(G(i)-H(i)+k,j) . (12)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Partial Bidirectional Encoder",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "3 Experimental setup A series of comparative experiments in terms of translation quality and latency have been carried out using data from the IWSLT 2020 Evaluation Campaign (Ansari et al., 2020) , for both German\u2192English and English\u2192German. For the streaming condition, our system is tuned on the 2010 dev set, and evaluated on the 2010 test set for comparison with (Schneider and Waibel, 2020) . Under this setting, words were lowercased and punctuation was removed in order to simulate a basic upstream ASR system. Also, a second nonstreaming setting is used for the English\u2192German direction to compare our system with top-of-theline sentence-based simultaneous MT systems participating in the IWSLT 2020 Simultaneous Translation Task.",
+                "cite_spans": [
+                    {
+                        "start": 174,
+                        "end": 195,
+                        "text": "(Ansari et al., 2020)",
+                        "ref_id": "BIBREF1"
+                    },
+                    {
+                        "start": 367,
+                        "end": 395,
+                        "text": "(Schneider and Waibel, 2020)",
+                        "ref_id": "BIBREF26"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Partial Bidirectional Encoder",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "Table 1 summarizes the basic statistics of the IWSLT corpora used for training the streaming MT systems. Corpora for which document information is readily available are processed for training using the sliding window technique mentioned in Section 2.1. Specifically, for each training sentence, we prepend previous sentences, which are added one by one until a threshold h of history tokens is reached. Sentence boundaries are defined on the presence of special tokens ( <DOC>,<CONT>,<BRK>,<SEP>) as in (Junczys-Dowmunt, 2019) . Byte Pair Encoding (Sennrich et al., 2016) with 40K merge operations is applied to the data after preprocessing.",
+                "cite_spans": [
+                    {
+                        "start": 503,
+                        "end": 526,
+                        "text": "(Junczys-Dowmunt, 2019)",
+                        "ref_id": "BIBREF15"
+                    },
+                    {
+                        "start": 548,
+                        "end": 571,
+                        "text": "(Sennrich et al., 2016)",
+                        "ref_id": "BIBREF28"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 6,
+                        "end": 7,
+                        "text": "1",
+                        "ref_id": "TABREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Partial Bidirectional Encoder",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "Our streaming MT system is evaluated in terms of latency and translation quality with BLEU (Papineni et al., 2002) . Traditionally, latency evaluation in simultaneous MT has been carried out using AP, AL and DAL. However, these measures have been devised for sentence-level evaluation, where the latency of every sentence is computed independently from each other and as mentioned before, they do not perform well on a streaming setup. Thus, we revert to the stream-based adaptation of these measures proposed in (Iranzo-S\u00e1nchez et al., 2021) unless stated otherwise. Latency measures for a sentence pair (x, y) are based on a cost function C i (x, y) and a normalization term Z(x, y)",
+                "cite_spans": [
+                    {
+                        "start": 91,
+                        "end": 114,
+                        "text": "(Papineni et al., 2002)",
+                        "ref_id": "BIBREF25"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Partial Bidirectional Encoder",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "X 1 X 2 X 3 X 4 X 5 G(2) = 5 e 3 X 1 X 2 X 3 X 4 X 5 G(1) = 4 e 3 X 1 X 2 X 3 X 4 X 5 G(2) = 5 e 3 X 1 X 2 X 3 X 4 X 5 G(1) = 4 e 3 X 1 X 2 X 3 X 4 X 5 G(2) = 5 e 3 X 1 X 2 X 3 X 4 X 5 G(1) = 4 e 3",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Partial Bidirectional Encoder",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "L(x, y) = 1 Z(x, y) i C i (x, y)",
+                        "eq_num": "(13)"
+                    }
+                ],
+                "section": "Partial Bidirectional Encoder",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "where",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Partial Bidirectional Encoder",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "C i (x, y) = \uf8f1 \uf8f4 \uf8f2 \uf8f4 \uf8f3 g(i) AP g(i) -i-1 \u03b3 AL g (i) -i-1 \u03b3 DAL (14) and Z(x, y) = \uf8f1 \uf8f4 \uf8f2 \uf8f4 \uf8f3 |x| \u2022 |y| AP argmin i:g(i)=|x| i AL |y| DAL (15)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Partial Bidirectional Encoder",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "Latency measures can be computed in a streaming manner by considering a global delay function G(i), that is mapped into a relative delay so that it can be compared with the sentence-level oracle delay. For the i-th target position of the n-th sentence, the associated relative delay can be obtained from the global delay function as g n (i) = G(i+b n )-a n . So, the stream-adapted cost function of the latency measures is defined as",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Partial Bidirectional Encoder",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "C i (x n , y n ) = \uf8f1 \uf8f4 \uf8f2 \uf8f4 \uf8f3 g n (i) AP g n (i) -i-1 \u03b3n AL g n (i) -i-1 \u03b3n DAL (16) with g n (i) defined as max \uf8f1 \uf8f4 \uf8f2 \uf8f4 \uf8f3 g n (i) g n-1 (|x n-1 |) + 1 \u03b3 n-1 i = 1 g n (i -1) + 1 \u03b3n i > 1 (17)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Partial Bidirectional Encoder",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "This definition assumes that the source and target sentence segmentation of the stream are uncovered, but this is not always the case (Schneider and Waibel, 2020) or they may not match that of the reference translations. However, sentence boundaries can be obtained by re-segmenting the system hypothesis following exactly the same procedure applied to compute translation quality in ST evaluation. To this purpose, we use the MWER segmenter (Matusov et al., 2005) to compute sentence boundaries according to the reference translations.",
+                "cite_spans": [
+                    {
+                        "start": 442,
+                        "end": 464,
+                        "text": "(Matusov et al., 2005)",
+                        "ref_id": "BIBREF23"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Partial Bidirectional Encoder",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "Our streaming MT models have been trained following the conventional Transformer BASE (German\u2194English streaming MT) and BIG (English\u2192German simultaneous MT) configurations (Vaswani et al., 2017) . As in (Schneider and Waibel, 2020), after training is finished, the models are finetuned on the training set of MuST-C (Di Gangi et al., 2019) .",
+                "cite_spans": [
+                    {
+                        "start": 172,
+                        "end": 194,
+                        "text": "(Vaswani et al., 2017)",
+                        "ref_id": "BIBREF31"
+                    },
+                    {
+                        "start": 309,
+                        "end": 339,
+                        "text": "MuST-C (Di Gangi et al., 2019)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Partial Bidirectional Encoder",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "The proposed model in Section 2 assumes that at inference time the source stream has been segmented into sentences. To this purpose, we opt for the text-based DS model (Iranzo-S\u00e1nchez et al., 2020) , a sliding-window segmenter that moves over the source stream taking a split decision at each token based on a local-context window that extends to both past and future tokens. This segmenter is streaming-ready and obtains superior translation quality when compared with other segmenters (Stolcke, 2002; Cho et al., 2017) . As the future window length of the DS segmenter conditions the latency of the streaming MT system, this length was adjusted to find a tradeoff between latency and translation quality. The DS segmenter was trained on the TED corpus (Cettolo et al., 2012) .",
+                "cite_spans": [
+                    {
+                        "start": 168,
+                        "end": 197,
+                        "text": "(Iranzo-S\u00e1nchez et al., 2020)",
+                        "ref_id": "BIBREF14"
+                    },
+                    {
+                        "start": 487,
+                        "end": 502,
+                        "text": "(Stolcke, 2002;",
+                        "ref_id": "BIBREF29"
+                    },
+                    {
+                        "start": 503,
+                        "end": 520,
+                        "text": "Cho et al., 2017)",
+                        "ref_id": "BIBREF6"
+                    },
+                    {
+                        "start": 754,
+                        "end": 776,
+                        "text": "(Cettolo et al., 2012)",
+                        "ref_id": "BIBREF4"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Partial Bidirectional Encoder",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "Figure 2 reports the evolution of BLEU scores on the German-English IWSLT 2010 dev set as a function of the k value in the wait-k policy for a range of streaming history lengths (h = {0, 20, 40, 60, 80}). We show results for the 3 encoders introduced previously. History lengths were selected taking into account that the average sentence length is 20 tokens. A history length of zero (h = 0) refers to the conventional sentence-level simultaneous MT model. The BLEU scores for the offline MT systems with a bidirectional encoder are also reported using horizontal lines, in order to serve as reference values. We report offline results for h = 0 and the best performing history configuration, h = 60. All systems used the reference segmentation during decoding.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 7,
+                        "end": 8,
+                        "text": "2",
+                        "ref_id": "FIGREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Evaluation",
+                "sec_num": "4"
+            },
+            {
+                "text": "As observed, BLEU scores of the simultaneous MT systems leveraging on the streaming history (h > 0) are systematically and notably higher than those of conventional sentence-based simultaneous MT system (h = 0) over the range of wait-k values. Indeed, as the streaming history increases, BLEU scores also do reaching what it seems the optimal history length at h = 60 and slightly degrading at h = 80. As expected, when replacing the unidirectional encoder by the PBE, BLEU scores improve as the wait-k value increases, since PBE has additional access to those tokens from j + 1 up to k. For instance, for k = 32 and h = 60, PBE is 0.7 BLEU points above the unidirectional encoder. On the other hand, it can be observed how using an encoder which is not fully bidirectional during training, creates a performance gap with respect to the offline bidirectional model when carrying out inference in an offline manner (k \u2265 32). It can be also observed how the PBE model is better prepared for this scenario and shows a smaller gap. It is important to keep in mind that although both offline and PBE models behave the same way dur- ing inference for a large enough k, during training time the PBE model, trained using the multi-k with k randomly sampled for each batch, has been optimized jointly for low, medium and high latencies.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Evaluation",
+                "sec_num": "4"
+            },
+            {
+                "text": "In general, the bidirectional encoder shows poor performance for simultaneous MT. This can be explained by the fact that there exists a mismatch between the training condition (whole source available) and the inference condition (only a prefix of the source is available for k < 32). These results are consistent with (Elbayad et al., 2020a) . Keep in mind that this bidirectional model is different from the offline one because it has been subject to the constraints of Eq. 7 during training. As a result of the BLEU scores reported in Figure 2 , the streaming MT system with h = 60 and PBE was used in the rest of the German-English experiments.",
+                "cite_spans": [
+                    {
+                        "start": 318,
+                        "end": 341,
+                        "text": "(Elbayad et al., 2020a)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 544,
+                        "end": 545,
+                        "text": "2",
+                        "ref_id": "FIGREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Evaluation",
+                "sec_num": "4"
+            },
+            {
+                "text": "Following (Schneider and Waibel, 2020)'s setup, the test set is lowercased and concatenated into a single stream. In order to measure the latency of the pipeline defined by the segmenter followed by MT system, it is necessary to take into account not only the latency of the MT system but also that of the segmenter. Thankfully this is straightforward to do in our pipeline, as a segmenter with a future window of length w modifies the pipeline policy so that, at the start of the stream, w READ actions are carried out to fill up the future window. Then, every time the MT system carries out a READ action, it receives one token from the segmenter. Thus, the integration of the segmenter into the pipeline is transparent from a latency viewpoint. Figure 3 As shown, stream-adapted AL and DAL figures achieved by our streaming MT system are reasonable, lagging 2-10 tokens behind the speaker for nearly maximum BLEU scores with a best BLEU score of 29.5 points. The same happens with AP figures ranging from 0.6 for w = 0 to 1.3 for w = 4. These figures highlight the advantages of tying together our translation policy with the sentence segmentation provided by the DS model. Every time the DS model emits an end-of-sentence event, the MT model is forced to catch-up and translate the entire input. In this way, the MT model never strays too far from the speaker, even if the source-target length ratio differs from the \u03b3 defined at inference time. See Appendix A for streaming translation results in the reverse direction (English \u2192 German).",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 755,
+                        "end": 756,
+                        "text": "3",
+                        "ref_id": "FIGREF2"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Evaluation",
+                "sec_num": "4"
+            },
+            {
+                "text": "Next, we compare our proposed streaming MT (STR-MT) model with the \u03bb = 0.3 ACT system (Schneider and Waibel, 2020) in terms of BLEU score and stream-adapted latency measures on Table 2 . Stream-level AL and DAL indicate that the ACT models lags around 100 tokens behind the speaker. Although both MT systems achieve similar translation quality levels, they do so at significantly different latencies, since the ACT model The STR-MT model is now compared on the English-German IWSLT 2020 simultaneous textto-text track (Ansari et al., 2020) with other participants: RWTH (Bahar et al., 2020) , KIT (Pham et al., 2020) and ON-TRAC (Elbayad et al., 2020b) . This comparison is carried out in order to assess whether the proposed streaming MT system is competitive with highly optimized systems for a simultaneous MT task. Given that the test set of this track remains blind, we use the results reported on the MuST-C corpus as a reference. In order to evaluate all systems under the same conditions, the reference segmentation of the MuST-C corpus is used instead of the DS model. Additionally, given that all other participants translate each sentence independently, the conventional sentence-level AL latency measure is reported. Figure 4 shows the comparison of BLEU scores versus AL measured in terms of detokenized tokens. As defined in the IWSLT text-to-text track, three AL regimes, low (AL \u2264 3), medium (3 < AL \u2264 6) and high (6 < AL \u2264 15) were considered.",
+                "cite_spans": [
+                    {
+                        "start": 518,
+                        "end": 539,
+                        "text": "(Ansari et al., 2020)",
+                        "ref_id": "BIBREF1"
+                    },
+                    {
+                        "start": 570,
+                        "end": 590,
+                        "text": "(Bahar et al., 2020)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 597,
+                        "end": 616,
+                        "text": "(Pham et al., 2020)",
+                        "ref_id": "BIBREF26"
+                    },
+                    {
+                        "start": 629,
+                        "end": 652,
+                        "text": "(Elbayad et al., 2020b)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 183,
+                        "end": 184,
+                        "text": "2",
+                        "ref_id": "TABREF1"
+                    },
+                    {
+                        "start": 1236,
+                        "end": 1237,
+                        "text": "4",
+                        "ref_id": "FIGREF4"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Evaluation",
+                "sec_num": "4"
+            },
+            {
+                "text": "ON-TRAC and our streaming MT system exhibit a similar progression, which is to be expected given that they are both based on the multi-k approach. However, our system consistently outperforms the ON-TRAC system by 1-2 BLEU. This confirms the importance of utilizing streaming history in order to significantly improve results, and how the proposed PBE model can take better advantage of the history.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Evaluation",
+                "sec_num": "4"
+            },
+            {
+                "text": "RWTH and KIT systems are closer in translation quality to our proposal than ON-TRAC, for AL between 5 and 7. However, these systems do not show a flexible latency policy and are not comparable to our system at other regimes. Indeed, for that to be possible, these systems need to be re-trained, in contrast to our system in which latency is adjusted at inference time.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Evaluation",
+                "sec_num": "4"
+            },
+            {
+                "text": "In this work, a formalization of streaming MT as a generalization of simultaneous MT has been proposed in order to define a theoretical framework in which our two contributions have been made. On the one hand, we successfully leverage streaming history across sentence boundaries for a simultaneous MT system based on multiple wait-k paths that allows our system to greatly improve the results of the sentence-level baseline. On the other hand, our PBE is able to take into account longer context information than its unidirectional counterpart, while keeping the same training efficiency. Our proposed MT system has been evaluated under a realistic streaming setting being able to reach similar translation quality than a state-of-theart segmentation-free streaming MT system at a fraction of its latency. Additionally, our system has been shown to be competitive when compared with state-of-the-art simultaneous MT systems optimized for sentence-level translation, obtaining excellent results using a single model across a wide range of latency levels, thanks to its flexible inference policy.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusions",
+                "sec_num": "5"
+            },
+            {
+                "text": "In terms of future work, additional training and inference procedures that take advantage of the streaming history in streaming MT are still open for research. One important avenue of improvement is to devise more robust training methods, so that simultaneous models can perform as well as their offline counterparts when carrying out inference at higher latencies. The segmentation model, though proved useful in a streaming setup, adds complexity and can greatly affect translation quality. Thus, the development of segmentation-free streaming MT models is another interesting research topic.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusions",
+                "sec_num": "5"
+            },
+            {
+                "text": "Figure 5 shows a close-up of Figure 2 , which contains results for the German-English IWSLT 2010 dev set. We can observe how the PBE models obtain consistent quality improvements over their unidirectional counterparts. Apart from the previously reported German \u2192 English streaming MT results, we have also conducted experiments in the reverse direction, English \u2192 German. These are shown in Figure 6 . The results show a similar trend to previous experiments, with the addition of streaming history allowing our systems to obtain significant improvements over the sentence-based baseline. Unlike the previous case, the optimum history size in this case is h = 40 instead of h = 60.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 7,
+                        "end": 8,
+                        "text": "5",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 36,
+                        "end": 37,
+                        "text": "2",
+                        "ref_id": "FIGREF1"
+                    },
+                    {
+                        "start": 398,
+                        "end": 399,
+                        "text": "6",
+                        "ref_id": "FIGREF6"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "A Extended Streaming Translation Results",
+                "sec_num": null
+            },
+            {
+                "text": "In order to enable streaming translation, the best performing h = 40 systems has been combined with a German DS system. Similarly to previous experiments, we have conducted tests using different values of w and k in order to balance the Bidir. PBE",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "A Extended Streaming Translation Results",
+                "sec_num": null
+            },
+            {
+                "text": "Figure 5 : BLEU scores on the German-English IWSLT 2010 dev set as a function of the k value in the wait-k policy for a range of streaming history (h) lengths with a unidirectional encoder (solid lines), PBE (dashed line) or bidirectional (dashed line with points). This is a close-up of Figure 2 .",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 7,
+                        "end": 8,
+                        "text": "5",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 295,
+                        "end": 296,
+                        "text": "2",
+                        "ref_id": "FIGREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "A Extended Streaming Translation Results",
+                "sec_num": null
+            },
+            {
+                "text": "latency-quality trade-off, shown in Figure 7 . Under the streaming condition, the wait-k policy and DS model allow the model to follow closely the speaker while achieving good quality, with a latency that can be easily adjusted between 4 and 15 tokens depending on the requirements of the task. There are diminishing returns when increasing the latency above 6-7 tokens, as only marginal gains in quality are obtained.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 43,
+                        "end": 44,
+                        "text": "7",
+                        "ref_id": "FIGREF7"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "A Extended Streaming Translation Results",
+                "sec_num": null
+            },
+            {
+                "text": "During training of the unidirectional and PBE encoders, the constraints imposed by Eqs. 8 and 9 are efficiently implemented by full self-attention, as in the bidirectional encoder, followed by an attention mask, for each token to only attend those tokens fulfilling the constraints. The attention mask sets the weights of the other tokens to -\u221e before application of the self-attention softmax. This is exactly the same mechanism used in the standard Transformer decoder to prevent the auto-regressive decoder from accessing future information. This means that the three encoder types have an During inference time, however, the unidirectional encoder has some advantages. Given that the unidirectional encoder is incremental, meaning that the encodings of old tokens do not change when a new token becomes available, the process can be sped up by only computing the encoding of the newly available token. Although encoder self-attention still needs to be computed, a single vector is used as the query instead of the full matrix. Table 3 shows inference statistics for the different components of the En \u2192 De Transformer Big with h=60. Two setups have been tested: CPU-only inference, and GPU inference. Results were obtained on an Intel i9-7920X machine with an NVIDIA GTX 2080Ti.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 1037,
+                        "end": 1038,
+                        "text": "3",
+                        "ref_id": "TABREF2"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "B Efficiency of the proposed models",
+                "sec_num": null
+            },
+            {
+                "text": "The unidirectional encoder is four times faster than the bidirectional encoder when run on a CPU. However, both encoders perform the same when run on a GPU. For the streaming MT scenario considered in this work, no latency reduction is gained ",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "B Efficiency of the proposed models",
+                "sec_num": null
+            },
+            {
+                "text": "The multi-k systems have been trained with the official implementation (https://github.com/ elbayadm/attn2d). Models are trained for 0.5M steps on a machine with 4 2080Ti GPUs.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "C MT System configuration",
+                "sec_num": null
+            },
+            {
+                "text": "Total training time was 40h for BASE models, and 60h for BIG models. The following command was used to train them: For finetuning, we change to the following:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "C MT System configuration",
+                "sec_num": null
+            },
+            {
+                "text": "--lr-scheduler fixed \\ --lr 4.47169e-05 \\ For the streaming translation scenario, the data is lowercased and all punctuation signs are removed. For the simultaneous scenario (IWSLT 2020 simultaneous text-to-text), it is truecased and tokenized using Moses. We apply language identification to the training data using langid (Lui and Baldwin, 2012) and discard those sentences that have been tagged with the wrong language. SentencePiece (Kudo and Richardson, 2018) is used to learn the BPE units, and we use whitespace as a suffix in order to know when an entire target word has been written during decoding.",
+                "cite_spans": [
+                    {
+                        "start": 324,
+                        "end": 347,
+                        "text": "(Lui and Baldwin, 2012)",
+                        "ref_id": "BIBREF18"
+                    },
+                    {
+                        "start": 437,
+                        "end": 464,
+                        "text": "(Kudo and Richardson, 2018)",
+                        "ref_id": "BIBREF16"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "C MT System configuration",
+                "sec_num": null
+            },
+            {
+                "text": "In order to obtain samples that can be used for training streaming MT models, a sliding window that moves over whole sentences is used to extract consistent source-target samples. Figure 8 shows an example of corpus construction using h = 5. The generated streaming data is upsampled to keep a 1-to-3 ratio with the regular sentence-level data.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 187,
+                        "end": 188,
+                        "text": "8",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "C MT System configuration",
+                "sec_num": null
+            },
+            {
+                "text": "The Direct Segmentation system has been trained with the official implementation (https://github.com/jairsan/ Speech_Translation_Segmenter).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "D Segmenter System configuration",
+                "sec_num": null
+            },
+            {
+                "text": "The following command was used to train the segmenter system: with the following configurations:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "D Segmenter System configuration",
+                "sec_num": null
+            },
+            {
+                "text": "(len=11; window=0) (len=12; window=1) (len=13; window=2) (len=14, window=3) (len=15, window=4)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "D Segmenter System configuration",
+                "sec_num": null
+            }
+        ],
+        "back_matter": [
+            {
+                "text": "The research leading to these results has received funding from the European Union's Horizon 2020 research and innovation programme under grant agreements no. 761758 (X5Gon) and 952215 (TAILOR), and Erasmus+ Education programme under grant agreement no. 20-226-093604-SCH (EXPERT); the Government of Spain's grant RTI2018-094879-B-I00 (Multisub) funded by MCIN/AEI/10.13039/501100011033 & \"ERDF A way of making Europe\", and FPU scholarships FPU18/04135; and the Generalitat Valenciana's research project Classroom Activity Recognition (ref. PROMETEO/2019/111). The authors gratefully acknowledge the computer resources at Artemisa, funded by the European Union ERDF and Comunitat Valenciana as well as the technical support provided by the Instituto de F\u00edsica Corpuscular, IFIC (CSIC-UV).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Acknowledgements",
+                "sec_num": null
+            },
+            {
+                "text": "Target 1x 1,1 x 1,2 y 1,1 y 1,2 2x 2,1 x 2,2 x 2,3 y 2,1 y 2,2 3x 3,1 x 3,2 x 3,3 y 3,1 y 3,2 y 3,3 4x 4,1 x 4,2 y 4,1 y 4,2Sentence pair Source<DOC> y 1,1 y 1,2 <SEP> y 2,1 y 2,2 <SEP> y 3,1 y 3,2 y 3,3 <BRK> 4 <CONT> y 3,1 y 3,2 y 3,3 <SEP> y 4,1 y 4,2 <END> Figure 8 : Illustrated example of sample construction with history. Starting from a corpus of ordered sentence pairs (top), streaming samples are constructed (bottom) using h = 5. Past history is shown in light gray. Sentence boundary and document tokens (Junczys-Dowmunt, 2019) are not counted for the history size limit. Notice how, for the last sample, the pair (x 2 , y 2 ) is not included in the sample, as the history size limit would have otherwise been exceeded on the source side.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 268,
+                        "end": 269,
+                        "text": "8",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Sentece pair Source",
+                "sec_num": null
+            }
+        ],
+        "bib_entries": {
+            "BIBREF0": {
+                "ref_id": "b0",
+                "title": "Contextual handling in neural machine translation: Look behind, ahead and on both sides",
+                "authors": [
+                    {
+                        "first": "M",
+                        "middle": [],
+                        "last": "Ruchit Agrawal",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "M",
+                        "middle": [],
+                        "last": "Turchi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Negri",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proc. of EAMT",
+                "volume": "",
+                "issue": "",
+                "pages": "11--20",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ruchit Agrawal, M. Turchi, and M. Negri. 2018. Con- textual handling in neural machine translation: Look behind, ahead and on both sides. In Proc. of EAMT, pages 11-20.",
+                "links": null
+            },
+            "BIBREF1": {
+                "ref_id": "b1",
+                "title": "FINDINGS OF THE IWSLT 2020 EVALUA-TION CAMPAIGN",
+                "authors": [
+                    {
+                        "first": "Amittai",
+                        "middle": [],
+                        "last": "Ebrahim Ansari",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nguyen",
+                        "middle": [],
+                        "last": "Axelrod",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ond\u0159ej",
+                        "middle": [],
+                        "last": "Bach",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Roldano",
+                        "middle": [],
+                        "last": "Bojar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Fahim",
+                        "middle": [],
+                        "last": "Cattoni",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nadir",
+                        "middle": [],
+                        "last": "Dalvi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Marcello",
+                        "middle": [],
+                        "last": "Durrani",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christian",
+                        "middle": [],
+                        "last": "Federico",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jiatao",
+                        "middle": [],
+                        "last": "Federmann",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Fei",
+                        "middle": [],
+                        "last": "Gu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kevin",
+                        "middle": [],
+                        "last": "Huang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xutai",
+                        "middle": [],
+                        "last": "Knight",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ajay",
+                        "middle": [],
+                        "last": "Ma",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Matteo",
+                        "middle": [],
+                        "last": "Nagesh",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jan",
+                        "middle": [],
+                        "last": "Negri",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Juan",
+                        "middle": [],
+                        "last": "Niehues",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Elizabeth",
+                        "middle": [],
+                        "last": "Pino",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xing",
+                        "middle": [],
+                        "last": "Salesky",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sebastian",
+                        "middle": [],
+                        "last": "Shi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Marco",
+                        "middle": [],
+                        "last": "St\u00fcker",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alexander",
+                        "middle": [],
+                        "last": "Turchi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Changhan",
+                        "middle": [],
+                        "last": "Waibel",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "Proc. of IWSLT",
+                "volume": "",
+                "issue": "",
+                "pages": "1--34",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ebrahim Ansari, Amittai Axelrod, Nguyen Bach, Ond\u0159ej Bojar, Roldano Cattoni, Fahim Dalvi, Nadir Durrani, Marcello Federico, Christian Federmann, Jiatao Gu, Fei Huang, Kevin Knight, Xutai Ma, Ajay Nagesh, Matteo Negri, Jan Niehues, Juan Pino, Eliz- abeth Salesky, Xing Shi, Sebastian St\u00fcker, Marco Turchi, Alexander Waibel, and Changhan Wang. 2020. FINDINGS OF THE IWSLT 2020 EVALUA- TION CAMPAIGN. In Proc. of IWSLT, pages 1-34, Online. ACL.",
+                "links": null
+            },
+            "BIBREF2": {
+                "ref_id": "b2",
+                "title": "Monotonic Infinite Lookback Attention for Simultaneous Machine Translation",
+                "authors": [
+                    {
+                        "first": "Naveen",
+                        "middle": [],
+                        "last": "Arivazhagan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Colin",
+                        "middle": [],
+                        "last": "Cherry",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Wolfgang",
+                        "middle": [],
+                        "last": "Macherey",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chung-Cheng",
+                        "middle": [],
+                        "last": "Chiu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Semih",
+                        "middle": [],
+                        "last": "Yavuz",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ruoming",
+                        "middle": [],
+                        "last": "Pang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Wei",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Colin",
+                        "middle": [],
+                        "last": "Raffel",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proc. of ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "1313--1323",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Naveen Arivazhagan, Colin Cherry, Wolfgang Macherey, Chung-Cheng Chiu, Semih Yavuz, Ruoming Pang, Wei Li, and Colin Raffel. 2019. Monotonic Infinite Lookback Attention for Simulta- neous Machine Translation. In Proc. of ACL, pages 1313-1323. ACL.",
+                "links": null
+            },
+            "BIBREF3": {
+                "ref_id": "b3",
+                "title": "Tamer Alkhouli, Andreas Guta, Pavel Golik, Evgeny Matusov, and Christian Herold. 2020. Start-before-end and endto-end: Neural speech translation by AppTek and RWTH Aachen University",
+                "authors": [
+                    {
+                        "first": "Naveen",
+                        "middle": [],
+                        "last": "Arivazhagan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Colin",
+                        "middle": [],
+                        "last": "Cherry",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Wolfgang",
+                        "middle": [],
+                        "last": "Macherey",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "George",
+                        "middle": [
+                            "F"
+                        ],
+                        "last": "Foster",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "Proc. of IWSLT",
+                "volume": "",
+                "issue": "",
+                "pages": "44--54",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Naveen Arivazhagan, Colin Cherry, Wolfgang Macherey, and George F. Foster. 2020. Re- translation versus streaming for simultaneous translation. In Proc. of IWSLT, pages 220-227. ACL. Parnia Bahar, Patrick Wilken, Tamer Alkhouli, An- dreas Guta, Pavel Golik, Evgeny Matusov, and Christian Herold. 2020. Start-before-end and end- to-end: Neural speech translation by AppTek and RWTH Aachen University. In Proc. of IWSLT, pages 44-54. ACL.",
+                "links": null
+            },
+            "BIBREF4": {
+                "ref_id": "b4",
+                "title": "Web Inventory of Transcribed and Translated Talks",
+                "authors": [
+                    {
+                        "first": "Mauro",
+                        "middle": [],
+                        "last": "Cettolo",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christian",
+                        "middle": [],
+                        "last": "Girardi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Marcello",
+                        "middle": [],
+                        "last": "",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2012,
+                "venue": "Proc. of EAMT",
+                "volume": "3",
+                "issue": "",
+                "pages": "261--268",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Mauro Cettolo, Christian Girardi, and Marcello Fed- erico. 2012. WIT 3 : Web Inventory of Transcribed and Translated Talks. In Proc. of EAMT, pages 261- 268.",
+                "links": null
+            },
+            "BIBREF5": {
+                "ref_id": "b5",
+                "title": "Thinking slow about latency evaluation for simultaneous machine translation",
+                "authors": [
+                    {
+                        "first": "Colin",
+                        "middle": [],
+                        "last": "Cherry",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "George",
+                        "middle": [],
+                        "last": "Foster",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1906.00048"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Colin Cherry and George Foster. 2019. Thinking slow about latency evaluation for simultaneous machine translation. arXiv preprint arXiv:1906.00048.",
+                "links": null
+            },
+            "BIBREF6": {
+                "ref_id": "b6",
+                "title": "NMT-Based Segmentation and Punctuation Insertion for Real-Time Spoken Language Translation",
+                "authors": [
+                    {
+                        "first": "Eunah",
+                        "middle": [],
+                        "last": "Cho",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jan",
+                        "middle": [],
+                        "last": "Niehues",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alex",
+                        "middle": [],
+                        "last": "Waibel",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Proc. of Interspeech",
+                "volume": "",
+                "issue": "",
+                "pages": "2645--2649",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Eunah Cho, Jan Niehues, and Alex Waibel. 2017. NMT-Based Segmentation and Punctuation Inser- tion for Real-Time Spoken Language Translation. In Proc. of Interspeech, pages 2645-2649. ISCA.",
+                "links": null
+            },
+            "BIBREF7": {
+                "ref_id": "b7",
+                "title": "Can neural machine translation do simultaneous translation",
+                "authors": [
+                    {
+                        "first": "Kyunghyun",
+                        "middle": [],
+                        "last": "Cho",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Masha",
+                        "middle": [],
+                        "last": "Esipova",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1606.02012"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Kyunghyun Cho and Masha Esipova. 2016. Can neu- ral machine translation do simultaneous translation? arXiv preprint arXiv:1606.02012.",
+                "links": null
+            },
+            "BIBREF8": {
+                "ref_id": "b8",
+                "title": "Transformer-xl: Attentive language models beyond a fixed-length context",
+                "authors": [
+                    {
+                        "first": "Zihang",
+                        "middle": [],
+                        "last": "Dai",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zhilin",
+                        "middle": [],
+                        "last": "Yang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yiming",
+                        "middle": [],
+                        "last": "Yang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jaime",
+                        "middle": [
+                            "G"
+                        ],
+                        "last": "Carbonell",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Quoc",
+                        "middle": [],
+                        "last": "Le",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ruslan",
+                        "middle": [],
+                        "last": "Salakhutdinov",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proc. of ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "2978--2988",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Zihang Dai, Zhilin Yang, Yiming Yang, Jaime G Car- bonell, Quoc Le, and Ruslan Salakhutdinov. 2019. Transformer-xl: Attentive language models beyond a fixed-length context. In Proc. of ACL, pages 2978- 2988.",
+                "links": null
+            },
+            "BIBREF9": {
+                "ref_id": "b9",
+                "title": "Incremental decoding and training methods for simultaneous translation in neural machine translation",
+                "authors": [
+                    {
+                        "first": "Fahim",
+                        "middle": [],
+                        "last": "Dalvi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nadir",
+                        "middle": [],
+                        "last": "Durrani",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hassan",
+                        "middle": [],
+                        "last": "Sajjad",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Stephan",
+                        "middle": [],
+                        "last": "Vogel",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proc. of NAACL-HLT",
+                "volume": "",
+                "issue": "",
+                "pages": "493--499",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Fahim Dalvi, Nadir Durrani, Hassan Sajjad, and Stephan Vogel. 2018. Incremental decoding and training methods for simultaneous translation in neu- ral machine translation. In Proc. of NAACL-HLT, pages 493-499. ACL.",
+                "links": null
+            },
+            "BIBREF10": {
+                "ref_id": "b10",
+                "title": "MuST-C: a Multilingual Speech Translation Corpus",
+                "authors": [
+                    {
+                        "first": "A",
+                        "middle": [
+                            "Di"
+                        ],
+                        "last": "Mattia",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Roldano",
+                        "middle": [],
+                        "last": "Gangi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Luisa",
+                        "middle": [],
+                        "last": "Cattoni",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Matteo",
+                        "middle": [],
+                        "last": "Bentivogli",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Marco",
+                        "middle": [],
+                        "last": "Negri",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Turchi",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proc. of NAACL-HLT",
+                "volume": "",
+                "issue": "",
+                "pages": "2012--2017",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Mattia A. Di Gangi, Roldano Cattoni, Luisa Bentivogli, Matteo Negri, and Marco Turchi. 2019. MuST-C: a Multilingual Speech Translation Corpus. In Proc. of NAACL-HLT, pages 2012-2017. ACM.",
+                "links": null
+            },
+            "BIBREF11": {
+                "ref_id": "b11",
+                "title": "Efficient Wait-k Models for Simultaneous Machine Translation",
+                "authors": [
+                    {
+                        "first": "Maha",
+                        "middle": [],
+                        "last": "Elbayad",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Laurent",
+                        "middle": [],
+                        "last": "Besacier",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jakob",
+                        "middle": [],
+                        "last": "Verbeek",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "Proc. of Interspeech",
+                "volume": "",
+                "issue": "",
+                "pages": "1461--1465",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Maha Elbayad, Laurent Besacier, and Jakob Verbeek. 2020a. Efficient Wait-k Models for Simultaneous Machine Translation. In Proc. of Interspeech, pages 1461-1465. ISCA.",
+                "links": null
+            },
+            "BIBREF12": {
+                "ref_id": "b12",
+                "title": "ON-TRAC consortium for end-to-end and simultaneous speech translation challenge tasks at IWSLT 2020",
+                "authors": [
+                    {
+                        "first": "Maha",
+                        "middle": [],
+                        "last": "Elbayad",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ha",
+                        "middle": [],
+                        "last": "Nguyen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Fethi",
+                        "middle": [],
+                        "last": "Bougares",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Natalia",
+                        "middle": [],
+                        "last": "Tomashenko",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Antoine",
+                        "middle": [],
+                        "last": "Caubri\u00e8re",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Benjamin",
+                        "middle": [],
+                        "last": "Lecouteux",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yannick",
+                        "middle": [],
+                        "last": "Est\u00e8ve",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Laurent",
+                        "middle": [],
+                        "last": "Besacier",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "Proc. of IWSLT",
+                "volume": "",
+                "issue": "",
+                "pages": "35--43",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Maha Elbayad, Ha Nguyen, Fethi Bougares, Natalia Tomashenko, Antoine Caubri\u00e8re, Benjamin Lecou- teux, Yannick Est\u00e8ve, and Laurent Besacier. 2020b. ON-TRAC consortium for end-to-end and simulta- neous speech translation challenge tasks at IWSLT 2020. In Proc. of IWSLT, pages 35-43. ACL.",
+                "links": null
+            },
+            "BIBREF13": {
+                "ref_id": "b13",
+                "title": "Stream-level latency evaluation for simultaneous machine translation",
+                "authors": [
+                    {
+                        "first": "Javier",
+                        "middle": [],
+                        "last": "Iranzo-S\u00e1nchez",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jorge",
+                        "middle": [
+                            "Civera"
+                        ],
+                        "last": "Saiz",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alfons",
+                        "middle": [],
+                        "last": "Juan",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2021,
+                "venue": "Findings of ACL: EMNLP",
+                "volume": "",
+                "issue": "",
+                "pages": "664--670",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Javier Iranzo-S\u00e1nchez, Jorge Civera Saiz, and Alfons Juan. 2021. Stream-level latency evaluation for si- multaneous machine translation. In Findings of ACL: EMNLP, pages 664-670. ACL.",
+                "links": null
+            },
+            "BIBREF14": {
+                "ref_id": "b14",
+                "title": "Direct Segmentation Models for Streaming Speech Translation",
+                "authors": [
+                    {
+                        "first": "Javier",
+                        "middle": [],
+                        "last": "Iranzo-S\u00e1nchez",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Adri\u00e0",
+                        "middle": [],
+                        "last": "Gim\u00e9nez",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Joan",
+                        "middle": [],
+                        "last": "Albert Silvestre-Cerd\u00e0",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Pau",
+                        "middle": [],
+                        "last": "Baquero",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jorge",
+                        "middle": [],
+                        "last": "Civera",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alfons",
+                        "middle": [],
+                        "last": "Juan",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "Proc. of EMNLP",
+                "volume": "",
+                "issue": "",
+                "pages": "2599--2611",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Javier Iranzo-S\u00e1nchez, Adri\u00e0 Gim\u00e9nez, Joan Albert Silvestre-Cerd\u00e0, Pau Baquero, Jorge Civera, and Al- fons Juan. 2020. Direct Segmentation Models for Streaming Speech Translation. In Proc. of EMNLP, pages 2599-2611. ACL.",
+                "links": null
+            },
+            "BIBREF15": {
+                "ref_id": "b15",
+                "title": "Microsoft Translator at WMT 2019: Towards Large-Scale Document-Level Neural Machine Translation",
+                "authors": [
+                    {
+                        "first": "Marcin",
+                        "middle": [],
+                        "last": "Junczys-Dowmunt",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proc. of WMT",
+                "volume": "",
+                "issue": "",
+                "pages": "225--233",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Marcin Junczys-Dowmunt. 2019. Microsoft Transla- tor at WMT 2019: Towards Large-Scale Document- Level Neural Machine Translation. In Proc. of WMT, pages 225-233.",
+                "links": null
+            },
+            "BIBREF16": {
+                "ref_id": "b16",
+                "title": "Sentencepiece: A simple and language independent subword tokenizer and detokenizer for neural text processing",
+                "authors": [
+                    {
+                        "first": "Taku",
+                        "middle": [],
+                        "last": "Kudo",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "John",
+                        "middle": [],
+                        "last": "Richardson",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proc. of EMNLP: System Demonstrations",
+                "volume": "",
+                "issue": "",
+                "pages": "66--71",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Taku Kudo and John Richardson. 2018. Sentencepiece: A simple and language independent subword tok- enizer and detokenizer for neural text processing. In Proc. of EMNLP: System Demonstrations, pages 66- 71. ACL.",
+                "links": null
+            },
+            "BIBREF17": {
+                "ref_id": "b17",
+                "title": "Sentence boundary augmentation for neural machine translation robustness",
+                "authors": [
+                    {
+                        "first": "Daniel",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "I",
+                        "middle": [],
+                        "last": "Te",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Naveen",
+                        "middle": [],
+                        "last": "Arivazhagan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Colin",
+                        "middle": [],
+                        "last": "Cherry",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dirk",
+                        "middle": [],
+                        "last": "Padfield",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:2010.11132"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Daniel Li, Te I, Naveen Arivazhagan, Colin Cherry, and Dirk Padfield. 2020. Sentence boundary aug- mentation for neural machine translation robustness. arXiv preprint arXiv:2010.11132.",
+                "links": null
+            },
+            "BIBREF18": {
+                "ref_id": "b18",
+                "title": "langid.py: An off-the-shelf language identification tool",
+                "authors": [
+                    {
+                        "first": "Marco",
+                        "middle": [],
+                        "last": "Lui",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Timothy",
+                        "middle": [],
+                        "last": "Baldwin",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2012,
+                "venue": "Proc. of ACL: System Demonstrations",
+                "volume": "",
+                "issue": "",
+                "pages": "25--30",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Marco Lui and Timothy Baldwin. 2012. langid.py: An off-the-shelf language identification tool. In Proc. of ACL: System Demonstrations, pages 25-30. ACL.",
+                "links": null
+            },
+            "BIBREF19": {
+                "ref_id": "b19",
+                "title": "STACL: Simultaneous translation with implicit anticipation and controllable latency using prefix-to-prefix framework",
+                "authors": [
+                    {
+                        "first": "Mingbo",
+                        "middle": [],
+                        "last": "Ma",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Liang",
+                        "middle": [],
+                        "last": "Huang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hao",
+                        "middle": [],
+                        "last": "Xiong",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Renjie",
+                        "middle": [],
+                        "last": "Zheng",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kaibo",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Baigong",
+                        "middle": [],
+                        "last": "Zheng",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chuanqiang",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zhongjun",
+                        "middle": [],
+                        "last": "He",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hairong",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xing",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hua",
+                        "middle": [],
+                        "last": "Wu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Haifeng",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proc. of ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "3025--3036",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Mingbo Ma, Liang Huang, Hao Xiong, Renjie Zheng, Kaibo Liu, Baigong Zheng, Chuanqiang Zhang, Zhongjun He, Hairong Liu, Xing Li, Hua Wu, and Haifeng Wang. 2019. STACL: Simultaneous trans- lation with implicit anticipation and controllable la- tency using prefix-to-prefix framework. In Proc. of ACL, pages 3025-3036. ACL.",
+                "links": null
+            },
+            "BIBREF20": {
+                "ref_id": "b20",
+                "title": "A simple and effective unified encoder for document-level machine translation",
+                "authors": [
+                    {
+                        "first": "Shuming",
+                        "middle": [],
+                        "last": "Ma",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dongdong",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ming",
+                        "middle": [],
+                        "last": "Zhou",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "Proc. of ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "3505--3511",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Shuming Ma, Dongdong Zhang, and Ming Zhou. 2020a. A simple and effective unified encoder for document-level machine translation. In Proc. of ACL, pages 3505-3511. ACL.",
+                "links": null
+            },
+            "BIBREF21": {
+                "ref_id": "b21",
+                "title": "Liezl Puzon, and Jiatao Gu. 2020b. Monotonic Multihead Attention",
+                "authors": [
+                    {
+                        "first": "Xutai",
+                        "middle": [],
+                        "last": "Ma",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Juan",
+                        "middle": [
+                            "Miguel"
+                        ],
+                        "last": "Pino",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "James",
+                        "middle": [],
+                        "last": "Cross",
+                        "suffix": ""
+                    }
+                ],
+                "year": null,
+                "venue": "Proc. ICLR 2020. OpenReview.net",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Xutai Ma, Juan Miguel Pino, James Cross, Liezl Pu- zon, and Jiatao Gu. 2020b. Monotonic Multihead Attention. In Proc. ICLR 2020. OpenReview.net.",
+                "links": null
+            },
+            "BIBREF22": {
+                "ref_id": "b22",
+                "title": "A survey on document-level machine translation: Methods and evaluation",
+                "authors": [
+                    {
+                        "first": "Sameen",
+                        "middle": [],
+                        "last": "Maruf",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Fahimeh",
+                        "middle": [],
+                        "last": "Saleh",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Gholamreza",
+                        "middle": [],
+                        "last": "Haffari",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2021,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1912.08494"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Sameen Maruf, Fahimeh Saleh, and Gholamreza Haf- fari. 2021. A survey on document-level machine translation: Methods and evaluation. arXiv preprint arXiv:1912.08494.",
+                "links": null
+            },
+            "BIBREF23": {
+                "ref_id": "b23",
+                "title": "Evaluating machine translation output with automatic sentence segmentation",
+                "authors": [
+                    {
+                        "first": "Evgeny",
+                        "middle": [],
+                        "last": "Matusov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Gregor",
+                        "middle": [],
+                        "last": "Leusch",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Oliver",
+                        "middle": [],
+                        "last": "Bender",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hermann",
+                        "middle": [],
+                        "last": "Ney",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2005,
+                "venue": "Proc. of IWSLT. ISCA",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Evgeny Matusov, Gregor Leusch, Oliver Bender, and Hermann Ney. 2005. Evaluating machine transla- tion output with automatic sentence segmentation. In Proc. of IWSLT. ISCA.",
+                "links": null
+            },
+            "BIBREF24": {
+                "ref_id": "b24",
+                "title": "Lowlatency neural speech translation",
+                "authors": [
+                    {
+                        "first": "Jan",
+                        "middle": [],
+                        "last": "Niehues",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ngoc-Quan",
+                        "middle": [],
+                        "last": "Pham",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Thanh-Le",
+                        "middle": [],
+                        "last": "Ha",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Matthias",
+                        "middle": [],
+                        "last": "Sperber",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alex",
+                        "middle": [],
+                        "last": "Waibel",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proc. of Interspeech",
+                "volume": "",
+                "issue": "",
+                "pages": "1293--1297",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jan Niehues, Ngoc-Quan Pham, Thanh-Le Ha, Matthias Sperber, and Alex Waibel. 2018. Low- latency neural speech translation. In Proc. of Inter- speech, pages 1293-1297. ISCA.",
+                "links": null
+            },
+            "BIBREF25": {
+                "ref_id": "b25",
+                "title": "Bleu: a Method for Automatic Evaluation of Machine Translation",
+                "authors": [
+                    {
+                        "first": "Kishore",
+                        "middle": [],
+                        "last": "Papineni",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Salim",
+                        "middle": [],
+                        "last": "Roukos",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Todd",
+                        "middle": [],
+                        "last": "Ward",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Wei-Jing",
+                        "middle": [],
+                        "last": "Zhu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2002,
+                "venue": "Proc. of ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "311--318",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Kishore Papineni, Salim Roukos, Todd Ward, and Wei- Jing Zhu. 2002. Bleu: a Method for Automatic Eval- uation of Machine Translation. In Proc. of ACL, pages 311-318.",
+                "links": null
+            },
+            "BIBREF26": {
+                "ref_id": "b26",
+                "title": "KIT's IWSLT 2020 SLT translation system",
+                "authors": [
+                    {
+                        "first": "Ngoc-Quan",
+                        "middle": [],
+                        "last": "Pham",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Felix",
+                        "middle": [],
+                        "last": "Schneider",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tuan-Nam",
+                        "middle": [],
+                        "last": "Nguyen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Thanh-Le",
+                        "middle": [],
+                        "last": "Ha",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Thai",
+                        "middle": [],
+                        "last": "",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Son",
+                        "middle": [],
+                        "last": "Nguyen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Maximilian",
+                        "middle": [],
+                        "last": "Awiszus",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sebastian",
+                        "middle": [],
+                        "last": "St\u00fcker",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alexander",
+                        "middle": [],
+                        "last": "Waibel",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "Proc. of IWSLT",
+                "volume": "",
+                "issue": "",
+                "pages": "55--61",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ngoc-Quan Pham, Felix Schneider, Tuan-Nam Nguyen, Thanh-Le Ha, Thai Son Nguyen, Maxi- milian Awiszus, Sebastian St\u00fcker, and Alexander Waibel. 2020. KIT's IWSLT 2020 SLT translation system. In Proc. of IWSLT, pages 55-61. ACL.",
+                "links": null
+            },
+            "BIBREF27": {
+                "ref_id": "b27",
+                "title": "Towards stream translation: Adaptive computation time for simultaneous machine translation",
+                "authors": [
+                    {
+                        "first": "Yves",
+                        "middle": [],
+                        "last": "Scherrer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "J\u00f6rg",
+                        "middle": [],
+                        "last": "Tiedemann",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sharid",
+                        "middle": [],
+                        "last": "Lo\u00e1iciga",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proc. of DiscoMT@EMNLP",
+                "volume": "",
+                "issue": "",
+                "pages": "228--236",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Yves Scherrer, J\u00f6rg Tiedemann, and Sharid Lo\u00e1i- ciga. 2019. Analysing concatenation approaches to document-level NMT in two different domains. In Proc. of DiscoMT@EMNLP, pages 51-61. ACL. Felix Schneider and Alexander Waibel. 2020. Towards stream translation: Adaptive computation time for si- multaneous machine translation. In Proc. of IWSLT, pages 228-236. ACL.",
+                "links": null
+            },
+            "BIBREF28": {
+                "ref_id": "b28",
+                "title": "Neural Machine Translation of Rare Words with Subword Units",
+                "authors": [
+                    {
+                        "first": "Rico",
+                        "middle": [],
+                        "last": "Sennrich",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Barry",
+                        "middle": [],
+                        "last": "Haddow",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alexandra",
+                        "middle": [],
+                        "last": "Birch",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proc. of ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "1715--1725",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Rico Sennrich, Barry Haddow, and Alexandra Birch. 2016. Neural Machine Translation of Rare Words with Subword Units. In Proc. of ACL, pages 1715- 1725. ACL.",
+                "links": null
+            },
+            "BIBREF29": {
+                "ref_id": "b29",
+                "title": "SRILM -an extensible language modeling toolkit",
+                "authors": [
+                    {
+                        "first": "Andreas",
+                        "middle": [],
+                        "last": "Stolcke",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2002,
+                "venue": "Proc. of Interspeech",
+                "volume": "",
+                "issue": "",
+                "pages": "901--904",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Andreas Stolcke. 2002. SRILM -an extensible lan- guage modeling toolkit. In Proc. of Interspeech, pages 901-904. ISCA.",
+                "links": null
+            },
+            "BIBREF30": {
+                "ref_id": "b30",
+                "title": "Neural machine translation with extended context",
+                "authors": [
+                    {
+                        "first": "J\u00f6rg",
+                        "middle": [],
+                        "last": "Tiedemann",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yves",
+                        "middle": [],
+                        "last": "Scherrer",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Proc. of DiscoMT@EMNLP",
+                "volume": "",
+                "issue": "",
+                "pages": "82--92",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "J\u00f6rg Tiedemann and Yves Scherrer. 2017. Neural ma- chine translation with extended context. In Proc. of DiscoMT@EMNLP, pages 82-92. ACL.",
+                "links": null
+            },
+            "BIBREF31": {
+                "ref_id": "b31",
+                "title": "Attention is all you need",
+                "authors": [
+                    {
+                        "first": "Ashish",
+                        "middle": [],
+                        "last": "Vaswani",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Noam",
+                        "middle": [],
+                        "last": "Shazeer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Niki",
+                        "middle": [],
+                        "last": "Parmar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jakob",
+                        "middle": [],
+                        "last": "Uszkoreit",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Llion",
+                        "middle": [],
+                        "last": "Jones",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Aidan",
+                        "middle": [
+                            "N"
+                        ],
+                        "last": "Gomez",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Lukasz",
+                        "middle": [],
+                        "last": "Kaiser",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Illia",
+                        "middle": [],
+                        "last": "Polosukhin",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Proc. of NIPS",
+                "volume": "",
+                "issue": "",
+                "pages": "5998--6008",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Lukasz Kaiser, and Illia Polosukhin. 2017. Attention is all you need. In Proc. of NIPS, pages 5998-6008.",
+                "links": null
+            },
+            "BIBREF32": {
+                "ref_id": "b32",
+                "title": "Beyond sentence-level end-to-end speech translation: Context helps",
+                "authors": [
+                    {
+                        "first": "Biao",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ivan",
+                        "middle": [],
+                        "last": "Titov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Barry",
+                        "middle": [],
+                        "last": "Haddow",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Rico",
+                        "middle": [],
+                        "last": "Sennrich",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2021,
+                "venue": "Proc. of ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "2566--2578",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Biao Zhang, Ivan Titov, Barry Haddow, and Rico Sennrich. 2021. Beyond sentence-level end-to-end speech translation: Context helps. In Proc. of ACL, pages 2566-2578. ACL.",
+                "links": null
+            },
+            "BIBREF33": {
+                "ref_id": "b33",
+                "title": "Simultaneous translation policies: From fixed to adaptive",
+                "authors": [
+                    {
+                        "first": "Baigong",
+                        "middle": [],
+                        "last": "Zheng",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "Proc. of ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "2847--2853",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Baigong Zheng et al. 2020a. Simultaneous translation policies: From fixed to adaptive. In Proc. of ACL, pages 2847-2853. ACL.",
+                "links": null
+            },
+            "BIBREF34": {
+                "ref_id": "b34",
+                "title": "Towards making the most of context in neural machine translation",
+                "authors": [
+                    {
+                        "first": "Zaixiang",
+                        "middle": [],
+                        "last": "Zheng",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xiang",
+                        "middle": [],
+                        "last": "Yue",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Shujian",
+                        "middle": [],
+                        "last": "Huang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jiajun",
+                        "middle": [],
+                        "last": "Chen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alexandra",
+                        "middle": [],
+                        "last": "Birch",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "Proc. of IJCAI",
+                "volume": "",
+                "issue": "",
+                "pages": "3983--3989",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Zaixiang Zheng, Xiang Yue, Shujian Huang, Jiajun Chen, and Alexandra Birch. 2020b. Towards mak- ing the most of context in neural machine translation. In Proc. of IJCAI, pages 3983-3989.",
+                "links": null
+            }
+        },
+        "ref_entries": {
+            "FIGREF0": {
+                "num": null,
+                "text": "Figure 1: Comparison of attention positions in j = 3 for bidirectional (left), unidirectional (center) and PBE (right) encoders with k = 4 in two consecutive timesteps i = 1 with G(1) = 4 (top) and i = 2 with G(2) = 5 (bottom).",
+                "uris": null,
+                "fig_num": "1",
+                "type_str": "figure"
+            },
+            "FIGREF1": {
+                "num": null,
+                "text": "Figure 2: BLEU scores on the German-English IWSLT 2010 dev set as a function of the k value in the wait-k policy for a range of streaming history (h) lengths and encoder type (See Appendix A for a close-up).",
+                "uris": null,
+                "fig_num": "2",
+                "type_str": "figure"
+            },
+            "FIGREF2": {
+                "num": null,
+                "text": "Figure 3: BLEU scores versus stream-adapted AL and DAL (scale s=0.85) with segmenters of future window length w = {0, 1, 2, 3, 4} on the IWSLT 2010 test set. Points over each curve correspond to k = {1, 2, 4, 8, 16} values of the wait-k policy used at inference time.",
+                "uris": null,
+                "fig_num": "3",
+                "type_str": "figure"
+            },
+            "FIGREF3": {
+                "num": null,
+                "text": "shows BLEU scores versus streamadapted AL and DAL (s scale = 0.85) figures reported with segmenters of future window length w = {0, 1, 2, 3, 4} for a streaming evaluation on the IWSLT 2010 test set. Points over each curve correspond to k = {1, 2, 4, 8, 16} values of the wait-k policy used at inference time. Results for a w = 0 oracle are also shown as an upper-bound.",
+                "uris": null,
+                "fig_num": null,
+                "type_str": "figure"
+            },
+            "FIGREF4": {
+                "num": null,
+                "text": "Figure 4: Comparative BLEU scores versus AL at three regimes, low, medium, and high latency, for IWSLT 2020 simultaneous text-to-text track participants, RWTH, ON-TRAC, KIT and our streaming MT (STR-MT) system on the MuST-C corpus.",
+                "uris": null,
+                "fig_num": "4",
+                "type_str": "figure"
+            },
+            "FIGREF6": {
+                "num": null,
+                "text": "Figure6: BLEU scores on the English-German IWSLT 2010 dev set as a function of the k value in the waitk policy for a range of streaming history (h) lengths using a PBE encoder.",
+                "uris": null,
+                "fig_num": "6",
+                "type_str": "figure"
+            },
+            "FIGREF7": {
+                "num": null,
+                "text": "Figure 7: BLEU scores versus stream-adapted AL and DAL (scale s=0.85) with segmenters of future window length w = {0, 1, 2, 3, 4} on the English-German IWSLT 2010 test set. Points over each curve correspond to k = {1, 2, 4, 8, 16} values of the wait-k policy used at inference time.",
+                "uris": null,
+                "fig_num": "7",
+                "type_str": "figure"
+            },
+            "FIGREF8": {
+                "num": null,
+                "text": "-dir $FAIRSEQ/examples/$ex \\ --arch $ARCH waitk_transformer_base \\ --share-decoder-input-output-embed \\ --left-pad-source False \\ --tokens $TOK \\ --update-freq 2 \\ --save-dir $MODEL_OUTPUT_FOLDER \\ --no-progress-bar \\ --log-interval 100 \\ --max-update 500000 \\ --save-interval-updates 10000 \\",
+                "uris": null,
+                "fig_num": null,
+                "type_str": "figure"
+            },
+            "TABREF0": {
+                "content": "<table><tr><td>Corpus</td><td>Doc Sents(M)</td><td colspan=\"2\">Tokens(M)</td></tr><tr><td/><td/><td colspan=\"2\">German English</td></tr><tr><td>News-Comm.</td><td>0.3</td><td>7.4</td><td>7.2</td></tr><tr><td>Wikititles</td><td>1.3</td><td>2.7</td><td>3.1</td></tr><tr><td>Europarl</td><td>1.8</td><td>42.5</td><td>45.5</td></tr><tr><td>Rapid</td><td>1.5</td><td>26.0</td><td>26.9</td></tr><tr><td>MuST-C</td><td>0.2</td><td>3.9</td><td>4.2</td></tr><tr><td>TED</td><td>0.2</td><td>3.3</td><td>3.6</td></tr><tr><td>LibriVox</td><td>0.1</td><td>0.9</td><td>1.1</td></tr><tr><td>Paracrawl</td><td>31.4</td><td>465.2</td><td>502.9</td></tr></table>",
+                "type_str": "table",
+                "text": "Basic statistics of the training data from the IWSLT 2020 Evaluation Campaign (M = Millions).",
+                "html": null,
+                "num": null
+            },
+            "TABREF1": {
+                "content": "<table><tr><td>Model</td><td>BLEU</td><td>AP</td><td colspan=\"2\">AL DAL</td></tr><tr><td>ACT</td><td colspan=\"4\">30.3 10.3 100.1 101.8</td></tr><tr><td>STR-MT</td><td>29.5</td><td>1.2</td><td>11.2</td><td>17.8</td></tr></table>",
+                "type_str": "table",
+                "text": "Latency and quality comparison of ACT (Schneider and Waibel, 2020) and the proposed STR-MT on the IWSLT 2010 De-En test set.",
+                "html": null,
+                "num": null
+            },
+            "TABREF2": {
+                "content": "<table><tr><td>Component</td><td>CPU</td><td>GPU</td></tr><tr><td colspan=\"3\">Unidir. Encoder 0.034s 0.002s</td></tr><tr><td>Bidir. Encoder</td><td colspan=\"2\">0.138s 0.002s</td></tr><tr><td>Decoder</td><td colspan=\"2\">0.242s 0.004s</td></tr><tr><td colspan=\"3\">by not re-encoding previous tokens due to the GPU</td></tr><tr><td colspan=\"3\">paralellization capability. When run on a GPU, the</td></tr><tr><td colspan=\"3\">proposed model works seamlessly under real-time</td></tr><tr><td>constraints.</td><td/><td/></tr></table>",
+                "type_str": "table",
+                "text": "Latency of translating a token (in seconds) for the proposed En-De h=60 Transformer Big model.",
+                "html": null,
+                "num": null
+            }
+        }
+    }
+}

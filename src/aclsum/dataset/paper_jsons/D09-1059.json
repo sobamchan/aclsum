@@ -1,0 +1,1903 @@
+{
+    "paper_id": "D09-1059",
+    "header": {
+        "generated_with": "S2ORC 1.0.0",
+        "date_generated": "2023-06-16T11:58:15.430840Z"
+    },
+    "title": "Statistical Bistratal Dependency Parsing",
+    "authors": [
+        {
+            "first": "Richard",
+            "middle": [],
+            "last": "Johansson",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "University of Trento",
+                "location": {
+                    "settlement": "Trento",
+                    "country": "Italy"
+                }
+            },
+            "email": "johansson@disi.unitn.it"
+        }
+    ],
+    "year": "",
+    "venue": null,
+    "identifiers": {},
+    "abstract": "We present an inexact search algorithm for the problem of predicting a two-layered dependency graph. The algorithm is based on a k-best version of the standard cubictime search algorithm for projective dependency parsing, which is used as the backbone of a beam search procedure. This allows us to handle the complex nonlocal feature dependencies occurring in bistratal parsing if we model the interdependency between the two layers.\nWe apply the algorithm to the syntacticsemantic dependency parsing task of the CoNLL-2008 Shared Task, and we obtain a competitive result equal to the highest published for a system that jointly learns syntactic and semantic structure.",
+    "pdf_parse": {
+        "paper_id": "D09-1059",
+        "_pdf_hash": "",
+        "abstract": [
+            {
+                "text": "We present an inexact search algorithm for the problem of predicting a two-layered dependency graph. The algorithm is based on a k-best version of the standard cubictime search algorithm for projective dependency parsing, which is used as the backbone of a beam search procedure. This allows us to handle the complex nonlocal feature dependencies occurring in bistratal parsing if we model the interdependency between the two layers.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            },
+            {
+                "text": "We apply the algorithm to the syntacticsemantic dependency parsing task of the CoNLL-2008 Shared Task, and we obtain a competitive result equal to the highest published for a system that jointly learns syntactic and semantic structure.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            }
+        ],
+        "body_text": [
+            {
+                "text": "Numerous linguistic theories assume a multistratal model of linguistic structure, such as a layer of surface syntax, deep syntax, and shallow semantics. Examples include Meaning-Text Theory (Mel'\u010duk, 1988) , Discontinuous Grammar (Buch-Kromann, 2006) , Extensible Dependency Grammar (Debusmann et al., 2004) , and the Functional Generative Description (Sgall et al., 1986) which forms the theoretical foundation of the Prague Dependency Treebank (Haji\u010d, 1998) .",
+                "cite_spans": [
+                    {
+                        "start": 170,
+                        "end": 205,
+                        "text": "Meaning-Text Theory (Mel'\u010duk, 1988)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 230,
+                        "end": 250,
+                        "text": "(Buch-Kromann, 2006)",
+                        "ref_id": "BIBREF0"
+                    },
+                    {
+                        "start": 283,
+                        "end": 307,
+                        "text": "(Debusmann et al., 2004)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 352,
+                        "end": 372,
+                        "text": "(Sgall et al., 1986)",
+                        "ref_id": "BIBREF27"
+                    },
+                    {
+                        "start": 446,
+                        "end": 459,
+                        "text": "(Haji\u010d, 1998)",
+                        "ref_id": "BIBREF11"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "In the statistical NLP community, the most widely used grammatical resource is the Penn Treebank (Marcus et al., 1993) . This is a purely syntactic resource, but we can also include this treebank in the category of multistratal resources since the PropBank (Palmer et al., 2005) and NomBank (Meyers et al., 2004) projects have annotated shallow semantic structures on top of it. Dependency-converted versions of the Penn Treebank, PropBank and NomBank were used in the CoNLL-2008 Shared Task (Surdeanu et al., 2008) , in which the task of the participants was to produce a bistratal dependency structure consisting of surface syntax and shallow semantics.",
+                "cite_spans": [
+                    {
+                        "start": 97,
+                        "end": 118,
+                        "text": "(Marcus et al., 1993)",
+                        "ref_id": "BIBREF19"
+                    },
+                    {
+                        "start": 257,
+                        "end": 278,
+                        "text": "(Palmer et al., 2005)",
+                        "ref_id": "BIBREF25"
+                    },
+                    {
+                        "start": 291,
+                        "end": 312,
+                        "text": "(Meyers et al., 2004)",
+                        "ref_id": "BIBREF23"
+                    },
+                    {
+                        "start": 492,
+                        "end": 515,
+                        "text": "(Surdeanu et al., 2008)",
+                        "ref_id": "BIBREF29"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Producing a consistent multistratal structure is a conceptually and computationally complex task, and most previous methods have employed a purely pipeline-based decomposition of the task. This includes the majority of work on shallow semantic analysis (Gildea and Jurafsky, 2002, inter alia) . Nevertheless, since it is obvious that syntax and semantics are highly interdependent, it has repeatedly been suggested that the problems of syntactic and semantic analysis should be carried out simultaneously rather than in a pipeline, and that modeling the interdependency between syntax and semantics would improve the quality of all the substructures.",
+                "cite_spans": [
+                    {
+                        "start": 253,
+                        "end": 292,
+                        "text": "(Gildea and Jurafsky, 2002, inter alia)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "The purpose of the CoNLL-2008 Shared Task was to study the feasibility of a joint analysis of syntax and semantics, and while most participating systems used a pipeline-based approach to the problem, there were a number of contributions that attempted to take the interdependence between syntax and semantics into account. The top-performing system in the task (Johansson and Nugues, 2008) applied a very simple reranking scheme by means of a k-best syntactic output, similar to previous attempts (Gildea and Jurafsky, 2002; Toutanova et al., 2005) to improve semantic role labeling performance by using mul-tiple parses. The system by Henderson et al. (2008) extended previous stack-based algorithms for dependency parsing by using two separate stacks to build the syntactic and semantic graphs. Llu\u00eds and M\u00e0rquez (2008) proposed a model that simultaneously predicts syntactic and semantic links, but since its search algorithm could not take the syntactic-semantic interdependencies into account, a pre-parsing step was still needed. In addition, before the CoNLL-2008 shared task there have been a few attempts to jointly learn syntactic and semantic structure; for instance, Merlo and Musillo (2008) appended semantic role labels to the phrase tags in a constituent treebank and applied a conventional constituent parser to predict constituent structure and semantic roles.",
+                "cite_spans": [
+                    {
+                        "start": 361,
+                        "end": 389,
+                        "text": "(Johansson and Nugues, 2008)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 497,
+                        "end": 524,
+                        "text": "(Gildea and Jurafsky, 2002;",
+                        "ref_id": "BIBREF9"
+                    },
+                    {
+                        "start": 525,
+                        "end": 548,
+                        "text": "Toutanova et al., 2005)",
+                        "ref_id": "BIBREF32"
+                    },
+                    {
+                        "start": 636,
+                        "end": 659,
+                        "text": "Henderson et al. (2008)",
+                        "ref_id": "BIBREF12"
+                    },
+                    {
+                        "start": 797,
+                        "end": 821,
+                        "text": "Llu\u00eds and M\u00e0rquez (2008)",
+                        "ref_id": "BIBREF18"
+                    },
+                    {
+                        "start": 1179,
+                        "end": 1203,
+                        "text": "Merlo and Musillo (2008)",
+                        "ref_id": "BIBREF22"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "In this paper, we propose a new approximate search method for bistratal dependency analysis. The search method is based on a beam search procedure that extends a k-best version of the standard cubic-time search algorithm for projective dependency parsing. This is similar to the search method for constituent parsing used by Huang (2008) , who referred to it as cube pruning, inspired by an idea from machine translation decoding (Chiang, 2007) . The cube pruning approach, which is normally used to solve the arg max problem, was also recently extended to summing problems, which is needed in some learning algorithms (Gimpel and Smith, 2009) .",
+                "cite_spans": [
+                    {
+                        "start": 325,
+                        "end": 337,
+                        "text": "Huang (2008)",
+                        "ref_id": "BIBREF14"
+                    },
+                    {
+                        "start": 430,
+                        "end": 444,
+                        "text": "(Chiang, 2007)",
+                        "ref_id": "BIBREF2"
+                    },
+                    {
+                        "start": 619,
+                        "end": 643,
+                        "text": "(Gimpel and Smith, 2009)",
+                        "ref_id": "BIBREF10"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "We apply the algorithm on the CoNLL-2008 Shared Task data, and obtain the same evaluation score as the best previously published system that simultaneously learns syntactic and semantic structure (Titov et al., 2009) .",
+                "cite_spans": [
+                    {
+                        "start": 196,
+                        "end": 216,
+                        "text": "(Titov et al., 2009)",
+                        "ref_id": "BIBREF31"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "In the tradition of dependency representation of sentence structure, starting from Tesni\u00e8re (1959) , the linguistic structure of the sentence is represented as a directed graph of relations between words. In most theories, certain constraints are imposed on this graph; the most common constraint on dependency graphs in syntax, for instance, is that the graph should form a tree (i.e. it should be connected, acyclic, and every node should have at most one incoming edge). This assumption underlies almost all dependency parsing, although there are also a few parsers based on slightly more general problem formulations (Sagae and Tsuji, 2008) .",
+                "cite_spans": [
+                    {
+                        "start": 83,
+                        "end": 98,
+                        "text": "Tesni\u00e8re (1959)",
+                        "ref_id": "BIBREF30"
+                    },
+                    {
+                        "start": 621,
+                        "end": 644,
+                        "text": "(Sagae and Tsuji, 2008)",
+                        "ref_id": "BIBREF26"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Bistratal Dependency Parsing",
+                "sec_num": "2"
+            },
+            {
+                "text": "In this paper, we assume a different type of constraint: that the graph can be partitioned into two subgraphs that we will refer to as strata or layers, where the first of the layers forms a tree. For the second layer, the only assumption we make is that there is at most one link between any two words. However, we believe that for any interesting linguistic structure, the second layer will be highly dependent on the structure of the first layer.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Bistratal Dependency Parsing",
+                "sec_num": "2"
+            },
+            {
+                "text": "Figure 1 shows an example of a bistratal dependency graph such as in the CoNLL-2008 Shared Task on syntactic and semantic dependency parsing. The figure shows the representation of the sentence We were expecting prices to fall. The primary layer represents surface-syntactic relations, shown above the sentence, and the secondary layer consists of predicate-argument links (here, we have two predicates expecting and fall). We now give a formal model of the statistical parsing problem of prediction of a bistratal dependency graph. For a given input sentence x, the task of our algorithm is to predict a structure \u0177 consisting of a primary layer \u0177p and a secondary layer \u0177s . In a discriminative modeling framework, we model this prediction problem as the search for the highest-scoring output from the candidate space Y under a scoring function F :",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 7,
+                        "end": 8,
+                        "text": "1",
+                        "ref_id": "FIGREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Bistratal Dependency Parsing",
+                "sec_num": "2"
+            },
+            {
+                "text": "\u0177p , \u0177s = arg max yp,ys \u2208Y F (x, y p , y s )",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Bistratal Dependency Parsing",
+                "sec_num": "2"
+            },
+            {
+                "text": "The learning problem consists of searching in the model space for a scoring function F that minimizes the cost of predictions on unseen examples according to a given cost function \u03c1. In this work, we consider linear scoring functions of the following form:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Bistratal Dependency Parsing",
+                "sec_num": "2"
+            },
+            {
+                "text": "F (x, y p , y s ) = w \u2022 \u03a6(x, y p , y s )",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Bistratal Dependency Parsing",
+                "sec_num": "2"
+            },
+            {
+                "text": "where \u03a6(x, y) is a numeric feature representation of the tuple (x, y p , y s ) and w a high-dimensional vector of feature weights.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Bistratal Dependency Parsing",
+                "sec_num": "2"
+            },
+            {
+                "text": "Based on the structural assumptions made above, we now decompose the feature representation into three parts:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Bistratal Dependency Parsing",
+                "sec_num": "2"
+            },
+            {
+                "text": "\u03a6 = \u03a6 p + \u03a6 i + \u03a6 s",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Bistratal Dependency Parsing",
+                "sec_num": "2"
+            },
+            {
+                "text": "Here, \u03a6 p represents the primary layer, assumed to be a tree, \u03a6 s the secondary layer, and finally \u03a6 i is the representation of the interdependency between the layers. For the feature representations of the primary and secondary layers, we employ edge factorization, a decomposition widely used in statistical dependency parsing, and assume that all edges can be scored independently:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Bistratal Dependency Parsing",
+                "sec_num": "2"
+            },
+            {
+                "text": "\u03a6 p (x, y p ) = f \u2208yp \u03c6 p (x, f )",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Bistratal Dependency Parsing",
+                "sec_num": "2"
+            },
+            {
+                "text": "The representation of the interdependency between the layers assumes that each secondary link is dependent on the primary layer, but independent of other secondary links.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Bistratal Dependency Parsing",
+                "sec_num": "2"
+            },
+            {
+                "text": "\u03a6 i (x, y p , y s ) = f \u2208ys \u03c6 i (x, f, y p )",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Bistratal Dependency Parsing",
+                "sec_num": "2"
+            },
+            {
+                "text": "The interdependency between layers is the bottleneck for the search algorithm that we will present in Section 3. For semantic role analysis, this involves all features that rely on a syntactic representation, most importantly the PATH feature that represents the grammatical relation between predicate and argument words. For instance, in Figure 1 , we can represent the surface-syntactic relation between the tokens fall and prices as the string IM\u2191OPRD\u2191OBJ\u2193. In this work, all interdependency features will be based on paths in the primary layer.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 346,
+                        "end": 347,
+                        "text": "1",
+                        "ref_id": "FIGREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Bistratal Dependency Parsing",
+                "sec_num": "2"
+            },
+            {
+                "text": "This section presents an algorithm to approximately solve the arg max problem for prediction of bistratal dependency structures. We present the algorithm in two steps: first, we review a k-best version of the standard search algorithm for projective monostratal dependency parsing, based on the work by Huang and Chiang (2005) . 1 In the second step, starting from the k-best monostratal search, we devise a search method for the bistratal problem.",
+                "cite_spans": [
+                    {
+                        "start": 303,
+                        "end": 326,
+                        "text": "Huang and Chiang (2005)",
+                        "ref_id": "BIBREF13"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "A Bistratal Search Algorithm",
+                "sec_num": "3"
+            },
+            {
+                "text": "The search method commonly used in dependency parsers is a chart-based dynamic programming algorithm that finds the highest-scoring projective dependency tree under an edge-factored scoring function. It runs in cubic time with respect to the sentence length. In a slightly more general formulation, it was first published by Eisner (1996) . Starting from McDonald et al. (2005) , it has been widely used in recent statistical dependency parsing frameworks.",
+                "cite_spans": [
+                    {
+                        "start": 325,
+                        "end": 338,
+                        "text": "Eisner (1996)",
+                        "ref_id": "BIBREF7"
+                    },
+                    {
+                        "start": 355,
+                        "end": 377,
+                        "text": "McDonald et al. (2005)",
+                        "ref_id": "BIBREF20"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Review of k-Best Dependency Parsing",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "The algorithm works by creating open structures, which consist of a dependency link and the set of links that it spans, and closed structures, consisting of the left or right half of a complete subtree. An open structure is created by a procedure LINK that adds a dependency link to connect a right-pointing and a left-pointing closed structure, and a closed structure by a procedure JOIN that joins an open structure with a closed structure. Figure 2 shows schematic illustrations: a LINK operation connects the right-pointing closed structure between s and j with the left-pointing closed structure between j + 1 and e, and a JOIN operation connects an open structure between s and j with a closed structure between j and e. The search algorithm can easily be extended to find the k best parses, not only the best one. In k-best parsing, we maintain a k-best list in every cell in the dynamic programming table. To create the k-best list of derivations for an open structure between the positions s and e, for instance, there are up to |L| \u2022 (e -s) \u2022 k 2 possible combinations to consider if the set of allowed labels is L. The key observation by Huang and Chiang (2005) is to make use of the fact that the lists are sorted. For every position between s and e, we add the best combination to a priority queue, from which we then repeatedly remove the front item. For every item we remove, we add three successors: an item with a next-best left part, an item with a next-best right part, and finally an item with a next-best edge label.",
+                "cite_spans": [
+                    {
+                        "start": 1149,
+                        "end": 1172,
+                        "text": "Huang and Chiang (2005)",
+                        "ref_id": "BIBREF13"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 450,
+                        "end": 451,
+                        "text": "2",
+                        "ref_id": "FIGREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Review of k-Best Dependency Parsing",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "The pseudocode of the search algorithm for k-best dependency parsing is given in Algorithms 1 and 2. For brevity, we omitted the code for ADVANCE-LEFT and ADVANCE-RIGHT, which are similar to ADVANCE-EDGE, as well as ADVANCE-LOWER, which resembles ADVANCE-UPPER. The FST function used in the pseudocode returns the first element of a tuple.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Review of k-Best Dependency Parsing",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "The algorithm uses a priority queue with standard operations ENQUEUE, which enqueues an element, and DEQUEUE, which removes the highest-scoring item from the queue. With a standard binary heap implementation of the priority queue, these two operations execute in logarithmic time. To build the queue, we use a constant-time TOSS operation, which appends an item to the queue without enforcing the priority queue constraint, and a HEAPIFY operation that constructs a consistent priority queue in linear time.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Review of k-Best Dependency Parsing",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "The k-best algorithm forms the core of the inexact bistratal search algorithm. Our method is similar to the forest reranking method by Huang (2008) , although there is no forest pruning or reranking involved here. Crucially, we divide the features into local features, which can be computed \"offline\", and nonlocal features, which must be computed during search. In our case, the local features are \u03a6 p and \u03a6 s , while the nonlocal features are the interdependent features \u03a6 i . Algorithm 3 shows pseudocode for the main part of the bistratal search algorithm, and Algorithm 4 for its support functions. The algorithm works as follows: for every span s, e , the algorithm first uses the LINK procedure from the kbest monostratal search to construct a k-best list of open structures without semantic links. In the next step, secondary links are added in the procedure LINK-SECONDARY. For brevity, we show only the procedures that create open structures; they are very similar to their closed-structure counterparts.",
+                "cite_spans": [
+                    {
+                        "start": 135,
+                        "end": 147,
+                        "text": "Huang (2008)",
+                        "ref_id": "BIBREF14"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Extension to Bistratal Dependency Parsing",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "The LINK-SECONDARY procedure starts by creating an initial candidate (FIRST-SEC-OPEN) based on the best open structure for the primary layer. FIRST-SEC-OPEN creates the candidate space for secondary links for a single primary open structure. To reduce search complexity, it makes use of a problem-specific function SCOPE ",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Extension to Bistratal Dependency Parsing",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "for s \u2208 [0, . . . , n -m] LINK(s, s + m, \u2192, k) LINK(s, s + m, \u2190, k) JOIN(s, s + m, \u2192, k) JOIN(s, s + m, \u2190, k) return C[0, n, \u2192] procedure LINK(s, e, dir, k) E \u2190 CREATE-EDGES(s,e, dir, k) q \u2190 empty priority queue for j \u2208 [s, . . . , e -1] l \u2190 C[s, j, \u2192] r \u2190 C[j + 1, e, \u2190] o \u2190 CREATE-OPEN(E, l, r, 1, 1, 1) TOSS(q, o) HEAPIFY(q) while |O[s, e, dir]| < k and |q| > 0 o \u2190 DEQUEUE(q) if o / \u2208 O[s, e, dir] APPEND(O[s, e, dir], o) ENQUEUE(q, ADVANCE-EDGE(o)) ENQUEUE(q, ADVANCE-LEFT(o)) ENQUEUE(q, ADVANCE-RIGHT(o)) procedure JOIN(s, e, dir, k) q \u2190 empty priority queue if dir =\u2192 for j \u2208 [s + 1, . . . , e] u \u2190 O[s, j, \u2192] l \u2190 C[j, e, \u2192] c \u2190 CREATE-CLOSED(u, l, 1, 1) TOSS(q, c) else for j \u2208 [s, . . . , e -1] u \u2190 O[j, e, \u2190] l \u2190 C[s, j, \u2190] c \u2190 CREATE-CLOSED(u, l, 1, 1) TOSS(q, c) HEAPIFY(q) while |C[s, e, dir]| < k and |q| > 0 c \u2190 DEQUEUE(q) if c / \u2208 C[s, e, dir] APPEND(C[s, e, dir], c) ENQUEUE(q, ADVANCE-UPPER(c)) ENQUEUE(q, ADVANCE-LOWER(c))",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Extension to Bistratal Dependency Parsing",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "that defines which secondary links are possible from a given token, given a primary-layer context.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Extension to Bistratal Dependency Parsing",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "An important insight by Huang (2008) is that nonlocal features should be computed as early as possible during search. In our case, we assume that the interdependency features are based on tree paths in the primary layer. This means that secondary links between two tokens can be added when there is a complete path in the primary layer between the tokens. structure by adding a link between two substructures, a complete path is created between the tokens in the substructures. We thus search for possible secondary links only between the two substructures that are joined.",
+                "cite_spans": [
+                    {
+                        "start": 24,
+                        "end": 36,
+                        "text": "Huang (2008)",
+                        "ref_id": "BIBREF14"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Extension to Bistratal Dependency Parsing",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "Figure 3 illustrates this process. A primary open structure between s and e has been created by adding a link from the right-pointing closed structure between s and j to the left-pointing closed structure between j + 1 and e. We now try to add secondary links between the two substructures. For instance, in the semantic role parsing task described in subsection 3.3, if we know that there is a predicate between s and j, then we look for arguments between j + 1 and e, i.e. we apply the SCOPE function to the right substructure.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 7,
+                        "end": 8,
+                        "text": "3",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Extension to Bistratal Dependency Parsing",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "When computing the scores for secondary links, note that for efficiency only the interdependent part \u03a6 i should be computed in CREATE-SEC-EDGES; the part of the score that does not depend on the primary layer can be computed before entering the search procedure. ",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Extension to Bistratal Dependency Parsing",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "m \u2208 [1, . . . , n] for s \u2208 [0, . . . , n -m] LINK(s, s + m, \u2192, k) LINK-SECONDARY(s, s + m, \u2192, k) LINK(s, s + m, \u2190, k) LINK-SECONDARY(s, s + m, \u2190, k) JOIN(s, s + m, \u2192, k) JOIN-SECONDARY(s, s + m, \u2192, k) JOIN(s, s + m, \u2190, k) JOIN-SECONDARY(s, s + m, \u2190, k) return FIRST(C[0, n, \u2192]) procedure LINK-SECONDARY(s, e, dir, k) q \u2190 empty priority queue o \u2190 FIRST-SEC-OPEN(O[s, e, dir], 1, k) ENQUEUE(q, o) buf \u2190 empty list while |buf | < k and |q| > 0 o \u2190 DEQUEUE(q) if o / \u2208 buf APPEND(buf, o) for o \u2032 \u2208 ADVANCE-SEC-OPEN(o, k) ENQUEUE(q, o \u2032 ) SORT(buf ) to O[s, e, dir]",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Extension to Bistratal Dependency Parsing",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "We applied the bistratal search method in Algorithm 3 on the data from the CoNLL-2008 Shared Task (Surdeanu et al., 2008) . Here, the primary layer is the tree of surface-syntactic relations such as subject and object, and the secondary layer contains the links between the predicate words in the sentence and their respective logical arguments, such as agent and patient. The training corpus consists of sections 02 -21 of the Penn Treebank, and contains roughly 1 million words.",
+                "cite_spans": [
+                    {
+                        "start": 98,
+                        "end": 121,
+                        "text": "(Surdeanu et al., 2008)",
+                        "ref_id": "BIBREF29"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Application on the CoNLL-2008 Shared Task Treebank",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "Algorithm 4 Support operations in bistratal search.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Application on the CoNLL-2008 Shared Task Treebank",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "function FIRST-SEC-OPEN(L, iL, k) if i = LENGTH(L) return \u2205 l \u2190GET-LEFT(L[iL]), r \u2190GET-RIGHT(L[iL]) for h \u2208 [START(l), . . . , END(l)] for d \u2208 SCOPE(r, h)] E[h][d] \u2190 CREATE-SEC-EDGES(h, d, L[iL], k)] IE[h][d] \u2190 1 for h \u2208 [START(r), . . . , END(r)] for d \u2208 SCOPE(l, h)] E[h][d] \u2190 CREATE-SEC-EDGES(h, d, L[iL], k)] IE[h][d] \u2190 1 return CREATE-SEC-OPEN(L, iL, E, I) function CREATE-SEC-EDGES(h,d, o, k) E \u2190 \u2205 for l \u2208 ALLOWED-SEC-LABELS(h,d) score \u2190 w \u2022 \u03c6i(h, d, l, o) + scoress[h, d, l] edge \u2190 score, h, d, l APPEND(E, edge) return the top k edges in E function CREATE-SEC-OPEN(L,iL, E, I) score \u2190 FST(L[iL]) + h,d FST(E[h, d, IE[h, d]]) return score, L, iL, E, IE function ADVANCE-SEC-OPEN(o, k) where o = score, L, iL, E, IE buf \u2190 \u2205 if iL < LENGTH(L) and IE = [1, . . . , 1] APPEND(buf, FIRST-SEC-OPEN(L, iL + 1, k)) for h, d if IE[h, d] < LENGTH(E[h, d]) I \u2032 E \u2190 COPY(IE) I \u2032 E [h, d] \u2190 I \u2032 E [h, d] + 1 APPEND(buf, CREATE-SEC-OPEN(L, iL, E, I \u2032 E )) return buf",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Application on the CoNLL-2008 Shared Task Treebank",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "To apply the bistratal search algorithm to the problem of syntactic-semantic parsing, a problem-specific implementation of the SCOPE function is needed. In this case, we made two assumptions. First, we assumed that the identities of the predicate words are known a priori 2 . Secondly, we assumed that every argument of a given predicate word is either a direct dependent of the predicate, one of its ancestors, or a direct dependent of one of its ancestors. This assumption is a simple adaptation of the pruning algorithm by Xue and Palmer (2004) , and it holds for the vast majority of arguments in the CoNLL-2008 data; in the training set, we measured that this covers 99.04% of the arguments of verbs and 97.55% of the argu-2 Since our algorithm needs to know the positions of the predicates, we trained a separate classifier using the LIBLIN-EAR toolkit (Fan et al., 2008) to identify the predicate words. As features for the classifier, we used the words and part-ofspeech tags in a \u00b13 window around the word under consideration. ments of nouns. Figure 4 shows an example of how the SCOPE function works in our case. If a predicate is contained in the right substructure, we find two potential arguments: one at the start of the left substructure, and one more by recursively searching the left structure. While the primary layer is assumed to be projective in Algorithm 3, the syntactic trees in the CoNLL-2008 data have a small number of nonprojective links. We used a pseudo-projective edge label encoding to handle nonprojectivity (Nivre and Nilsson, 2005) .",
+                "cite_spans": [
+                    {
+                        "start": 526,
+                        "end": 547,
+                        "text": "Xue and Palmer (2004)",
+                        "ref_id": "BIBREF33"
+                    },
+                    {
+                        "start": 859,
+                        "end": 877,
+                        "text": "(Fan et al., 2008)",
+                        "ref_id": "BIBREF8"
+                    },
+                    {
+                        "start": 1541,
+                        "end": 1566,
+                        "text": "(Nivre and Nilsson, 2005)",
+                        "ref_id": "BIBREF24"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 1059,
+                        "end": 1060,
+                        "text": "4",
+                        "ref_id": "FIGREF3"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Application on the CoNLL-2008 Shared Task Treebank",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "To implement the model, we constructed feature representations \u03a6 p , \u03a6 s , and \u03a6 i . The surfacesyntactic representation \u03a6 p was a standard firstorder edge factorization using the same features as McDonald et al. (2005) . The features in \u03a6 s and \u03a6 i are shown in Table 1 We trained the discriminative model using the Online Passive-aggressive algorithm (Crammer et al., 2006) , which is an efficient online learning method that can be used to train models for learning problems with structured output spaces. A cost function \u03c1 is needed in the learning algorithm; we decomposed it into a pri-mary part \u03c1 p and a secondary part \u03c1 s . We computed the primary part as the sum of link errors: \u03c1 p (y p , \u0177p ) = l\u2208\u0177p c p (l, y p ), where c p (l, y p ) = 0 if l \u2208 y p and its label is correct 0.5 if l \u2208 y p but its label is incorrect",
+                "cite_spans": [
+                    {
+                        "start": 197,
+                        "end": 219,
+                        "text": "McDonald et al. (2005)",
+                        "ref_id": "BIBREF20"
+                    },
+                    {
+                        "start": 353,
+                        "end": 375,
+                        "text": "(Crammer et al., 2006)",
+                        "ref_id": "BIBREF4"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 269,
+                        "end": 270,
+                        "text": "1",
+                        "ref_id": "TABREF3"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Application on the CoNLL-2008 Shared Task Treebank",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "1 if l / \u2208 y p",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Application on the CoNLL-2008 Shared Task Treebank",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "In a similar vein, we computed the secondary part \u03c1 s of the cost function as #f p + #f n + 0.5 \u2022 #f l, where #f p is the number of false positive secondary links, #f n the number of false negative links, and #f l the number of links with correct endpoints but incorrect label.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Application on the CoNLL-2008 Shared Task Treebank",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "The training procedure took roughly 24 hours on an 2.3 GHz AMD Athlon processor. The memory consumption was about 1 GB during training.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Application on the CoNLL-2008 Shared Task Treebank",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "We evaluated the performance of our system on the test set from the CoNLL-2008 shared task, which consists of section 23 of the WSJ part of the Penn Treebank, as well as a small part of the Brown corpus. A beam width k of 4 was used in this experiment. Table 2 shows the results of the evaluation. The table shows the three most important scores computed by the official evaluation script: labeled syntactic dependency accuracy (LAS), labeled semantic dependency F 1 -measure (Sem. F1), and the macro-averaged F 1 -measure, a weighted combination of the syntactic and semantic scores (M. F1). Our result is competitive; we obtain the same macro F1 as the newly published result by Titov et al. (2009) , which is the highest published figure for a joint syntactic-semantic parser so far. Importantly, our system clearly outperforms the system by Llu\u00eds and M\u00e0rquez (2008) , which is the most similar system in problem modeling, but which uses a different search strategy. Since the search procedure is inexact, it is important to quantify roughly how much of a detrimental impact the approximation has on the parsing quality. We studied the influence of the beam width parameter k on the performance of the parser. The results on the development set can be seen in Table 3 . As can be seen, a modest increase in performance can be obtained by increasing the beam width, at the cost of increased parsing time. In addition, to have a rough indication of the impact of search errors on the quality of the parses, we computed the fraction of sentences where the gold-standard parse had a higher score according to the model than the parse returned by the search3 . Table 4 shows the results of this experiment. This suggests that the search errors, although they clearly have an impact, are not the major source of errors, even with small beam widths. To investigate where future optimization efforts should be spent, we used the built-in hprof profiling tool of Java to locate the bottlenecks. Once again, we ran the program on the development set with a beam width of 4, and Table 5 shows the three types of operations where the algorithm spent most of its time. It turns out that 74% of the time was spent on the computation and scoring of interdependency features. To make our algorithm truly useful in practice, we thus need to devise a way to speed up or cache these computations. ",
+                "cite_spans": [
+                    {
+                        "start": 681,
+                        "end": 700,
+                        "text": "Titov et al. (2009)",
+                        "ref_id": "BIBREF31"
+                    },
+                    {
+                        "start": 845,
+                        "end": 869,
+                        "text": "Llu\u00eds and M\u00e0rquez (2008)",
+                        "ref_id": "BIBREF18"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 259,
+                        "end": 260,
+                        "text": "2",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 1269,
+                        "end": 1270,
+                        "text": "3",
+                        "ref_id": "TABREF5"
+                    },
+                    {
+                        "start": 1665,
+                        "end": 1666,
+                        "text": "4",
+                        "ref_id": "TABREF6"
+                    },
+                    {
+                        "start": 2077,
+                        "end": 2078,
+                        "text": "5",
+                        "ref_id": "TABREF7"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "4"
+            },
+            {
+                "text": "In this paper, we have presented a new approximate search method to solve the problem of jointly predicting the two layers in a bistratal dependency graph. The algorithm shows competitive performance on the treebank used in the CoNLL-2008 Shared Task, a bistratal treebank consisting of a surface-syntactic and a shallow semantic layer. In addition to the syntactic-semantic task that we have described in this paper, we believe that our method can be used in other types of multistratal syntactic frameworks, such as a representation of surface and deep syntax as in Meaning-Text Theory (Mel'\u010duk, 1988) .",
+                "cite_spans": [
+                    {
+                        "start": 588,
+                        "end": 603,
+                        "text": "(Mel'\u010duk, 1988)",
+                        "ref_id": "BIBREF21"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Discussion",
+                "sec_num": "5"
+            },
+            {
+                "text": "The optimization problem that we set out to solve is intractable, but we have shown that reasonable performance can be achieved with an inexact, beam search-based search method. This is not obvious: it has previously been shown that using an inexact search procedure when the learning algorithm assumes that the search is exact may lead to slow convergence or even divergence (Kulesza and Pereira, 2008) , but this does not seem to be a problem in our case.",
+                "cite_spans": [
+                    {
+                        "start": 376,
+                        "end": 403,
+                        "text": "(Kulesza and Pereira, 2008)",
+                        "ref_id": "BIBREF17"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Discussion",
+                "sec_num": "5"
+            },
+            {
+                "text": "While we used a beam search method as the method of approximation, other methods are certainly possible. An interesting example is the recent system by Smith and Eisner (2008) , which used loopy belief propagation in a dependency parser using highly complex features, while still maintaining cubic-time search complexity.",
+                "cite_spans": [
+                    {
+                        "start": 152,
+                        "end": 175,
+                        "text": "Smith and Eisner (2008)",
+                        "ref_id": "BIBREF28"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Discussion",
+                "sec_num": "5"
+            },
+            {
+                "text": "An obvious drawback of our approach compared to traditional pipeline-based semantic role labeling methods is that the speed of the algorithm is highly dependent on the size of the interdependency feature representation \u03a6 i . Also, extracting these features is fairly complex, and it is of critical importance to implement the feature extraction procedure efficiently since it is one of the bottlenecks of the algorithm. It is plausible that our performance suffers from the absence of other frequently used syntax-based features such as dependent-of-dependent and voice.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Discussion",
+                "sec_num": "5"
+            },
+            {
+                "text": "It is thus highly dubious that a joint modeling of syntactic and semantic structure is worth the additional implementational effort. So far, no system using tightly integrated syntactic and semantic processing has been competitive with the best systems, which have been either completely pipelinebased (Che et al., 2008; Ciaramita et al., 2008) or employed only a loose syntactic-semantic coupling (Johansson and Nugues, 2008) . It has been conjectured that modeling the semantics of the sentence would also help in syntactic disambiguation; however, it is likely that this is already implicitly taken into account by the lexical features present in virtually all modern parsers.",
+                "cite_spans": [
+                    {
+                        "start": 302,
+                        "end": 320,
+                        "text": "(Che et al., 2008;",
+                        "ref_id": "BIBREF1"
+                    },
+                    {
+                        "start": 321,
+                        "end": 344,
+                        "text": "Ciaramita et al., 2008)",
+                        "ref_id": "BIBREF3"
+                    },
+                    {
+                        "start": 398,
+                        "end": 426,
+                        "text": "(Johansson and Nugues, 2008)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Discussion",
+                "sec_num": "5"
+            },
+            {
+                "text": "In addition, a problem that our beam search method has in common with the constituent parsing method by Huang (2008) is that highly nonlocal features must be computed late. In our case, this means that if there is a long distance between a predicate and an argument, the secondary link between them will be unlikely to influence the final search result.",
+                "cite_spans": [
+                    {
+                        "start": 104,
+                        "end": 116,
+                        "text": "Huang (2008)",
+                        "ref_id": "BIBREF14"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Discussion",
+                "sec_num": "5"
+            },
+            {
+                "text": "Huang and Chiang (2005) described an even more efficient k-best algorithm based on lazy evaluation, which we will not use here since it is not obviously adaptable to the situation where the search is inexact.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "To be able to compare the scores of the gold-standard and predicted parses, we disabled the automatic classifier for predicate identification and provided the parser with goldstandard predicates in this experiment.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            }
+        ],
+        "back_matter": [
+            {
+                "text": "The author is grateful for the helpful comments by the reviewers. This work has been funded by the LivingKnowledge project under the seventh EU framework program.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Acknowledgements",
+                "sec_num": null
+            }
+        ],
+        "bib_entries": {
+            "BIBREF0": {
+                "ref_id": "b0",
+                "title": "Discontinuous Grammar. A dependency-based model of human parsing and language learning",
+                "authors": [
+                    {
+                        "first": "Matthias",
+                        "middle": [],
+                        "last": "Buch-Kromann",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2006,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Matthias Buch-Kromann. 2006. Discontinuous Gram- mar. A dependency-based model of human parsing and language learning. Ph.D. thesis, Copenhagen Business School.",
+                "links": null
+            },
+            "BIBREF1": {
+                "ref_id": "b1",
+                "title": "A cascaded syntactic and semantic dependency parsing system",
+                "authors": [
+                    {
+                        "first": "Wanxiang",
+                        "middle": [],
+                        "last": "Che",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zhenghua",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yuxuan",
+                        "middle": [],
+                        "last": "Hu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yongqiang",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Bing",
+                        "middle": [],
+                        "last": "Qin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ting",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sheng",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2008,
+                "venue": "CoNLL 2008: Proceedings of the Twelfth Conference on Natural Language Learning",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Wanxiang Che, Zhenghua Li, Yuxuan Hu, Yongqiang Li, Bing Qin, Ting Liu, and Sheng Li. 2008. A cascaded syntactic and semantic dependency pars- ing system. In CoNLL 2008: Proceedings of the Twelfth Conference on Natural Language Learning.",
+                "links": null
+            },
+            "BIBREF2": {
+                "ref_id": "b2",
+                "title": "Hierarchical phrase-based translation",
+                "authors": [
+                    {
+                        "first": "David",
+                        "middle": [],
+                        "last": "Chiang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2007,
+                "venue": "Computational Linguistics",
+                "volume": "33",
+                "issue": "2",
+                "pages": "201--228",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "David Chiang. 2007. Hierarchical phrase-based trans- lation. Computational Linguistics, 33(2):201-228.",
+                "links": null
+            },
+            "BIBREF3": {
+                "ref_id": "b3",
+                "title": "DeSRL: A linear-time semantic role labeling system",
+                "authors": [
+                    {
+                        "first": "Massimiliano",
+                        "middle": [],
+                        "last": "Ciaramita",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Giuseppe",
+                        "middle": [],
+                        "last": "Attardi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Felice",
+                        "middle": [],
+                        "last": "Dell'orletta",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mihai",
+                        "middle": [],
+                        "last": "Surdeanu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2008,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Massimiliano Ciaramita, Giuseppe Attardi, Felice Dell'Orletta, and Mihai Surdeanu. 2008. DeSRL: A linear-time semantic role labeling system. In Pro- ceedings of the Shared Task Session of CoNLL-2008.",
+                "links": null
+            },
+            "BIBREF4": {
+                "ref_id": "b4",
+                "title": "Online passive-aggressive algorithms",
+                "authors": [
+                    {
+                        "first": "Koby",
+                        "middle": [],
+                        "last": "Crammer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ofer",
+                        "middle": [],
+                        "last": "Dekel",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Joseph",
+                        "middle": [],
+                        "last": "Keshet",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Shai",
+                        "middle": [],
+                        "last": "Shalev-Schwartz",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yoram",
+                        "middle": [],
+                        "last": "Singer",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2006,
+                "venue": "Journal of Machine Learning Research",
+                "volume": "",
+                "issue": "7",
+                "pages": "551--585",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Koby Crammer, Ofer Dekel, Joseph Keshet, Shai Shalev-Schwartz, and Yoram Singer. 2006. Online passive-aggressive algorithms. Journal of Machine Learning Research, 2006(7):551-585.",
+                "links": null
+            },
+            "BIBREF6": {
+                "ref_id": "b6",
+                "title": "A relational syntax-semantics interface based on dependency grammar",
+                "authors": [],
+                "year": 2004,
+                "venue": "Proceedings of the 20th International Conference on Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "A relational syntax-semantics interface based on dependency grammar. In Proceedings of the 20th International Conference on Computational Linguistics (COLING 2004).",
+                "links": null
+            },
+            "BIBREF7": {
+                "ref_id": "b7",
+                "title": "Three new probabilistic models for dependency parsing: An exploration",
+                "authors": [
+                    {
+                        "first": "Jason",
+                        "middle": [
+                            "M"
+                        ],
+                        "last": "Eisner",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1996,
+                "venue": "Proceedings of the 16th International Conference on Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "340--345",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jason M. Eisner. 1996. Three new probabilistic mod- els for dependency parsing: An exploration. In Pro- ceedings of the 16th International Conference on Computational Linguistics, pages 340-345.",
+                "links": null
+            },
+            "BIBREF8": {
+                "ref_id": "b8",
+                "title": "LIBLINEAR: A library for large linear classification",
+                "authors": [
+                    {
+                        "first": "Rong-En",
+                        "middle": [],
+                        "last": "Fan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kai-Wei",
+                        "middle": [],
+                        "last": "Chang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Cho-Jui",
+                        "middle": [],
+                        "last": "Hsieh",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xiang-Rui",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chih-Jen",
+                        "middle": [],
+                        "last": "Lin",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2008,
+                "venue": "Journal of Machine Learning Research",
+                "volume": "9",
+                "issue": "",
+                "pages": "1871--1874",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Rong-En Fan, Kai-Wei Chang, Cho-Jui Hsieh, Xiang- Rui Wang, and Chih-Jen Lin. 2008. LIBLINEAR: A library for large linear classification. Journal of Machine Learning Research, 9:1871-1874.",
+                "links": null
+            },
+            "BIBREF9": {
+                "ref_id": "b9",
+                "title": "Automatic labeling of semantic roles",
+                "authors": [
+                    {
+                        "first": "Daniel",
+                        "middle": [],
+                        "last": "Gildea",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Daniel",
+                        "middle": [],
+                        "last": "Jurafsky",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2002,
+                "venue": "Computational Linguistics",
+                "volume": "28",
+                "issue": "3",
+                "pages": "245--288",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Daniel Gildea and Daniel Jurafsky. 2002. Automatic labeling of semantic roles. Computational Linguis- tics, 28(3):245-288.",
+                "links": null
+            },
+            "BIBREF10": {
+                "ref_id": "b10",
+                "title": "Cube summing, approximate inference with non-local features, and dynamic programming without semirings",
+                "authors": [
+                    {
+                        "first": "Kevin",
+                        "middle": [],
+                        "last": "Gimpel",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Noah",
+                        "middle": [
+                            "A"
+                        ],
+                        "last": "Smith",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "Proceedings of the Twelfth Conference of the European Chapter of the Association for Computational Linguistics (EACL)",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Kevin Gimpel and Noah A. Smith. 2009. Cube summing, approximate inference with non-local fea- tures, and dynamic programming without semirings. In Proceedings of the Twelfth Conference of the Eu- ropean Chapter of the Association for Computa- tional Linguistics (EACL).",
+                "links": null
+            },
+            "BIBREF11": {
+                "ref_id": "b11",
+                "title": "Building a syntactically annotated corpus: The Prague Dependency Treebank",
+                "authors": [
+                    {
+                        "first": "Jan",
+                        "middle": [],
+                        "last": "Haji\u010d",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1998,
+                "venue": "Issues of Valency and Meaning",
+                "volume": "",
+                "issue": "",
+                "pages": "106--132",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jan Haji\u010d. 1998. Building a syntactically annotated corpus: The Prague Dependency Treebank. In Is- sues of Valency and Meaning, pages 106-132.",
+                "links": null
+            },
+            "BIBREF12": {
+                "ref_id": "b12",
+                "title": "A latent variable model of synchronous parsing for syntactic and semantic dependencies",
+                "authors": [
+                    {
+                        "first": "James",
+                        "middle": [],
+                        "last": "Henderson",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Paola",
+                        "middle": [],
+                        "last": "Merlo",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Gabriele",
+                        "middle": [],
+                        "last": "Musillo",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ivan",
+                        "middle": [],
+                        "last": "Titov",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2008,
+                "venue": "CoNLL 2008: Proceedings of the Twelfth Conference on Natural Language Learning",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "James Henderson, Paola Merlo, Gabriele Musillo, and Ivan Titov. 2008. A latent variable model of synchronous parsing for syntactic and semantic de- pendencies. In CoNLL 2008: Proceedings of the Twelfth Conference on Natural Language Learning.",
+                "links": null
+            },
+            "BIBREF13": {
+                "ref_id": "b13",
+                "title": "Better k-best parsing",
+                "authors": [
+                    {
+                        "first": "Liang",
+                        "middle": [],
+                        "last": "Huang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "David",
+                        "middle": [],
+                        "last": "Chiang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2005,
+                "venue": "Proceedings of the 9th International Workshop on Parsing Technologies (IWPT 2005)",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Liang Huang and David Chiang. 2005. Better k-best parsing. In Proceedings of the 9th International Workshop on Parsing Technologies (IWPT 2005).",
+                "links": null
+            },
+            "BIBREF14": {
+                "ref_id": "b14",
+                "title": "Forest reranking: Discriminative parsing with non-local features",
+                "authors": [
+                    {
+                        "first": "Liang",
+                        "middle": [],
+                        "last": "Huang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2008,
+                "venue": "Proceedings of ACL-08: HLT",
+                "volume": "",
+                "issue": "",
+                "pages": "586--594",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Liang Huang. 2008. Forest reranking: Discriminative parsing with non-local features. In Proceedings of ACL-08: HLT, pages 586-594.",
+                "links": null
+            },
+            "BIBREF16": {
+                "ref_id": "b16",
+                "title": "Dependency-based syntactic-semantic analysis with PropBank and NomBank",
+                "authors": [],
+                "year": null,
+                "venue": "Proceedings of the Shared Task Session of CoNLL-2008",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Dependency-based syntactic-semantic analysis with PropBank and NomBank. In Proceedings of the Shared Task Session of CoNLL-2008.",
+                "links": null
+            },
+            "BIBREF17": {
+                "ref_id": "b17",
+                "title": "Structured learning with approximate inference",
+                "authors": [
+                    {
+                        "first": "Alex",
+                        "middle": [],
+                        "last": "Kulesza",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Fernando",
+                        "middle": [],
+                        "last": "Pereira",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2008,
+                "venue": "Advances in Neural Information Processing Systems",
+                "volume": "20",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Alex Kulesza and Fernando Pereira. 2008. Structured learning with approximate inference. In Advances in Neural Information Processing Systems 20.",
+                "links": null
+            },
+            "BIBREF18": {
+                "ref_id": "b18",
+                "title": "A joint model for parsing syntactic and semantic dependencies",
+                "authors": [
+                    {
+                        "first": "Xavier",
+                        "middle": [],
+                        "last": "Llu\u00eds",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Llu\u00eds",
+                        "middle": [],
+                        "last": "M\u00e0rquez",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2008,
+                "venue": "CoNLL 2008: Proceedings of the Twelfth Conference on Natural Language Learning",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Xavier Llu\u00eds and Llu\u00eds M\u00e0rquez. 2008. A joint model for parsing syntactic and semantic dependencies. In CoNLL 2008: Proceedings of the Twelfth Confer- ence on Natural Language Learning.",
+                "links": null
+            },
+            "BIBREF19": {
+                "ref_id": "b19",
+                "title": "Building a large annotated corpus of English: the Penn Treebank",
+                "authors": [
+                    {
+                        "first": "Mitchell",
+                        "middle": [
+                            "P"
+                        ],
+                        "last": "Marcus",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Beatrice",
+                        "middle": [],
+                        "last": "Santorini",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mary",
+                        "middle": [
+                            "Ann"
+                        ],
+                        "last": "Marcinkiewicz",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1993,
+                "venue": "Computational Linguistics",
+                "volume": "19",
+                "issue": "2",
+                "pages": "313--330",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Mitchell P. Marcus, Beatrice Santorini, and Mary Ann Marcinkiewicz. 1993. Building a large annotated corpus of English: the Penn Treebank. Computa- tional Linguistics, 19(2):313-330.",
+                "links": null
+            },
+            "BIBREF20": {
+                "ref_id": "b20",
+                "title": "Online large-margin training of dependency parsers",
+                "authors": [
+                    {
+                        "first": "Ryan",
+                        "middle": [],
+                        "last": "Mcdonald",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Koby",
+                        "middle": [],
+                        "last": "Crammer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Fernando",
+                        "middle": [],
+                        "last": "Pereira",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2005,
+                "venue": "Proceedings of 43rd Annual Meeting of the Association for Computational Linguistics (ACL'05)",
+                "volume": "",
+                "issue": "",
+                "pages": "91--98",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ryan McDonald, Koby Crammer, and Fernando Pereira. 2005. Online large-margin training of de- pendency parsers. In Proceedings of 43rd Annual Meeting of the Association for Computational Lin- guistics (ACL'05), pages 91-98.",
+                "links": null
+            },
+            "BIBREF21": {
+                "ref_id": "b21",
+                "title": "Dependency Syntax: Theory and Practice",
+                "authors": [
+                    {
+                        "first": "Igor",
+                        "middle": [
+                            "A"
+                        ],
+                        "last": "Mel'\u010duk",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1988,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Igor A. Mel'\u010duk. 1988. Dependency Syntax: Theory and Practice. State University Press of New York.",
+                "links": null
+            },
+            "BIBREF22": {
+                "ref_id": "b22",
+                "title": "Semantic parsing for high-precision semantic role labelling",
+                "authors": [
+                    {
+                        "first": "Paola",
+                        "middle": [],
+                        "last": "Merlo",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Gabriele",
+                        "middle": [],
+                        "last": "Musillo",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2008,
+                "venue": "Proceedings of the 12th Conference on Computational Natural Language Learning",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Paola Merlo and Gabriele Musillo. 2008. Semantic parsing for high-precision semantic role labelling. In Proceedings of the 12th Conference on Computa- tional Natural Language Learning (CoNLL-2008).",
+                "links": null
+            },
+            "BIBREF23": {
+                "ref_id": "b23",
+                "title": "HLT-NAACL 2004 Workshop: Frontiers in Corpus Annotation",
+                "authors": [
+                    {
+                        "first": "Adam",
+                        "middle": [],
+                        "last": "Meyers",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ruth",
+                        "middle": [],
+                        "last": "Reeves",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Catherine",
+                        "middle": [],
+                        "last": "Macleod",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Rachel",
+                        "middle": [],
+                        "last": "Szekely",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Veronika",
+                        "middle": [],
+                        "last": "Zielinska",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Brian",
+                        "middle": [],
+                        "last": "Young",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ralph",
+                        "middle": [],
+                        "last": "Grishman",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2004,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Adam Meyers, Ruth Reeves, Catherine Macleod, Rachel Szekely, Veronika Zielinska, Brian Young, and Ralph Grishman. 2004. The NomBank project: An interim report. In HLT-NAACL 2004 Workshop: Frontiers in Corpus Annotation.",
+                "links": null
+            },
+            "BIBREF24": {
+                "ref_id": "b24",
+                "title": "Pseudoprojective dependency parsing",
+                "authors": [
+                    {
+                        "first": "Joakim",
+                        "middle": [],
+                        "last": "Nivre",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jens",
+                        "middle": [],
+                        "last": "Nilsson",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2005,
+                "venue": "Proceedings of the 43rd Annual Meeting of the Association for Computational Linguistics (ACL'05)",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Joakim Nivre and Jens Nilsson. 2005. Pseudo- projective dependency parsing. In Proceedings of the 43rd Annual Meeting of the Association for Computational Linguistics (ACL'05).",
+                "links": null
+            },
+            "BIBREF25": {
+                "ref_id": "b25",
+                "title": "The proposition bank: An annotated corpus of semantic roles",
+                "authors": [
+                    {
+                        "first": "Martha",
+                        "middle": [],
+                        "last": "Palmer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Daniel",
+                        "middle": [],
+                        "last": "Gildea",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Paul",
+                        "middle": [],
+                        "last": "Kingsbury",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2005,
+                "venue": "Computational Linguistics",
+                "volume": "31",
+                "issue": "1",
+                "pages": "71--106",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Martha Palmer, Daniel Gildea, and Paul Kingsbury. 2005. The proposition bank: An annotated cor- pus of semantic roles. Computational Linguistics, 31(1):71-106.",
+                "links": null
+            },
+            "BIBREF26": {
+                "ref_id": "b26",
+                "title": "Shift-reduce dependency DAG parsing",
+                "authors": [
+                    {
+                        "first": "Kenji",
+                        "middle": [],
+                        "last": "Sagae",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jun'ichi",
+                        "middle": [],
+                        "last": "Tsuji",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2008,
+                "venue": "Proceedings of the 22nd International Conference on Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Kenji Sagae and Jun'ichi Tsuji. 2008. Shift-reduce dependency DAG parsing. In Proceedings of the 22nd International Conference on Computational Linguistics (Coling 2008).",
+                "links": null
+            },
+            "BIBREF27": {
+                "ref_id": "b27",
+                "title": "The Meaning of the Sentence in Its Semantic and Pragmatic Aspects",
+                "authors": [
+                    {
+                        "first": "Petr",
+                        "middle": [],
+                        "last": "Sgall",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Eva",
+                        "middle": [],
+                        "last": "Haji\u010dov\u00e1",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jarmila",
+                        "middle": [],
+                        "last": "Panevov\u00e1",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1986,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Petr Sgall, Eva Haji\u010dov\u00e1, and Jarmila Panevov\u00e1. 1986. The Meaning of the Sentence in Its Semantic and Pragmatic Aspects. Dordrecht:Reidel Publishing Company and Prague:Academia.",
+                "links": null
+            },
+            "BIBREF28": {
+                "ref_id": "b28",
+                "title": "Dependency parsing by belief propagation",
+                "authors": [
+                    {
+                        "first": "David",
+                        "middle": [],
+                        "last": "Smith",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jason",
+                        "middle": [],
+                        "last": "Eisner",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2008,
+                "venue": "Proceedings of the Conference on Empirical Methods in Natural Language Processing (EMNLP)",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "David Smith and Jason Eisner. 2008. Dependency parsing by belief propagation. In Proceedings of the Conference on Empirical Methods in Natural Language Processing (EMNLP), Honolulu, United States.",
+                "links": null
+            },
+            "BIBREF29": {
+                "ref_id": "b29",
+                "title": "The CoNLL-2008 shared task on joint parsing of syntactic and semantic dependencies",
+                "authors": [
+                    {
+                        "first": "Mihai",
+                        "middle": [],
+                        "last": "Surdeanu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Richard",
+                        "middle": [],
+                        "last": "Johansson",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Adam",
+                        "middle": [],
+                        "last": "Meyers",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Llu\u00eds",
+                        "middle": [],
+                        "last": "M\u00e0rquez",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Joakim",
+                        "middle": [],
+                        "last": "Nivre",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2008,
+                "venue": "Proceedings of CoNLL-2008",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Mihai Surdeanu, Richard Johansson, Adam Meyers, Llu\u00eds M\u00e0rquez, and Joakim Nivre. 2008. The CoNLL-2008 shared task on joint parsing of syn- tactic and semantic dependencies. In Proceedings of CoNLL-2008.",
+                "links": null
+            },
+            "BIBREF30": {
+                "ref_id": "b30",
+                "title": "\u00c9l\u00e9ments de syntaxe structurale",
+                "authors": [
+                    {
+                        "first": "Lucien",
+                        "middle": [],
+                        "last": "Tesni\u00e8re",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1959,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Lucien Tesni\u00e8re. 1959. \u00c9l\u00e9ments de syntaxe struc- turale. Klincksieck, Paris.",
+                "links": null
+            },
+            "BIBREF31": {
+                "ref_id": "b31",
+                "title": "Online graph planarisation for synchronous parsing of semantic and syntactic dependencies",
+                "authors": [
+                    {
+                        "first": "Ivan",
+                        "middle": [],
+                        "last": "Titov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "James",
+                        "middle": [],
+                        "last": "Henderson",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Paola",
+                        "middle": [],
+                        "last": "Merlo",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Gabriele",
+                        "middle": [],
+                        "last": "Musillo",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "Proceedings of the International Joint Conferences on Artificial Intelligence",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ivan Titov, James Henderson, Paola Merlo, and Gabriele Musillo. 2009. Online graph planarisation for synchronous parsing of semantic and syntactic dependencies. In Proceedings of the International Joint Conferences on Artificial Intelligence.",
+                "links": null
+            },
+            "BIBREF32": {
+                "ref_id": "b32",
+                "title": "Joint learning improves semantic role labeling",
+                "authors": [
+                    {
+                        "first": "Kristina",
+                        "middle": [],
+                        "last": "Toutanova",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Aria",
+                        "middle": [],
+                        "last": "Haghighi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [
+                            "D"
+                        ],
+                        "last": "Manning",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2005,
+                "venue": "Proceedings of the 43rd Annual Meeting of the Association for Computational Linguistics (ACL'05)",
+                "volume": "",
+                "issue": "",
+                "pages": "589--596",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Kristina Toutanova, Aria Haghighi, and Christopher D. Manning. 2005. Joint learning improves semantic role labeling. In Proceedings of the 43rd Annual Meeting of the Association for Computational Lin- guistics (ACL'05), pages 589-596.",
+                "links": null
+            },
+            "BIBREF33": {
+                "ref_id": "b33",
+                "title": "Calibrating features for semantic role labeling",
+                "authors": [
+                    {
+                        "first": "Nianwen",
+                        "middle": [],
+                        "last": "Xue",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Martha",
+                        "middle": [],
+                        "last": "Palmer",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2004,
+                "venue": "Proceedings of the 2004 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "88--94",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Nianwen Xue and Martha Palmer. 2004. Calibrating features for semantic role labeling. In Proceedings of the 2004 Conference on Empirical Methods in Natural Language Processing, pages 88-94.",
+                "links": null
+            }
+        },
+        "ref_entries": {
+            "FIGREF0": {
+                "num": null,
+                "text": "Figure 1: Example of a bistratal dependency graph.",
+                "uris": null,
+                "fig_num": "1",
+                "type_str": "figure"
+            },
+            "FIGREF1": {
+                "num": null,
+                "text": "Figure 2: Illustrations of the LINK and JOIN operations.",
+                "uris": null,
+                "fig_num": "2",
+                "type_str": "figure"
+            },
+            "FIGREF2": {
+                "num": null,
+                "text": "Figure 3: Illustration of the secondary linking process: When two substructures are connected, we can compute the path between a predicate in the left substructure and an argument in the right substructure.",
+                "uris": null,
+                "fig_num": "33",
+                "type_str": "figure"
+            },
+            "FIGREF3": {
+                "num": null,
+                "text": "Figure 4: Illustration of the SCOPE function for predicate-argument links. If the right substructure contains a predicate, we can find potential arguments in the left substructure.",
+                "uris": null,
+                "fig_num": "4",
+                "type_str": "figure"
+            },
+            "TABREF0": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "Algorithm 1 k-best search algorithm for dependency parsing. function k-BEST-SEARCH(k) n \u2190 length of the sentence initialize the table O of open structures initialize the table C of closed structures for m \u2208 [1, . . . , n]",
+                "html": null,
+                "num": null
+            },
+            "TABREF1": {
+                "content": "<table><tr><td>function CREATE-EDGES(s, e, dir, k)</td></tr><tr><td>E \u2190 \u2205</td></tr><tr><td>for l \u2208 ALLOWED-LABELS(s,e, dir)</td></tr><tr><td>scoreL \u2190 w \u2022 \u03c6p(s, e, dir, l)</td></tr><tr><td>edge \u2190 scoreL, s, e, dir, l</td></tr><tr><td>APPEND(E, edge)</td></tr><tr><td>return the top k edges in E</td></tr><tr><td>function CREATE-OPEN(E, l, r, ie, i l , ir)</td></tr><tr><td>scoreL \u2190 FST(E[ie]) + FST(l[i l ]) + FST(r[ir])</td></tr><tr><td>return scoreL + scoreN , E, l, r, ie, i l , ir</td></tr><tr><td>function CREATE-CLOSED(u, l, iu, ir)</td></tr><tr><td>scoreL \u2190 FST(u[iu]) + FST(l[i l ])</td></tr><tr><td>return scoreL + scoreN , u, l, iu, i l</td></tr><tr><td>function ADVANCE-EDGE(o)</td></tr><tr><td>where o = (score, E, l, r, ie, i l , ir)</td></tr><tr><td>if ie = LENGTH(E)</td></tr><tr><td>return \u2205</td></tr><tr><td>else</td></tr><tr><td>return CREATE-OPEN(E, l, r, ie + 1, i</td></tr></table>",
+                "type_str": "table",
+                "text": "When we create an openAlgorithm 2 Support operations for the k-best search.",
+                "html": null,
+                "num": null
+            },
+            "TABREF3": {
+                "content": "<table><tr><td>\u03a6s</td><td>\u03a6i</td></tr><tr><td>Predicate word</td><td>Path</td></tr><tr><td>Predicate POS</td><td>Path + arg. POS</td></tr><tr><td>Argument word</td><td>Path + pred. POS</td></tr><tr><td>Argument POS</td><td>Path + arg. word</td></tr><tr><td>Pred. + arg. words</td><td>Path + pred. word</td></tr><tr><td>Predicate word + label</td><td>Path + label</td></tr><tr><td>Predicate POS + label</td><td>Path + arg. POS + label</td></tr><tr><td>Argument word + label</td><td>Path + pred. POS + label</td></tr><tr><td>Argument POS + label</td><td>Path + arg. word + label</td></tr><tr><td colspan=\"2\">Pred. + arg. words + label Path + pred. word + label</td></tr></table>",
+                "type_str": "table",
+                "text": "and are standard features in statistical semantic role classification. Feature representation for secondary links.",
+                "html": null,
+                "num": null
+            },
+            "TABREF5": {
+                "content": "<table><tr><td colspan=\"3\">k LAS Sem. F1 M. F1 Time</td></tr><tr><td>1 85.14</td><td>77.05</td><td>81.10 242</td></tr><tr><td>2 85.43</td><td>77.17</td><td>81.30 369</td></tr><tr><td>4 85.49</td><td>77.20</td><td>81.35 625</td></tr><tr><td>8 85.58</td><td>77.20</td><td>81.40 1178</td></tr></table>",
+                "type_str": "table",
+                "text": "Influence of beam width on parsing accuracy.",
+                "html": null,
+                "num": null
+            },
+            "TABREF6": {
+                "content": "<table><tr><td colspan=\"2\">k Fraction</td></tr><tr><td>1</td><td>0.121</td></tr><tr><td>2</td><td>0.104</td></tr><tr><td>4</td><td>0.096</td></tr><tr><td>8</td><td>0.090</td></tr></table>",
+                "type_str": "table",
+                "text": "Fraction of sentences in the development set where the gold-standard parse has a higher score than the parse returned by the search procedure.",
+                "html": null,
+                "num": null
+            },
+            "TABREF7": {
+                "content": "<table><tr><td>Operation</td><td>Fraction</td></tr><tr><td>w \u2022 \u03a6 i</td><td>0.64</td></tr><tr><td>Queue operations</td><td>0.15</td></tr><tr><td>Computation of \u03a6 i</td><td>0.10</td></tr></table>",
+                "type_str": "table",
+                "text": "The three most significant bottlenecks and their fraction of the total runtime.",
+                "html": null,
+                "num": null
+            }
+        }
+    }
+}

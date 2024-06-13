@@ -1,0 +1,1427 @@
+{
+    "paper_id": "D07-1086",
+    "header": {
+        "generated_with": "S2ORC 1.0.0",
+        "date_generated": "2023-06-16T11:59:14.757023Z"
+    },
+    "title": "Learning Noun Phrase Query Segmentation",
+    "authors": [
+        {
+            "first": "Shane",
+            "middle": [],
+            "last": "Bergsma",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "University of Alberta",
+                "location": {
+                    "postCode": "T6G 2E8",
+                    "settlement": "Edmonton, Alberta",
+                    "country": "Canada"
+                }
+            },
+            "email": "bergsma@cs.ualberta.ca"
+        },
+        {
+            "first": "Qin",
+            "middle": [
+                "Iris"
+            ],
+            "last": "Wang",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "University of Alberta",
+                "location": {
+                    "postCode": "T6G 2E8",
+                    "settlement": "Edmonton, Alberta",
+                    "country": "Canada"
+                }
+            },
+            "email": ""
+        }
+    ],
+    "year": "",
+    "venue": null,
+    "identifiers": {},
+    "abstract": "Query segmentation is the process of taking a user's search-engine query and dividing the tokens into individual phrases or semantic units. Identification of these query segments can potentially improve both document-retrieval precision, by first returning pages which contain the exact query segments, and document-retrieval recall, by allowing query expansion or substitution via the segmented units. We train and evaluate a machine-learned query segmentation system that achieves 86% segmentationdecision accuracy on a gold standard set of segmented noun phrase queries, well above recently published approaches. Key enablers of this high performance are features derived from previous natural language processing work in noun compound bracketing. For example, token association features beyond simple N-gram counts provide powerful indicators of segmentation.",
+    "pdf_parse": {
+        "paper_id": "D07-1086",
+        "_pdf_hash": "",
+        "abstract": [
+            {
+                "text": "Query segmentation is the process of taking a user's search-engine query and dividing the tokens into individual phrases or semantic units. Identification of these query segments can potentially improve both document-retrieval precision, by first returning pages which contain the exact query segments, and document-retrieval recall, by allowing query expansion or substitution via the segmented units. We train and evaluate a machine-learned query segmentation system that achieves 86% segmentationdecision accuracy on a gold standard set of segmented noun phrase queries, well above recently published approaches. Key enablers of this high performance are features derived from previous natural language processing work in noun compound bracketing. For example, token association features beyond simple N-gram counts provide powerful indicators of segmentation.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            }
+        ],
+        "body_text": [
+            {
+                "text": "Billions of times every day, people around the world communicate with Internet search engines via a small text box on a web page. The user provides a sequence of words to the search engine, and the search engine interprets the query and tries to return web pages that not only contain the query tokens, but that are also somehow about the topic or idea that the query terms describe.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Recent years have seen a widespread recognition that the user is indeed providing natural language text to the search engine; query tokens are not independent, unordered symbols to be matched on a web document but rather ordered words and phrases with syntactic relationships. For example, Zhai (1997) pointed out that indexing on single-word symbols is not able to distinguish a search for \"bank terminology\" from one for \"terminology bank.\" The reader can submit these queries to a current search engine to confirm that modern indexing does recognize the effect of token order on query meaning in some way.",
+                "cite_spans": [
+                    {
+                        "start": 290,
+                        "end": 301,
+                        "text": "Zhai (1997)",
+                        "ref_id": "BIBREF22"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Accurately interpreting query semantics also depends on establishing relationships between the query tokens. For example, consider the query \"two man power saw.\" There are a number of possible interpretations of this query, and these can be expressed through a number of different segmentations or bracketings of the query terms: One simple way to make use of these interpretations in search would be to put quotation marks around the phrasal segments to require the search engine to only find pages with exact phrase matches. If, as seems likely, the searcher is seeking pages about the large, mechanically-powered two-man saws used by lumberjacks and sawyers to cut big trees, then the first segmentation is correct. Indeed, a phrasal search for \"two man power saw\" on Google does find the device of interest. So does the second interpretation, but along with other, less-relevant pages discussing competitions involving \"two-man handsaw, two-woman handsaw, power saw log bucking, etc.\" The top document returned for the third interpretation, meanwhile, describes a man on a rampage at a subway station with two cordless power saws, while the fourth interpretation finds pages about topics ranging from hockey's thrilling two-man power play advantage to the man power situation during the Second World War. Clearly, choosing the right segmentation means finding the right documents faster.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Query segmentation can also help if insufficient pages are returned for the original query. A technique such as query substitution or expansion (Jones et al., 2006 ) can be employed using the segmented units. For example, we could replace the sexist \"two man\" modifier with the politically-correct \"two person\" phrase in order to find additional relevant documents. Without segmentation, expanding via the individual words \"two,\" \"man,\" \"power,\" or \"saw\" could produce less sensible results.",
+                "cite_spans": [
+                    {
+                        "start": 144,
+                        "end": 163,
+                        "text": "(Jones et al., 2006",
+                        "ref_id": "BIBREF7"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "In this paper, we propose a data-driven, machinelearned approach to query segmentation. Similar to previous segmentation approaches described in Section 2, we make a decision to segment or not to segment between each pair of tokens in the query. Unlike previous work, we view this as a classification task where the decision parameters are learned discriminatively from gold standard data. In Section 3, we describe our approach and the features we use. Section 4 describes our labelled data, as well as the specific tools used for our experiments. Section 5 provides the results of our evaluation, and shows the strong gains in performance possible using a wide set of features within a discriminative framework.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Query segmentation has previously been approached in an unsupervised manner. Risvik et al. (2003) combine the frequency count of a segment and the mutual information (MI) between pairs of words in the segment in a heuristic scoring function. The system chooses the segmentation with the highest score as the output segmentation. Jones et al. (2006) use MI between pairs of tokens as the sole factor in deciding on segmentation breaks. If the MI is above a threshold (optimized on a small training set), the pair of tokens is joined in a segment. Otherwise, a segmentation break is made.",
+                "cite_spans": [
+                    {
+                        "start": 77,
+                        "end": 97,
+                        "text": "Risvik et al. (2003)",
+                        "ref_id": "BIBREF20"
+                    },
+                    {
+                        "start": 329,
+                        "end": 348,
+                        "text": "Jones et al. (2006)",
+                        "ref_id": "BIBREF7"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "Query segmentation is related to the task of noun compound (NC) bracketing. NC bracketing determines the syntactic structure of an NC as expressed by a binary tree, or, equivalently, a binary bracketing (Nakov and Hearst, 2005a) . Zhai (1997) first identified the importance of syntactic query/corpus parsing for information retrieval, but did not consider query segmentation itself. In principle, as N increases, the number of binary trees for an Ntoken compound is much greater than the 2 N -1 possible segmentations. In practice, empirical NC research has focused on three-word compounds. The computational problem is thus deciding whether the three-word NC has a left or right-bracketing structure (Lauer, 1995) . For the segmentation task, analysing a three-word NC requires deciding between four different segmentations. For example, there are two bracketings for \"used car parts,\" the left-bracketing \"[[used car] parts]\" and the rightbracketing \"[used [car parts]],\" while there are four segmentations, including the case where there is only one segment, \"[used car parts]\" and the base case where each token forms its own segment, \" [used] [car] [parts] .\" Query segmentation thus naturally handles the case where the query consists of multiple, separate noun phrases that should not be analysed with a single binary tree.",
+                "cite_spans": [
+                    {
+                        "start": 203,
+                        "end": 228,
+                        "text": "(Nakov and Hearst, 2005a)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 231,
+                        "end": 242,
+                        "text": "Zhai (1997)",
+                        "ref_id": "BIBREF22"
+                    },
+                    {
+                        "start": 702,
+                        "end": 715,
+                        "text": "(Lauer, 1995)",
+                        "ref_id": "BIBREF12"
+                    },
+                    {
+                        "start": 1142,
+                        "end": 1162,
+                        "text": "[used] [car] [parts]",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "Despite the differences between the tasks, it is worth investigating whether the information that helps disambiguate left and right-bracketings can also be useful for segmentation. In particular, we explored many of the sources of information used by Nakov and Hearst (2005a) , as well as several novel features that aid segmentation performance and should also prove useful for NC analysis researchers. Unlike all previous approaches that we are aware of, we apply our features in a flexible discriminative framework rather than a classification based on a vote or average of features.",
+                "cite_spans": [
+                    {
+                        "start": 251,
+                        "end": 275,
+                        "text": "Nakov and Hearst (2005a)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "NC analysis has benefited from the recent trend of using web-derived features rather than corpusbased counts (Keller and Lapata, 2003) . Lapata and Keller (2004) first used web-based co-occurrence counts for the bracketing of NCs. Recent innovations have been to use statistics \"beyond the Ngram,\" such as counting the number of web pages where a pair of words w, x participate in a genitive relationship (\"w's x\"), occur collapsed as a single phrase (\"wx\") (Nakov and Hearst, 2005a) or have a definite article as a left-boundary marker (\"the w x\") (Nicholson and Baldwin, 2006) . We show strong performance gains when such features are employed for query segmentation.",
+                "cite_spans": [
+                    {
+                        "start": 109,
+                        "end": 134,
+                        "text": "(Keller and Lapata, 2003)",
+                        "ref_id": "BIBREF9"
+                    },
+                    {
+                        "start": 137,
+                        "end": 161,
+                        "text": "Lapata and Keller (2004)",
+                        "ref_id": "BIBREF11"
+                    },
+                    {
+                        "start": 458,
+                        "end": 483,
+                        "text": "(Nakov and Hearst, 2005a)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 549,
+                        "end": 578,
+                        "text": "(Nicholson and Baldwin, 2006)",
+                        "ref_id": "BIBREF17"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "NC bracketing is part of a larger field of research on multiword expressions including general NC interpretation. NC interpretation explores not just the syntactic dependencies among compound constituents, but the semantics of the nominal relationships (Girju et al., 2005) . Web-based statistics have also had an impact on these wider analysis tasks, including work on interpretation of verb nominalisations (Nicholson and Baldwin, 2006) and NC coordination (Nakov and Hearst, 2005b) .",
+                "cite_spans": [
+                    {
+                        "start": 253,
+                        "end": 273,
+                        "text": "(Girju et al., 2005)",
+                        "ref_id": "BIBREF3"
+                    },
+                    {
+                        "start": 409,
+                        "end": 438,
+                        "text": "(Nicholson and Baldwin, 2006)",
+                        "ref_id": "BIBREF17"
+                    },
+                    {
+                        "start": 459,
+                        "end": 484,
+                        "text": "(Nakov and Hearst, 2005b)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "Consider a query x = {x 1 , x 2 , ..., x N } consisting of N query tokens. Segmentation is a mapping S :",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Segmentation Classification",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "x \u2192 y \u2208 Y N , where y is a segmentation from the set Y N . Since we can either have or not have a segmentation break at each of the N -1 spaces between the N tokens, |Y N | = 2 N -1 . Supervised machine learning can be applied to derive the mapping S automatically, given a set of training examples consisting of pairs of queries and their segmentations T = {(x i , y i )}. Typically this would be done via a set of features \u03a8(x, y) for the structured examples. A set of weights w can be learned discriminatively such that each training example (x i , y i ) has a higher score, Score w (x, y) = w \u2022 \u03a8(x, y), than alternative query-segmentation pairs, (x i , z i ), z i = y i . 1 At test time, the classifier chooses the segmentation for",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Segmentation Classification",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "x that has the highest score according to the learned parameterization: \u0177 = argmax y Score w (x, y). Unlike many problems in NLP such as parsing or part-of-speech tagging, the small cardinality of Y N makes enumerating all the alternative query segmentations computationally feasible.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Segmentation Classification",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "In our preliminary experiments, we used a Support Vector Machine (SVM) ranker (Joachims, 2002) to learn the structured classifier. 2 We also in-1 See e.g. Collins (2002) for a popular training algorithm. 2 A ranking approach was also used previously by Daum\u00e9 III and Marcu (2004) for the CoNLL-99 nested noun phrase identification task. vestigated a Hidden Markov Model SVM (Altun et al., 2003) to label the segmentation breaks using information from past segmentation decisions. Ultimately, the mappings produced by these approaches were not as accurate as a simple formulation that creates a full query segmentation y as the combination of independent classification decisions made between each pair of tokens in the query. 3In the classification framework, the input is a query, x, a position in the query, i, where 0<i<N , and the output is a segmentation decision yes/no. The training set of segmented queries is converted into examples of decisions between tokens and learning is performed on this set. At test time, N -1 segmentation decisions are made for the N -length query and an output segmentation y is produced.",
+                "cite_spans": [
+                    {
+                        "start": 78,
+                        "end": 94,
+                        "text": "(Joachims, 2002)",
+                        "ref_id": "BIBREF6"
+                    },
+                    {
+                        "start": 155,
+                        "end": 169,
+                        "text": "Collins (2002)",
+                        "ref_id": "BIBREF2"
+                    },
+                    {
+                        "start": 253,
+                        "end": 279,
+                        "text": "Daum\u00e9 III and Marcu (2004)",
+                        "ref_id": "BIBREF4"
+                    },
+                    {
+                        "start": 374,
+                        "end": 394,
+                        "text": "(Altun et al., 2003)",
+                        "ref_id": "BIBREF0"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Segmentation Classification",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "Here, features depend only on the input query x and the position in the query i. For a decision at position i, we use features from tokens up to three positions to the left and to the right of the decision location. That is, for a decision between x L0 and x R0 , we extract features from a window of six tokens in the query: {..., x L2 , x L1 , x L0 , x R0 , x R1 , x R2 , ...}. We now detail the features derived from this window.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Segmentation Classification",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "There are a number of possible indicators of whether a segmentation break occurs between a pair of tokens. Some of these features fire separately for each token x in our feature window, while others are defined over pairs or sets of tokens in the window. We first describe the features that are defined for the tokens around the decision boundary, x L0 and x R0 , before describing how these same features are extended to longer phrases and other token pairs.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Features",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "Table 1 lists the binary features that fire if particular aspects of a token or pair of tokens are present. For example, one of the POS-tags features will fire if the pair's part-of-speech tags are DT JJ, another feature will fire if the position of the pair in the to-Table 1 : Indicator features. Name Description is-the token x = \"the\" is-free token x = \"free\" POS-tags Part-of-speech tags of pair x L0 x R0 fwd-pos position from beginning, i rev-pos position from end N -i ken is 2, etc. The two lexical features (for when the token is \"the\" and when the token is \"free\") fire separately for the left and right tokens around the decision boundary. They are designed to add discrimination for these common query words, motivated by examples in our training set. For example, in the training set, \"free\" often occurs in its own segment when it's on the left-hand-side of a decision boundary (e.g. \"free\" \"online\" ...), but may join into a larger segment when it's on the right-hand-side of a collocation (e.g. \"sulfite free\" or \"sugar free\"). The classifier can use the feature weights to encourage or discourage segmentation in these specific situations. For statistical features, previous work (Section 2) suggests that the mutual information between the decision tokens x L0 and x R0 may be appropriate. The log of the pointwise mutual information (Church and Hanks, 1989) between the decision-boundary tokens",
+                "cite_spans": [
+                    {
+                        "start": 1353,
+                        "end": 1377,
+                        "text": "(Church and Hanks, 1989)",
+                        "ref_id": "BIBREF1"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 6,
+                        "end": 7,
+                        "text": "1",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 275,
+                        "end": 276,
+                        "text": "1",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Decision-boundary features",
+                "sec_num": "3.2.1"
+            },
+            {
+                "text": "x L0 , x R0 is: MI(x L0 , x R0 ) = log Pr(x L0 x R0 ) Pr(x L0 )Pr(x R0 )",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Decision-boundary features",
+                "sec_num": "3.2.1"
+            },
+            {
+                "text": "This is equivalent to the sum: log C(x L0 x R0 ) + log K -log C(x L0 ) -log C(x R0 ). For web-based features, the counts C(.) can be taken as a search engine's count of the number of pages containing the term. The normalizer K is thus the total number of pages on the Internet.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Decision-boundary features",
+                "sec_num": "3.2.1"
+            },
+            {
+                "text": "Represented as a summation, we can see that providing MI as the feature effectively ties the weights on the logarithmic counts C(x L0 x R0 ), C(x L0 ), and C(x R0 ). Another approach would be to provide these logarithmic counts as separate features to our learning algorithm, which can then set the weights optimally for segmentation. We call this set of counts the \"Basic\" features. In Section 5, we confirm results on our development set that showed using the basic features untied increased segmentation Description web-count count of \"x\" on the web pair-count web count \"w x\" definite web count \"the w x\" collapsed web count \"wx\" (one word) and-count web count \"w and x\" genitive web count \"w's x\" Qcount-1",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Decision-boundary features",
+                "sec_num": "3.2.1"
+            },
+            {
+                "text": "Counts of \"x\" in query database Qcounts-2 Counts of \"w x\" in database performance by up to 4% over using MI -an important observation for all researchers using association models as features in their discriminative classifiers.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Decision-boundary features",
+                "sec_num": "3.2.1"
+            },
+            {
+                "text": "Furthermore, with this technique, we do not need to normalize the counts for the other pairwise statistical features given in Table 2 . We can simply rely on our learning algorithm to increase or decrease the weights on the logarithm of the counts as needed.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 132,
+                        "end": 133,
+                        "text": "2",
+                        "ref_id": "TABREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Decision-boundary features",
+                "sec_num": "3.2.1"
+            },
+            {
+                "text": "To illustrate how the statistical features work, consider a query from our development set: \"star wars weapons guns.\" The phrase \"star wars\" can easily be interpreted as a phrase; there is a high co-occurrence count (pair-count), and many pages where they occur as a single phrase (collapsed), e.g. \"starwars.com.\" \"Weapons\" and \"guns,\" on the other hand, should not be joined together. Although they may have a high co-occurrence count, the coordination feature (and-count) is high (\"weapons and guns\") showing these to be related concepts but not phrasal constituents. Including this novel feature resulted in noticeable gains on the development set.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Decision-boundary features",
+                "sec_num": "3.2.1"
+            },
+            {
+                "text": "Since this is a query-based segmentation, features that consider whether sets of tokens occurred elsewhere in the query database may provide domainspecific discrimination. For each of the Qcount features, we look for two quantities: the number of times the phrase occurs as a query on its own and the number of times the phrase occurs within another query. 4 Including both of these counts also resulted in performance gains on the development set.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Decision-boundary features",
+                "sec_num": "3.2.1"
+            },
+            {
+                "text": "We also extensively investigated other corpusbased features, such as the number of times the phrase occurred hyphenated or capitalized, and the corpus-based distributional similarity (Lin, 1998) between a pair of tokens. These features are not available from search-engine statistics because search engines disregard punctuation and capitalization, and collecting page-count-based distributional similarity statistics is computationally infeasible.",
+                "cite_spans": [
+                    {
+                        "start": 183,
+                        "end": 194,
+                        "text": "(Lin, 1998)",
+                        "ref_id": "BIBREF13"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Decision-boundary features",
+                "sec_num": "3.2.1"
+            },
+            {
+                "text": "Unfortunately, none of the corpus-based features improved performance on the development set and are thus excluded from further consideration. This is perhaps not surprising. For such a task that involves real user queries, with arbitrary spellings and sometimes exotic vocabulary, gathering counts from web search engines is the only way to procure reliable and broad-coverage statistics.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Decision-boundary features",
+                "sec_num": "3.2.1"
+            },
+            {
+                "text": "Although the tokens at the decision boundary are of paramount importance, information from the neighbouring tokens is also critical for segmentation decision discrimination. We thus include features that take into consideration the preceding and following tokens, x L1 and x R1 , as context information. We gather all the token indicator features for each of these tokens, as well as all pairwise features between x L1 and x L0 , and then x R0 and x R1 . If context tokens are not available at this position in the query, a feature fires to indicate this. Also, if the context features are available, we include trigram web and query-database counts of \"x L1 x L0 x R0 \" and \"x L0",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Context Features",
+                "sec_num": "3.2.2"
+            },
+            {
+                "text": "x R0 x R1 \", and a fourgram spanning both contexts. Furthermore, if tokens x L2 and x R2 are available, we collect relevant token-level, pairwise, trigram, and fourgram counts including these tokens as well.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Context Features",
+                "sec_num": "3.2.2"
+            },
+            {
+                "text": "In Section 5, we show that context features are very important. They allow our system to implicitly leverage surrounding segmentation decisions, which cannot be accessed directly in an independent segmentation-decision classifier. For example, consider the query \"bank loan amoritization schedule.\" Although \"loan amoritization\" has a strong connection, we may nevertheless insert a break between them because \"bank loan\" and \"amoritization schedule\" each have even stronger association.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Context Features",
+                "sec_num": "3.2.2"
+            },
+            {
+                "text": "Motivated by work in noun phrase parsing, it might be beneficial to check if, for example, token",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Dependency Features",
+                "sec_num": "3.2.3"
+            },
+            {
+                "text": "x L0 is more likely to modify a later token, such as x R1 . For example, in \"female bus driver\", we might not wish to segment \"female bus\" because \"female\" has a much stronger association with \"driver\" than with \"bus\". Thus, as features, we include the pairwise counts between x L0 and x R1 , and then x L1 and x R0 . Features from longer range dependencies did not improve performance on the development set.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Dependency Features",
+                "sec_num": "3.2.3"
+            },
+            {
+                "text": "Our dataset was taken from the AOL search query database (Pass et al., 2006) , a collection of 35 million queries submitted to the AOL search engine. Most punctuation has been removed from the queries.5 Along with the query, each entry in the database contains an anonymous user ID and the domain of the URL the user clicked on, if they selected one of the returned pages. For our data, we used only those queries with a click-URL. This subset has a higher proportion of correctly-spelled queries, and facilitates annotation (described below).",
+                "cite_spans": [
+                    {
+                        "start": 57,
+                        "end": 76,
+                        "text": "(Pass et al., 2006)",
+                        "ref_id": "BIBREF18"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Data",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "We then tagged the search queries using a maximum entropy part-of-speech tagger (Ratnaparkhi, 1996) . As our approach was designed particularly for noun phrase queries, we selected for our final experiments those AOL queries containing only determiners, adjectives, and nouns. We also only considered phrases of length four or greater, since queries of these lengths are most likely to benefit from a segmentation, but our approach works for queries of any length. Future experiments will investigate applying the current approach to phrasal verbs, prepositional idioms and segments with other parts of speech.",
+                "cite_spans": [
+                    {
+                        "start": 80,
+                        "end": 99,
+                        "text": "(Ratnaparkhi, 1996)",
+                        "ref_id": "BIBREF19"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Data",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "We randomly selected 500 queries for training, 500 for development, and 500 for final testing. These were all manually segmented by our annotators. Manual segmentation was done with improving search precision in mind. Annotators were asked to analyze each query and form an idea of what the user was searching for, taking into consideration the click-URL or performing their own online searches, if needed. The annotators were then asked to segment the query to improve search retrieval, by forcing a search engine to find pages with the segments occurring as unbroken units.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Data",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "One annotator segmented all three data sets, and these were used for all the experiments. Two additional annotators also segmented the final test set to allow inter-annotator agreement calculation. The pairwise agreement on segmentation decisions (between each pair of tokens) was between 84.0% and 84.6%. The agreement on entire queries was between 57.6% and 60.8%. All three agreed completely on 219 of the 500 queries, and we use this \"intersected\" set for a separate evaluation in our experiments. 6 If we take the proportion of segmentation decisions the annotators would be expected to agree on by chance to be 50%, the Kappa statistic (Jurafsky and Martin, 2000, page 315 ) is around .69, below the .8 considered to be good reliability.",
+                "cite_spans": [
+                    {
+                        "start": 642,
+                        "end": 678,
+                        "text": "(Jurafsky and Martin, 2000, page 315",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Data",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "This observed agreement was lower than we anticipated, and reflects both differences in query interpretation and in the perceived value of different segmentations for retrieval performance. Annotators agreed that terms like \"real estate,\" \"work force,\" \"west palm beach,\" and \"private investigator\" should be separate segments. These are collocations in the linguistics sense (Manning and Sch\u00fctze, 1999, pages 183-187) ; we cannot substitute related words for terms in these expressions nor apply syntactic transformations or paraphrases (e.g. we don't say \"investigator of privates\"). However, for a query such as \"bank manager,\" should we exclude web pages that discuss \"manager of the bank\" or \"branch manager for XYZ bank\"? If a user is searching for a particular webpage, excluding such results could be harmful. However, for query substitution or expansion, identifying that \"bank manager\" is a single unit may be useful. We can resolve the conflicting objectives of our two motivating applications by moving to a multi-layer query bracketing scheme, first segmenting unbreakable collocations and then building them into semantic units with a query segmentation grammar. This will be the subject of future research.",
+                "cite_spans": [
+                    {
+                        "start": 376,
+                        "end": 418,
+                        "text": "(Manning and Sch\u00fctze, 1999, pages 183-187)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Data",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "All of our statistical feature information was collected using the Google SOAP Search API. 7 For training and classifying our data, we use the popular Support Vector Machine (SVM) learning package SVM light (Joachims, 1999) . SVMs are maximummargin classifiers that achieve good performance on a range of tasks. In each case, we learn a linear kernel on the training set segmentation decisions and tune the parameter that trades-off training error and margin on the development set.",
+                "cite_spans": [
+                    {
+                        "start": 207,
+                        "end": 223,
+                        "text": "(Joachims, 1999)",
+                        "ref_id": "BIBREF5"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "We use the following two evaluation criteria:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "1. Seg-Acc: Segmentation decision accuracy: the proportion of times our classifier's decision to insert a segment break or not between a pair of tokens agrees with the gold standard decision.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "2. Qry-Acc: Query segmentation accuracy: the proportion of queries for which the complete segmentation derived from our classifications agrees with the gold standard segmentation.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "Table 3 provides our results for various configurations of features and token-combinations as described in Section 3.8 For comparison, a baseline that always chooses a segmentation break achieves 44.8% Seg-Acc and 4.2% Qry-Acc, while a system that inserts no breaks achieves 55.2% Seg-Acc and 4.0% Qry-Acc. Our comparison system is the MI approach used by Jones et al. (2006) , which achieves 68% Seg-Acc and 26.6% Qry-Acc (Table 3 ). We let the SVM set the threshold for MI on the training set. Note that the Basic, Decision-Boundary system (Section 3.2.1), which uses exactly the same cooccurrence information as the MI system (in the form of the Basic features) but allows the SVM to discriminatively weight the logarithmic counts, immediately increases Seg-Acc performance by 3.7%. Even more strikingly, adding the Basic count information for the Context tokens (Section 3.2.2) boosts performance by another 8.5%, increasing Qry-Acc by over 22%. Smaller, further gains arise by adding Dependency token information (Section 3.2.3).",
+                "cite_spans": [
+                    {
+                        "start": 356,
+                        "end": 375,
+                        "text": "Jones et al. (2006)",
+                        "ref_id": "BIBREF7"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 6,
+                        "end": 7,
+                        "text": "3",
+                        "ref_id": "TABREF1"
+                    },
+                    {
+                        "start": 430,
+                        "end": 431,
+                        "text": "3",
+                        "ref_id": "TABREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "5"
+            },
+            {
+                "text": "Also, notice that moving from Basic features for the Decision-Boundary tokens to all of our indicator (Table 1 ) and statistical (Table 2 ) features (referred to as All features) increases performance from 71.7% to 84.3%. These gains convincingly justify Note, however, that these results must also be considered in light of the low inter-annotator agreement (Section 4.1). Indeed, results are lower if we evaluate using the test-set labels from another annotator (necessarily training on the original annotator's labels). On the intersected set of the three annotators, however, results are better still: 88.7% Seg-Acc and 69.4% Qry-Acc on the intersected queries for the full-featured system (Table 3 ). Since high performance is dependent on consistent training and test labellings, it seems likely that developing more-explicit annotation instructions may allow further improvements in performance as within-set and between-set annotation agreement increases.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 109,
+                        "end": 110,
+                        "text": "1",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 136,
+                        "end": 137,
+                        "text": "2",
+                        "ref_id": "TABREF0"
+                    },
+                    {
+                        "start": 701,
+                        "end": 702,
+                        "text": "3",
+                        "ref_id": "TABREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "5"
+            },
+            {
+                "text": "It would also be theoretically interesting, and of significant practical importance, to develop a learning approach that embraces the agreement of the annotations as part of the learning algorithm. Our initial ranking formulation (Section 3.1), for example, could learn a model that prefers segmentations with higher agreement, but still prefers any annotated segmentation to alternative, unobserved structures. As there is growing interest in making maximal use of annotation resources within discriminative learning techniques (Zaidan et al., 2007) , developing a general empirical approach to learning from ambiguously-labelled examples would be both an important contribution to this trend and a potentially helpful technique in a number of NLP domains.",
+                "cite_spans": [
+                    {
+                        "start": 529,
+                        "end": 550,
+                        "text": "(Zaidan et al., 2007)",
+                        "ref_id": "BIBREF21"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "5"
+            },
+            {
+                "text": "We have developed a novel approach to search query segmentation and evaluated this approach on actual user queries, reducing error by 56% over a recent comparison approach. Gains in performance were made possible by both leveraging recent progress in feature engineering for noun compound bracketing, as well as using a flexible, discriminative incorporation of association information, beyond the decisionboundary tokens. We have created and made available a set of manually-segmented user queries, and thus provided a new testing platform for other researchers in this area. Our initial formulation of query segmentation as a structured learning problem, and our leveraging of association statistics beyond the decision boundary, also provides powerful tools for noun compound bracketing researchers to both move beyond three-word compounds and to adopt discriminative feature weighting techniques.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion",
+                "sec_num": "6"
+            },
+            {
+                "text": "The positive results achieved on this important application should encourage further inter-disciplinary collaboration between noun compound interpretation and information retrieval researchers. For example, analysing the semantics of multiword expressions may allow for more-focused query expansion; knowing to expand \"bank manager\" to include pages describing a \"manager of the bank,\" but not doing the same for non-compositional phrases like \"real estate\" or \"private investigator,\" requires exactly the kind of techniques being developed in the noun compound interpretation community. Thus for query expansion, as for query segmentation, work in natural language processing has the potential to make a real and immediate impact on search-engine technology.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion",
+                "sec_num": "6"
+            },
+            {
+                "text": "The next step in this research is to directly investigate how query segmentation affects search performance. For such an evaluation, we would need to know, for each possible segmentation (including no segmentation), the document retrieval performance. This could be the proportion of returned documents that are deemed to be relevant to the original query. Exactly such an evaluation was recently used by Kumaran and Allan (2007) for the related task of query contraction. Of course, a dataset with queries and retrieval scores may serve for more than evaluation; it may provide the examples used by the learning module. That is, the parameters of the contraction or segmentation scoring function could be discriminatively set to optimize the retrieval of the training set queries. A unified framework for query contraction, segmentation, and expansion, all based on discriminatively optimizing retrieval performance, is a very appealing future research direction. In this framework, the size of the training sets would not be limited by human annotation resources, but by the number of queries for which retrieved-document relevance judgments are available. Generating more training examples would allow the use of more powerful, finer-grained lexical features for classification.",
+                "cite_spans": [
+                    {
+                        "start": 405,
+                        "end": 429,
+                        "text": "Kumaran and Allan (2007)",
+                        "ref_id": "BIBREF10"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion",
+                "sec_num": "6"
+            },
+            {
+                "text": "The structured learners did show large gains over the classification framework on the dev-set when using only the basic features for the decision-boundary tokens (see Section 3.2.1), but not when the full feature set was deployed. Also, features only available to structured learners, e.g. number of segments in query, etc., did improve the performance of the structured approaches, but not above that of the simpler classifier.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "We exclude counts from the training, development, and testing queries discussed in Section 4.1.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "Including, unfortunately, all quotation marks, precluding our use of users' own segmentations as additional labelled examples or feature data for our system",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "All queries and statistical feature information is available at http://www.cs.ualberta.ca/\u02dcbergsma/QuerySegmentation/",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "http://code.google.com/apis/soapsearch/",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "Statistically significant intra-row differences in Qry-Acc are marked with an asterix(McNemar's test, p<0.05)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            }
+        ],
+        "back_matter": [
+            {
+                "text": "We gratefully acknowledge support from the Natural Sciences and Engineering Research Council of Canada, the Alberta Ingenuity Fund, the Alberta Ingenuity Center for Machine Learning, and the Alberta Informatics Circle of Research Excellence.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Acknowledgments",
+                "sec_num": null
+            }
+        ],
+        "bib_entries": {
+            "BIBREF0": {
+                "ref_id": "b0",
+                "title": "Hidden markov support vector machines",
+                "authors": [
+                    {
+                        "first": "Yasemin",
+                        "middle": [],
+                        "last": "Altun",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ioannis",
+                        "middle": [],
+                        "last": "Tsochantaridis",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Thomas",
+                        "middle": [],
+                        "last": "Hofmann",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2003,
+                "venue": "ICML",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Yasemin Altun, Ioannis Tsochantaridis, and Thomas Hofmann. 2003. Hidden markov support vector machines. In ICML.",
+                "links": null
+            },
+            "BIBREF1": {
+                "ref_id": "b1",
+                "title": "Word association norms, mutual information, and lexicography",
+                "authors": [
+                    {
+                        "first": "Kenneth",
+                        "middle": [
+                            "Ward"
+                        ],
+                        "last": "Church",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Patrick",
+                        "middle": [],
+                        "last": "Hanks",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1989,
+                "venue": "ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "76--83",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Kenneth Ward Church and Patrick Hanks. 1989. Word associ- ation norms, mutual information, and lexicography. In ACL, pages 76-83.",
+                "links": null
+            },
+            "BIBREF2": {
+                "ref_id": "b2",
+                "title": "Discriminative training methods for hidden markov models: Theory and experiments with perceptron algorithms",
+                "authors": [
+                    {
+                        "first": "Michael",
+                        "middle": [],
+                        "last": "Collins",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2002,
+                "venue": "EMNLP",
+                "volume": "",
+                "issue": "",
+                "pages": "1--8",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Michael Collins. 2002. Discriminative training methods for hidden markov models: Theory and experiments with per- ceptron algorithms. In EMNLP, pages 1-8.",
+                "links": null
+            },
+            "BIBREF3": {
+                "ref_id": "b3",
+                "title": "On the semantics of noun compounds",
+                "authors": [
+                    {
+                        "first": "Roxana",
+                        "middle": [],
+                        "last": "Girju",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dan",
+                        "middle": [],
+                        "last": "Moldovan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Marta",
+                        "middle": [],
+                        "last": "Tatu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Daniel",
+                        "middle": [],
+                        "last": "Antohe",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2005,
+                "venue": "Computer Speech and Language",
+                "volume": "19",
+                "issue": "4",
+                "pages": "479--496",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Roxana Girju, Dan Moldovan, Marta Tatu, and Daniel Antohe. 2005. On the semantics of noun compounds. Computer Speech and Language, 19(4):479-496.",
+                "links": null
+            },
+            "BIBREF4": {
+                "ref_id": "b4",
+                "title": "NP bracketing by maximum entropy tagging and SVM reranking",
+                "authors": [
+                    {
+                        "first": "Hal",
+                        "middle": [],
+                        "last": "Daum\u00e9",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Iii",
+                        "middle": [],
+                        "last": "",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Daniel",
+                        "middle": [],
+                        "last": "Marcu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2004,
+                "venue": "EMNLP",
+                "volume": "",
+                "issue": "",
+                "pages": "254--261",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Hal Daum\u00e9 III and Daniel Marcu. 2004. NP bracketing by maximum entropy tagging and SVM reranking. In EMNLP, pages 254-261.",
+                "links": null
+            },
+            "BIBREF5": {
+                "ref_id": "b5",
+                "title": "Making large-scale Support Vector Machine learning practical",
+                "authors": [
+                    {
+                        "first": "Thorsten",
+                        "middle": [],
+                        "last": "Joachims",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1999,
+                "venue": "Advances in Kernel Methods: Support Vector Machines",
+                "volume": "",
+                "issue": "",
+                "pages": "169--184",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Thorsten Joachims. 1999. Making large-scale Support Vector Machine learning practical. In B. Sch\u00f6lkopf and C. Burges, editors, Advances in Kernel Methods: Support Vector Ma- chines, pages 169-184. MIT-Press.",
+                "links": null
+            },
+            "BIBREF6": {
+                "ref_id": "b6",
+                "title": "Optimizing search engines using clickthrough data",
+                "authors": [
+                    {
+                        "first": "Thorsten",
+                        "middle": [],
+                        "last": "Joachims",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2002,
+                "venue": "ACM Conference on Knowledge Discovery and Data Mining",
+                "volume": "",
+                "issue": "",
+                "pages": "133--142",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Thorsten Joachims. 2002. Optimizing search engines using clickthrough data. In ACM Conference on Knowledge Dis- covery and Data Mining, pages 133-142.",
+                "links": null
+            },
+            "BIBREF7": {
+                "ref_id": "b7",
+                "title": "Generating query substitutions",
+                "authors": [
+                    {
+                        "first": "Rosie",
+                        "middle": [],
+                        "last": "Jones",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Benjamin",
+                        "middle": [],
+                        "last": "Rey",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Omid",
+                        "middle": [],
+                        "last": "Madani",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Wiley",
+                        "middle": [],
+                        "last": "Greiner",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2006,
+                "venue": "WWW",
+                "volume": "",
+                "issue": "",
+                "pages": "387--396",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Rosie Jones, Benjamin Rey, Omid Madani, and Wiley Greiner. 2006. Generating query substitutions. In WWW, pages 387- 396.",
+                "links": null
+            },
+            "BIBREF8": {
+                "ref_id": "b8",
+                "title": "Speech and language processing",
+                "authors": [
+                    {
+                        "first": "Daniel",
+                        "middle": [],
+                        "last": "Jurafsky",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "James",
+                        "middle": [
+                            "H"
+                        ],
+                        "last": "Martin",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2000,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Daniel Jurafsky and James H. Martin. 2000. Speech and lan- guage processing. Prentice Hall.",
+                "links": null
+            },
+            "BIBREF9": {
+                "ref_id": "b9",
+                "title": "Using the web to obtain frequencies for unseen bigrams",
+                "authors": [
+                    {
+                        "first": "Frank",
+                        "middle": [],
+                        "last": "Keller",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mirella",
+                        "middle": [],
+                        "last": "Lapata",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2003,
+                "venue": "Computational Linguistics",
+                "volume": "29",
+                "issue": "3",
+                "pages": "459--484",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Frank Keller and Mirella Lapata. 2003. Using the web to obtain frequencies for unseen bigrams. Computational Linguistics, 29(3):459-484.",
+                "links": null
+            },
+            "BIBREF10": {
+                "ref_id": "b10",
+                "title": "A case for shorter queries, and helping users create them",
+                "authors": [
+                    {
+                        "first": "Giridhar",
+                        "middle": [],
+                        "last": "Kumaran",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "James",
+                        "middle": [],
+                        "last": "Allan",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2007,
+                "venue": "NAACL-HLT",
+                "volume": "",
+                "issue": "",
+                "pages": "220--227",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Giridhar Kumaran and James Allan. 2007. A case for shorter queries, and helping users create them. In NAACL-HLT, pages 220-227.",
+                "links": null
+            },
+            "BIBREF11": {
+                "ref_id": "b11",
+                "title": "The web as a baseline: Evaluating the performance of unsupervised web-based models for a range of NLP tasks",
+                "authors": [
+                    {
+                        "first": "Mirella",
+                        "middle": [],
+                        "last": "Lapata",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Frank",
+                        "middle": [],
+                        "last": "Keller",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2004,
+                "venue": "HLT-NAACL",
+                "volume": "",
+                "issue": "",
+                "pages": "121--128",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Mirella Lapata and Frank Keller. 2004. The web as a base- line: Evaluating the performance of unsupervised web-based models for a range of NLP tasks. In HLT-NAACL, pages 121-128.",
+                "links": null
+            },
+            "BIBREF12": {
+                "ref_id": "b12",
+                "title": "Corpus statistics meet the noun compound: Some empirical results",
+                "authors": [
+                    {
+                        "first": "Mark",
+                        "middle": [],
+                        "last": "Lauer",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1995,
+                "venue": "ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "47--54",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Mark Lauer. 1995. Corpus statistics meet the noun compound: Some empirical results. In ACL, pages 47-54.",
+                "links": null
+            },
+            "BIBREF13": {
+                "ref_id": "b13",
+                "title": "Automatic retrieval and clustering of similar words",
+                "authors": [
+                    {
+                        "first": "Dekang",
+                        "middle": [],
+                        "last": "Lin",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1998,
+                "venue": "COLING/ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "768--773",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Dekang Lin. 1998. Automatic retrieval and clustering of simi- lar words. In COLING/ACL, pages 768-773.",
+                "links": null
+            },
+            "BIBREF14": {
+                "ref_id": "b14",
+                "title": "Foundations of Statistical Natural Language Processing",
+                "authors": [
+                    {
+                        "first": "Christopher",
+                        "middle": [
+                            "D"
+                        ],
+                        "last": "Manning",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hinrich",
+                        "middle": [],
+                        "last": "Sch\u00fctze",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1999,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Christopher D. Manning and Hinrich Sch\u00fctze. 1999. Foun- dations of Statistical Natural Language Processing. MIT Press.",
+                "links": null
+            },
+            "BIBREF15": {
+                "ref_id": "b15",
+                "title": "Search engine statistics beyond the n-gram: Application to noun compound bracketing",
+                "authors": [
+                    {
+                        "first": "Preslav",
+                        "middle": [],
+                        "last": "Nakov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Marti",
+                        "middle": [],
+                        "last": "Hearst",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2005,
+                "venue": "CoNLL",
+                "volume": "",
+                "issue": "",
+                "pages": "17--24",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Preslav Nakov and Marti Hearst. 2005a. Search engine statis- tics beyond the n-gram: Application to noun compound bracketing. In CoNLL, pages 17-24.",
+                "links": null
+            },
+            "BIBREF16": {
+                "ref_id": "b16",
+                "title": "Using the web as an implicit training set: application to structural ambiguity resolution",
+                "authors": [
+                    {
+                        "first": "Preslav",
+                        "middle": [],
+                        "last": "Nakov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Marti",
+                        "middle": [],
+                        "last": "Hearst",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2005,
+                "venue": "HLT/EMNLP",
+                "volume": "",
+                "issue": "",
+                "pages": "835--842",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Preslav Nakov and Marti Hearst. 2005b. Using the web as an implicit training set: application to structural ambiguity resolution. In HLT/EMNLP, pages 835-842.",
+                "links": null
+            },
+            "BIBREF17": {
+                "ref_id": "b17",
+                "title": "Interpretation of compound nominalisations using corpus and web statistics",
+                "authors": [
+                    {
+                        "first": "Jeremy",
+                        "middle": [],
+                        "last": "Nicholson",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Timothy",
+                        "middle": [],
+                        "last": "Baldwin",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2006,
+                "venue": "ACL Workshop on Multiword Expressions",
+                "volume": "",
+                "issue": "",
+                "pages": "54--61",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jeremy Nicholson and Timothy Baldwin. 2006. Interpretation of compound nominalisations using corpus and web statis- tics. In ACL Workshop on Multiword Expressions, pages 54-61.",
+                "links": null
+            },
+            "BIBREF18": {
+                "ref_id": "b18",
+                "title": "A picture of search",
+                "authors": [
+                    {
+                        "first": "Greg",
+                        "middle": [],
+                        "last": "Pass",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Abdur",
+                        "middle": [],
+                        "last": "Chowdhury",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Cayley",
+                        "middle": [],
+                        "last": "Torgeson",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2006,
+                "venue": "The First International Conference on Scalable Information Systems",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Greg Pass, Abdur Chowdhury, and Cayley Torgeson. 2006. A picture of search. In The First International Conference on Scalable Information Systems.",
+                "links": null
+            },
+            "BIBREF19": {
+                "ref_id": "b19",
+                "title": "A maximum entropy model for part-of-speech tagging",
+                "authors": [
+                    {
+                        "first": "Adwait",
+                        "middle": [],
+                        "last": "Ratnaparkhi",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1996,
+                "venue": "EMNLP",
+                "volume": "",
+                "issue": "",
+                "pages": "133--142",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Adwait Ratnaparkhi. 1996. A maximum entropy model for part-of-speech tagging. In EMNLP, pages 133-142.",
+                "links": null
+            },
+            "BIBREF20": {
+                "ref_id": "b20",
+                "title": "Query segmentation for web search",
+                "authors": [
+                    {
+                        "first": "Tomasz",
+                        "middle": [],
+                        "last": "Knut Magne Risvik",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Peter",
+                        "middle": [],
+                        "last": "Mikolajewski",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Boros",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2003,
+                "venue": "WWW",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Knut Magne Risvik, Tomasz Mikolajewski, and Peter Boros. 2003. Query segmentation for web search. In WWW (Poster Session).",
+                "links": null
+            },
+            "BIBREF21": {
+                "ref_id": "b21",
+                "title": "Using \"annotator rationales\" to improve machine learning for text categorization",
+                "authors": [
+                    {
+                        "first": "Omar",
+                        "middle": [],
+                        "last": "Zaidan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jason",
+                        "middle": [],
+                        "last": "Eisner",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christine",
+                        "middle": [],
+                        "last": "Piatko",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2007,
+                "venue": "NAACL-HLT",
+                "volume": "",
+                "issue": "",
+                "pages": "260--267",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Omar Zaidan, Jason Eisner, and Christine Piatko. 2007. Using \"annotator rationales\" to improve machine learning for text categorization. In NAACL-HLT, pages 260-267.",
+                "links": null
+            },
+            "BIBREF22": {
+                "ref_id": "b22",
+                "title": "Fast statistical parsing of noun phrases for document indexing",
+                "authors": [
+                    {
+                        "first": "Chengxiang",
+                        "middle": [],
+                        "last": "Zhai",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1997,
+                "venue": "ANLP",
+                "volume": "",
+                "issue": "",
+                "pages": "312--319",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Chengxiang Zhai. 1997. Fast statistical parsing of noun phrases for document indexing. In ANLP, pages 312-319.",
+                "links": null
+            }
+        },
+        "ref_entries": {
+            "FIGREF0": {
+                "num": null,
+                "text": "1. [two man power saw] 2. [two man] [power saw] 3. [two] [man] [power saw] 4. [two] [man power] [saw], etc.",
+                "uris": null,
+                "fig_num": null,
+                "type_str": "figure"
+            },
+            "TABREF0": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "Statistical features. Name",
+                "html": null,
+                "num": null
+            },
+            "TABREF1": {
+                "content": "<table><tr><td colspan=\"2\">Feature Type Feature Span</td><td colspan=\"4\">Test Set Seg-Acc Qry-Acc Seg-Acc Qry-Acc Intersection Set</td></tr><tr><td>MI Basic Basic Basic All All All</td><td>Decision-Boundary Decision-Boundary Decision-Boundary, Context Decision-Boundary, Context, Dependency Decision-Boundary Decision-Boundary, Context Decision-Boundary, Context, Dependency</td><td>68.0 71.7 80.2 81.1 84.3 86.3 85.8</td><td>26.6 29.2 52.0* 53.2 57.8* 63.8* 61.0</td><td>73.8 77.6 85.6 86.2 86.6 89.2 88.7</td><td>34.7 39.7 62.1* 64.8 63.5 71.7* 69.4</td></tr><tr><td colspan=\"2\">our use of an expanded feature set for this task. Including Context with the expanded features adds another 2%, while adding Dependency information actually seems to hinder performance slightly, al-though gains were seen when adding Dependency information on the development set.</td><td/><td/><td/><td/></tr></table>",
+                "type_str": "table",
+                "text": "Segmentation Performance (%)",
+                "html": null,
+                "num": null
+            }
+        }
+    }
+}

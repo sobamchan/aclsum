@@ -1,0 +1,986 @@
+{
+    "paper_id": "P02-1051",
+    "header": {
+        "generated_with": "S2ORC 1.0.0",
+        "date_generated": "2023-06-16T12:12:42.115873Z"
+    },
+    "title": "Translating Named Entities Using Monolingual and Bilingual Resources",
+    "authors": [
+        {
+            "first": "Yaser",
+            "middle": [],
+            "last": "Al-Onaizan",
+            "suffix": "",
+            "affiliation": {},
+            "email": ""
+        },
+        {
+            "first": "Kevin",
+            "middle": [],
+            "last": "Knight",
+            "suffix": "",
+            "affiliation": {},
+            "email": "knight\u00a1@isi.edu"
+        }
+    ],
+    "year": "",
+    "venue": null,
+    "identifiers": {},
+    "abstract": "Named entity phrases are some of the most difficult phrases to translate because new phrases can appear from nowhere, and because many are domain specific, not to be found in bilingual dictionaries. We present a novel algorithm for translating named entity phrases using easily obtainable monolingual and bilingual resources. We report on the application and evaluation of this algorithm in translating Arabic named entities to English. We also compare our results with the results obtained from human translations and a commercial system for the same task.",
+    "pdf_parse": {
+        "paper_id": "P02-1051",
+        "_pdf_hash": "",
+        "abstract": [
+            {
+                "text": "Named entity phrases are some of the most difficult phrases to translate because new phrases can appear from nowhere, and because many are domain specific, not to be found in bilingual dictionaries. We present a novel algorithm for translating named entity phrases using easily obtainable monolingual and bilingual resources. We report on the application and evaluation of this algorithm in translating Arabic named entities to English. We also compare our results with the results obtained from human translations and a commercial system for the same task.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            }
+        ],
+        "body_text": [
+            {
+                "text": "Named entity phrases are being introduced in news stories on a daily basis in the form of personal names, organizations, locations, temporal phrases, and monetary expressions. While the identification of named entities in text has received significant attention (e.g., Mikheev et al. (1999) and Bikel et al. (1999) ), translation of named entities has not. This translation problem is especially challenging because new phrases can appear from nowhere, and because many named-entities are domain specific, not to be found in bilingual dictionaries.",
+                "cite_spans": [
+                    {
+                        "start": 269,
+                        "end": 290,
+                        "text": "Mikheev et al. (1999)",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 295,
+                        "end": 314,
+                        "text": "Bikel et al. (1999)",
+                        "ref_id": "BIBREF1"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "A system that specializes in translating named entities such as the one we describe here would be an important tool for many NLP applications. Statisti-cal machine translation systems can use such a system as a component to handle phrase translation in order to improve overall translation quality. Cross-Lingual Information Retrieval (CLIR) systems could identify relevant documents based on translations of named entity phrases provided by such a system. Question Answering (QA) systems could benefit substantially from such a tool since the answer to many factoid questions involve named entities (e.g., answers to who questions usually involve Persons/Organizations, where questions involve Locations, and when questions involve Temporal Expressions).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "In this paper, we describe a system for Arabic-English named entity translation, though the technique is applicable to any language pair and does not require especially difficult-to-obtain resources.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "The rest of this paper is organized as follows. In Section 2, we give an overview of our approach. In Section 3, we describe how translation candidates are generated. In Section 4, we show how monolingual clues are used to help re-rank the translation candidates list. In Section 5, we describe how the candidates list can be extended using contextual information. We conclude this paper with the evaluation results of our translation algorithm on a test set. We also compare our system with human translators and a commercial system.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "The frequency of named-entity phrases in news text reflects the significance of the events they are associated with. When translating named entities in news stories of international importance, the same event will most likely be reported in many languages including the target language. Instead of having to come up with translations for the named entities often with many unknown words in one document, sometimes it is easier for a human to find a document in the target language that is similar to, but not necessarily a translation of, the original document and then extract the translations. Let's illustrate this idea with the following example:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Our Approach",
+                "sec_num": "2"
+            },
+            {
+                "text": "We would like to translate the named entities that appear in the following Arabic excerpt:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Example",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "\u00a2\u00a1 \u00a3 \u00a5\u00a4 \u00a6\u00a1 \u00a7 \u00a9 ! \u00a2\" # %$ & ' ( $ ) \u00a3 10 32 & \u00a4 54 36 7 & 8 \u00a4 \u00a69 @ \u00a7 ' ) BA DC E \u00a8\u00a4 F G IH PF Q %R \u00a3 S $ 6 ) 3T \u00a8 \u00a1 \u00a3 \u00a4 54 6 7 ' U WV \u00a4 YX \u00a7 2 `H \u00a1 R 'a F C Q E $ b dc \u00a3 \u00a1 V R \u00a3 'a fe hg $ ' i R \u00a3 ` X \u00a3 ' ) B) \u00a3 T p$ q r s6 t 9 ) \u00a7 T \u00a8R \u00a3 'a ' i fu ) B R \u00a3 `C \u00a1 \u00a3 v H 6 b ' U \u00a4 ' X H 0 ) \u00a3 xw y ! e \u00a1 \u00a7 R & X \u00a3 ' ) e ' `\u1e26 T \u00a7 $ \u00a7 H w C E $ b U C \u00a7 \u00a1 $ \u00a1 \u00a3 \u00a1 H ) \u00a3 \u00a1 \u00a7 R \u00a3 $ 6 $ ) \u00a7 \u00a1 \u00a3 \u00a4 ' i ' \u00a1",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Example",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "The Arabic newspaper article from which we extracted this excerpt is about negotiations between the US and North Korean authorities regarding the search for the remains of US soldiers who died during the Korean war.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Example",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "We presented the Arabic document to a bilingual speaker and asked them to translate the locations \"",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Example",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "\u00a1 \u00a3 v H 6 b ' U t\u0161wzyn E \u00a8\u00a4 F h \u02d8z\u0101n\", \" E $ b U C \u00a8\u0101wns\u0101-",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Example",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "n\", and \" \u00a7 $ \u00a7 H w kw\u01e7\u0101n\u01e7.\" The translations they provided were Chozin Reserve, Onsan, and Kojanj. It is obvious that the human attempted to sound out names and despite coming close, they failed to get them correctly as we will see later.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Example",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "When translating unknown or unfamiliar names, one effective approach is to search for an English document that discusses the same subject and then extract the translations. For this example, we start by creating the following Web query that we use with the search engine:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Example",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "Search Query 1: soldiers remains, search, North Korea, and US.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Example",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "This query returned many hits. The top document returned by the search engine 1 we used contained the following paragraph:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Example",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "The targeted area is near Unsan, which saw several battles between the U.S. This search query returned only 3 documents. The first one is the above document. The third is the top level page for the second document. The second document contained the following excerpt:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Example",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "Operations in 2001 will include areas of investigation near Kaechon, approximately 18 miles south of Unsan and Kujang. Kaechon includes an area nicknamed the \"Gauntlet,\" where the U.S. Army's 2nd Infantry Division conducted its famous fighting withdrawal along a narrow road through six miles of Chinese ambush positions during November and December 1950. More than 950 missing in action soldiers are believed to be located in these three areas.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Example",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "The Chosin Reservoir campaign left approximately 750 Marines and soldiers missing in action from both the east and west sides of the reservoir in northeastern North Korea. This human translation method gives us the correct translation for the names we are interested in.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Example",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "Inspired by this, our goal is to tackle the named entity translation problem using the same approach described above, but fully automatically and using the least amount of hard-to-obtain bilingual resources.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Two-Step Approach",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "As shown in Figure 1 , the translation process in our system is carried out in two main steps. Given a named entity in the source language, our translation algorithm first generates a ranked list of translation candidates using bilingual and monolingual resources, which we describe in the Section 3. Then, the list of candidates is re-scored using different monolingual clues (Section 4). ",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 19,
+                        "end": 20,
+                        "text": "1",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Two-Step Approach",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "Named entity phrases can be identified fairly accurately (e.g., Bikel et al. (1999) report an F-MEASURE of 94.9%). In addition to identifying phrase boundaries, named-entity identifiers also provide the category and sub-category of a phrase (e.g., ENTITY NAME, and PERSON). Different types of named entities are translated differently and hence our candidate generator has a specialized module for each type. Numerical and temporal expressions typically use a limited set of vocabulary words (e.g., names of months, days of the week, etc.) and can be translated fairly easily using simple translation patterns. Therefore, we will not address them in this paper. Instead we will focus on person names, locations, and organizations. But before we present further details, we will discuss how words can be transliterated (i.e., \"sounded-out\"), which is a crucial component of our named entity translation algorithm.",
+                "cite_spans": [
+                    {
+                        "start": 64,
+                        "end": 83,
+                        "text": "Bikel et al. (1999)",
+                        "ref_id": "BIBREF1"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Producing Translation Candidates",
+                "sec_num": "3"
+            },
+            {
+                "text": "Transliteration is the process of replacing words in the source language with their approximate phonetic or spelling equivalents in the target language. Transliteration between languages that use similar alphabets and sound systems is very simple. However, transliterating names from Arabic into English is a non-trivial task, mainly due to the differences in their sound and writing systems. Vowels in Arabic come in two varieties: long vowels and short vowels. Short vowels are rarely written in Arabic in newspaper text, which makes pronunciation and meaning highly ambiguous. Also, there is no oneto-one correspondence between Arabic sounds and English sounds. For example, English P and B are both mapped into Arabic \" ( \u00a7 b\"; Arabic \" h . \" and \"\u00a1 h-\" into English H; and so on. Stalls and Knight (1998) present an Arabic-to-English back-transliteration system based on the source-channel framework. The transliteration process is based on a generative model of how an English name is transliterated into Arabic. It consists of several steps, each is defined as a probabilistic model represented as a finite state machine. First, an English word is generated according to its unigram probabilities \u00a2 \u00a4\u00a3 \u00a6\u00a5 \u00a8 \u00a7 . Then, the English word is pronounced with probability \u00a2 \u00a4\u00a3 \u00a6\u00a9 \u00a5 \u00a7 , which is col- lected directly from an English pronunciation dictionary. Finally, the English phoneme sequence is converted into Arabic writing with probability \u00a2 \u00a4\u00a3 \u00a6 \u00a9 \u00a7 .",
+                "cite_spans": [
+                    {
+                        "start": 785,
+                        "end": 809,
+                        "text": "Stalls and Knight (1998)",
+                        "ref_id": "BIBREF6"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Transliteration",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "According to this model, the transliteration probability is given by the following equation:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Transliteration",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "\u00a2 \u00a3 \u00a6\u00a5 ! \u00a7 #\" %$ '& )( \u00a8\u00a2 \u00a4\u00a3 \u00a6\u00a5 \u00a7 0\u00a2 \u00a4\u00a3 \u00a6\u00a9 ! \u00a5 \u00a7 0\u00a2 \u00a4\u00a3 \u00a6 \u00a9 1 \u00a7 (1)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Transliteration",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "The transliterations proposed by this model are generally accurate. However, one serious limitation of this method is that only English words with known pronunciations can be produced. Also, human translators often transliterate words based on how they are spelled in the source language. For example, Graham is transliterated into Arabic as \" %$ \u00a1 \u00a4 & \u0121r\u0101h\u0101m\" and not as \" \u00a4 & \u0121r\u0101m\". To ad- dress these limitations, we extend this approach by using a new spelling-based model in addition to the phonetic-based model.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Transliteration",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "The spelling-based model we propose (described in detail in (Al-Onaizan and Knight, 2002) ) directly maps English letter sequences into Arabic letter sequences with probability \u00a2 \u00a4\u00a3 \u00a6 \u00a5 \u00a7 , which are trained on a small English/Arabic name list without the need for English pronunciations. Since no pronunciations are needed, this list is easily obtainable for many language pairs. We also extend the model \u00a2 \u00a4\u00a3 \u00a6\u00a5 \u00a7 to in- clude a letter trigram model in addition to the word unigram model. This makes it possible to generate words that are not already defined in the word unigram model. The transliteration score according to this model is given by:",
+                "cite_spans": [
+                    {
+                        "start": 60,
+                        "end": 89,
+                        "text": "(Al-Onaizan and Knight, 2002)",
+                        "ref_id": "BIBREF0"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Transliteration",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "\u00a2 \u00a1 \u00a3 \u00a6\u00a5 \u00a7 \" %\u00a2 \u00a4\u00a3 \u00a6\u00a5 \u00a7 0\u00a2 \u00a4\u00a3 \u00a6 \u00a5 \u00a7 (2)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Transliteration",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "The phonetic-based and spelling-based models are combined into a single transliteration model.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Transliteration",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "The transliteration score for an English word \u00a5 given an Arabic word is a linear combination of the phonetic-based and the spelling-based transliteration scores as follows:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Transliteration",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "\u00a2 \u00a4\u00a3 \u00a5 ! \u00a7 \u00a3\u00a2 \u00a4 \u00a2 \u00a1 \u00a3 \u00a6\u00a5 ! \u00a7 \u00a6\u00a5 \u00a3 \u00a8 \u00a7 \u00a9 \u00a4 \u00a7 0\u00a2 \u00a3 \u00a6\u00a5 \u00a7 (3)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Transliteration",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "Person names are almost always transliterated. The translation candidates for typical person names are generated using the transliteration module described above. Finite-state devices produce a lattice containing all possible transliterations for a given name. The candidate list is created by extracting the n-best transliterations for a given name. The score of each candidate in the list is the transliteration probability as given by Equation 3. For example, the name \" E H ' ) c @) \u00a3 0 klyntwn ) \u00a3 \u00a1 \u00a7",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Producing Candidates for Person Names",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "byl\" is transliterated into: Bell Clinton, Bill Clinton, Bill Klington, etc.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Producing Candidates for Person Names",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "Words in organization and location names, on the other hand, are either translated (e.g., \" E \u00a8\u00a4 F h \u02d8z\u0101n\" as Reservoir) or transliterated (e.g., \"",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Producing Candidates for Location and Organization Names",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "\u00a1 \u00a3 v H 6 b ' U",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Producing Candidates for Location and Organization Names",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "t\u0161wzyn\" as Chosin), and it is not clear when a word must be translated and when it must be transliterated. So to generate translation candidates for a given phrase , words in the phrase are first trans- lated using a bilingual dictionary and they are also transliterated. Our candidate generator combines the dictionary entries and n-best transliterations for each word in the given phrase into a regular expression that accepts all possible permutations of word translation/transliteration combinations. In addition to the word transliterations and translations, English zero-fertility words (i.e., words that might not have Arabic equivalents in the named entity phrase such as of and the) are considered. This regular expression is then matched against a large English news corpus. All matches are then scored according to their individual word translation/transliteration scores. The score for a given candidate \u00a9 is given by a modified IBM Model 1 probability (Brown et al., 1993) as follows:",
+                "cite_spans": [
+                    {
+                        "start": 965,
+                        "end": 985,
+                        "text": "(Brown et al., 1993)",
+                        "ref_id": "BIBREF2"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Producing Candidates for Location and Organization Names",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "\u00a2 \u00a4\u00a3 \u00a6\u00a9 ! \u00a7 \u00a2 $ & \u00a2 \u00a4\u00a3 \u00a6\u00a9 \u00a7 (4) \u00a2 $ \"! $# &% \u00a1' (' (' $ 0) \u00a1# &% 1 2 3 # 54 76 \u00a3 8 3 \u00a9 \u00a89 \u00a7 (5)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Producing Candidates for Location and Organization Names",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "where @ is the length of \u00a9 , A is the length of , is a scaling factor based on the number of matches of \u00a9 found, and 3 is the index of the En- glish word aligned with 3 according to alignment . The probability 6 \u00a3 \u00a6\u00a9 \u00a89 3 \u00a7 is a linear combination of the transliteration and translation score, where the translation score is a uniform probability over all dictionary entries for 3 .",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Producing Candidates for Location and Organization Names",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "The scored matches form the list of translation candidates. For example, the candidate list for \"",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Producing Candidates for Location and Organization Names",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "\u00a4 \u00a6\u00a1 \u00a3 v $ ) q r \u00a8al-h \u02d8n\u0101zyr B \u00a7 ) \u00a3 0 h",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Producing Candidates for Location and Organization Names",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "\u02d8ly\u01e7\" includes Bay of Pigs and Gulf of Pigs.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Producing Candidates for Location and Organization Names",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "Once a ranked list of translation candidates is generated for a given phrase, several monolingual English resources are used to help re-rank the list. The candidates are re-ranked according to the following",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Re-Scoring Candidates",
+                "sec_num": "4"
+            },
+            {
+                "text": "equation: C ED ( $F \u00a3 $G \u00a7 H\u00a2 C 5I QP \u00a3 8G \u00a7 SR UT WV \u00a4\u00a3 8G \u00a7 (6)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Re-Scoring Candidates",
+                "sec_num": "4"
+            },
+            {
+                "text": "where T WV \u00a4\u00a3 8G \u00a7 is the re-scoring factor used.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Re-Scoring Candidates",
+                "sec_num": "4"
+            },
+            {
+                "text": "Straight Web Counts: (Grefenstette, 1999 ) used phrase Web frequency to disambiguate possible English translations for German and Spanish compound nouns. We use normalized Web counts of named entity phrases as the first re-scoring factor used to rescore translation candidates. For the \" E H ' ) c @) \u00a3 0 klyntwn ) \u00a3 \u00a1 \u00a7 . The Web frequency counts of these two names are: \u00a7 \"q f and r sq ta u vr sq q respectively. This gives us revised scores of \u00a7 X \u00a1 R \u00a7 a b and f X f r R \u00a7 (a b 4 % , respectively, which leads to the correct translation being ranked highest.",
+                "cite_spans": [
+                    {
+                        "start": 21,
+                        "end": 40,
+                        "text": "(Grefenstette, 1999",
+                        "ref_id": "BIBREF4"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Re-Scoring Candidates",
+                "sec_num": "4"
+            },
+            {
+                "text": "It is important to consider counts for the full name rather than the individual words in the name to get accurate counts. To illustrate this point consider the person name \" ) \u00a3 Bw To use these normalized counts to score and rank the first name/last name combinations in a way similar to a unigram language model, we would get the following name/score pairs: (John Keele, 0.003), (John Kyl, 0.001), (Jon Keele, 0.0002), and (Jon Kyl, g uX \u00a1\u00a4 R \u00a7 (a b \u00a6\u00a5 ). However, the normalized phrase counts for the possible full names are: (Jon Kyl, 0.8976), (John Kyl, 0.0936), (John Keele, 0.0087), and (Jon Keele, 0.0001), which is more desirable as Jon Kyl is an often-mentioned US Senator.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Re-Scoring Candidates",
+                "sec_num": "4"
+            },
+            {
+                "text": "Co-reference: When a named entity is first mentioned in a news article, typically the full form of the phrase (e.g., the full name of a person) is used. Later references to the name often use a shortened version of the name (e.g, the last name of the person). Shortened versions are more ambiguous by nature than the full version of a phrase and hence more difficult to translate. Also, longer phrases tend to have more accurate Web counts than shorter ones as we have shown above. For example, the phrase \" ( \u00a7 \u00a8H ) \u00a5T \u00a8alnw\u0101b \u00a7 0 q \u00a7 \u00a8m \u01e7ls\" is translated as the House of Rep- resentatives. The word \" \u00a7 0 39 @ \u00a7 \u00a9 \u00a8al-m\u01e7ls\" 2 might be used for later references to this phrase. In that case, we are confronted with the task of translating \" \u00a7 0 39 @ \u00a7 \u00a9 \u00a8al-m\u01e7ls\" which is ambiguous and could refer to a number of things including: the Council when referring to \" \u00a8almn \u00a7 0 q \u00a7 \u00a8m \u01e7ls\" (the Se- curity Council); the House when referring to ' ( \u00a7 \u00a8H ) T \u00e4l-nw\u0101b \u00a7 0 q \u00a7 \u00a8m \u01e7ls\" (the House of Representatives);",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Re-Scoring Candidates",
+                "sec_num": "4"
+            },
+            {
+                "text": "and as the Assembly when referring to \" ' \u00a6 \u00a8almt \u00a7 0 q \u00a7 \u00a8m \u01e7ls\" (National Assembly).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Re-Scoring Candidates",
+                "sec_num": "4"
+            },
+            {
+                "text": "2 \" ! \u00a3\" # %$ al-m\u01e7ls\" is the same word as \" & ' ( m\u01e7ls\" but with the definite article ) \u00a3$ a-attached.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Re-Scoring Candidates",
+                "sec_num": "4"
+            },
+            {
+                "text": "If we are able to determine that in fact it was referring to the House of Representatives, then, we can translate it accurately as the House. This can be done by comparing the shortened phrase with the rest of the named entity phrases of the same type. If the shortened phrase is found to be a sub-phrase of only one other phrase, then, we conclude that the shortened phrase is another reference to the same named entity. In that case we use the counts of the longer phrase to re-rank the candidates of the shorter one.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Re-Scoring Candidates",
+                "sec_num": "4"
+            },
+            {
+                "text": "Contextual The challenge is to find the contextual information that provide the most accurate counts. We have experimented with several techniques to identify the contextual information automatically. Some of these techniques use document-wide contextual information such as the title of the document or select key terms mentioned in the document. One way to identify those key terms is to use the tf.idf measure. Others use contextual information that is local to the named entity in question such as the 2 words that precede and/or succeed the named entity or other named entities mentioned closely to the one in question.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Re-Scoring Candidates",
+                "sec_num": "4"
+            },
+            {
+                "text": "The re-scoring methods described above assume that the correct translation is in the candidates list. When it is not in the list, the re-scoring will fail. To address this situation, we need to extrapolate from the candidate list. We do this by searching for the correct translation rather than generating it. We do that by using sub-phrases from the candidates list or by searching for documents in the target language similar to the one being translated. For example, for a person name, instead of searching for the full name, we search for the first name and the last name separately. Then, we use the IdentiFinder named entity identifier (Bikel et al., 1999) to identify all named entities in the top 2 retrieved documents for each sub-phrase. All named entities of the type of the named entity in question (e.g., PER-SON) found in the retrieved documents and that contain the sub-phrase used in the search are scored using our transliteration module and added to the list of translation candidates, and the re-scoring is repeated.",
+                "cite_spans": [
+                    {
+                        "start": 642,
+                        "end": 662,
+                        "text": "(Bikel et al., 1999)",
+                        "ref_id": "BIBREF1"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Extending the Candidates List",
+                "sec_num": "5"
+            },
+            {
+                "text": "To illustrate this method, consider the name \" E $ ) 3& n\u0101n R \u00a3 `H w kwfy.\" Our translation module proposes:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Extending the Candidates List",
+                "sec_num": "5"
+            },
+            {
+                "text": "Coffee Annan, Coffee Engen, Coffee Anton, Coffee Anyone, and Covey Annan but not the correct translation Kofi Annan. We would like to find the most common person names that have either one of Coffee or Covey as a first name; or Annan, Engen, Anton, or Anyone as a last name. One way to do this is to search using wild cards. Since we are not aware of any search engine that allows wild-card Web search, we can perform a wild-card search instead over our news corpus. The problem is that our news corpus is dated material, and it might not contain the information we are interested in. In this case, our news corpus, for example, might predate the appointment of Kofi Annan as the Secretary General of the UN. Alternatively, using a search engine, we retrieve the top 2 matching documents for each of the names Coffee, Covey, Annan, Engen, Anton, and Anyone. All person names found in the retrieved documents that contain any of the first or last names we used in the search are added to the list of translation candidates. We hope that the correct translation is among the names found in the retrieved documents. The rescoring procedure is applied once more on the expanded candidates list. In this example, we add Kofi Annan to the candidate list, and it is subsequently ranked at the top.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Extending the Candidates List",
+                "sec_num": "5"
+            },
+            {
+                "text": "To address cases where neither the correct translation nor any of its sub-phrases can be found in the list of translation candidates, we attempt to search for, instead of generating, translation candidates. This can be done by searching for a document in the target language that is similar to the one being translated from the source language. This is especially useful when translating named entities in news stories of international importance where the same event will most likely be reported in many languages including the target language. We currently do this by repeating the extrapolation procedure described above but this time using contextual information such as the title of the original document to find similar documents in the target language. Ideally, one would use a Cross-Lingual IR system to find relevant documents more successfully.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Extending the Candidates List",
+                "sec_num": "5"
+            },
+            {
+                "text": "This section presents our evaluation results on the named entity translation task. We compare the translation results obtained from human translations, a commercial MT system, and our named entity translation system. The evaluation corpus consists of two different test sets, a development test set and a blind test set. The first set consists of 21 Arabic newspaper articles taken from the political affairs section of the daily newspaper Al-Riyadh. Named entity phrases in these articles were hand-tagged according to the MUC (Chinchor, 1997) guidelines. They were then translated to English by a bilingual speaker (a native speaker of Arabic) given the text they appear in. The Arabic phrases were then paired with their English translations.",
+                "cite_spans": [
+                    {
+                        "start": 528,
+                        "end": 544,
+                        "text": "(Chinchor, 1997)",
+                        "ref_id": "BIBREF3"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Test Set",
+                "sec_num": "6.1"
+            },
+            {
+                "text": "The blind test set consists of 20 Arabic newspaper articles that were selected from the political section of the Arabic daily Al-Hayat. The articles have already been translated into English by professional translators. 3 Named entity phrases in these articles were hand-tagged, extracted, and paired with their English translations to create the blind test set.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Test Set",
+                "sec_num": "6.1"
+            },
+            {
+                "text": "Table 1 shows the distribution of the named entity phrases into the three categories PERSON, ORGA-NIZATION , and LOCATION in the two data sets.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 6,
+                        "end": 7,
+                        "text": "1",
+                        "ref_id": "TABREF2"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Test Set",
+                "sec_num": "6.1"
+            },
+            {
+                "text": "The English translations in the two data sets were reviewed thoroughly to correct any wrong translations made by the original translators. For example, to find the correct translation of a politician's name, official government web pages were used to find the correct spelling. In cases where the translation could not be verified, the original translation provided by the human translator was considered the \"correct\" translation. The Arabic phrases and their correct translations constitute the gold-standard translation for the two test sets. According to our evaluation criteria, only translations that match the gold-standard are considered as correct. In some cases, this criterion is too rigid, as it will consider perfectly acceptable translations as incorrect. However, since we use it mainly to compare our results with those obtained from the human translations and the commercial system, this criterion is sufficient. The actual accuracy figures might be slightly higher than what we report here.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Test Set",
+                "sec_num": "6.1"
+            },
+            {
+                "text": "In order to evaluate human performance at this task, we compared the translations by the original human translators with the correct translations on the goldstandard. The errors made by the original human translators turned out to be numerous, ranging from simple spelling errors (e.g., Custa Rica vs. Costa Rica) to more serious errors such as transliteration errors (e.g., John Keele vs. Jon Kyl) and other translation errors (e.g., Union Reserve Council vs. Federal Reserve Board).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Evaluation Results",
+                "sec_num": "6.2"
+            },
+            {
+                "text": "The Arabic documents were also translated using a commercial Arabic-to-English translation system. 4 The translation of the named entity phrases are then manually extracted from the translated text. When compared with the gold-standard, nearly half of the phrases in the development test set and more than a third of the blind test were translated incorrectly by the commercial system. The errors can be classified into several categories including: poor transliterations (e.g., Koln Baol vs. Colin Powell), translating a name instead of sounding it out (e.g., O'Neill's urine vs. Paul O'Neill), wrong translation (e.g., Joint Corners Organization vs. Joint Chiefs of Staff) or wrong word order (e.g.,the Church of the Orthodox Roman).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Evaluation Results",
+                "sec_num": "6.2"
+            },
+            {
+                "text": "Table 2 shows a detailed comparison of the translation accuracy between our system, the commercial system, and the human translators. The translations obtained by our system show significant improvement over the commercial system. In fact, in some cases it outperforms the human translator. When we consider the top-20 translations, our system's overall accuracy (84%) is higher than the human's (75.3%) on the blind test set. This means that there is a lot of room for improvement once we consider more effective re-scoring methods. Also, the top-20 list in itself is often useful in providing phrasal translation candidates for general purpose statistical machine translation systems or other NLP systems.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 6,
+                        "end": 7,
+                        "text": "2",
+                        "ref_id": "TABREF3"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Evaluation Results",
+                "sec_num": "6.2"
+            },
+            {
+                "text": "The strength of our translation system is in translating person names, which indicates the strength of our transliteration module. This might also be attributed to the low named entity coverage of our bilingual dictionary. In some cases, some words that need to be translated (as opposed to transliterated) are not found in our bilingual dictionary which may lead to incorrect location or organization translations but does not affect person names. The reason word translations are sometimes not found in the dictionary is not necessarily because of the spotty coverage of the dictionary but because of the way we access definitions in the dictionary. Only shallow morphological analysis (e.g., removing prefixes and suffixes) is done before accessing the dictionary, whereas a full morphological analysis is necessary, especially for morphologically rich languages such as Arabic. Another reason for doing poorly on organizations is that acronyms and abbreviations in the Arabic text (e.g., \" \u00a8C w\u0101s,\" the Saudi Press Agency) are currently not handled by our system.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Evaluation Results",
+                "sec_num": "6.2"
+            },
+            {
+                "text": "The blind test set was selected from the FBIS 2001 Multilingual Corpus. The FBIS data is collected by the Foreign Broadcast Information Service for the benefit of the US government. We suspect that the human translators who translated the documents into English are somewhat familiar with the genre of the articles and hence the named entities Web counts within a given context (we used here title of the document as the contextual information). In Co-reference, if the phrase to be translated is part of a longer phrase then we use the the ranking of the candidates for the longer phrase to re-rank the candidates of the short one, otherwise we leave the list as is.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Evaluation Results",
+                "sec_num": "6.2"
+            },
+            {
+                "text": "that appear in the text. On the other hand, the development test set was randomly selected by us from our pool of Arabic articles and then submitted to the human translator. Therefore, the human translations in the blind set are generally more accurate than the human translations in the development test. Another reason might be the fact that the human translator who translated the development test is not a professional translator.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Evaluation Results",
+                "sec_num": "6.2"
+            },
+            {
+                "text": "The only exception to this trend is organizations. After reviewing the translations, we discovered that many of the organization translations provided by the human translator in the blind test set that were judged incorrect were acronyms or abbreviations for the full name of the organization (e.g., the INC instead of the Iraqi National Congress).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Evaluation Results",
+                "sec_num": "6.2"
+            },
+            {
+                "text": "As we described earlier in this paper, our translation system first generates a list of translation candidates, then re-scores them using several re-scoring methods. The list of translation candidates we used for these experiments are of size 20. The re-scoring methods are applied incrementally where the reranked list of one module is the input to the next module. Table 3 shows the translation accuracy after each of the methods we evaluated.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 373,
+                        "end": 374,
+                        "text": "3",
+                        "ref_id": "TABREF4"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Effects of Re-Scoring",
+                "sec_num": "6.3"
+            },
+            {
+                "text": "The most effective re-scoring method was the simplest, the straight Web counts. This is because re-scoring methods are applied incrementally and straight Web counts was the first to be applied, and so it helps to resolve the \"easy\" cases, whereas the other methods are left with the more \"difficult\" cases. It would be interesting to see how rearranging the order in which the modules are applied might affect the overall accuracy of the system.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Effects of Re-Scoring",
+                "sec_num": "6.3"
+            },
+            {
+                "text": "The re-scoring methods we used so far are in general most effective when applied to person name translation because corpus phrase counts are already being used by the candidate generator for producing candidates for locations and organizations, but not for persons. Also, the re-scoring methods we used were initially developed and applied to person names. More effective re-scoring methods are clearly needed especially for organization names. One method is to count phrases only if they are tagged by a named entity identifier with the same tag we are interested in. This way we can elimi-nate counting wrong translations such as enthusiasm when translating \" $ 2 h . m\u0101s\" (Hamas).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Effects of Re-Scoring",
+                "sec_num": "6.3"
+            },
+            {
+                "text": "We have presented a named entity translation algorithm that performs at near human translation accuracy when translating Arabic named entities to English. The algorithm uses very limited amount of hard-to-obtain bilingual resources and should be easily adaptable to other languages. We would like to apply to other languages such as Chinese and Japanese and to investigate whether the current algorithm would perform as well or whether new algorithms might be needed.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion and Future Work",
+                "sec_num": "7"
+            },
+            {
+                "text": "Currently, our translation algorithm does not use any dictionary of named entities and they are translated on the fly. Translating a common name incorrectly has a significant effect on the translation accuracy. We would like to experiment with adding a small named entity translation dictionary for common names and see if this might improve the overall translation accuracy.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion and Future Work",
+                "sec_num": "7"
+            },
+            {
+                "text": "The Arabic articles along with their English translations were part of the FBIS 2001 Multilingual corpus.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "We used Sakhr's Web-based translation system available at http://tarjim.ajeeb.com/.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            }
+        ],
+        "back_matter": [
+            {
+                "text": "This work was supported by DARPA-ITO grant N66001-00-1-9814.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Acknowledgments",
+                "sec_num": null
+            }
+        ],
+        "bib_entries": {
+            "BIBREF0": {
+                "ref_id": "b0",
+                "title": "Machine Transliteration of Names in Arabic Text",
+                "authors": [
+                    {
+                        "first": "Yaser",
+                        "middle": [],
+                        "last": "Al-Onaizan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kevin",
+                        "middle": [],
+                        "last": "Knight",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2002,
+                "venue": "Proceedings of the ACL Workshop on Computational Approaches to Semitic Languages",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Yaser Al-Onaizan and Kevin Knight. 2002. Machine Translit- eration of Names in Arabic Text. In Proceedings of the ACL Workshop on Computational Approaches to Semitic Lan- guages.",
+                "links": null
+            },
+            "BIBREF1": {
+                "ref_id": "b1",
+                "title": "An algorithm that learns what's in a name",
+                "authors": [
+                    {
+                        "first": "M",
+                        "middle": [],
+                        "last": "Daniel",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Richard",
+                        "middle": [],
+                        "last": "Bikel",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ralph",
+                        "middle": [
+                            "M"
+                        ],
+                        "last": "Schwartz",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Weischedel",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1999,
+                "venue": "Machine Learning",
+                "volume": "34",
+                "issue": "1/3",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Daniel M. Bikel, Richard Schwartz, and Ralph M. Weischedel. 1999. An algorithm that learns what's in a name. Machine Learning, 34(1/3).",
+                "links": null
+            },
+            "BIBREF2": {
+                "ref_id": "b2",
+                "title": "The Mathematics of Statistical Machine Translation: Parameter Estimation",
+                "authors": [
+                    {
+                        "first": "P",
+                        "middle": [
+                            "F"
+                        ],
+                        "last": "Brown",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "S",
+                        "middle": [
+                            "A"
+                        ],
+                        "last": "Della-Pietra",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "V",
+                        "middle": [
+                            "J"
+                        ],
+                        "last": "Della-Pietra",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "R",
+                        "middle": [
+                            "L"
+                        ],
+                        "last": "Mercer",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1993,
+                "venue": "Computational Linguistics",
+                "volume": "19",
+                "issue": "2",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "P. F. Brown, S. A. Della-Pietra, V. J. Della-Pietra, and R. L. Mercer. 1993. The Mathematics of Statistical Machine Translation: Parameter Estimation. Computational Linguis- tics, 19(2).",
+                "links": null
+            },
+            "BIBREF3": {
+                "ref_id": "b3",
+                "title": "MUC-7 Named Entity Task Definition",
+                "authors": [
+                    {
+                        "first": "Nancy",
+                        "middle": [],
+                        "last": "Chinchor",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1997,
+                "venue": "Proceedings of the 7th Message Understanding Conference",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Nancy Chinchor. 1997. MUC-7 Named Entity Task Definition. In Proceedings of the 7th Message Understanding Confer- ence. http://www.muc.saic.com/.",
+                "links": null
+            },
+            "BIBREF4": {
+                "ref_id": "b4",
+                "title": "The WWW as a Resource for Example-Based MT Tasks",
+                "authors": [
+                    {
+                        "first": "Gregory",
+                        "middle": [],
+                        "last": "Grefenstette",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1999,
+                "venue": "ASLIB'99 Translating and the Computer",
+                "volume": "21",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Gregory Grefenstette. 1999. The WWW as a Resource for Example-Based MT Tasks. In ASLIB'99 Translating and the Computer 21.",
+                "links": null
+            },
+            "BIBREF5": {
+                "ref_id": "b5",
+                "title": "Named Entity Recognition without Gazetteers",
+                "authors": [
+                    {
+                        "first": "Andrei",
+                        "middle": [],
+                        "last": "Mikheev",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Marc",
+                        "middle": [],
+                        "last": "Moens",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Calire",
+                        "middle": [],
+                        "last": "Grover",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1999,
+                "venue": "Proceedings of the EACL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Andrei Mikheev, Marc Moens, and Calire Grover. 1999. Named Entity Recognition without Gazetteers. In Proceed- ings of the EACL.",
+                "links": null
+            },
+            "BIBREF6": {
+                "ref_id": "b6",
+                "title": "Translating Names and Technical Terms in Arabic Text",
+                "authors": [
+                    {
+                        "first": "Bonnie",
+                        "middle": [
+                            "G"
+                        ],
+                        "last": "Stalls",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kevin",
+                        "middle": [],
+                        "last": "Knight",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1998,
+                "venue": "Proceedings of the COLING/ACL Workshop on Computational Approaches to Semitic Languages",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Bonnie G. Stalls and Kevin Knight. 1998. Translating Names and Technical Terms in Arabic Text. In Proceedings of the COLING/ACL Workshop on Computational Approaches to Semitic Languages.",
+                "links": null
+            }
+        },
+        "ref_entries": {
+            "FIGREF0": {
+                "num": null,
+                "text": "Figure 1: A sketch of our named entity translation system.",
+                "uris": null,
+                "fig_num": null,
+                "type_str": "figure"
+            },
+            "FIGREF1": {
+                "num": null,
+                "text": "byl\" example, the top two translation candidates are Bell Clinton with transliteration score \u00a7 X Y \u00a7 \u00a1R ` \u00a7 (a cb % ed and Bill Clinton with score f X hg SR i \u00a7 (a b 4 p%",
+                "uris": null,
+                "fig_num": null,
+                "type_str": "figure"
+            },
+            "FIGREF2": {
+                "num": null,
+                "text": "The transliteration module proposes Jon and John as possible transliterations for the first name, and Keele and Kyl among others for the last name. The normalized counts for the individual words are: (John, 0.9269), (Jon, 0.0688), (Keele, 0.0032), and (Kyl, 0.0011).",
+                "uris": null,
+                "fig_num": null,
+                "type_str": "figure"
+            },
+            "TABREF2": {
+                "content": "<table><tr><td>Test Set</td><td colspan=\"2\">PERSON ORG LOC</td></tr><tr><td>Development</td><td>33.57</td><td>25.62 40.81</td></tr><tr><td>Blind</td><td>28.38</td><td>21.96 49.66</td></tr></table>",
+                "type_str": "table",
+                "text": "The distribution of named entities in the test sets into the categories PERSON, ORGANI-ZATION , and LOCATION. The numbers shown are the ratio of each category to the total.",
+                "html": null,
+                "num": null
+            },
+            "TABREF3": {
+                "content": "<table><tr><td>System</td><td colspan=\"3\">Accuracy (%) PERSON ORG LOC Overall</td></tr><tr><td>Human</td><td colspan=\"2\">60.00</td><td>71.70 86.10 73.70</td></tr><tr><td>Sakhr</td><td colspan=\"2\">29.47</td><td>51.72 72.73 52.80</td></tr><tr><td>Top-1 Results</td><td colspan=\"2\">77.20</td><td>43.30 69.00 65.20</td></tr><tr><td>Top-20 Results</td><td colspan=\"2\">84.80</td><td>55.00 70.50 71.33</td></tr><tr><td colspan=\"4\">(a) Results on the Development Test Set</td></tr><tr><td>System</td><td colspan=\"3\">Accuracy (%) PERSON ORG LOC Overall</td></tr><tr><td>Human</td><td colspan=\"2\">67.89</td><td>42.20 94.68 75.30</td></tr><tr><td>Sakhr</td><td colspan=\"2\">47.71</td><td>36.05 80.80 61.30</td></tr><tr><td>Top-1 Results</td><td colspan=\"2\">64.24</td><td>51.00 86.68 72.57</td></tr><tr><td>Top-20 Results</td><td colspan=\"2\">78.84</td><td>70.80 92.86 84.00</td></tr><tr><td colspan=\"4\">(b) Results on the Blind Test Set</td></tr><tr><td>Module</td><td/><td colspan=\"2\">Accuracy (%) PERSON ORG LOC Overall</td></tr><tr><td>Candidate Generator</td><td/><td>59.85</td><td>31.67 54.00 49.96</td></tr><tr><td>Straight Web Counts</td><td/><td>75.76</td><td>37.97 63.37 61.02</td></tr><tr><td colspan=\"2\">Contextual Web Counts</td><td>75.76</td><td>39.17 67.50 63.01</td></tr><tr><td>Co-reference</td><td/><td>77.20</td><td>43.30 69.00 65.20</td></tr><tr><td colspan=\"4\">(a) Results on the Development test set</td></tr><tr><td>Module</td><td/><td colspan=\"2\">Accuracy (%) PERSON ORG LOC Overall</td></tr><tr><td>Candidate Generator</td><td/><td>54.33</td><td>51.55 85.75 69.44</td></tr><tr><td>Straight Web Counts</td><td/><td>61.00</td><td>46.60 86.68 70.66</td></tr><tr><td colspan=\"2\">Contextual Web Counts</td><td>62.50</td><td>45.34 85.75 70.40</td></tr><tr><td>Co-reference</td><td/><td>64.24</td><td>51.00 86.68 72.57</td></tr><tr><td colspan=\"4\">(b) Results on the Blind Test Set</td></tr></table>",
+                "type_str": "table",
+                "text": "A comparison of translation accuracy for the human translator, commercial system, and our system on the development and blind test sets. Only a match with the translation in the gold-standard is considered a correct translation. The human translator results are obtained by comparing the translations provided by the original human translator with the translations in the gold-standard. The Sakhr results are for the Web version of Sakhr's commercial system. The Top-1 results of our system considers whether the correct answer is the top candidate or not, while the Top-20 results considers whether the correct answer is among the top-20 candidates. Overall is a weighted average of the three named entity categories.",
+                "html": null,
+                "num": null
+            },
+            "TABREF4": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "This table shows the accuracy after each translation module. The modules are applied incremen-",
+                "html": null,
+                "num": null
+            }
+        }
+    }
+}

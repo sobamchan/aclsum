@@ -1,0 +1,2153 @@
+{
+    "paper_id": "N10-1034",
+    "header": {
+        "generated_with": "S2ORC 1.0.0",
+        "date_generated": "2023-06-16T11:55:25.231973Z"
+    },
+    "title": "Fast Query for Large Treebanks",
+    "authors": [
+        {
+            "first": "Sumukh",
+            "middle": [],
+            "last": "Ghodke",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "University of Melbourne",
+                "location": {
+                    "postCode": "3010",
+                    "settlement": "Victoria",
+                    "country": "Australia"
+                }
+            },
+            "email": ""
+        },
+        {
+            "first": "Steven",
+            "middle": [],
+            "last": "Bird",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "University of Melbourne",
+                "location": {
+                    "postCode": "3010",
+                    "settlement": "Victoria",
+                    "country": "Australia"
+                }
+            },
+            "email": ""
+        },
+        {
+            "first": "\u2020",
+            "middle": [],
+            "last": "Linguistic",
+            "suffix": "",
+            "affiliation": {},
+            "email": ""
+        },
+        {
+            "first": "Data",
+            "middle": [],
+            "last": "Consortium",
+            "suffix": "",
+            "affiliation": {},
+            "email": ""
+        }
+    ],
+    "year": "",
+    "venue": null,
+    "identifiers": {},
+    "abstract": "A variety of query systems have been developed for interrogating parsed corpora, or treebanks. With the arrival of efficient, widecoverage parsers, it is feasible to create very large databases of trees. However, existing approaches that use in-memory search, or relational or XML database technologies, do not scale up. We describe a method for storage, indexing, and query of treebanks that uses an information retrieval engine. Several experiments with a large treebank demonstrate excellent scaling characteristics for a wide range of query types. This work facilitates the curation of much larger treebanks, and enables them to be used effectively in a variety of scientific and engineering tasks.",
+    "pdf_parse": {
+        "paper_id": "N10-1034",
+        "_pdf_hash": "",
+        "abstract": [
+            {
+                "text": "A variety of query systems have been developed for interrogating parsed corpora, or treebanks. With the arrival of efficient, widecoverage parsers, it is feasible to create very large databases of trees. However, existing approaches that use in-memory search, or relational or XML database technologies, do not scale up. We describe a method for storage, indexing, and query of treebanks that uses an information retrieval engine. Several experiments with a large treebank demonstrate excellent scaling characteristics for a wide range of query types. This work facilitates the curation of much larger treebanks, and enables them to be used effectively in a variety of scientific and engineering tasks.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            }
+        ],
+        "body_text": [
+            {
+                "text": "The problem of representing and querying linguistic annotations has been an active area of research for several years. Much of the work has grown from efforts to curate large databases of annotated text such as treebanks, for use in developing and testing language technologies (Marcus et al., 1993; Abeill\u00e9, 2003; Hockenmaier and Steedman, 2007) . At least a dozen linguistic tree query languages have been developed for interrogating treebanks (see \u00a72).",
+                "cite_spans": [
+                    {
+                        "start": 278,
+                        "end": 299,
+                        "text": "(Marcus et al., 1993;",
+                        "ref_id": "BIBREF22"
+                    },
+                    {
+                        "start": 300,
+                        "end": 314,
+                        "text": "Abeill\u00e9, 2003;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 315,
+                        "end": 346,
+                        "text": "Hockenmaier and Steedman, 2007)",
+                        "ref_id": "BIBREF15"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "While high quality syntactic parsers are able to efficiently annotate large quantities of English text (Clark and Curran, 2007) , existing approaches to query do not work on the same scale. Many existing systems load the entire corpus into memory and check a user-supplied query against every tree. Others avoid the memory limitation, and use relational or XML database systems. Although these have built-in support for indexes, they do not scale up either (Ghodke and Bird, 2008; Zhang et al., 2001) ).",
+                "cite_spans": [
+                    {
+                        "start": 103,
+                        "end": 127,
+                        "text": "(Clark and Curran, 2007)",
+                        "ref_id": "BIBREF8"
+                    },
+                    {
+                        "start": 457,
+                        "end": 480,
+                        "text": "(Ghodke and Bird, 2008;",
+                        "ref_id": "BIBREF10"
+                    },
+                    {
+                        "start": 481,
+                        "end": 500,
+                        "text": "Zhang et al., 2001)",
+                        "ref_id": "BIBREF38"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "The ability to interrogate large collections of parsed text has important practical applications. First, it opens the way to a new kind of information retrieval (IR) that is sensitive to syntactic information, permitting users to do more focussed search. At the simplest level, an ambiguous query term like wind or park could be disambiguated with the help of a POS tag (e.g. wind/N, park/V). (Existing IR engines already support query with part-of-speech tags (Chowdhury and McCabe, 1998) ). More complex queries could stipulate the syntactic category of apple is in subject position.",
+                "cite_spans": [
+                    {
+                        "start": 461,
+                        "end": 489,
+                        "text": "(Chowdhury and McCabe, 1998)",
+                        "ref_id": "BIBREF7"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "A second benefit of large scale tree query is for natural language processing. For example, we might compute the likelihood that a given noun appears as the agent or patient of a verb, as a measure of animacy. We can use features derived from syntactic trees in order to support semantic role labeling, language modeling, and information extraction (Chen and Rambow, 2003; Collins et al., 2005; Hakenberg et al., 2009) . A further benefit for natural language processing, though not yet realized, is for a treebank and query engine to provide the underlying storage and retrieval for a variety of linguistic applications. Just as a relational database is present in most business applications, providing reliable and efficient access to relational data, such a system would act as a repository of annotated texts, and expose an expressive API to client applications.",
+                "cite_spans": [
+                    {
+                        "start": 349,
+                        "end": 372,
+                        "text": "(Chen and Rambow, 2003;",
+                        "ref_id": "BIBREF6"
+                    },
+                    {
+                        "start": 373,
+                        "end": 394,
+                        "text": "Collins et al., 2005;",
+                        "ref_id": "BIBREF9"
+                    },
+                    {
+                        "start": 395,
+                        "end": 418,
+                        "text": "Hakenberg et al., 2009)",
+                        "ref_id": "BIBREF11"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "A third benefit of large scale tree query is to support syntactic investigations, e.g. for develop-ing syntactic theories or preparing materials for language learners. Published treebanks will usually not attest particular words in the context of some infrequent construction, to the detriment of syntactic studies that make predictions about such combinations, and language learners wanting to see instances of some construction involving words from some specialized topic. A much larger treebank alleviates these problems. To improve recall performance, multiple parses for a given sentence could be stored (possibly derived from different parsers).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "A fourth benefit for large scale tree query is to support the curation of treebanks, a major enterprise in its own right (Abeill\u00e9, 2003) . Manual selection and correction of automatically generated parse trees is a substantial part of the task of preparing a treebank. At the point of making such decisions, it is often helpful for an annotator to view existing annotations of a given construction which have already been manually validated (Hiroshi et al., 2005) . Occasionally, an earlier annotation decision may need to be reconsidered in the light of new examples, leading to further queries and to corrections that are spread across the whole corpus (Wallis, 2003; Xue et al., 2005) .",
+                "cite_spans": [
+                    {
+                        "start": 121,
+                        "end": 136,
+                        "text": "(Abeill\u00e9, 2003)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 441,
+                        "end": 463,
+                        "text": "(Hiroshi et al., 2005)",
+                        "ref_id": "BIBREF14"
+                    },
+                    {
+                        "start": 655,
+                        "end": 669,
+                        "text": "(Wallis, 2003;",
+                        "ref_id": "BIBREF36"
+                    },
+                    {
+                        "start": 670,
+                        "end": 687,
+                        "text": "Xue et al., 2005)",
+                        "ref_id": "BIBREF37"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "This paper explores a new methods for scaling up tree query using an IR engine. In \u00a72 we describe existing tree query systems, elaborating on the design decisions, and on key aspects of their implementation and performance. In \u00a73 we describe a method for indexing trees using an IR engine, and discuss the details of our open source implementation. In \u00a74 we report results from a variety of experiments involving two data collections. The first collection contains of 5.5 million parsed trees, two orders of magnitude larger than those used by existing tree query systems, while the second collection contains 26.5 million trees.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "A tree query system needs to be able to identify trees having particular properties. On the face of it, this should be possible to achieve by writing simple programs over treebank files on disk. The programs would match tree structures using regular expression patterns, possibly augmented with syntax for matching tree structure. However, tree query is a more complex and interesting task, due to several factors which we list below.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Treebank Query",
+                "sec_num": "2"
+            },
+            {
+                "text": "There are many varieties of treebank. Some extend the nested bracketing syntax to store morphological information. Others store complex attribute-value matrices in tree nodes or have tree-valued attributes (Oepen et al., 2002) , or store dependency structures ( \u010cmejrek et al., 2004) , or categorial grammar derivations (Hockenmaier and Steedman, 2007) . Others store multiple overlapping trees (Cassidy and Harrington, 2001; Heid et al., 2004; Volk et al., 2007) .",
+                "cite_spans": [
+                    {
+                        "start": 206,
+                        "end": 226,
+                        "text": "(Oepen et al., 2002)",
+                        "ref_id": "BIBREF30"
+                    },
+                    {
+                        "start": 260,
+                        "end": 283,
+                        "text": "( \u010cmejrek et al., 2004)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 320,
+                        "end": 352,
+                        "text": "(Hockenmaier and Steedman, 2007)",
+                        "ref_id": "BIBREF15"
+                    },
+                    {
+                        "start": 395,
+                        "end": 425,
+                        "text": "(Cassidy and Harrington, 2001;",
+                        "ref_id": "BIBREF4"
+                    },
+                    {
+                        "start": 426,
+                        "end": 444,
+                        "text": "Heid et al., 2004;",
+                        "ref_id": "BIBREF13"
+                    },
+                    {
+                        "start": 445,
+                        "end": 463,
+                        "text": "Volk et al., 2007)",
+                        "ref_id": "BIBREF35"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Structure of the data:",
+                "sec_num": null
+            },
+            {
+                "text": "Form of results: Do we want entire trees, or matching subtrees, or just a count of the number of results? Do we need some indication of why the query matched a particular tree, perhaps by showing how query terms relate to a hit, cf. document snippets and highlighted words in web search results? Do we want to see multiple hits when a query matches a particular tree in more than one place? Do we want to see tree diagrams, or some machinereadable tree representation that can be used in external analysis? Can a query serve to update the treebank, cf. SQL update queries? Number of results: Do we want all results, or the first n results in document order, or the \"best\" n results, where our notion of best might be based on representativeness or distinctiveness.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Structure of the data:",
+                "sec_num": null
+            },
+            {
+                "text": "Description language: Do we prefer to describe trees by giving examples of tree fragments, replacing some nodes replaced with wildcards (Hiroshi et al., 2005; Ichikawa et al., 2006; M\u00edrovsk\u00fd, 2006) ? Or do we prefer a path language (Rohde, 2005; Lai and Bird, 2010) ? Or perhaps we prefer a language involving variables, quantifiers, boolean operators, and negation (K\u00f6nig and Lezius, 2001; Kepser, 2003; Pajas and \u0160t\u011bp\u00e1nek, 2009) ? What built-in tree relations are required, beyond the typical parent/child, ancestor/descendent, sibling and temporal relations? (E.g. last child, leftmost descendent, parent's following sibling, pronoun's antecedent.) Do we need to describe tree nodes using regular expressions, or attributes and values? Do we need a type system, a pattern language, or boolean logic for talking about attribute values? The expressive requirements of the query language have been discussed at length elsewhere (Lai and Bird, 2004; M\u00edrovsk\u00fd, 2008) , and we will not consider them further here.",
+                "cite_spans": [
+                    {
+                        "start": 136,
+                        "end": 158,
+                        "text": "(Hiroshi et al., 2005;",
+                        "ref_id": "BIBREF14"
+                    },
+                    {
+                        "start": 159,
+                        "end": 181,
+                        "text": "Ichikawa et al., 2006;",
+                        "ref_id": "BIBREF16"
+                    },
+                    {
+                        "start": 182,
+                        "end": 197,
+                        "text": "M\u00edrovsk\u00fd, 2006)",
+                        "ref_id": "BIBREF27"
+                    },
+                    {
+                        "start": 232,
+                        "end": 245,
+                        "text": "(Rohde, 2005;",
+                        "ref_id": "BIBREF32"
+                    },
+                    {
+                        "start": 246,
+                        "end": 265,
+                        "text": "Lai and Bird, 2010)",
+                        "ref_id": "BIBREF20"
+                    },
+                    {
+                        "start": 366,
+                        "end": 390,
+                        "text": "(K\u00f6nig and Lezius, 2001;",
+                        "ref_id": "BIBREF18"
+                    },
+                    {
+                        "start": 391,
+                        "end": 404,
+                        "text": "Kepser, 2003;",
+                        "ref_id": "BIBREF17"
+                    },
+                    {
+                        "start": 405,
+                        "end": 430,
+                        "text": "Pajas and \u0160t\u011bp\u00e1nek, 2009)",
+                        "ref_id": "BIBREF31"
+                    },
+                    {
+                        "start": 928,
+                        "end": 948,
+                        "text": "(Lai and Bird, 2004;",
+                        "ref_id": "BIBREF19"
+                    },
+                    {
+                        "start": 949,
+                        "end": 964,
+                        "text": "M\u00edrovsk\u00fd, 2008)",
+                        "ref_id": "BIBREF28"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Structure of the data:",
+                "sec_num": null
+            },
+            {
+                "text": "Performance: What performance is acceptable, especially as the data size grows? Do we want to optimize multiple reformulations of a query, for users who iteratively refine a query based on query results? Do we want to optimize certain query types? Are queries performed interactively or in batch mode? Is the treebank stable, or being actively revised, in which case indexes need to be easily updatable? Do we expect logically identical queries to have the same performance, so that users do not have to rewrite their queries for efficiency? Key performance measures are index size and search times.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Structure of the data:",
+                "sec_num": null
+            },
+            {
+                "text": "Architecture: Is the query system standalone, or does it exist in a client-server architecture? Is there a separate user-interface layer that interacts with a data server using a well-defined API, or is it a monolithic system? Should it translate queries into another language, such as SQL (Bird et al., 2006; Nakov et al., 2005) , or XQuery (Cassidy, 2002; Mayo et al., 2006) , or to automata (Maryns and Kepser, 2009) , in order to benefit from the performance optimizations they provide Indexing. The indexing methods used in individual systems are usually not reported. Many systems display nearly constant time for querying a database, regardless of the selectivity of a query, a strong indicator that no indexes are being used. For example, Emu performs all queries in memory with no indexes, and several others are likely to be the same (Cassidy and Harrington, 2001; K\u00f6nig and Lezius, 2001; Heid et al., 2004) . TGrep2 (Rohde, 2005) uses a custom corpus file and processes it sentence by sentence at query execution time. Other tree query systems use hashed indexes or other types of inmemory indexes. However, a common drawback of these systems is that they are designed for treebanks that are at most a few million words in size, and do not scale well to much larger treebanks.",
+                "cite_spans": [
+                    {
+                        "start": 290,
+                        "end": 309,
+                        "text": "(Bird et al., 2006;",
+                        "ref_id": "BIBREF2"
+                    },
+                    {
+                        "start": 310,
+                        "end": 329,
+                        "text": "Nakov et al., 2005)",
+                        "ref_id": "BIBREF29"
+                    },
+                    {
+                        "start": 342,
+                        "end": 357,
+                        "text": "(Cassidy, 2002;",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 358,
+                        "end": 376,
+                        "text": "Mayo et al., 2006)",
+                        "ref_id": "BIBREF24"
+                    },
+                    {
+                        "start": 394,
+                        "end": 419,
+                        "text": "(Maryns and Kepser, 2009)",
+                        "ref_id": "BIBREF23"
+                    },
+                    {
+                        "start": 844,
+                        "end": 874,
+                        "text": "(Cassidy and Harrington, 2001;",
+                        "ref_id": "BIBREF4"
+                    },
+                    {
+                        "start": 875,
+                        "end": 898,
+                        "text": "K\u00f6nig and Lezius, 2001;",
+                        "ref_id": "BIBREF18"
+                    },
+                    {
+                        "start": 899,
+                        "end": 917,
+                        "text": "Heid et al., 2004)",
+                        "ref_id": "BIBREF13"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Structure of the data:",
+                "sec_num": null
+            },
+            {
+                "text": "There are many positions to be taken on the above questions. Our goal is not to argue for a particular data format or query style, but rather to demonstrate a powerful technique for indexing and querying treebanks which should be applicable to most of the above scenarios.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Structure of the data:",
+                "sec_num": null
+            },
+            {
+                "text": "In this section we discuss two methods of storing and indexing trees. The first uses a relational database and linguistic queries are translated into SQL, while the second uses an inverted index approach based on an open source IR engine, Lucene.1 Relational databases are a mature technology and are known to be efficient at performing joins and accessing data using indexes. Information retrieval engines using term vectors, on the other hand, efficiently retrieve documents relevant to a query. IR engines are known to scale well, but they do not support complex queries. A common feature of both the IR and database approaches is the adoption of so-called \"tree labeling\" schemes.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Indexing Trees",
+                "sec_num": "3"
+            },
+            {
+                "text": "Tree queries specify node labels (\"value constraints\") and structural relationships between nodes of interest (\"structural constraints\"). A simple value constraint could look for a wh noun phrase by specifying the WHNP; such queries are efficiently implemented using indexes. Structural relationships cannot be indexed like node labels. A term in a sentence will have multiple relationships with other terms in the same sentence. Indexing all pairs of terms that exist in a given structural relationship results in an explosion in the index size. Instead, the standard approach is to store position information with each occurrence of a term, using a table or a term vector, and then use the position information to find structural matches. Many systems use this approach, from early object databases such as Lore (McHugh et al., 1997) , to relational representation of tree data (Bird et al., 2006) and XISS/R (Harding et al., 2003) , and native XML databases such as eXist (Meier, 2003) . Here, the position is encoded via node labeling schemes, and is designed so it can support efficient testing of a variety of structural relations.",
+                "cite_spans": [
+                    {
+                        "start": 814,
+                        "end": 835,
+                        "text": "(McHugh et al., 1997)",
+                        "ref_id": "BIBREF25"
+                    },
+                    {
+                        "start": 880,
+                        "end": 899,
+                        "text": "(Bird et al., 2006)",
+                        "ref_id": "BIBREF2"
+                    },
+                    {
+                        "start": 911,
+                        "end": 933,
+                        "text": "(Harding et al., 2003)",
+                        "ref_id": "BIBREF12"
+                    },
+                    {
+                        "start": 975,
+                        "end": 988,
+                        "text": "(Meier, 2003)",
+                        "ref_id": "BIBREF26"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Tree labeling schemes",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "A labeling scheme based on pre-order and postorder labeling of nodes is the foundation for several extended schemes. It can be used for efficiently detecting that two nodes are in a hierarchical (or inclusion) relationship. Other labeling schemes are based on the Dewey scheme, in which each node contains Figure 1 : Generating node labels a hierarchical label in which numbers are separated by periods (Tatarinov et al., 2002) . A child node gets its label by appending its position relative to its siblings to its parent's label. This scheme can be used for efficiently detecting that two nodes are in a hierarchical or sequential (temporal) relationship.",
+                "cite_spans": [
+                    {
+                        "start": 403,
+                        "end": 427,
+                        "text": "(Tatarinov et al., 2002)",
+                        "ref_id": "BIBREF33"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 313,
+                        "end": 314,
+                        "text": "1",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Tree labeling schemes",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "The LPath numbering scheme assigns four integer labels to each node (Bird et al., 2006) . The generation of these labels is explained with the help of an example. Figure 1 is the graphical representation of a parse tree for a sentence with 7 words, w 1 \u2022 \u2022 \u2022 w 7 . Let A, B, C, D, E, and S represent the annotation tags. Some nodes at different positions in the tree share a common name.",
+                "cite_spans": [
+                    {
+                        "start": 68,
+                        "end": 87,
+                        "text": "(Bird et al., 2006)",
+                        "ref_id": "BIBREF2"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 170,
+                        "end": 171,
+                        "text": "1",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Tree labeling schemes",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "The first step in labeling is to identify the sequential positions between words, as shown beneath the parse tree in Figure 1 . The left id of a terminal node is the sequence position immediately to the left of a node, while its right id is the one to its immediate right. The left id of a non-terminal node is the left id of its leftmost descendant, and the right id is the right id of its rightmost descendant. In most cases the ancestor-descendant and preceding-following relationships between two elements can be evaluated using the left and right ids alone. The sequential ids do not differentiate between two nodes where one is the lone child of the other. The depth id is therefore required in such cases and to identify the child node (depth values are shown on the left side of Figure 1 ). In order to check if two given nodes are siblings, the above three ids will not suffice. We therefore assign a common parent id label to siblings. These four identifiers together enable us to identify relationships between elements without traversing trees. 1 . We can see that the parent id of the third A and second B are equal because they are siblings.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 124,
+                        "end": 125,
+                        "text": "1",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 794,
+                        "end": 795,
+                        "text": "1",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 1057,
+                        "end": 1058,
+                        "text": "1",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Tree labeling schemes",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "Once these numbers are assigned to each node, the nodes can be stored independently without loss of any structural information (in either a relational database or an inverted index). At query execution time, the set of elements on either side of an operator are extracted and only those node numbers that satisfy the operator's specification are selected as the result. For example, if the operator is the child relation, and the operands are A and B, then there are two matches: B{3, 4, 4, 4}, child of A{2, 4, 3, 2} and, B{7, 8, 4, 10}, child of A{5, 8, 3, 8}.2 This process of finding the elements of a document that match operators is nothing other than the standard join operation (and it is implemented differently in relational databases and IR engines).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Tree labeling schemes",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "Tree nodes can be stored in a relational database using a table structure (Bird et al., 2006) . Each treebank would have a single table for all nodes where each node's information is stored in a tuple. The node name is stored along with other position information and the sentence id. Every node tuple also has a unique primary key. The parent id column is a foreign key, referencing the parent node's id, speeding up parent/child join operations. In practice, queries are translated from higher level linguistic query languages such as LPath into SQL automatically, allowing users to use a convenient syntax, rather than query using SQL.",
+                "cite_spans": [
+                    {
+                        "start": 74,
+                        "end": 93,
+                        "text": "(Bird et al., 2006)",
+                        "ref_id": "BIBREF2"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Relational database approach",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "Previous research on a similar database structure for containment queries in XML databases showed that databases are generally slower than specialised IR indexes (Zhang et al., 2001) . In that work, the authors provide results comparing their IR join algorithm, the multi-predicate merge join (MPMGJN), with two standard relational join algorithms. They consider the number of comparisons performed in the standard merge join and the index nested loop join, and contrast these with their IR join algorithm. They show that the IR algorithm performs fewer comparisons than a standard merge join but greater than the index nested loop join.",
+                "cite_spans": [
+                    {
+                        "start": 162,
+                        "end": 182,
+                        "text": "(Zhang et al., 2001)",
+                        "ref_id": "BIBREF38"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Relational database approach",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "The multi-predicate merge join exploits the fact that nodes are encountered in document order (i.e. a node appears before its descendents). Search within a document can be aborted as soon as it is clear that further searching will not yield further results. Importantly, this IR join algorithm is faster than both relational join algorithms in practice, since it makes much better use of the hardware disk cache. Our own experiments with a large treebank stored in an Oracle database have demonstrated that this shortcoming of relational query relative to IR query exists in the linguistic domain (Ghodke and Bird, 2008) .",
+                "cite_spans": [
+                    {
+                        "start": 597,
+                        "end": 620,
+                        "text": "(Ghodke and Bird, 2008)",
+                        "ref_id": "BIBREF10"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Relational database approach",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "We transform the task of searching treebanks into a conventional document retrieval task in which each sentence is treated as a document. Tree node labels are stored in inverted indexes just like words in a text index. We require two types of indexes, for frequency and position. The frequency index for a node label contains a list of sentence ids and, for each one, a count indicating the frequency of the node label in the sentence. (Labels with a frequency of zero do not appear in this index.) The position index is used to store node numbers for each occurrence of the node label. The numbers at each position are read into memory as objects only when required (at other times, the byte numbers are skipped over for efficiency). During query processing, the frequency indexes are first traversed sequentially to find a document that contains all the required elements in the query. Once a document is found, the structural constraints are checked using the data stored in the position index for that document. The document itself does not need to be loaded.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "IR engine approach",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "Using an inverted index for searching structured data is not new, and several XML databases already use this method to index XML elements (Meier, 2003) . However, linguistic query systems are special purpose applications where the unit of retrieval is usually a sentence. A given tree may satisfy a query in multiple places, but we only identify which sentences are relevant. Finding all matches within a sentence requires further processing. 3Our approach has been to process each sentence as a document. By fixing the unit of retrieval to be the sentence, we are able to greatly reduce the size of intermediate results when performing a series of joins. The task is then to simply check whether a sentence satisfies a query or not. This can be done using substantially less resources than is needed for finding sets of nodes, the unit of retrieval for relational and XML databases. When processing a series of joins, we use a single buffer to store the node positions required to perform the next join in the series. After computing that join and processing another operator in the query, the buffer contents is replaced with a new set of nodes, discarding the intermediate information.",
+                "cite_spans": [
+                    {
+                        "start": 138,
+                        "end": 151,
+                        "text": "(Meier, 2003)",
+                        "ref_id": "BIBREF26"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "IR engine approach",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "We used two data collections in our experiments. The first collection is a portion of the English Gigaword Corpus, parsed in the Penn Treebank format. We used the TnT tagger and the DBParser trained on the Wall Street Journal section of the Penn Treebank to parse sentences in the corpus. The total size of the corpus is about 5.5 million sentences. The TGrep2 corpus file for this corpus is about 1.8 GB and the Lucene index is 4 GB on disk. The second data collection is a portion of English Wikipedia, again tagged and parsed using TnT tagger and DB-Parser, respectively. This collection contains 26.5 million parsed sentences. The TGrep2 corpus file corresponding to this collection is about 6.6 GB and the Lucene index is 14 GB on disk. ",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Data",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "Query performance depends largely on the nature of the individual queries, therefore we present a detailed analysis of the query types and their corresponding results in this section.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Types of queries",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "Selectivity: A query term that has few corresponding hits in the corpus will be considered to have high selectivity. The selectivity of whole queries depends not only on the selectivity of their individual elements, but also on how frequently these terms satisfy the structural constraints specified by the query. Table 2 gives execution times for queries with varying selectivity, using our system. We assign a selectivity measure for the operator based on how often the two operands satisfy the structural condition. It is clear that when elements are very common and they frequently satisfy the structural constraints of the operator, there are bound to be more run-time structural checks and the performance deteriorates. This is demonstrated by the time taken by the first query. Note the relatively small difference in the execution time between the second and third queries. The third query contains a high selectivity element and even returns fewer matches compared to the second, but takes almost as long. This may be due to the relative frequency of the tags within each sentence, which we have not controled in this experiment. If there are several LST tags in the sentences where it appears, there are likely to be greater number of searches within each sentence. A better join algorithm would improve the performance in such cases.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 320,
+                        "end": 321,
+                        "text": "2",
+                        "ref_id": "TABREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Types of queries",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "A multiple regression analysis of the full search (cold start) times for collection 2 shows that lowselectivity labels contribute 9.5 seconds, and a lowselectivity operator contributes 6.7 seconds, and that this accounts for most of the variability in the timing data (t = -1.53 + 9.51 * N 1 + 6.72 * op + 9.44 * N 2 , R 2 = 0.8976). This demonstrates that the distribution of full search (cold start) times is mostly accounted for by the index load time, with the time for computing a large join being a secondary cost.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Types of queries",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "The full search (warm start) times in Table 2 pay a lesser index loading cost.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 44,
+                        "end": 45,
+                        "text": "2",
+                        "ref_id": "TABREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Types of queries",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "Query length: It is evident that the system must retrieve and process more term vectors as we increase the number of elements in a query. To find out exactly how the query length affects processing, we ran tests with three sets of queries. In each set we varied the number of elements in a dominance relationship with another node of the same name. The number of terms in the dominance relationship was varied from 1 to 6, where the first case is equivalent to just finding all terms with that name. In the first set, queries search for nested noun phrases (NP), while the second and third look for adjective phrases (ADJP) and list elements (LST) respectively. These terms have been chosen to simultaneously study the effects of selectivity and query length, with NP being the least selective (or most common), followed by ADJP, then with LST being the most selective (or least common). NP is also more frequently self-nested than the others. Figure 2 plots query length (x-axis) against query execution time (y-axis, log scale) for the three sets, using our system. With each step on the x-axis, a query will have an extra descendant node. For example, at position 3 for element A, the query would be //A//A//A. The circles on the plot are proportional to the log of the result set size. The biggest circle is for //NP which is of the order of 5.4 million, while there are only 4 trees in which LST is nested 4 times. LST is not nested 5 or more times. Similarly, ADJP returns 0 results for the 6th test query and hence there are no circles at these locations. The thick lines on the plot indicate the average cold start run time over three runs, while the dashed line shows the minimum average run time of 4 sets, with the query executed 5 times in each set. Together, the pairs of unbroken and dashed lines indicate the variation in run time depending on the state of the system. 4",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 951,
+                        "end": 952,
+                        "text": "2",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Types of queries",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "4 We can observe from the results that the variation be-",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Types of queries",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "The measurement techniques vary for TGrep and the IR based approach. In TGrep the corpus file is loaded each time during query processing, but in the IR approach an index once loaded can operate faster than a cold start.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Measurement techniques",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "In order to understand the variations in the operating speed we plot the variation in times from a cold start to a repeat query, as shown in Table 3 .",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 147,
+                        "end": 148,
+                        "text": "3",
+                        "ref_id": "TABREF2"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Measurement techniques",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "tween cold start and warm start correlates with query length. The length experiment here use a single term repeated multiple times. However, there is a possibility that the results may vary when the terms are different, because it would involve additional time to load the term vectors of distinct elements into memory. ",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Measurement techniques",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "We have shown how an IR engine can be used to build a high performance tree query system. It outperforms existing approaches using indexless inmemory search, or custom indexes, or relational database systems, or XML database systems. We reported the results of a variety of experiments to demonstrate the efficiency of query for a variety of query types on two treebanks consisting of around 5 and 26 million sentences, more than two orders of magnitude larger than what existing systems support. The approach is quite general, and not limited to particular treebank formats or query languages. This work suggests that web-scale tree query may soon be feasible. This opens the door to some interesting possibilities: augmenting web search with syntactic constraints, the ability discover rare examples of particular syntactic constructions, and as a technique for garnering better statistics and more sensitive features for the purpose of constructing language models.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusions",
+                "sec_num": "5"
+            },
+            {
+                "text": "http://lucene.apache.org/",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "The node labels are represented as an ordered set here for brevity. Their positions match the headings in Table1.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "Several alternate path joins and improvements to the MPMGJN algorithm have been proposed over the years to overcome the problem of large number of intermediate nodes and to reduce unnecessary joins(Al-Khalifa et al., 2002;Li and Moon, 2001). Bruno et al.'s work on twig joins further improved on those efforts by processing an entire query twig in a holistic fashion(Bruno et al., 2002), and has since been further optimized.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            }
+        ],
+        "back_matter": [
+            {
+                "text": "We gratefully acknowledge support from Microsoft Research India and the University of Melbourne.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Acknowledgments",
+                "sec_num": null
+            }
+        ],
+        "bib_entries": {
+            "BIBREF0": {
+                "ref_id": "b0",
+                "title": "Treebanks: Building and Using Parsed Corpora. Text, Speech and Language Technology",
+                "authors": [],
+                "year": 2003,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Anne Abeill\u00e9, editor. 2003. Treebanks: Building and Using Parsed Corpora. Text, Speech and Language Technology. Kluwer.",
+                "links": null
+            },
+            "BIBREF1": {
+                "ref_id": "b1",
+                "title": "Structural joins: A primitive for efficient XML query pattern matching",
+                "authors": [
+                    {
+                        "first": "Shurug",
+                        "middle": [],
+                        "last": "Al-Khalifa",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "H",
+                        "middle": [
+                            "V"
+                        ],
+                        "last": "Jagadish",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nick",
+                        "middle": [],
+                        "last": "Koudas",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jignesh",
+                        "middle": [
+                            "M"
+                        ],
+                        "last": "Patel",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Divesh",
+                        "middle": [],
+                        "last": "Srivastava",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yuqing",
+                        "middle": [],
+                        "last": "Wu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2002,
+                "venue": "ICDE '02: Proc. 18th Intl Conf on Data Engineering",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Shurug Al-Khalifa, H.V. Jagadish, Nick Koudas, Jig- nesh M. Patel, Divesh Srivastava, and Yuqing Wu. 2002. Structural joins: A primitive for efficient XML query pattern matching. In ICDE '02: Proc. 18th Intl Conf on Data Engineering, page 141. IEEE Computer Society.",
+                "links": null
+            },
+            "BIBREF2": {
+                "ref_id": "b2",
+                "title": "Designing and evaluating an XPath dialect for linguistic queries",
+                "authors": [
+                    {
+                        "first": "Steven",
+                        "middle": [],
+                        "last": "Bird",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yi",
+                        "middle": [],
+                        "last": "Chen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Susan",
+                        "middle": [
+                            "B"
+                        ],
+                        "last": "Davidson",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Haejoong",
+                        "middle": [],
+                        "last": "Lee",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yifeng",
+                        "middle": [],
+                        "last": "Zheng",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2006,
+                "venue": "ICDE '06: Proc. 22nd Intl Conf on Data Engineering",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Steven Bird, Yi Chen, Susan B. Davidson, Haejoong Lee, and Yifeng Zheng. 2006. Designing and evaluating an XPath dialect for linguistic queries. In ICDE '06: Proc. 22nd Intl Conf on Data Engineering, page 52. IEEE Computer Society.",
+                "links": null
+            },
+            "BIBREF3": {
+                "ref_id": "b3",
+                "title": "Holistic twig joins: optimal XML pattern matching",
+                "authors": [
+                    {
+                        "first": "Nicolas",
+                        "middle": [],
+                        "last": "Bruno",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nick",
+                        "middle": [],
+                        "last": "Koudas",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Divesh",
+                        "middle": [],
+                        "last": "Srivastava",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2002,
+                "venue": "SIGMOD '02: Proc. 2002 ACM SIG-MOD Intl Conf on Management of Data",
+                "volume": "",
+                "issue": "",
+                "pages": "310--321",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Nicolas Bruno, Nick Koudas, and Divesh Srivastava. 2002. Holistic twig joins: optimal XML pattern matching. In SIGMOD '02: Proc. 2002 ACM SIG- MOD Intl Conf on Management of Data, pages 310- 321. ACM.",
+                "links": null
+            },
+            "BIBREF4": {
+                "ref_id": "b4",
+                "title": "Multilevel annotation of speech: an overview of the Emu Speech Database Management System",
+                "authors": [
+                    {
+                        "first": "Steve",
+                        "middle": [],
+                        "last": "Cassidy",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jonathan",
+                        "middle": [],
+                        "last": "Harrington",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2001,
+                "venue": "",
+                "volume": "33",
+                "issue": "",
+                "pages": "61--77",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Steve Cassidy and Jonathan Harrington. 2001. Multi- level annotation of speech: an overview of the Emu Speech Database Management System. Speech Com- munication, 33:61-77.",
+                "links": null
+            },
+            "BIBREF5": {
+                "ref_id": "b5",
+                "title": "Xquery as an annotation query language: a use case analysis",
+                "authors": [
+                    {
+                        "first": "Steve",
+                        "middle": [],
+                        "last": "Cassidy",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2002,
+                "venue": "Proc. 3rd LREC",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Steve Cassidy. 2002. Xquery as an annotation query lan- guage: a use case analysis. In Proc. 3rd LREC.",
+                "links": null
+            },
+            "BIBREF6": {
+                "ref_id": "b6",
+                "title": "Use of deep linguistic features for the recognition and labeling of semantic arguments",
+                "authors": [
+                    {
+                        "first": "John",
+                        "middle": [],
+                        "last": "Chen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Owen",
+                        "middle": [],
+                        "last": "Rambow",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2003,
+                "venue": "Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "41--48",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "John Chen and Owen Rambow. 2003. Use of deep lin- guistic features for the recognition and labeling of se- mantic arguments. In Empirical Methods in Natural Language Processing, pages 41-48.",
+                "links": null
+            },
+            "BIBREF7": {
+                "ref_id": "b7",
+                "title": "Performance improvements to vector space information retrieval systems with POS",
+                "authors": [
+                    {
+                        "first": "Abdur",
+                        "middle": [],
+                        "last": "Chowdhury",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "M",
+                        "middle": [],
+                        "last": "",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Catherine",
+                        "middle": [],
+                        "last": "Mccabe",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1998,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Abdur Chowdhury and M. Catherine McCabe. 1998. Performance improvements to vector space informa- tion retrieval systems with POS. U Maryland.",
+                "links": null
+            },
+            "BIBREF8": {
+                "ref_id": "b8",
+                "title": "Widecoverage efficient statistical parsing with CCG and log-linear models",
+                "authors": [
+                    {
+                        "first": "Stephen",
+                        "middle": [],
+                        "last": "Clark",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "James",
+                        "middle": [
+                            "R"
+                        ],
+                        "last": "Curran",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2007,
+                "venue": "Computational Linguistics",
+                "volume": "33",
+                "issue": "4",
+                "pages": "493--552",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Stephen Clark and James R. Curran. 2007. Wide- coverage efficient statistical parsing with CCG and log-linear models. Computational Linguistics, 33(4):493-552.",
+                "links": null
+            },
+            "BIBREF9": {
+                "ref_id": "b9",
+                "title": "Discriminative syntactic language modeling for speech recognition",
+                "authors": [
+                    {
+                        "first": "Michael",
+                        "middle": [],
+                        "last": "Collins",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Brian",
+                        "middle": [],
+                        "last": "Roark",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Murat",
+                        "middle": [],
+                        "last": "Saraclar",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2005,
+                "venue": "Proc. 43rd ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "507--514",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Michael Collins, Brian Roark, and Murat Saraclar. 2005. Discriminative syntactic language modeling for speech recognition. In Proc. 43rd ACL, pages 507- 514. ACL.",
+                "links": null
+            },
+            "BIBREF10": {
+                "ref_id": "b10",
+                "title": "Querying linguistic annotations",
+                "authors": [
+                    {
+                        "first": "Sumukh",
+                        "middle": [],
+                        "last": "Ghodke",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Steven",
+                        "middle": [],
+                        "last": "Bird",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2008,
+                "venue": "Proc. 13th Australasian Document Computing Symposium",
+                "volume": "",
+                "issue": "",
+                "pages": "69--72",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Sumukh Ghodke and Steven Bird. 2008. Querying lin- guistic annotations. In Proc. 13th Australasian Docu- ment Computing Symposium, pages 69-72.",
+                "links": null
+            },
+            "BIBREF11": {
+                "ref_id": "b11",
+                "title": "Molecular event extraction from Link Grammar parse trees",
+                "authors": [
+                    {
+                        "first": "J\u00f6rg",
+                        "middle": [],
+                        "last": "Hakenberg",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Illes",
+                        "middle": [],
+                        "last": "Solt",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Domonkos",
+                        "middle": [],
+                        "last": "Tikk",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Luis",
+                        "middle": [],
+                        "last": "Tari",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Astrid",
+                        "middle": [],
+                        "last": "Rheinl\u00e4nder",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Quang",
+                        "middle": [],
+                        "last": "Nguyen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Graciela",
+                        "middle": [],
+                        "last": "Long",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ulf",
+                        "middle": [],
+                        "last": "Gonzalez",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Leser",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "Proc. BioNLP 2009 Workshop",
+                "volume": "",
+                "issue": "",
+                "pages": "86--94",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "J\u00f6rg Hakenberg, Illes Solt, Domonkos Tikk, Luis Tari, Astrid Rheinl\u00e4nder, Nguyen Quang Long, Graciela Gonzalez, and Ulf Leser. 2009. Molecular event extraction from Link Grammar parse trees. In Proc. BioNLP 2009 Workshop, pages 86-94. ACL.",
+                "links": null
+            },
+            "BIBREF12": {
+                "ref_id": "b12",
+                "title": "XISS/R: XML indexing and storage system using RDBMS",
+                "authors": [
+                    {
+                        "first": "J",
+                        "middle": [],
+                        "last": "Philip",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Quanzhong",
+                        "middle": [],
+                        "last": "Harding",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Bongki",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Moon",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2003,
+                "venue": "Proc. 29th Intl Conf on Very Large Data Bases",
+                "volume": "",
+                "issue": "",
+                "pages": "1073--1076",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Philip J Harding, Quanzhong Li, and Bongki Moon. 2003. XISS/R: XML indexing and storage system us- ing RDBMS. In Proc. 29th Intl Conf on Very Large Data Bases, pages 1073-1076. Morgan Kaufmann.",
+                "links": null
+            },
+            "BIBREF13": {
+                "ref_id": "b13",
+                "title": "Querying both time-aligned and hierarchical corpora with NXT search",
+                "authors": [
+                    {
+                        "first": "Ulrich",
+                        "middle": [],
+                        "last": "Heid",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Holger",
+                        "middle": [],
+                        "last": "Voormann",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jan-Torsten",
+                        "middle": [],
+                        "last": "Milde",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ulrike",
+                        "middle": [],
+                        "last": "Gut",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Katrin",
+                        "middle": [],
+                        "last": "Erk",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sebastian",
+                        "middle": [],
+                        "last": "Pado",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2004,
+                "venue": "Proc. 4th LREC",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ulrich Heid, Holger Voormann, Jan-Torsten Milde, Ul- rike Gut, Katrin Erk, and Sebastian Pado. 2004. Querying both time-aligned and hierarchical corpora with NXT search. In Proc. 4th LREC.",
+                "links": null
+            },
+            "BIBREF14": {
+                "ref_id": "b14",
+                "title": "eBonsai: An integrated environment for annotating treebanks",
+                "authors": [
+                    {
+                        "first": "Ichikawa",
+                        "middle": [],
+                        "last": "Hiroshi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Noguchi",
+                        "middle": [],
+                        "last": "Masaki",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hashimoto",
+                        "middle": [],
+                        "last": "Taiichi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tokunaga",
+                        "middle": [],
+                        "last": "Takenobu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tanaka",
+                        "middle": [],
+                        "last": "Hozumi",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2005,
+                "venue": "Proc. 2nd IJCNLP",
+                "volume": "",
+                "issue": "",
+                "pages": "108--113",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ichikawa Hiroshi, Noguchi Masaki, Hashimoto Taiichi, Tokunaga Takenobu, and Tanaka Hozumi. 2005. eBonsai: An integrated environment for annotating treebanks. In Proc. 2nd IJCNLP, pages 108-113.",
+                "links": null
+            },
+            "BIBREF15": {
+                "ref_id": "b15",
+                "title": "CCGbank: A corpus of CCG derivations and dependency structures extracted from the Penn Treebank",
+                "authors": [
+                    {
+                        "first": "Julia",
+                        "middle": [],
+                        "last": "Hockenmaier",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mark",
+                        "middle": [],
+                        "last": "Steedman",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2007,
+                "venue": "Computational Linguistics",
+                "volume": "33",
+                "issue": "",
+                "pages": "355--396",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Julia Hockenmaier and Mark Steedman. 2007. CCG- bank: A corpus of CCG derivations and dependency structures extracted from the Penn Treebank. Compu- tational Linguistics, 33:355-396.",
+                "links": null
+            },
+            "BIBREF16": {
+                "ref_id": "b16",
+                "title": "Efficient sentence retrieval based on syntactic structure",
+                "authors": [
+                    {
+                        "first": "Hiroshi",
+                        "middle": [],
+                        "last": "Ichikawa",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Keita",
+                        "middle": [],
+                        "last": "Hakoda",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Taiichi",
+                        "middle": [],
+                        "last": "Hashimoto",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Takenobu",
+                        "middle": [],
+                        "last": "Tokunaga",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2006,
+                "venue": "COLING/ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "399--406",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Hiroshi Ichikawa, Keita Hakoda, Taiichi Hashimoto, and Takenobu Tokunaga. 2006. Efficient sentence re- trieval based on syntactic structure. In COLING/ACL, pages 399-406.",
+                "links": null
+            },
+            "BIBREF17": {
+                "ref_id": "b17",
+                "title": "Finite Structure Query: A tool for querying syntactically annotated corpora",
+                "authors": [
+                    {
+                        "first": "Stephan",
+                        "middle": [],
+                        "last": "Kepser",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2003,
+                "venue": "Proc. 10th EACL",
+                "volume": "",
+                "issue": "",
+                "pages": "179--186",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Stephan Kepser. 2003. Finite Structure Query: A tool for querying syntactically annotated corpora. In Proc. 10th EACL, pages 179-186.",
+                "links": null
+            },
+            "BIBREF18": {
+                "ref_id": "b18",
+                "title": "The TIGER language: a description language for syntax graphs. part 1: User's guidelines",
+                "authors": [
+                    {
+                        "first": "Esther",
+                        "middle": [],
+                        "last": "K\u00f6nig",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Wolfgang",
+                        "middle": [],
+                        "last": "Lezius",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2001,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Esther K\u00f6nig and Wolfgang Lezius. 2001. The TIGER language: a description language for syntax graphs. part 1: User's guidelines. Technical report, University of Stuttgart.",
+                "links": null
+            },
+            "BIBREF19": {
+                "ref_id": "b19",
+                "title": "Querying and updating treebanks: A critical survey and requirements analysis",
+                "authors": [
+                    {
+                        "first": "Catherine",
+                        "middle": [],
+                        "last": "Lai",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Steven",
+                        "middle": [],
+                        "last": "Bird",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2004,
+                "venue": "Proc. Australasian Language Technology Workshop",
+                "volume": "",
+                "issue": "",
+                "pages": "139--146",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Catherine Lai and Steven Bird. 2004. Querying and up- dating treebanks: A critical survey and requirements analysis. In Proc. Australasian Language Technology Workshop, pages 139-146.",
+                "links": null
+            },
+            "BIBREF20": {
+                "ref_id": "b20",
+                "title": "Querying linguistic trees",
+                "authors": [
+                    {
+                        "first": "Catherine",
+                        "middle": [],
+                        "last": "Lai",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Steven",
+                        "middle": [],
+                        "last": "Bird",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2010,
+                "venue": "Journal of Logic, Language and Information",
+                "volume": "19",
+                "issue": "",
+                "pages": "53--73",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Catherine Lai and Steven Bird. 2010. Querying linguis- tic trees. Journal of Logic, Language and Information, 19:53-73.",
+                "links": null
+            },
+            "BIBREF21": {
+                "ref_id": "b21",
+                "title": "Indexing and querying XML data for regular path expressions",
+                "authors": [
+                    {
+                        "first": "Quanzhong",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Bongki",
+                        "middle": [],
+                        "last": "Moon",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2001,
+                "venue": "VLDB '01: Proc. 27th Intl Conf on Very Large Data Bases",
+                "volume": "",
+                "issue": "",
+                "pages": "361--370",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Quanzhong Li and Bongki Moon. 2001. Indexing and querying XML data for regular path expressions. In VLDB '01: Proc. 27th Intl Conf on Very Large Data Bases, pages 361-370. Morgan Kaufmann.",
+                "links": null
+            },
+            "BIBREF22": {
+                "ref_id": "b22",
+                "title": "Building a large annotated corpus of English: The Penn Treebank",
+                "authors": [
+                    {
+                        "first": "Mitchell",
+                        "middle": [
+                            "P"
+                        ],
+                        "last": "Marcus",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Beatrice",
+                        "middle": [],
+                        "last": "Santorini",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mary",
+                        "middle": [
+                            "Ann"
+                        ],
+                        "last": "Marcinkiewicz",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1993,
+                "venue": "Computational Linguistics",
+                "volume": "19",
+                "issue": "2",
+                "pages": "313--330",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Mitchell P. Marcus, Beatrice Santorini, and Mary Ann Marcinkiewicz. 1993. Building a large annotated cor- pus of English: The Penn Treebank. Computational Linguistics, 19(2):313-30.",
+                "links": null
+            },
+            "BIBREF23": {
+                "ref_id": "b23",
+                "title": "Monasearch: Querying linguistic treebanks with monadic second-order logic",
+                "authors": [
+                    {
+                        "first": "Hendrik",
+                        "middle": [],
+                        "last": "Maryns",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Stephan",
+                        "middle": [],
+                        "last": "Kepser",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "The 7th International Workshop on Treebanks and Linguistic Theories",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Hendrik Maryns and Stephan Kepser. 2009. Monasearch: Querying linguistic treebanks with monadic second-order logic. In The 7th International Workshop on Treebanks and Linguistic Theories.",
+                "links": null
+            },
+            "BIBREF24": {
+                "ref_id": "b24",
+                "title": "Towards an alternative implementation of nxts query language via xquery",
+                "authors": [
+                    {
+                        "first": "Neil",
+                        "middle": [],
+                        "last": "Mayo",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jonathan",
+                        "middle": [],
+                        "last": "Kilgour",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jean",
+                        "middle": [],
+                        "last": "Carletta",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2006,
+                "venue": "Proc. 5th Workshop on NLP and XML: Multi-Dimensional Markup in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "27--34",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Neil Mayo, Jonathan Kilgour, and Jean Carletta. 2006. Towards an alternative implementation of nxts query language via xquery. In Proc. 5th Workshop on NLP and XML: Multi-Dimensional Markup in Natural Lan- guage Processing, pages 27-34. ACL.",
+                "links": null
+            },
+            "BIBREF25": {
+                "ref_id": "b25",
+                "title": "Lore: A database management system for semistructured data",
+                "authors": [
+                    {
+                        "first": "J",
+                        "middle": [],
+                        "last": "Mchugh",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "S",
+                        "middle": [],
+                        "last": "Abiteboul",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "R",
+                        "middle": [],
+                        "last": "Goldman",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "D",
+                        "middle": [],
+                        "last": "Quass",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "J",
+                        "middle": [],
+                        "last": "Widom",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1997,
+                "venue": "SIGMOD Rec",
+                "volume": "26",
+                "issue": "",
+                "pages": "54--66",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "J. McHugh, S. Abiteboul, R. Goldman, D. Quass, and J. Widom. 1997. Lore: A database management sys- tem for semistructured data. SIGMOD Rec., 26:54-66.",
+                "links": null
+            },
+            "BIBREF26": {
+                "ref_id": "b26",
+                "title": "eXist: An open source native XML database",
+                "authors": [
+                    {
+                        "first": "Wolfgang",
+                        "middle": [],
+                        "last": "Meier",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2003,
+                "venue": "Revised Papers from the NODe 2002 Web and Database-Related Workshops on Web, Web-Services, and Database Systems",
+                "volume": "",
+                "issue": "",
+                "pages": "169--183",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Wolfgang Meier. 2003. eXist: An open source native XML database. In Revised Papers from the NODe 2002 Web and Database-Related Workshops on Web, Web-Services, and Database Systems, pages 169-183. Springer-Verlag.",
+                "links": null
+            },
+            "BIBREF27": {
+                "ref_id": "b27",
+                "title": "Netgraph: a tool for searching in Prague Dependency Treebank 2.0",
+                "authors": [
+                    {
+                        "first": "Ji\u0159\u00ed",
+                        "middle": [],
+                        "last": "M\u00edrovsk\u00fd",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2006,
+                "venue": "Proc. 5th Intl Conf on Treebanks and Linguistic Theories",
+                "volume": "",
+                "issue": "",
+                "pages": "211--222",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ji\u0159\u00ed M\u00edrovsk\u00fd. 2006. Netgraph: a tool for searching in Prague Dependency Treebank 2.0. In Proc. 5th Intl Conf on Treebanks and Linguistic Theories, pages 211-222.",
+                "links": null
+            },
+            "BIBREF28": {
+                "ref_id": "b28",
+                "title": "PDT 2.0 requirements on a query language",
+                "authors": [
+                    {
+                        "first": "Ji\u0159\u00ed",
+                        "middle": [],
+                        "last": "M\u00edrovsk\u00fd",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2008,
+                "venue": "Proc. 46th ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "37--45",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ji\u0159\u00ed M\u00edrovsk\u00fd. 2008. PDT 2.0 requirements on a query language. In Proc. 46th ACL, pages 37-45. ACL.",
+                "links": null
+            },
+            "BIBREF29": {
+                "ref_id": "b29",
+                "title": "Supporting annotation layers for natural language processing",
+                "authors": [
+                    {
+                        "first": "Preslav",
+                        "middle": [],
+                        "last": "Nakov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ariel",
+                        "middle": [],
+                        "last": "Schwartz",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Brian",
+                        "middle": [],
+                        "last": "Wolf",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Marti",
+                        "middle": [],
+                        "last": "Hearst",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2005,
+                "venue": "Proc. 43rd ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "65--68",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Preslav Nakov, Ariel Schwartz, Brian Wolf, and Marti Hearst. 2005. Supporting annotation layers for natural language processing. In Proc. 43rd ACL, pages 65-68.",
+                "links": null
+            },
+            "BIBREF30": {
+                "ref_id": "b30",
+                "title": "The LinGO Redwoods Treebank: Motivation and preliminary applications",
+                "authors": [
+                    {
+                        "first": "Stephan",
+                        "middle": [],
+                        "last": "Oepen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kristina",
+                        "middle": [],
+                        "last": "Toutanova",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Stuart",
+                        "middle": [],
+                        "last": "Shieber",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [],
+                        "last": "Manning",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dan",
+                        "middle": [],
+                        "last": "Flickinger",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Thorsten",
+                        "middle": [],
+                        "last": "Brants",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2002,
+                "venue": "Proc. 19th COLING",
+                "volume": "",
+                "issue": "",
+                "pages": "1253--1257",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Stephan Oepen, Kristina Toutanova, Stuart Shieber, Christopher Manning, Dan Flickinger, and Thorsten Brants. 2002. The LinGO Redwoods Treebank: Mo- tivation and preliminary applications. In Proc. 19th COLING, pages 1253-57.",
+                "links": null
+            },
+            "BIBREF31": {
+                "ref_id": "b31",
+                "title": "System for querying syntactically annotated corpora",
+                "authors": [
+                    {
+                        "first": "Petr",
+                        "middle": [],
+                        "last": "Pajas",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "Proc. 47th ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "33--36",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Petr Pajas and Jan \u0160t\u011bp\u00e1nek. 2009. System for querying syntactically annotated corpora. In Proc. 47th ACL, pages 33-36. ACL.",
+                "links": null
+            },
+            "BIBREF32": {
+                "ref_id": "b32",
+                "title": "TGrep2 User Manual Version 1",
+                "authors": [
+                    {
+                        "first": "L",
+                        "middle": [
+                            "T"
+                        ],
+                        "last": "Douglas",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Rohde",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2005,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Douglas L. T. Rohde, 2005. TGrep2 User Manual Ver- sion 1.15. http://tedlab.mit.edu/ dr/TGrep2/tgrep2.pdf.",
+                "links": null
+            },
+            "BIBREF33": {
+                "ref_id": "b33",
+                "title": "Storing and querying ordered XML using a relational database system",
+                "authors": [
+                    {
+                        "first": "Igor",
+                        "middle": [],
+                        "last": "Tatarinov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "D",
+                        "middle": [],
+                        "last": "Stratis",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kevin",
+                        "middle": [],
+                        "last": "Viglas",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jayavel",
+                        "middle": [],
+                        "last": "Beyer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Eugene",
+                        "middle": [],
+                        "last": "Shanmugasundaram",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chun",
+                        "middle": [],
+                        "last": "Shekita",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2002,
+                "venue": "SIGMOD '02: Proc. 2002 ACM SIGMOD Intl Conf on Management of Data",
+                "volume": "",
+                "issue": "",
+                "pages": "204--215",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Igor Tatarinov, Stratis D. Viglas, Kevin Beyer, Jayavel Shanmugasundaram, Eugene Shekita, and Chun Zhang. 2002. Storing and querying ordered XML using a relational database system. In SIGMOD '02: Proc. 2002 ACM SIGMOD Intl Conf on Management of Data, pages 204-215. ACM.",
+                "links": null
+            },
+            "BIBREF34": {
+                "ref_id": "b34",
+                "title": "Prague czech-english dependency treebank: Any hopes for a common annotation scheme?",
+                "authors": [
+                    {
+                        "first": "M",
+                        "middle": [],
+                        "last": "\u010cmejrek",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "J",
+                        "middle": [],
+                        "last": "Cu\u0159\u00edn",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "J",
+                        "middle": [],
+                        "last": "Havelka",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2004,
+                "venue": "HLT-NAACL 2004 Workshop: Frontiers in Corpus Annotation",
+                "volume": "",
+                "issue": "",
+                "pages": "47--54",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "M. \u010cmejrek, J. Cu\u0159\u00edn, and J. Havelka. 2004. Prague czech-english dependency treebank: Any hopes for a common annotation scheme? In A. Meyers, editor, HLT-NAACL 2004 Workshop: Frontiers in Corpus An- notation, pages 47-54. ACL.",
+                "links": null
+            },
+            "BIBREF35": {
+                "ref_id": "b35",
+                "title": "A search tool for parallel treebanks",
+                "authors": [
+                    {
+                        "first": "Martin",
+                        "middle": [],
+                        "last": "Volk",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Joakim",
+                        "middle": [],
+                        "last": "Lundborg",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ma\u00ebl",
+                        "middle": [],
+                        "last": "Mettler",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2007,
+                "venue": "Proc. Linguistic Annotation Workshop",
+                "volume": "",
+                "issue": "",
+                "pages": "85--92",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Martin Volk, Joakim Lundborg, and Ma\u00ebl Mettler. 2007. A search tool for parallel treebanks. In Proc. Linguis- tic Annotation Workshop, pages 85-92. ACL.",
+                "links": null
+            },
+            "BIBREF36": {
+                "ref_id": "b36",
+                "title": "Completing parsed corpora",
+                "authors": [
+                    {
+                        "first": "Sean",
+                        "middle": [],
+                        "last": "Wallis",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2003,
+                "venue": "Treebanks: Building and Using Parsed Corpora, Text, Speech and Language Technology",
+                "volume": "",
+                "issue": "",
+                "pages": "61--71",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Sean Wallis. 2003. Completing parsed corpora. In Anne Abeill\u00e9, editor, Treebanks: Building and Using Parsed Corpora, Text, Speech and Language Technol- ogy, pages 61-71. Kluwer.",
+                "links": null
+            },
+            "BIBREF37": {
+                "ref_id": "b37",
+                "title": "The Penn Chinese TreeBank: Phrase structure annotation of a large corpus",
+                "authors": [
+                    {
+                        "first": "Naiwen",
+                        "middle": [],
+                        "last": "Xue",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Fei",
+                        "middle": [],
+                        "last": "Xia",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Fu-Dong",
+                        "middle": [],
+                        "last": "Chiou",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Martha",
+                        "middle": [],
+                        "last": "Palmer",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2005,
+                "venue": "Natural Language Engineering",
+                "volume": "11",
+                "issue": "",
+                "pages": "207--238",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Naiwen Xue, Fei Xia, Fu-Dong Chiou, and Martha Palmer. 2005. The Penn Chinese TreeBank: Phrase structure annotation of a large corpus. Natural Lan- guage Engineering, 11:207-238.",
+                "links": null
+            },
+            "BIBREF38": {
+                "ref_id": "b38",
+                "title": "On supporting containment queries in relational database management systems",
+                "authors": [
+                    {
+                        "first": "Chun",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jeffrey",
+                        "middle": [],
+                        "last": "Naughton",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "David",
+                        "middle": [],
+                        "last": "Dewitt",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Qiong",
+                        "middle": [],
+                        "last": "Luo",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Guy",
+                        "middle": [],
+                        "last": "Lohman",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2001,
+                "venue": "SIGMOD '01: Proc. ACM SIGMOD international Conference on Management of Data",
+                "volume": "",
+                "issue": "",
+                "pages": "425--436",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Chun Zhang, Jeffrey Naughton, David DeWitt, Qiong Luo, and Guy Lohman. 2001. On supporting contain- ment queries in relational database management sys- tems. In SIGMOD '01: Proc. ACM SIGMOD inter- national Conference on Management of Data, pages 425-436, New York. ACM.",
+                "links": null
+            }
+        },
+        "ref_entries": {
+            "FIGREF0": {
+                "num": null,
+                "text": "Figure 2: Variation of query execution time with query length in data collection 1",
+                "uris": null,
+                "fig_num": "23",
+                "type_str": "figure"
+            },
+            "TABREF0": {
+                "content": "<table><tr><td colspan=\"5\">Node Left Right Depth Parent</td></tr><tr><td>A</td><td>2</td><td>4</td><td>3</td><td>2</td></tr><tr><td>A</td><td>1</td><td>4</td><td>2</td><td>6</td></tr><tr><td>A</td><td>5</td><td>8</td><td>3</td><td>8</td></tr><tr><td>B</td><td>3</td><td>4</td><td>4</td><td>4</td></tr><tr><td>B</td><td>4</td><td>5</td><td>3</td><td>8</td></tr><tr><td>B</td><td>7</td><td>8</td><td>4</td><td>10</td></tr></table>",
+                "type_str": "table",
+                "text": "Node labels Table 1 illustrates the node labels assigned to A and B nodes in Figure",
+                "html": null,
+                "num": null
+            },
+            "TABREF1": {
+                "content": "<table><tr><td>Query</td><td>Selectivity</td><td colspan=\"3\">Data Collection 1 (5.5M sentences)</td><td colspan=\"3\">Data Collection 2 (26.5M sentences)</td></tr><tr><td/><td/><td>Full search</td><td/><td>First 10</td><td/><td>Full search</td><td>First 10</td></tr><tr><td colspan=\"3\">(//N1 op N2) N1-op-N2 cold warm</td><td>hits</td><td>cold warm</td><td>cold</td><td>warm</td><td>hits</td><td>cold warm</td></tr><tr><td>NP/NN</td><td>L-L-L</td><td colspan=\"6\">7.326 5.533 4,814,540 0.059 0.0003 24.680 20.256 21,906,349 0.260 0.0003</td></tr><tr><td>VP/DT</td><td>L-H-L</td><td>4.576 3.593</td><td colspan=\"4\">17,328 0.140 0.004 13.865 11.363</td><td>91,070 0.301 0.003</td></tr><tr><td>NP/LST</td><td>L-L-H</td><td>4.454 0.043</td><td colspan=\"4\">6,808 0.083 0.001 16.864 0.077</td><td>2.974 0.270 0.003</td></tr><tr><td>VP/WHPP</td><td>L-H-H</td><td>2.445 0.034</td><td/><td>32 1.012 0.014</td><td colspan=\"2\">8.834 0.066</td><td>29 3.653 0.015</td></tr><tr><td>LST\\NP</td><td>H-L-L</td><td>4.444 0.043</td><td colspan=\"4\">6,808 0.080 0.001 16.814 0.077</td><td>2,974 0.271 0.003</td></tr><tr><td>WHPP\\VP</td><td>H-H-L</td><td>2.461 0.034</td><td/><td>32 0.990 0.013</td><td colspan=\"2\">8.726 0.065</td><td>29 3.611 0.015</td></tr><tr><td>LST/LS</td><td>H-L-H</td><td>0.181 0.005</td><td colspan=\"4\">10,432 0.071 0.0001 0.294 0.008</td><td>8,977 0.238 0.0002</td></tr><tr><td>LST/FW</td><td>H-H-H</td><td>0.123 0.009</td><td/><td>4 0.103 0.011</td><td colspan=\"2\">0.348 0.012</td><td>9 0.408 0.012</td></tr></table>",
+                "type_str": "table",
+                "text": "Execution times (in seconds) for queries of varying selectivity",
+                "html": null,
+                "num": null
+            },
+            "TABREF2": {
+                "content": "<table><tr><td>Query</td><td colspan=\"4\">Data collection 1 Data collection 2 TGrep2 IR TGrep2 IR</td></tr><tr><td>//NP</td><td>25.28</td><td>8.15</td><td colspan=\"2\">89.35 15.53</td></tr><tr><td>//NP//NP</td><td colspan=\"2\">25.44 10.42</td><td colspan=\"2\">88.36 35.95</td></tr><tr><td>//NP//NP//NP</td><td colspan=\"2\">25.45 14.96</td><td colspan=\"2\">87.48 52.81</td></tr><tr><td>//NP. . . //NP (4 times)</td><td colspan=\"2\">25.34 18.38</td><td colspan=\"2\">88.28 66.80</td></tr><tr><td>//NP. . . //NP (5 times)</td><td colspan=\"2\">25.46 20.94</td><td colspan=\"2\">87.38 70.80</td></tr><tr><td>//NP. . . //NP (6 times)</td><td colspan=\"2\">25.41 23.23</td><td colspan=\"2\">86.92 75.05</td></tr><tr><td>//ADJP</td><td>25.48</td><td>0.69</td><td>86.83</td><td>1.03</td></tr><tr><td>//ADJP//ADJP</td><td>25.36</td><td>0.73</td><td>86.42</td><td>1.61</td></tr><tr><td>//ADJP//ADJP//ADJP</td><td>25.29</td><td>0.84</td><td>86.89</td><td>1.89</td></tr><tr><td>//ADJP. . . //ADJP (4 times)</td><td>25.45</td><td>0.90</td><td>87.39</td><td>2.11</td></tr><tr><td>//ADJP. . . //ADJP (5 times)</td><td>25.23</td><td>1.03</td><td>86.50</td><td>2.49</td></tr><tr><td>//ADJP. . . //ADJP (6 times)</td><td>25.74</td><td>1.11</td><td>89.24</td><td>2.79</td></tr><tr><td>//LST</td><td>25.29</td><td>0.17</td><td>87.73</td><td>0.26</td></tr><tr><td>//LST//LST</td><td>25.49</td><td>0.20</td><td>87.09</td><td>0.27</td></tr><tr><td>//LST//LST//LST</td><td>25.38</td><td>0.20</td><td>87.66</td><td>0.28</td></tr><tr><td>//LST. . . //LST (4 times)</td><td>25.43</td><td>0.19</td><td>87.17</td><td>0.29</td></tr><tr><td>//LST. . . //LST (5 times)</td><td>25.40</td><td>0.19</td><td>88.02</td><td>0.31</td></tr><tr><td>//LST. . . //LST (6 times)</td><td>25.32</td><td>0.19</td><td>89.01</td><td>0.32</td></tr><tr><td>//NP/NN</td><td>25.66</td><td>7.33</td><td colspan=\"2\">87.63 24.68</td></tr><tr><td>//VP/DT</td><td>25.53</td><td>4.58</td><td colspan=\"2\">89.85 13.86</td></tr><tr><td>//NP/LST</td><td>25.62</td><td>4.45</td><td colspan=\"2\">86.39 16.86</td></tr><tr><td>//VP/WHPP</td><td>25.09</td><td>2.97</td><td>87.43</td><td>8.83</td></tr><tr><td>//WHPP/IN</td><td>25.75</td><td>4.44</td><td colspan=\"2\">88.48 16.81</td></tr><tr><td>//LST/JJ</td><td>25.46</td><td>2.46</td><td>86.57</td><td>8.73</td></tr><tr><td>//LST/LS</td><td>25.38</td><td>0.18</td><td>87.40</td><td>0.29</td></tr><tr><td>//LST/FW</td><td>25.51</td><td>0.12</td><td>87.27</td><td>0.35</td></tr></table>",
+                "type_str": "table",
+                "text": "Comparison of TGrep2 and IR Engine cold start query times (seconds)",
+                "html": null,
+                "num": null
+            }
+        }
+    }
+}

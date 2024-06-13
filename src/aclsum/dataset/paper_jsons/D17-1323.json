@@ -1,0 +1,2393 @@
+{
+    "paper_id": "D17-1323",
+    "header": {
+        "generated_with": "S2ORC 1.0.0",
+        "date_generated": "2023-06-16T12:00:12.590366Z"
+    },
+    "title": "Men Also Like Shopping: Reducing Gender Bias Amplification using Corpus-level Constraints",
+    "authors": [
+        {
+            "first": "Jieyu",
+            "middle": [],
+            "last": "Zhao",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "University of Virginia",
+                "location": {}
+            },
+            "email": ""
+        },
+        {
+            "first": "Tianlu",
+            "middle": [],
+            "last": "Wang",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "University of Virginia",
+                "location": {}
+            },
+            "email": ""
+        },
+        {
+            "first": "Mark",
+            "middle": [],
+            "last": "Yatskar",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "University of Washington",
+                "location": {}
+            },
+            "email": ""
+        },
+        {
+            "first": "Vicente",
+            "middle": [],
+            "last": "Ordonez",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "University of Virginia",
+                "location": {}
+            },
+            "email": "vicente@virginia.edu"
+        },
+        {
+            "first": "Kai-Wei",
+            "middle": [],
+            "last": "Chang",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "University of Virginia",
+                "location": {}
+            },
+            "email": ""
+        }
+    ],
+    "year": "",
+    "venue": null,
+    "identifiers": {},
+    "abstract": "Language is increasingly being used to define rich visual recognition problems with supporting image collections sourced from the web. Structured prediction models are used in these tasks to take advantage of correlations between co-occurring labels and visual input but risk inadvertently encoding social biases found in web corpora.\nIn this work, we study data and models associated with multilabel object classification and visual semantic role labeling. We find that (a) datasets for these tasks contain significant gender bias and (b) models trained on these datasets further amplify existing bias. For example, the activity cooking is over 33% more likely to involve females than males in a training set, and a trained model further amplifies the disparity to 68% at test time. We propose to inject corpus-level constraints for calibrating existing structured prediction models and design an algorithm based on Lagrangian relaxation for collective inference. Our method results in almost no performance loss for the underlying recognition task but decreases the magnitude of bias amplification by 47.5% and 40.5% for multilabel classification and visual semantic role labeling, respectively.",
+    "pdf_parse": {
+        "paper_id": "D17-1323",
+        "_pdf_hash": "",
+        "abstract": [
+            {
+                "text": "Language is increasingly being used to define rich visual recognition problems with supporting image collections sourced from the web. Structured prediction models are used in these tasks to take advantage of correlations between co-occurring labels and visual input but risk inadvertently encoding social biases found in web corpora.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            },
+            {
+                "text": "In this work, we study data and models associated with multilabel object classification and visual semantic role labeling. We find that (a) datasets for these tasks contain significant gender bias and (b) models trained on these datasets further amplify existing bias. For example, the activity cooking is over 33% more likely to involve females than males in a training set, and a trained model further amplifies the disparity to 68% at test time. We propose to inject corpus-level constraints for calibrating existing structured prediction models and design an algorithm based on Lagrangian relaxation for collective inference. Our method results in almost no performance loss for the underlying recognition task but decreases the magnitude of bias amplification by 47.5% and 40.5% for multilabel classification and visual semantic role labeling, respectively.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            }
+        ],
+        "body_text": [
+            {
+                "text": "Visual recognition tasks involving language, such as captioning (Vinyals et al., 2015) , visual question answering (Antol et al., 2015) , and visual semantic role labeling (Yatskar et al., 2016) , have emerged as avenues for expanding the diversity of information that can be recovered from images. These tasks aim at extracting rich seman-tics from images and require large quantities of labeled data, predominantly retrieved from the web. Methods often combine structured prediction and deep learning to model correlations between labels and images to make judgments that otherwise would have weak visual support. For example, in the first image of Figure 1 , it is possible to predict a spatula by considering that it is a common tool used for the activity cooking. Yet such methods run the risk of discovering and exploiting societal biases present in the underlying web corpora. Without properly quantifying and reducing the reliance on such correlations, broad adoption of these models can have the inadvertent effect of magnifying stereotypes.",
+                "cite_spans": [
+                    {
+                        "start": 64,
+                        "end": 86,
+                        "text": "(Vinyals et al., 2015)",
+                        "ref_id": "BIBREF29"
+                    },
+                    {
+                        "start": 115,
+                        "end": 135,
+                        "text": "(Antol et al., 2015)",
+                        "ref_id": "BIBREF0"
+                    },
+                    {
+                        "start": 172,
+                        "end": 194,
+                        "text": "(Yatskar et al., 2016)",
+                        "ref_id": "BIBREF31"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 658,
+                        "end": 659,
+                        "text": "1",
+                        "ref_id": "FIGREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "In this paper, we develop a general framework for quantifying bias and study two concrete tasks, visual semantic role labeling (vSRL) and multilabel object classification (MLC). In vSRL, we use the imSitu formalism (Yatskar et al., 2016 (Yatskar et al., , 2017)) , where the goal is to predict activities, objects and the roles those objects play within an activity. For MLC, we use MS-COCO (Lin et al., 2014; Chen et al., 2015) , a recognition task covering 80 object classes. We use gender bias as a running example and show that both supporting datasets for these tasks are biased with respect to a gender binary1 .",
+                "cite_spans": [
+                    {
+                        "start": 215,
+                        "end": 236,
+                        "text": "(Yatskar et al., 2016",
+                        "ref_id": "BIBREF31"
+                    },
+                    {
+                        "start": 237,
+                        "end": 262,
+                        "text": "(Yatskar et al., , 2017))",
+                        "ref_id": "BIBREF30"
+                    },
+                    {
+                        "start": 391,
+                        "end": 409,
+                        "text": "(Lin et al., 2014;",
+                        "ref_id": "BIBREF16"
+                    },
+                    {
+                        "start": 410,
+                        "end": 428,
+                        "text": "Chen et al., 2015)",
+                        "ref_id": "BIBREF7"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Our analysis reveals that over 45% and 37% of verbs and objects, respectively, exhibit bias toward a gender greater than 2:1. For example, as seen in Figure 1 , the cooking activity in imSitu is a heavily biased verb. Furthermore, we show that after training state-of-the-art structured predictors, models amplify the existing bias, by 5.0% for vSRL, and 3.6% in MLC. Each image is paired with a table describing a situation: the verb, cooking, its semantic roles, i.e agent, and noun values filling that role, i.e. woman. In the imSitu training set, 33% of cooking images have man in the agent role while the rest have woman. After training a Conditional Random Field (CRF), bias is amplified: man fills 16% of agent roles in cooking images. To reduce this bias amplification our calibration method adjusts weights of CRF potentials associated with biased predictions. After applying our methods, man appears in the agent role of 20% of cooking images, reducing the bias amplification by 25%, while keeping the CRF vSRL performance unchanged.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 157,
+                        "end": 158,
+                        "text": "1",
+                        "ref_id": "FIGREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "To mitigate the role of bias amplification when training models on biased corpora, we propose a novel constrained inference framework, called RBA, for Reducing Bias Amplification in predictions. Our method introduces corpus-level constraints so that gender indicators co-occur no more often together with elements of the prediction task than in the original training distribution. For example, as seen in Figure 1 , we would like noun man to occur in the agent role of the cooking as often as it occurs in the imSitu training set when evaluating on a development set. We combine our calibration constraint with the original structured predictor and use Lagrangian relaxation (Korte and Vygen, 2008; Rush and Collins, 2012) to reweigh bias creating factors in the original model.",
+                "cite_spans": [
+                    {
+                        "start": 675,
+                        "end": 698,
+                        "text": "(Korte and Vygen, 2008;",
+                        "ref_id": "BIBREF15"
+                    },
+                    {
+                        "start": 699,
+                        "end": 722,
+                        "text": "Rush and Collins, 2012)",
+                        "ref_id": "BIBREF24"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 412,
+                        "end": 413,
+                        "text": "1",
+                        "ref_id": "FIGREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "We evaluate our calibration method on imSitu vSRL and COCO MLC and find that in both instances, our models substantially reduce bias amplification. For vSRL, we reduce the average magnitude of bias amplification by 40.5%. For MLC, we are able to reduce the average magnitude of bias amplification by 47.5%. Overall, our calibration methods do not affect the performance of the underlying visual system, while substantially reducing the reliance of the system on socially biased correlations 2 .",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "2 Code and data are available at https://github. com/uclanlp/reducingbias",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "As intelligence systems start playing important roles in our daily life, ethics in artificial intelligence research has attracted significant interest. It is known that big-data technologies sometimes inadvertently worsen discrimination due to implicit biases in data (Podesta et al., 2014) . Such issues have been demonstrated in various learning systems, including online advertisement systems (Sweeney, 2013) , word embedding models (Bolukbasi et al., 2016; Caliskan et al., 2017) , online news (Ross and Carter, 2011) , web search (Kay et al., 2015) , and credit score (Hardt et al., 2016) . Data collection biases have been discussed in the context of creating image corpus (Misra et al., 2016; van Miltenburg, 2016 ) and text corpus (Gordon and Van Durme, 2013; Van Durme, 2010) . In contrast, we show that given a gender biased corpus, structured models such as conditional random fields, amplify the bias.",
+                "cite_spans": [
+                    {
+                        "start": 268,
+                        "end": 290,
+                        "text": "(Podesta et al., 2014)",
+                        "ref_id": "BIBREF22"
+                    },
+                    {
+                        "start": 396,
+                        "end": 411,
+                        "text": "(Sweeney, 2013)",
+                        "ref_id": "BIBREF27"
+                    },
+                    {
+                        "start": 436,
+                        "end": 460,
+                        "text": "(Bolukbasi et al., 2016;",
+                        "ref_id": "BIBREF3"
+                    },
+                    {
+                        "start": 461,
+                        "end": 483,
+                        "text": "Caliskan et al., 2017)",
+                        "ref_id": "BIBREF4"
+                    },
+                    {
+                        "start": 498,
+                        "end": 521,
+                        "text": "(Ross and Carter, 2011)",
+                        "ref_id": "BIBREF23"
+                    },
+                    {
+                        "start": 535,
+                        "end": 553,
+                        "text": "(Kay et al., 2015)",
+                        "ref_id": "BIBREF14"
+                    },
+                    {
+                        "start": 573,
+                        "end": 593,
+                        "text": "(Hardt et al., 2016)",
+                        "ref_id": "BIBREF13"
+                    },
+                    {
+                        "start": 679,
+                        "end": 699,
+                        "text": "(Misra et al., 2016;",
+                        "ref_id": "BIBREF19"
+                    },
+                    {
+                        "start": 700,
+                        "end": 720,
+                        "text": "van Miltenburg, 2016",
+                        "ref_id": "BIBREF18"
+                    },
+                    {
+                        "start": 739,
+                        "end": 767,
+                        "text": "(Gordon and Van Durme, 2013;",
+                        "ref_id": "BIBREF11"
+                    },
+                    {
+                        "start": 768,
+                        "end": 784,
+                        "text": "Van Durme, 2010)",
+                        "ref_id": "BIBREF28"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "The effect of the data imbalance can be easily detected and fixed when the prediction task is simple. For example, when classifying binary data with unbalanced labels (i.e., samples in the majority class dominate the dataset), a classifier trained exclusively to optimize accuracy learns to always predict the majority label, as the cost of making mistakes on samples in the minority class can be neglected. Various approaches have been proposed to make a \"fair\" binary classification (Barocas and Selbst, 2014; Dwork et al., 2012; Feldman et al., 2015; Zliobaite, 2015) . For structured prediction tasks the effect is harder to quantify and we are the first to propose methods to reduce bias amplification in this context.",
+                "cite_spans": [
+                    {
+                        "start": 485,
+                        "end": 511,
+                        "text": "(Barocas and Selbst, 2014;",
+                        "ref_id": "BIBREF2"
+                    },
+                    {
+                        "start": 512,
+                        "end": 531,
+                        "text": "Dwork et al., 2012;",
+                        "ref_id": "BIBREF9"
+                    },
+                    {
+                        "start": 532,
+                        "end": 553,
+                        "text": "Feldman et al., 2015;",
+                        "ref_id": "BIBREF10"
+                    },
+                    {
+                        "start": 554,
+                        "end": 570,
+                        "text": "Zliobaite, 2015)",
+                        "ref_id": "BIBREF32"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "Lagrangian relaxation and dual decomposition techniques have been widely used in NLP tasks (e.g., (Sontag et al., 2011; Rush and Collins, 2012; Chang and Collins, 2011; Peng et al., 2015) ) for dealing with instance-level constraints. Similar techniques (Chang et al., 2013; Dalvi, 2015) have been applied in handling corpus-level constraints for semi-supervised multilabel classification. In contrast to previous works aiming for improving accuracy performance, we incorporate corpus-level constraints for reducing gender bias.",
+                "cite_spans": [
+                    {
+                        "start": 98,
+                        "end": 119,
+                        "text": "(Sontag et al., 2011;",
+                        "ref_id": "BIBREF26"
+                    },
+                    {
+                        "start": 120,
+                        "end": 143,
+                        "text": "Rush and Collins, 2012;",
+                        "ref_id": "BIBREF24"
+                    },
+                    {
+                        "start": 144,
+                        "end": 168,
+                        "text": "Chang and Collins, 2011;",
+                        "ref_id": "BIBREF6"
+                    },
+                    {
+                        "start": 169,
+                        "end": 187,
+                        "text": "Peng et al., 2015)",
+                        "ref_id": "BIBREF21"
+                    },
+                    {
+                        "start": 254,
+                        "end": 274,
+                        "text": "(Chang et al., 2013;",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 275,
+                        "end": 287,
+                        "text": "Dalvi, 2015)",
+                        "ref_id": "BIBREF8"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "Modern statistical learning approaches capture correlations among output variables in order to make coherent predictions. However, for realworld applications, some implicit correlations are not appropriate, especially if they are amplified. In this section, we present a general framework to analyze inherent biases learned and amplified by a prediction model.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Visualizing and Quantifying Biases",
+                "sec_num": "3"
+            },
+            {
+                "text": "We consider that prediction problems involve several inter-dependent output variables y 1 , y 2 , ...y K , which can be represented as a structure y = {y 1 , y 2 , ...y K } \u2208 Y . This is a common setting in NLP applications, including tagging, and parsing. For example, in the vSRL task, the output can be represented as a structured table as shown in Fig 1 . Modern techniques often model the correlation between the sub-components in y and make a joint prediction over them using a structured prediction model. More details will be provided in Section 4.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Identifying bias",
+                "sec_num": null
+            },
+            {
+                "text": "We assume there is a subset of output variables g \u2286 y, g \u2208 G that reflects demographic attributes such as gender or race (e.g. g \u2208 G = {man, woman} is the agent), and there is another subset of the output o \u2286 y, o \u2208 O that are corelated with g (e.g., o is the activity present in an image, such as cooking). The goal is to identify the correlations that are potentially amplified by a learned model.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Identifying bias",
+                "sec_num": null
+            },
+            {
+                "text": "To achieve this, we define the bias score of a given output, o, with respect to a demographic variable, g, as:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Identifying bias",
+                "sec_num": null
+            },
+            {
+                "text": "b(o, g) = c(o, g) g \u2208G c(o, g )",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Identifying bias",
+                "sec_num": null
+            },
+            {
+                "text": ", where c(o, g) is the number of occurrences of o and g in a corpus. For example, to analyze how genders of agents and activities are co-related in vSRL, we define the gender bias toward man for each verb b(verb, man) as:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Identifying bias",
+                "sec_num": null
+            },
+            {
+                "text": "c(verb, man) c(verb, man) + c(verb, woman)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Identifying bias",
+                "sec_num": null
+            },
+            {
+                "text": ".",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Identifying bias",
+                "sec_num": null
+            },
+            {
+                "text": "(1)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Identifying bias",
+                "sec_num": null
+            },
+            {
+                "text": "If b(o, g) > 1/ G , then o is positively correlated with g and may exhibit bias.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Identifying bias",
+                "sec_num": null
+            },
+            {
+                "text": "Evaluating bias amplification To evaluate the degree of bias amplification, we propose to compare bias scores on the training set, b * (o, g), with bias scores on an unlabeled evaluation set of images b(o, g) that has been annotated by a predictor. We assume that the evaluation set is identically distributed to the training set. Therefore, if o is positively correlated with",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Identifying bias",
+                "sec_num": null
+            },
+            {
+                "text": "g (i.e, b * (o, g) > 1/ G ) and b(o, g) is larger than b * (o, g),",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Identifying bias",
+                "sec_num": null
+            },
+            {
+                "text": "we say bias has been amplified. For example, if b * (cooking, woman) = .66, and b(cooking, woman) = .84, then the bias of woman toward cooking has been amplified. Finally, we define the mean bias amplification as:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Identifying bias",
+                "sec_num": null
+            },
+            {
+                "text": "1 |O| g o\u2208{o\u2208O|b * (o,g)>1/ G } b(o, g) -b * (o, g).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Identifying bias",
+                "sec_num": null
+            },
+            {
+                "text": "This score estimates the average magnitude of bias amplification for pairs of o and g which exhibited bias.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Identifying bias",
+                "sec_num": null
+            },
+            {
+                "text": "In this section, we introduce Reducing Bias Amplification, RBA, a debiasing technique for calibrating the predictions from a structured prediction model. The intuition behind the algorithm is to inject constraints to ensure the model predictions follow the distribution observed from the training data. For example, the constraints added to the vSRL system ensure the gender ratio of each verb in Eq. ( 1) are within a given margin based on the statistics of the training data. These constraints are applied at the corpus level, because computing gender ratio requires the predictions of all test instances. As a result, a joint inference over test instances is required 3 . Solving such a giant inference problem with constraints is hard. Therefore, we present an approximate inference algorithm based on Lagrangian relaxation. The advantages of this approach are:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Calibration Algorithm",
+                "sec_num": "4"
+            },
+            {
+                "text": "\u2022 Our algorithm is iterative, and at each iteration, the joint inference problem is decomposed to a per-instance basis. This can be solved by the original inference algorithm. That is, our approach works as a metaalgorithm and developers do not need to implement a new inference algorithm.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Calibration Algorithm",
+                "sec_num": "4"
+            },
+            {
+                "text": "\u2022 The approach is general and can be applied in any structured model.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Calibration Algorithm",
+                "sec_num": "4"
+            },
+            {
+                "text": "\u2022 Lagrangian relaxation guarantees the solution is optimal if the algorithm converges and all constraints are satisfied.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Calibration Algorithm",
+                "sec_num": "4"
+            },
+            {
+                "text": "In practice, it is hard to obtain a solution where all corpus-level constrains are satisfied. However, we show that the performance of the proposed approach is empirically strong. We use imSitu for vSRL as a running example to explain our algorithm.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Calibration Algorithm",
+                "sec_num": "4"
+            },
+            {
+                "text": "Structured Output Prediction As we mentioned in Sec. 3, we assume the structured output y \u2208 Y consists of several sub-components. Given a test instance i as an input, the inference problem is to find arg max",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Calibration Algorithm",
+                "sec_num": "4"
+            },
+            {
+                "text": "y\u2208Y f \u03b8 (y, i),",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Calibration Algorithm",
+                "sec_num": "4"
+            },
+            {
+                "text": "where f \u03b8 (y, i) is a scoring function based on a model \u03b8 learned from the training data. The structured output y and the scoring function f \u03b8 (y, i) can be decomposed into small components based on an independence assumption. For example, in the vSRL task, the output y consists of two types of binary output variables {y v } and {y v,r }. The variable y v = 1 if and only if the activity v is chosen. Similarly, y v,r = 1 if and only if both the activity v and the semantic role r are assigned 4 . The scoring function f \u03b8 (y, i) is decomposed accordingly such that:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Calibration Algorithm",
+                "sec_num": "4"
+            },
+            {
+                "text": "f \u03b8 (y, i) = v y v s \u03b8 (v, i) + v,r y v,r s \u03b8 (v, r, i),",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Calibration Algorithm",
+                "sec_num": "4"
+            },
+            {
+                "text": "3 A sufficiently large sample of test instances must be used so that bias statistics can be estimated. In this work we use the entire test set for each respective problem. 4 We use r to refer to a combination of role and noun. For example, one possible value indicates an agent is a woman.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Calibration Algorithm",
+                "sec_num": "4"
+            },
+            {
+                "text": "represents the overall score of an assignment, and s \u03b8 (v, i) and s \u03b8 (v, r, i) are the potentials of the subassignments. The output space Y contains all feasible assignments of y v and y v,r , which can be represented as instance-wise constraints. For example, the constraint, v y v = 1 ensures only one activity is assigned to one image.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Calibration Algorithm",
+                "sec_num": "4"
+            },
+            {
+                "text": "Corpus-level Constraints Our goal is to inject constraints to ensure the output labels follow a desired distribution. For example, we can set a constraint to ensure the gender ratio for each activity in Eq. ( 1) is within a given margin. Let y i = {y i v } \u222a {y i v,r } be the output assignment for test instance i5 . For each activity v * , the constraints can be written as",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Calibration Algorithm",
+                "sec_num": "4"
+            },
+            {
+                "text": "b * -\u03b3 \u2264 i y i v=v * ,r\u2208M i y i v=v * ,r\u2208W + i y i v=v * ,r\u2208M \u2264 b * + \u03b3",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Calibration Algorithm",
+                "sec_num": "4"
+            },
+            {
+                "text": "(2) where b * \u2261 b * (v * , man) is the desired gender ratio of an activity v * , \u03b3 is a user-specified margin. M and W are a set of semantic role-values representing the agent as a man or a woman, respectively.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Calibration Algorithm",
+                "sec_num": "4"
+            },
+            {
+                "text": "Note that the constraints in (2) involve all the test instances. Therefore, it requires a joint inference over the entire test corpus. In general, these corpus-level constraints can be represented in a form of A i y i -b \u2264 0, where each row in the matrix A \u2208 R l\u00d7K is the coefficients of one constraint, and b \u2208 R l . The constrained inference problem can then be formulated as:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Calibration Algorithm",
+                "sec_num": "4"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "max {y i }\u2208{Y i } i f \u03b8 (y i , i), s.t. A i y i -b \u2264 0,",
+                        "eq_num": "(3)"
+                    }
+                ],
+                "section": "Calibration Algorithm",
+                "sec_num": "4"
+            },
+            {
+                "text": "where {Y i } represents a space spanned by possible combinations of labels for all instances. Without the corpus-level constraints, Eq. ( 3) can be optimized by maximizing each instance i max",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Calibration Algorithm",
+                "sec_num": "4"
+            },
+            {
+                "text": "y i \u2208Y i f \u03b8 (y i , i),",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Calibration Algorithm",
+                "sec_num": "4"
+            },
+            {
+                "text": "separately.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Calibration Algorithm",
+                "sec_num": "4"
+            },
+            {
+                "text": "Lagrangian Relaxation Eq. ( 3) can be solved by several combinatorial optimization methods. For example, one can represent the problem as an",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Calibration Algorithm",
+                "sec_num": "4"
+            },
+            {
+                "text": "Dataset Task Images O-Type O imSitu vSRL 60,000 verb 212 MS-COCO MLC 25,000 object 66 Table 1 : Statistics for the two recognition problems. In vSRL, we consider gender bias relating to verbs, while in MLC we consider the gender bias related to objects. integer linear program and solve it using an offthe-shelf solver (e.g., Gurobi (Gurobi Optimization, 2016)). However, Eq. ( 3) involves all test instances. Solving a constrained optimization problem on such a scale is difficult. Therefore, we consider relaxing the constraints and solve Eq. ( 3) using a Lagrangian relaxation technique (Rush and Collins, 2012) . We introduce a Lagrangian multiplier \u03bb j \u2265 0 for each corpus-level constraint. The Lagrangian is",
+                "cite_spans": [
+                    {
+                        "start": 590,
+                        "end": 614,
+                        "text": "(Rush and Collins, 2012)",
+                        "ref_id": "BIBREF24"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 92,
+                        "end": 93,
+                        "text": "1",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Calibration Algorithm",
+                "sec_num": "4"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "L(\u03bb, {y i }) = i f \u03b8 (y i ) - l j=1 \u03bb j A j i y i -b j ,",
+                        "eq_num": "(4)"
+                    }
+                ],
+                "section": "Calibration Algorithm",
+                "sec_num": "4"
+            },
+            {
+                "text": "where all the \u03bb j \u2265 0, \u2200j \u2208 {1, . . . , l}. The solution of Eq. ( 3) can be obtained by the following iterative procedure:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Calibration Algorithm",
+                "sec_num": "4"
+            },
+            {
+                "text": "1) At iteration t, get the output solution of each instance i y i,(t) = argmax y\u2208Y L(\u03bb (t-1) , y)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Calibration Algorithm",
+                "sec_num": "4"
+            },
+            {
+                "text": "2) update the Lagrangian multipliers.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Calibration Algorithm",
+                "sec_num": "4"
+            },
+            {
+                "text": "\u03bb (t) = max 0, \u03bb (t-1) + i \u03b7(Ay i,(t) -b) ,",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Calibration Algorithm",
+                "sec_num": "4"
+            },
+            {
+                "text": "where \u03bb (0) = 0. \u03b7 is the learning rate for updating \u03bb. Note that with a fixed \u03bb (t-1) , Eq. ( 5) can be solved using the original inference algorithms.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Calibration Algorithm",
+                "sec_num": "4"
+            },
+            {
+                "text": "The algorithm loops until all constraints are satisfied (i.e. optimal solution achieved) or reach maximal number of iterations.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Calibration Algorithm",
+                "sec_num": "4"
+            },
+            {
+                "text": "In this section, we provide details about the two visual recognition tasks we evaluated for bias: visual semantic role labeling (vSRL), and multi-label classification (MLC). We focus on gender, defining G = {man, woman} and focus on the agent role in vSRL, and any occurrence in text associated with the images in MLC. Problem statistics are summarized in Table 1 . We also provide setup details for our calibration method.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 362,
+                        "end": 363,
+                        "text": "1",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Experimental Setup",
+                "sec_num": "5"
+            },
+            {
+                "text": "Dataset We evaluate on imSitu (Yatskar et al., 2016) where activity classes are drawn from verbs and roles in FrameNet (Baker et al., 1998) and noun categories are drawn from WordNet (Miller et al., 1990) . The original dataset includes about 125,000 images with 75,702 for training, 25,200 for developing, and 25,200 for test. However, the dataset covers many non-human oriented activities (e.g., rearing, retrieving, and wagging), so we filter out these verbs, resulting in 212 verbs, leaving roughly 60,000 of the original 125,000 images in the dataset.",
+                "cite_spans": [
+                    {
+                        "start": 30,
+                        "end": 52,
+                        "text": "(Yatskar et al., 2016)",
+                        "ref_id": "BIBREF31"
+                    },
+                    {
+                        "start": 119,
+                        "end": 139,
+                        "text": "(Baker et al., 1998)",
+                        "ref_id": "BIBREF1"
+                    },
+                    {
+                        "start": 183,
+                        "end": 204,
+                        "text": "(Miller et al., 1990)",
+                        "ref_id": "BIBREF17"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Visual Semantic Role Labeling",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "Model We build on the baseline CRF released with the data, which has been shown effective compared to a non-structured prediction baseline (Yatskar et al., 2016) . The model decomposes the probability of a realized situation, y, the combination of activity, v, and realized frame, a set of semantic (role,noun) pairs (e, n e ), given an image i as :",
+                "cite_spans": [
+                    {
+                        "start": 139,
+                        "end": 161,
+                        "text": "(Yatskar et al., 2016)",
+                        "ref_id": "BIBREF31"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Visual Semantic Role Labeling",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "p(y|i; \u03b8) \u221d \u03c8(v, i; \u03b8) (e,ne)\u2208R f \u03c8(v, e",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Visual Semantic Role Labeling",
+                "sec_num": "5.1"
+            },
+            {
+                "text": ", n e , i; \u03b8)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Visual Semantic Role Labeling",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "where each potential value in the CRF for subpart x, is computed using features f i from the VGG convolutional neural network (Simonyan and Zisserman, 2014) on an input image, as follows:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Visual Semantic Role Labeling",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "\u03c8(x, i; \u03b8) = e w T x f i +bx ,",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Visual Semantic Role Labeling",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "where w and b are the parameters of an affine transformation layer. The model explicitly captures the correlation between activities and nouns in semantic roles, allowing it to learn common priors. We use a model pretrained on the original task with 504 verbs.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Visual Semantic Role Labeling",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "Dataset We use MS-COCO (Lin et al., 2014) , a common object detection benchmark, for multilabel object classification. The dataset contains 80 object types but does not make gender distinctions between man and woman. We use the five associated image captions available for each image in this dataset to annotate the gender of people in the images. If any of the captions mention the word man or woman we mark it, removing any images that mention both genders. Finally, we filter any object category not strongly associated with humans by removing objects that do not occur with man or woman at least 100 times in the training set, leaving a total of 66 objects.",
+                "cite_spans": [
+                    {
+                        "start": 23,
+                        "end": 41,
+                        "text": "(Lin et al., 2014)",
+                        "ref_id": "BIBREF16"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Multilabel Classification",
+                "sec_num": "5.2"
+            },
+            {
+                "text": "Model For this multi-label setting, we adapt a similar model as the structured CRF we use for vSRL. We decompose the joint probability of the output y, consisting of all object categories, c, and gender of the person, g, given an image i as:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Multilabel Classification",
+                "sec_num": "5.2"
+            },
+            {
+                "text": "p(y|i; \u03b8) \u221d \u03c8(g, i; \u03b8) c\u2208y \u03c8(g, c, i; \u03b8)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Multilabel Classification",
+                "sec_num": "5.2"
+            },
+            {
+                "text": "where each potential value for x, is computed using features, f i , from a pretrained ResNet-50 convolutional neural network evaluated on the image,",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Multilabel Classification",
+                "sec_num": "5.2"
+            },
+            {
+                "text": "\u03c8(x, i; \u03b8) = e w T x f i +bx .",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Multilabel Classification",
+                "sec_num": "5.2"
+            },
+            {
+                "text": "We trained a model using SGD with learning rate 10 -5 , momentum 0.9 and weight-decay 10 -4 , fine tuning the initial visual network, for 50 epochs.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Multilabel Classification",
+                "sec_num": "5.2"
+            },
+            {
+                "text": "The inference problems for both models are:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Calibration",
+                "sec_num": "5.3"
+            },
+            {
+                "text": "arg max y\u2208Y f \u03b8 (y, i) = log p(y|i; \u03b8).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Calibration",
+                "sec_num": "5.3"
+            },
+            {
+                "text": "We use the algorithm in Sec. (4) to calibrate the predictions using model \u03b8. Our calibration tries to enforce gender statistics derived from the training set of corpus applicable for each recognition problem. For all experiments, we try to match gender ratios on the test set within a margin of .05 of their value on the training set. While we do adjust the output on the test set, we never use the ground truth on the test set and instead working from the assumption that it should be similarly distributed as the training set. When running the debiasing algorithm, we set \u03b7 = 10 -1 and optimize for 100 iterations.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Calibration",
+                "sec_num": "5.3"
+            },
+            {
+                "text": "In this section, we use the approaches outlined in Section 3 to quantify the bias and bias amplification in the vSRL and the MLC tasks.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Bias Analysis",
+                "sec_num": "6"
+            },
+            {
+                "text": "6.1 Visual Semantic Role Labeling imSitu is gender biased In Figure 2 (a), along the x-axis, we show the male favoring bias of im-Situ verbs. Overall, the dataset is heavily biased toward male agents, with 64.6% of verbs favoring a male agent by an average bias of 0.707 (roughly 3:1 male). Nearly half of verbs are extremely biased in the male or female direction: 46.95% of verbs favor a gender with a bias of at least 0.7. 6Figure 2 (a) contains several activity labels revealing problematic biases. For example, shopping, microwaving and washing are biased toward a female agent. Furthermore, several verbs such as driving, shooting, and coaching are heavily biased toward a male agent.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 68,
+                        "end": 69,
+                        "text": "2",
+                        "ref_id": "FIGREF1"
+                    },
+                    {
+                        "start": 434,
+                        "end": 435,
+                        "text": "2",
+                        "ref_id": "FIGREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Bias Analysis",
+                "sec_num": "6"
+            },
+            {
+                "text": "Training on imSitu amplifies bias In Figure 2(a) , along the y-axis, we show the ratio of male agents (% of total people) in predictions on an unseen development set. The mean bias amplification in the development set is high, 0.050 on average, with 45.75% of verbs exhibiting amplification. Biased verbs tend to have stronger amplification: verbs with training bias over 0.7 in either the male or female direction have a mean amplification of 0.072. Several already problematic biases have gotten much worse. For example, serving, only had a small bias toward females in the training set, 0.402, is now heavily biased toward females, 0.122. The verb tuning, originally heavily biased toward males, 0.878, now has exclusively male agents.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 44,
+                        "end": 48,
+                        "text": "2(a)",
+                        "ref_id": "FIGREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Bias Analysis",
+                "sec_num": "6"
+            },
+            {
+                "text": "MS-COCO is gender biased In Figure 2 (b) along the x-axis, similarly to imSitu, we analyze bias of objects in MS-COCO with respect to males. MS-COCO is even more heavily biased toward men than imSitu, with 86.6% of objects biased toward men, but with smaller average magnitude, 0.65. One third of the nouns are extremely biased toward males, 37.9% of nouns favor men with a bias of at least 0.7. Some problematic examples include kitchen objects such as knife, fork, or spoon being more biased toward woman. Outdoor recreation related objects such tennis racket, snowboard and boat tend to be more biased toward men. had mean amplification of 0.081. Again, several problematic biases have now been amplified. For example, kitchen categories already biased toward females such as knife, fork and spoon have all been amplified. Technology oriented categories initially biased toward men such as keyboard and mouse have each increased their bias toward males by over 0.100.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 35,
+                        "end": 36,
+                        "text": "2",
+                        "ref_id": "FIGREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Multilabel Classification",
+                "sec_num": "6.2"
+            },
+            {
+                "text": "We confirmed our hypothesis that (a) both the im-Situ and MS-COCO datasets, gathered from the web, are heavily gender biased and that (b) models trained to perform prediction on these datasets amplify the existing gender bias when evaluated on development data. Furthermore, across both datasets, we showed that the degree of bias amplification was related to the size of the initial bias, with highly biased object and verb categories exhibiting more bias amplification. Our results demonstrate that care needs be taken in deploying such uncalibrated systems otherwise they could not only reinforce existing social bias but actually make them worse.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Discussion",
+                "sec_num": "6.3"
+            },
+            {
+                "text": "We test our methods for reducing bias amplification in two problem settings: visual semantic role labeling in the imSitu dataset (vSRL) and multilabel image classification in MS-COCO (MLC). In all settings we derive corpus constraints using the training set and then run our calibration method in batch on either the development or testing set. Our results are summarized in Table 2 and Figure 3 .",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 381,
+                        "end": 382,
+                        "text": "2",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 387,
+                        "end": 395,
+                        "text": "Figure 3",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Calibration Results",
+                "sec_num": "7"
+            },
+            {
+                "text": "Our quantitative results are summarized in the first two sections of Table 2 . On the development set, the number of verbs whose bias exceed the original bias by over 5% decreases 30.5% (Viol.). Overall, we are able to significantly reduce bias amplification in vSRL by 52% on the development set (Amp. bias). We evaluate the underlying recognition performance using the standard measure in vSRL: top-1 semantic role accuracy, which tests how often the correct verb was predicted and the noun value was correctly assigned to a semantic role. Our calibration method results in a negligible decrease in performance (Perf.). In Figure 3 (c) we can see that the overall distance to the training set distribution after applying RBA decreased significantly, over 39%. Figure 3 (e) demonstrates that across all initial training bias, RBA is able to reduce bias amplification. In general, RBA struggles to remove bias amplification in areas of low initial training bias, ",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 75,
+                        "end": 76,
+                        "text": "2",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 632,
+                        "end": 633,
+                        "text": "3",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 769,
+                        "end": 770,
+                        "text": "3",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Visual Semantic Role Labeling",
+                "sec_num": "7.1"
+            },
+            {
+                "text": "Our quantitative results on MS-COCO RBA are summarized in the last two sections of Table 2 .",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 89,
+                        "end": 90,
+                        "text": "2",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Multilabel Classification",
+                "sec_num": "7.2"
+            },
+            {
+                "text": "Similarly to vSRL, we are able to reduce the number of objects whose bias exceeds the original training bias by 5%, by 40% (Viol.). Bias amplification was reduced by 31.3% on the development set (Amp. bias). The underlying recognition system was evaluated by the standard measure: top-1 mean average precision, the precision averaged across object categories. Our calibration method results in a negligible loss in performance. In Figure 3(d) , we demonstrate that we substantially reduce the distance between training bias and bias in the development set. Finally, in Figure 3 (f) we demonstrate that we decrease bias amplification for all initial training bias settings. Results on the test set support our development results: we decrease bias amplification by 47.5% (Amp. bias).",
+                "cite_spans": [
+                    {
+                        "start": 431,
+                        "end": 442,
+                        "text": "Figure 3(d)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 576,
+                        "end": 577,
+                        "text": "3",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Multilabel Classification",
+                "sec_num": "7.2"
+            },
+            {
+                "text": "We have demonstrated that RBA can significantly reduce bias amplification. While were not able to remove all amplification, we have made significant progress with little or no loss in underlying recognition performance. Across both problems, RBA was able to reduce bias amplification at all initial values of training bias.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Discussion",
+                "sec_num": "7.3"
+            },
+            {
+                "text": "Structured prediction models can leverage correlations that allow them to make correct predictions even with very little underlying evidence. Yet such models risk potentially leveraging social bias in their training data. In this paper, we presented a general framework for visualizing and quantifying biases in such models and proposed RBA to calibrate their predictions under two different settings. Taking gender bias as an example, our analysis demonstrates that conditional random fields can amplify social bias from data while our approach RBA can help to reduce the bias.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion",
+                "sec_num": "8"
+            },
+            {
+                "text": "Our work is the first to demonstrate structured prediction models amplify bias and the first to propose methods for reducing this effect but significant avenues for future work remain. While RBA can be applied to any structured predictor, it is unclear whether different predictors amplify bias more or less. Furthermore, we presented only one method for measuring bias. More extensive analysis could explore the interaction among predictor, bias measurement, and bias deamplification method. Future work also includes applying bias reducing methods in other structured domains, such as pronoun reference resolution (Mitkov, 2014) .",
+                "cite_spans": [
+                    {
+                        "start": 616,
+                        "end": 630,
+                        "text": "(Mitkov, 2014)",
+                        "ref_id": "BIBREF20"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion",
+                "sec_num": "8"
+            },
+            {
+                "text": "To simplify our analysis, we only consider a gender binary as perceived by annotators in the datasets. We recognize that a more fine-grained analysis would be needed for deployment in a production system. Also, note that the proposed approach can be applied to other NLP tasks and other variables such as identification with a racial or ethnic group.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "For the sake of simplicity, we abuse the notations and use i to represent both input and data index.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "In this gender binary, bias toward woman is 1-the bias toward man",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            }
+        ],
+        "back_matter": [
+            {
+                "text": "Acknowledgement This work was supported in part by National Science Foundation Grant IIS-1657193 and two NVIDIA Hardware Grants.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "acknowledgement",
+                "sec_num": null
+            }
+        ],
+        "bib_entries": {
+            "BIBREF0": {
+                "ref_id": "b0",
+                "title": "Vqa: Visual question answering",
+                "authors": [
+                    {
+                        "first": "Stanislaw",
+                        "middle": [],
+                        "last": "Antol",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Aishwarya",
+                        "middle": [],
+                        "last": "Agrawal",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jiasen",
+                        "middle": [],
+                        "last": "Lu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Margaret",
+                        "middle": [],
+                        "last": "Mitchell",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dhruv",
+                        "middle": [],
+                        "last": "Batra",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "C",
+                        "middle": [],
+                        "last": "Lawrence Zitnick",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Devi",
+                        "middle": [],
+                        "last": "Parikh",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Proceedings of the IEEE International Conference on Computer Vision",
+                "volume": "",
+                "issue": "",
+                "pages": "2425--2433",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Stanislaw Antol, Aishwarya Agrawal, Jiasen Lu, Mar- garet Mitchell, Dhruv Batra, C Lawrence Zitnick, and Devi Parikh. 2015. Vqa: Visual question an- swering. In Proceedings of the IEEE International Conference on Computer Vision, pages 2425-2433.",
+                "links": null
+            },
+            "BIBREF1": {
+                "ref_id": "b1",
+                "title": "The Berkeley framenet project",
+                "authors": [
+                    {
+                        "first": "Collin",
+                        "middle": [
+                            "F"
+                        ],
+                        "last": "Baker",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Charles",
+                        "middle": [
+                            "J"
+                        ],
+                        "last": "Fillmore",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "John",
+                        "middle": [
+                            "B"
+                        ],
+                        "last": "Lowe",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1998,
+                "venue": "Proceedings of the Annual Meeting of the Association for Computational Linguistics (ACL)",
+                "volume": "",
+                "issue": "",
+                "pages": "86--90",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Collin F Baker, Charles J Fillmore, and John B Lowe. 1998. The Berkeley framenet project. In Proceed- ings of the Annual Meeting of the Association for Computational Linguistics (ACL), pages 86-90.",
+                "links": null
+            },
+            "BIBREF2": {
+                "ref_id": "b2",
+                "title": "Big data's disparate impact",
+                "authors": [
+                    {
+                        "first": "Solon",
+                        "middle": [],
+                        "last": "Barocas",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Andrew",
+                        "middle": [
+                            "D"
+                        ],
+                        "last": "Selbst",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Solon Barocas and Andrew D Selbst. 2014. Big data's disparate impact. Available at SSRN 2477899.",
+                "links": null
+            },
+            "BIBREF3": {
+                "ref_id": "b3",
+                "title": "Man is to computer programmer as woman is to homemaker? debiasing word embeddings",
+                "authors": [
+                    {
+                        "first": "Tolga",
+                        "middle": [],
+                        "last": "Bolukbasi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kai-Wei",
+                        "middle": [],
+                        "last": "Chang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "James",
+                        "middle": [
+                            "Y"
+                        ],
+                        "last": "Zou",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Venkatesh",
+                        "middle": [],
+                        "last": "Saligrama",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Adam",
+                        "middle": [
+                            "T"
+                        ],
+                        "last": "Kalai",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "The Conference on Advances in Neural Information Processing Systems (NIPS)",
+                "volume": "",
+                "issue": "",
+                "pages": "4349--4357",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Tolga Bolukbasi, Kai-Wei Chang, James Y Zou, Venkatesh Saligrama, and Adam T Kalai. 2016. Man is to computer programmer as woman is to homemaker? debiasing word embeddings. In The Conference on Advances in Neural Information Pro- cessing Systems (NIPS), pages 4349-4357.",
+                "links": null
+            },
+            "BIBREF4": {
+                "ref_id": "b4",
+                "title": "Semantics derived automatically from language corpora contain human-like biases",
+                "authors": [
+                    {
+                        "first": "Aylin",
+                        "middle": [],
+                        "last": "Caliskan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Joanna",
+                        "middle": [
+                            "J"
+                        ],
+                        "last": "Bryson",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Arvind",
+                        "middle": [],
+                        "last": "Narayanan",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Science",
+                "volume": "356",
+                "issue": "6334",
+                "pages": "183--186",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Aylin Caliskan, Joanna J Bryson, and Arvind Narayanan. 2017. Semantics derived automatically from language corpora contain human-like biases. Science, 356(6334):183-186.",
+                "links": null
+            },
+            "BIBREF5": {
+                "ref_id": "b5",
+                "title": "Tractable semi-supervised learning of complex structured prediction models",
+                "authors": [
+                    {
+                        "first": "Kai-Wei",
+                        "middle": [],
+                        "last": "Chang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "S",
+                        "middle": [],
+                        "last": "Sundararajan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "S",
+                        "middle": [
+                            "Sathiya"
+                        ],
+                        "last": "Keerthi",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "Proceedings of the European Conference on Machine Learning (ECML)",
+                "volume": "",
+                "issue": "",
+                "pages": "176--191",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Kai-Wei Chang, S. Sundararajan, and S. Sathiya Keerthi. 2013. Tractable semi-supervised learning of complex structured prediction models. In Pro- ceedings of the European Conference on Machine Learning (ECML), pages 176-191.",
+                "links": null
+            },
+            "BIBREF6": {
+                "ref_id": "b6",
+                "title": "Exact decoding of phrase-based translation models through Lagrangian relaxation",
+                "authors": [
+                    {
+                        "first": "Yin-Wen",
+                        "middle": [],
+                        "last": "Chang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Michael",
+                        "middle": [],
+                        "last": "Collins",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2011,
+                "venue": "EMNLP",
+                "volume": "",
+                "issue": "",
+                "pages": "26--37",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Yin-Wen Chang and Michael Collins. 2011. Exact de- coding of phrase-based translation models through Lagrangian relaxation. In EMNLP, pages 26-37.",
+                "links": null
+            },
+            "BIBREF7": {
+                "ref_id": "b7",
+                "title": "Microsoft coco captions: Data collection and evaluation server",
+                "authors": [
+                    {
+                        "first": "Xinlei",
+                        "middle": [],
+                        "last": "Chen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hao",
+                        "middle": [],
+                        "last": "Fang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tsung-Yi",
+                        "middle": [],
+                        "last": "Lin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ramakrishna",
+                        "middle": [],
+                        "last": "Vedantam",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Saurabh",
+                        "middle": [],
+                        "last": "Gupta",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Piotr",
+                        "middle": [],
+                        "last": "Doll\u00e1r",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "C",
+                        "middle": [],
+                        "last": "Lawrence",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zitnick",
+                        "middle": [],
+                        "last": "",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1504.00325"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Xinlei Chen, Hao Fang, Tsung-Yi Lin, Ramakr- ishna Vedantam, Saurabh Gupta, Piotr Doll\u00e1r, and C Lawrence Zitnick. 2015. Microsoft coco captions: Data collection and evaluation server. arXiv preprint arXiv:1504.00325.",
+                "links": null
+            },
+            "BIBREF8": {
+                "ref_id": "b8",
+                "title": "Constrained Semisupervised Learning in the Presence of Unanticipated Classes",
+                "authors": [
+                    {
+                        "first": "Bharat",
+                        "middle": [],
+                        "last": "Bhavana",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Dalvi",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Bhavana Bharat Dalvi. 2015. Constrained Semi- supervised Learning in the Presence of Unantici- pated Classes. Ph.D. thesis, Google Research.",
+                "links": null
+            },
+            "BIBREF9": {
+                "ref_id": "b9",
+                "title": "Fairness through awareness",
+                "authors": [
+                    {
+                        "first": "Cynthia",
+                        "middle": [],
+                        "last": "Dwork",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Moritz",
+                        "middle": [],
+                        "last": "Hardt",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Toniann",
+                        "middle": [],
+                        "last": "Pitassi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Omer",
+                        "middle": [],
+                        "last": "Reingold",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Richard",
+                        "middle": [],
+                        "last": "Zemel",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2012,
+                "venue": "Proceedings of the 3rd Innovations in Theoretical Computer Science Conference",
+                "volume": "",
+                "issue": "",
+                "pages": "214--226",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Cynthia Dwork, Moritz Hardt, Toniann Pitassi, Omer Reingold, and Richard Zemel. 2012. Fairness through awareness. In Proceedings of the 3rd In- novations in Theoretical Computer Science Confer- ence, pages 214-226. ACM.",
+                "links": null
+            },
+            "BIBREF10": {
+                "ref_id": "b10",
+                "title": "Certifying and removing disparate impact",
+                "authors": [
+                    {
+                        "first": "Michael",
+                        "middle": [],
+                        "last": "Feldman",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "A",
+                        "middle": [],
+                        "last": "Sorelle",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "John",
+                        "middle": [],
+                        "last": "Friedler",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Carlos",
+                        "middle": [],
+                        "last": "Moeller",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Suresh",
+                        "middle": [],
+                        "last": "Scheidegger",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Venkatasubramanian",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Proceedings of International Conference on Knowledge Discovery and Data Mining (KDD)",
+                "volume": "",
+                "issue": "",
+                "pages": "259--268",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Michael Feldman, Sorelle A Friedler, John Moeller, Carlos Scheidegger, and Suresh Venkatasubrama- nian. 2015. Certifying and removing disparate im- pact. In Proceedings of International Conference on Knowledge Discovery and Data Mining (KDD), pages 259-268.",
+                "links": null
+            },
+            "BIBREF11": {
+                "ref_id": "b11",
+                "title": "Reporting bias and knowledge extraction",
+                "authors": [
+                    {
+                        "first": "Jonathan",
+                        "middle": [],
+                        "last": "Gordon",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Benjamin",
+                        "middle": [],
+                        "last": "Van Durme",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jonathan Gordon and Benjamin Van Durme. 2013. Re- porting bias and knowledge extraction. Automated Knowledge Base Construction (AKBC).",
+                "links": null
+            },
+            "BIBREF12": {
+                "ref_id": "b12",
+                "title": "Gurobi Optimization",
+                "authors": [
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Inc",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Gurobi optimizer reference manual",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Inc. Gurobi Optimization. 2016. Gurobi optimizer ref- erence manual.",
+                "links": null
+            },
+            "BIBREF13": {
+                "ref_id": "b13",
+                "title": "Equality of opportunity in supervised learning",
+                "authors": [
+                    {
+                        "first": "Moritz",
+                        "middle": [],
+                        "last": "Hardt",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Eric",
+                        "middle": [],
+                        "last": "Price",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nati",
+                        "middle": [],
+                        "last": "Srebro",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Conference on Neural Information Processing Systems (NIPS)",
+                "volume": "",
+                "issue": "",
+                "pages": "3315--3323",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Moritz Hardt, Eric Price, Nati Srebro, et al. 2016. Equality of opportunity in supervised learning. In Conference on Neural Information Processing Sys- tems (NIPS), pages 3315-3323.",
+                "links": null
+            },
+            "BIBREF14": {
+                "ref_id": "b14",
+                "title": "Unequal representation and gender stereotypes in image search results for occupations",
+                "authors": [
+                    {
+                        "first": "Matthew",
+                        "middle": [],
+                        "last": "Kay",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Cynthia",
+                        "middle": [],
+                        "last": "Matuszek",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sean",
+                        "middle": [
+                            "A"
+                        ],
+                        "last": "Munson",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Human Factors in Computing Systems",
+                "volume": "",
+                "issue": "",
+                "pages": "3819--3828",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Matthew Kay, Cynthia Matuszek, and Sean A Munson. 2015. Unequal representation and gender stereo- types in image search results for occupations. In Human Factors in Computing Systems, pages 3819- 3828. ACM.",
+                "links": null
+            },
+            "BIBREF15": {
+                "ref_id": "b15",
+                "title": "Combinatorial Optimization: Theory and Application",
+                "authors": [
+                    {
+                        "first": "Bernhard",
+                        "middle": [],
+                        "last": "Korte",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jens",
+                        "middle": [],
+                        "last": "Vygen",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2008,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Bernhard Korte and Jens Vygen. 2008. Combinatorial Optimization: Theory and Application. Springer Verlag.",
+                "links": null
+            },
+            "BIBREF16": {
+                "ref_id": "b16",
+                "title": "Microsoft coco: Common objects in context",
+                "authors": [
+                    {
+                        "first": "Tsung-Yi",
+                        "middle": [],
+                        "last": "Lin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Michael",
+                        "middle": [],
+                        "last": "Maire",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Serge",
+                        "middle": [],
+                        "last": "Belongie",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "James",
+                        "middle": [],
+                        "last": "Hays",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Pietro",
+                        "middle": [],
+                        "last": "Perona",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Deva",
+                        "middle": [],
+                        "last": "Ramanan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Piotr",
+                        "middle": [],
+                        "last": "Doll\u00e1r",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "C",
+                        "middle": [],
+                        "last": "Lawrence",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zitnick",
+                        "middle": [],
+                        "last": "",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "European Conference on Computer Vision",
+                "volume": "",
+                "issue": "",
+                "pages": "740--755",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Tsung-Yi Lin, Michael Maire, Serge Belongie, James Hays, Pietro Perona, Deva Ramanan, Piotr Doll\u00e1r, and C Lawrence Zitnick. 2014. Microsoft coco: Common objects in context. In European Confer- ence on Computer Vision, pages 740-755. Springer.",
+                "links": null
+            },
+            "BIBREF17": {
+                "ref_id": "b17",
+                "title": "Wordnet: An on-line lexical database",
+                "authors": [
+                    {
+                        "first": "G",
+                        "middle": [],
+                        "last": "Miller",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "R",
+                        "middle": [],
+                        "last": "Beckwith",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "C",
+                        "middle": [],
+                        "last": "Fellbaum",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "D",
+                        "middle": [],
+                        "last": "Gross",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "K",
+                        "middle": [
+                            "J"
+                        ],
+                        "last": "Miller",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1990,
+                "venue": "International Journal of Lexicography",
+                "volume": "3",
+                "issue": "4",
+                "pages": "235--312",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "G. Miller, R. Beckwith, C. Fellbaum, D. Gross, and K.J. Miller. 1990. Wordnet: An on-line lexical database. International Journal of Lexicography, 3(4):235-312.",
+                "links": null
+            },
+            "BIBREF18": {
+                "ref_id": "b18",
+                "title": "Stereotyping and bias in the flickr30k dataset",
+                "authors": [
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Emiel Van Miltenburg",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Emiel van Miltenburg. 2016. Stereotyping and bias in the flickr30k dataset. MMC.",
+                "links": null
+            },
+            "BIBREF19": {
+                "ref_id": "b19",
+                "title": "Seeing through the human reporting bias: Visual classifiers from noisy humancentric labels",
+                "authors": [
+                    {
+                        "first": "Ishan",
+                        "middle": [],
+                        "last": "Misra",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Lawrence",
+                        "middle": [],
+                        "last": "Zitnick",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Margaret",
+                        "middle": [],
+                        "last": "Mitchell",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ross",
+                        "middle": [],
+                        "last": "Girshick",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Conference on Computer Vision and Pattern Recognition (CVPR)",
+                "volume": "",
+                "issue": "",
+                "pages": "2930--2939",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ishan Misra, C Lawrence Zitnick, Margaret Mitchell, and Ross Girshick. 2016. Seeing through the human reporting bias: Visual classifiers from noisy human- centric labels. In Conference on Computer Vision and Pattern Recognition (CVPR), pages 2930-2939.",
+                "links": null
+            },
+            "BIBREF20": {
+                "ref_id": "b20",
+                "title": "Anaphora resolution. Routledge",
+                "authors": [
+                    {
+                        "first": "Ruslan",
+                        "middle": [],
+                        "last": "Mitkov",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ruslan Mitkov. 2014. Anaphora resolution. Rout- ledge.",
+                "links": null
+            },
+            "BIBREF21": {
+                "ref_id": "b21",
+                "title": "Dual decomposition inference for graphical models over strings",
+                "authors": [
+                    {
+                        "first": "Nanyun",
+                        "middle": [],
+                        "last": "Peng",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ryan",
+                        "middle": [],
+                        "last": "Cotterell",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jason",
+                        "middle": [],
+                        "last": "Eisner",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Conference on Empirical Methods in Natural Language Processing (EMNLP)",
+                "volume": "",
+                "issue": "",
+                "pages": "917--927",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Nanyun Peng, Ryan Cotterell, and Jason Eisner. 2015. Dual decomposition inference for graphical models over strings. In Conference on Empirical Methods in Natural Language Processing (EMNLP), pages 917-927.",
+                "links": null
+            },
+            "BIBREF22": {
+                "ref_id": "b22",
+                "title": "Big data: Seizing opportunities and preserving values",
+                "authors": [
+                    {
+                        "first": "John",
+                        "middle": [],
+                        "last": "Podesta",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Penny",
+                        "middle": [],
+                        "last": "Pritzker",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ernest",
+                        "middle": [
+                            "J"
+                        ],
+                        "last": "Moniz",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "John",
+                        "middle": [],
+                        "last": "Holdren",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jefrey",
+                        "middle": [],
+                        "last": "Zients",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "John Podesta, Penny Pritzker, Ernest J. Moniz, John Holdren, and Jefrey Zients. 2014. Big data: Seiz- ing opportunities and preserving values. Executive Office of the President.",
+                "links": null
+            },
+            "BIBREF23": {
+                "ref_id": "b23",
+                "title": "Women and news: A long and winding road",
+                "authors": [
+                    {
+                        "first": "Karen",
+                        "middle": [],
+                        "last": "Ross",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Cynthia",
+                        "middle": [],
+                        "last": "Carter",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2011,
+                "venue": "Media, Culture & Society",
+                "volume": "33",
+                "issue": "8",
+                "pages": "1148--1165",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Karen Ross and Cynthia Carter. 2011. Women and news: A long and winding road. Media, Culture & Society, 33(8):1148-1165.",
+                "links": null
+            },
+            "BIBREF24": {
+                "ref_id": "b24",
+                "title": "A Tutorial on Dual Decomposition and Lagrangian Relaxation for Inference in Natural Language Processing",
+                "authors": [
+                    {
+                        "first": "M",
+                        "middle": [],
+                        "last": "Alexander",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Michael",
+                        "middle": [],
+                        "last": "Rush",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Collins",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2012,
+                "venue": "Journal of Artificial Intelligence Research",
+                "volume": "45",
+                "issue": "",
+                "pages": "305--362",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Alexander M Rush and Michael Collins. 2012. A Tuto- rial on Dual Decomposition and Lagrangian Relax- ation for Inference in Natural Language Processing. Journal of Artificial Intelligence Research, 45:305- 362.",
+                "links": null
+            },
+            "BIBREF25": {
+                "ref_id": "b25",
+                "title": "Very deep convolutional networks for large-scale image recognition",
+                "authors": [
+                    {
+                        "first": "Karen",
+                        "middle": [],
+                        "last": "Simonyan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Andrew",
+                        "middle": [],
+                        "last": "Zisserman",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1409.1556"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Karen Simonyan and Andrew Zisserman. 2014. Very deep convolutional networks for large-scale image recognition. arXiv preprint arXiv:1409.1556.",
+                "links": null
+            },
+            "BIBREF26": {
+                "ref_id": "b26",
+                "title": "Introduction to dual decomposition for inference",
+                "authors": [
+                    {
+                        "first": "David",
+                        "middle": [],
+                        "last": "Sontag",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tommi",
+                        "middle": [],
+                        "last": "Amir Globerson",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Jaakkola",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2011,
+                "venue": "Optimization for Machine Learning",
+                "volume": "1",
+                "issue": "",
+                "pages": "219--254",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "David Sontag, Amir Globerson, and Tommi Jaakkola. 2011. Introduction to dual decomposition for infer- ence. Optimization for Machine Learning, 1:219- 254.",
+                "links": null
+            },
+            "BIBREF27": {
+                "ref_id": "b27",
+                "title": "Discrimination in online ad delivery",
+                "authors": [
+                    {
+                        "first": "Latanya",
+                        "middle": [],
+                        "last": "Sweeney",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "Queue",
+                "volume": "11",
+                "issue": "3",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Latanya Sweeney. 2013. Discrimination in online ad delivery. Queue, 11(3):10.",
+                "links": null
+            },
+            "BIBREF28": {
+                "ref_id": "b28",
+                "title": "Extracting implicit knowledge from text",
+                "authors": [
+                    {
+                        "first": "D",
+                        "middle": [],
+                        "last": "Benjamin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Van Durme",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2010,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Benjamin D Van Durme. 2010. Extracting implicit knowledge from text. Ph.D. thesis, University of Rochester.",
+                "links": null
+            },
+            "BIBREF29": {
+                "ref_id": "b29",
+                "title": "Show and tell: A neural image caption generator",
+                "authors": [
+                    {
+                        "first": "Oriol",
+                        "middle": [],
+                        "last": "Vinyals",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alexander",
+                        "middle": [],
+                        "last": "Toshev",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Samy",
+                        "middle": [],
+                        "last": "Bengio",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dumitru",
+                        "middle": [],
+                        "last": "Erhan",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition",
+                "volume": "",
+                "issue": "",
+                "pages": "3156--3164",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Oriol Vinyals, Alexander Toshev, Samy Bengio, and Dumitru Erhan. 2015. Show and tell: A neural im- age caption generator. In Proceedings of the IEEE Conference on Computer Vision and Pattern Recog- nition, pages 3156-3164.",
+                "links": null
+            },
+            "BIBREF30": {
+                "ref_id": "b30",
+                "title": "Commonly uncommon: Semantic sparsity in situation recognition",
+                "authors": [
+                    {
+                        "first": "Mark",
+                        "middle": [],
+                        "last": "Yatskar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Vicente",
+                        "middle": [],
+                        "last": "Ordonez",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Luke",
+                        "middle": [],
+                        "last": "Zettlemoyer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ali",
+                        "middle": [],
+                        "last": "Farhadi",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR)",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Mark Yatskar, Vicente Ordonez, Luke Zettlemoyer, and Ali Farhadi. 2017. Commonly uncommon: Seman- tic sparsity in situation recognition. In Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR).",
+                "links": null
+            },
+            "BIBREF31": {
+                "ref_id": "b31",
+                "title": "Situation recognition: Visual semantic role labeling for image understanding",
+                "authors": [
+                    {
+                        "first": "Mark",
+                        "middle": [],
+                        "last": "Yatskar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Luke",
+                        "middle": [],
+                        "last": "Zettlemoyer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ali",
+                        "middle": [],
+                        "last": "Farhadi",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR)",
+                "volume": "",
+                "issue": "",
+                "pages": "5534--5542",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Mark Yatskar, Luke Zettlemoyer, and Ali Farhadi. 2016. Situation recognition: Visual semantic role labeling for image understanding. In Proceedings of the IEEE Conference on Computer Vision and Pat- tern Recognition (CVPR), pages 5534-5542.",
+                "links": null
+            },
+            "BIBREF32": {
+                "ref_id": "b32",
+                "title": "A survey on measuring indirect discrimination in machine learning",
+                "authors": [
+                    {
+                        "first": "Indre",
+                        "middle": [],
+                        "last": "Zliobaite",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1511.00148"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Indre Zliobaite. 2015. A survey on measuring indirect discrimination in machine learning. arXiv preprint arXiv:1511.00148.",
+                "links": null
+            }
+        },
+        "ref_entries": {
+            "FIGREF0": {
+                "num": null,
+                "text": "Figure1: Five example images from the imSitu visual semantic role labeling (vSRL) dataset. Each image is paired with a table describing a situation: the verb, cooking, its semantic roles, i.e agent, and noun values filling that role, i.e. woman. In the imSitu training set, 33% of cooking images have man in the agent role while the rest have woman. After training a Conditional Random Field (CRF), bias is amplified: man fills 16% of agent roles in cooking images. To reduce this bias amplification our calibration method adjusts weights of CRF potentials associated with biased predictions. After applying our methods, man appears in the agent role of 20% of cooking images, reducing the bias amplification by 25%, while keeping the CRF vSRL performance unchanged.",
+                "uris": null,
+                "fig_num": "1",
+                "type_str": "figure"
+            },
+            "FIGREF1": {
+                "num": null,
+                "text": "Figure 2: Gender bias analysis of imSitu vSRL and MS-COCO MLC. (a) gender bias of verbs toward man in the training set versus bias on a predicted development set. (b) gender bias of nouns toward man in the training set versus bias on the predicted development set. Values near zero indicate bias toward woman while values near 0.5 indicate unbiased variables. Across both dataset, there is significant bias toward males, and significant bias amplification after training on biased training data.",
+                "uris": null,
+                "fig_num": "2",
+                "type_str": "figure"
+            },
+            "FIGREF2": {
+                "num": null,
+                "text": "Figure 3: Results of reducing bias amplification using RBA on imSitu vSRL and MS-COCO MLC. Figures 3(a)-(d) show initial training set bias along the x-axis and development set bias along the yaxis. Dotted blue lines indicate the 0.05 margin used in RBA, with points violating the margin shown in red while points meeting the margin are shown in green. Across both settings adding RBA significantly reduces the number of violations, and reduces the bias amplification significantly. Figures 3(e)-(f) demonstrate bias amplification as a function of training bias, with and without RBA. Across all initial training biases, RBA is able to reduce the bias amplification.",
+                "uris": null,
+                "fig_num": null,
+                "type_str": "figure"
+            }
+        }
+    }
+}

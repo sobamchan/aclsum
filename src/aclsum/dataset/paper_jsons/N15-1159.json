@@ -1,0 +1,1412 @@
+{
+    "paper_id": "N15-1159",
+    "header": {
+        "generated_with": "S2ORC 1.0.0",
+        "date_generated": "2023-06-16T11:59:30.391620Z"
+    },
+    "title": "On the Automatic Learning of Sentiment Lexicons",
+    "authors": [
+        {
+            "first": "Aliaksei",
+            "middle": [],
+            "last": "Severyn",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "University of Trento",
+                "location": {
+                    "postCode": "38123",
+                    "settlement": "Povo (TN)",
+                    "country": "Italy"
+                }
+            },
+            "email": "severyn@disi.unitn.it"
+        },
+        {
+            "first": "Alessandro",
+            "middle": [],
+            "last": "Moschitti",
+            "suffix": "",
+            "affiliation": {},
+            "email": "amoschitti@qf.org.qa"
+        }
+    ],
+    "year": "",
+    "venue": null,
+    "identifiers": {},
+    "abstract": "This paper describes a simple and principled approach to automatically construct sentiment lexicons using distant supervision. We induce the sentiment association scores for the lexicon items from a model trained on a weakly supervised corpora. Our empirical findings show that features extracted from such a machine-learned lexicon outperform models using manual or other automatically constructed sentiment lexicons. Finally, our system achieves the state-of-the-art in Twitter Sentiment Analysis tasks from Semeval-2013 and ranks 2nd best in Semeval-2014 according to the average rank.",
+    "pdf_parse": {
+        "paper_id": "N15-1159",
+        "_pdf_hash": "",
+        "abstract": [
+            {
+                "text": "This paper describes a simple and principled approach to automatically construct sentiment lexicons using distant supervision. We induce the sentiment association scores for the lexicon items from a model trained on a weakly supervised corpora. Our empirical findings show that features extracted from such a machine-learned lexicon outperform models using manual or other automatically constructed sentiment lexicons. Finally, our system achieves the state-of-the-art in Twitter Sentiment Analysis tasks from Semeval-2013 and ranks 2nd best in Semeval-2014 according to the average rank.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            }
+        ],
+        "body_text": [
+            {
+                "text": "One of the early and rather successful models for sentiment analysis (Pang and Lee, 2004; Pang and Lee, 2008) relied on manually constructed lexicons that map words to their sentiment, e.g., positive, negative or neutral. The document-level polarity is then assigned by performing some form of averaging, e.g., majority voting, of individual word polarities found in the document. These systems show an acceptable level of accuracy, they are easy to build and are highly computationally efficient as the only operation required to assign a polarity label are the word lookups and averaging. However, the information about word polarities in a document are best exploited when using machine learning models to train a sentiment classifier.",
+                "cite_spans": [
+                    {
+                        "start": 69,
+                        "end": 89,
+                        "text": "(Pang and Lee, 2004;",
+                        "ref_id": "BIBREF13"
+                    },
+                    {
+                        "start": 90,
+                        "end": 109,
+                        "text": "Pang and Lee, 2008)",
+                        "ref_id": "BIBREF14"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "In fact, most successful sentiment classification systems rely on supervised learning. Interestingly, a simple bag of words model using just unigrams and bigrams with an SVM has shown excellent results (Wang and Manning, 2012) performing on par or beating more complicated models, e.g., using neural networks (Socher et al., 2011) .",
+                "cite_spans": [
+                    {
+                        "start": 202,
+                        "end": 226,
+                        "text": "(Wang and Manning, 2012)",
+                        "ref_id": "BIBREF19"
+                    },
+                    {
+                        "start": 309,
+                        "end": 330,
+                        "text": "(Socher et al., 2011)",
+                        "ref_id": "BIBREF16"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Regarding Twitter sentiment analysis, the top performing system (Mohammad et al., 2013) from Semeval-2013 Twittter Sentiment Analysis task (Nakov et al., 2013) follows this recipe by training an SVM on various surface form, sentiment and semantic features. Perhaps, the most valuable finding is that sentiment lexicons appear to be the most useful source of features accounting for over 8 point gains in the F-measure on top of the standard feature sets.",
+                "cite_spans": [
+                    {
+                        "start": 64,
+                        "end": 87,
+                        "text": "(Mohammad et al., 2013)",
+                        "ref_id": "BIBREF11"
+                    },
+                    {
+                        "start": 139,
+                        "end": 159,
+                        "text": "(Nakov et al., 2013)",
+                        "ref_id": "BIBREF12"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Sentiment lexicons are mappings from words to scores capturing the degree of the sentiment expressed by a given word. While several manually constructed lexicons are made available, e.g., the MPQA (Wilson et al., 2005) , the Bing and Liu (Hu and Liu, 2004) and NRC Emoticon (Mohammad and Turney, 2013) lexicons, providing high quality word-sentiment associations compiled by humans, still their main drawback is low recall.",
+                "cite_spans": [
+                    {
+                        "start": 197,
+                        "end": 218,
+                        "text": "(Wilson et al., 2005)",
+                        "ref_id": "BIBREF20"
+                    },
+                    {
+                        "start": 238,
+                        "end": 256,
+                        "text": "(Hu and Liu, 2004)",
+                        "ref_id": "BIBREF4"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "For example, the largest NRC Emoticon lexicon contains only 14k items, whereas tweets with extremely sparse surface forms are known to form very large vocabularies. Hence, using larger lexicons with better recall has the potential of learning more accurate models. Extracting such lexicons automatically is a challenging and interesting problem (Lau et al., 2011; Bro and Ehrig, 2013; Liu et al., 2013; Tai and Kao, 2013; Yang et al., 2014; Huang et al., 2014) . However, different from previous work our goal is not to extract human-interpretable lexicons but to use them as a source of features to improve the classifier accuracy.",
+                "cite_spans": [
+                    {
+                        "start": 345,
+                        "end": 363,
+                        "text": "(Lau et al., 2011;",
+                        "ref_id": "BIBREF8"
+                    },
+                    {
+                        "start": 364,
+                        "end": 384,
+                        "text": "Bro and Ehrig, 2013;",
+                        "ref_id": "BIBREF0"
+                    },
+                    {
+                        "start": 385,
+                        "end": 402,
+                        "text": "Liu et al., 2013;",
+                        "ref_id": "BIBREF9"
+                    },
+                    {
+                        "start": 403,
+                        "end": 421,
+                        "text": "Tai and Kao, 2013;",
+                        "ref_id": "BIBREF17"
+                    },
+                    {
+                        "start": 422,
+                        "end": 440,
+                        "text": "Yang et al., 2014;",
+                        "ref_id": "BIBREF21"
+                    },
+                    {
+                        "start": 441,
+                        "end": 460,
+                        "text": "Huang et al., 2014)",
+                        "ref_id": "BIBREF5"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Following this idea, the authors in (Mohammad et al., 2013) use features derived from the lexicons to build a state-of-the-art sentiment classifier for Twitter. They construct automatic lexicons using noisy labels automatically inferred from emoticons and hashtags present in the tweets. The wordsentiment association scores are estimated using pointwise mutual information (PMI) computed between a word and a tweet label.",
+                "cite_spans": [
+                    {
+                        "start": 36,
+                        "end": 59,
+                        "text": "(Mohammad et al., 2013)",
+                        "ref_id": "BIBREF11"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "While the idea to model statistical correlations between the words and tweet labels using PMI or any other metric is rather intuitive, we believe there is a more effective way to exploit noisy labels for estimating the word-sentiment association scores. Our method relies on the idea of distant supervision (Marchetti-Bowick and Chambers, 2012) . We use a large distantly supervised Twitter corpus, which contains noisy opinion labels (positive or negative) to learn a supervised polarity classifier. We encode tweets using words and multi-word expressions as features (which are also entries in our lexicon). The weights from the learned model are then used to define which lexicon items to keep, i.e., items that constitute a good sentiment lexicon. The scores for the lexicon items can be then directly used to encode new tweets or used to derive more advanced features. Using machine learning to induce the scores for the lexicon items has an advantage of learning the scores that are directly optimized for the classification task, where lexicon items with higher discriminative power tend to receive higher weights.",
+                "cite_spans": [
+                    {
+                        "start": 307,
+                        "end": 344,
+                        "text": "(Marchetti-Bowick and Chambers, 2012)",
+                        "ref_id": "BIBREF10"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "To assess the effectiveness of our approach, we reimplemented the state-of-the-art system ranking 1st in Semeval-2013 Twitter Sentiment Analysis challenge and used it as our baseline. We show that adding features from our machine-learned sentiment lexicon yields better results than any of the automatic PMI lexicons used in the baseline and all of them combined together. Our system obtains new state-of-the-art results on the SemEval-2013 message level task with an F-score of 71.32 -a 2% of absolute improvement over the previous best system in SemEval-2013. We also evaluate the utility of the ML lexicon on the five test sets from a recent Semeval-2014 task showing significant improvement over a strong baseline. Finally, our system shows high accuracy among the 42 systems participating in the Semeval-2014 challenge ranking 2nd best according to the average rank across all test sets.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "We treat the task of sentiment analysis as a supervised learning problem, where we are given labeled data {(x i , y i )} n i=1 and the goal is to estimate a decision function f (x) \u2192 y that maps input examples to labels. In particular, we use a linear SVM model with the prediction function of the following form: f = sign(w T x + b), where the model weights w are estimated from the training set.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Our model",
+                "sec_num": "2"
+            },
+            {
+                "text": "In the following we describe our approach to construct sentiment lexicons by learning an SVM model on the the distant supervised dataset. Finally, we describe our baseline model.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Our model",
+                "sec_num": "2"
+            },
+            {
+                "text": "Our sentiment lexicon consists of words and word sequences (we only use word unigrams and bigrams). To select lexicon items from a set of all unigrams and bigrams, we propose the following process:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Distant Supervision for Automatic Lexicon Construction",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "1. Collect a large unlabelled corpus of tweets C. 2. For each tweet t i \u2208 C use cues (hashtags or emoticons) to automatically infer its label (positive or negative): y i \u2208 {-1, +1}. For example, positive or negative emoticons, such as ':-)' or ':(' are good indicators of the general sentiment expressed by a tweet.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Distant Supervision for Automatic Lexicon Construction",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "tweet t i into a feature vector x i \u2208 R |L| , where the lexicon L is a set of unigrams and bigrams.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Extract unigram and bigram features to encode a",
+                "sec_num": "3."
+            },
+            {
+                "text": "w = i=1..N \u03b1 i y i x i on the encoded corpus C = {(x i , y i )} N i=1 .",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Train an SVM model",
+                "sec_num": "5."
+            },
+            {
+                "text": "The model w \u2208 R |L| is a dense vector whose components are obtained from a weighted combination of training examples x i (support vectors) and their labels y i (only those instances with \u03b1 i > 0 contribute to the components of w). 6. Given that the each component w j of the model w directly corresponds to the lexicon entry l j \u2208 L its raw score is used as a sentiment association score.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Train an SVM model",
+                "sec_num": "5."
+            },
+            {
+                "text": "Different from manually constructed lexicons compiled by humans where each item is assigned with an interpretable sentiment score, the scores in the automatic lexicon are learned automatically on a weakly supervised task. We use the weights from an SVM model whose weights are formed by the support vectors, i.e., the most difficult instances close to the decision boundary, hence most useful for the classification task. Additionally, due to its regularisation properties, SVM is known to select only the most robust features, which is important in the case of noisy labeled data. Hence, our method is a more principled way grounded in the statistical learning theory to exploit the noisy labels for estimating the word-sentiment association scores for the lexicon entries. Moreover, feature engineering with our lexicon appears to be more helpful (see Sec. 3) on a supervised task.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Train an SVM model",
+                "sec_num": "5."
+            },
+            {
+                "text": "We re-implement the state-of-the-art NRC model from (Mohammad et al., 2013) , which ranked 1st in the Semeval-2013, and use it as our baseline. This system relies on various n-gram, surface form and lexicon features. Briefly, we engineered the following feature sets: 1",
+                "cite_spans": [
+                    {
+                        "start": 52,
+                        "end": 75,
+                        "text": "(Mohammad et al., 2013)",
+                        "ref_id": "BIBREF11"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Baseline model",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "\u2022 Word and character grams: we use 1,2,3 ngrams for words and 3,4,5 n-grams for character sequences; \u2022 Negation: the number of negated contexts -a span of words between a negation word (not, never), and a punctuation mark. \u2022 Lexicons: given a word, we lookup its sentiment polarity score in the lexicon: score(w). The following aggregate features are produced for the lexicon items found in a tweet: the total count, the total sum, the maximal score and the score of the last token. These features are produced for unigrams, bigrams, each part-of-speech tag, hashtags and all-caps tokens. \u2022 Other: number of hashtags, capitalized words, elongated words, positive and negative emoticons, punctuation.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Baseline model",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "In the following experiments our goal is to assess the value of our distant supervision method to au- tomatically extract sentiment lexicons. We compare its performance with other automatically constructed lexicons extracted from large Twitter corpora, e.g., auto lexicons built using the PMI approach from (Mohammad et al., 2013) .",
+                "cite_spans": [
+                    {
+                        "start": 307,
+                        "end": 330,
+                        "text": "(Mohammad et al., 2013)",
+                        "ref_id": "BIBREF11"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "3"
+            },
+            {
+                "text": "We extract our lexicon from a freely available Emoticon140 Twitter corpus (Go et al., 2009) , where the sentiment labels are automatically inferred from emoticons contained in a tweet2 . The major advantage of such corpora is that it is easy to build as emoticons serve as fairly good cues for the general sentiment expressed in a tweet, thus they can be used as noisy labels. Hence, large datasets can be collected without incurring any annotation costs. Tweets with positive emoticons, like ':)', are assumed to be positive, and tweets with negative emoticons, like ':(', are labeled as negative. The corpus contains 1.6 million tweets with equal distribution between positive and negative tweets. We use a tokeniser from the CMU Twitter tagger (Gimpel et al., 2011) extracting only unigrams and bigrams3 to encode training instances. To make the extraction of word-sentiment association weights from the model straight-forward, we ignore neutral labels thus converting the task to a binary classification task. We use LibLinear (Fan et al., 2008) sonably small, we filter entries with small weights. In particular, we found that selecting items with a weight greater than 1e -6 did not cause any drop in accuracy, while the resulting lexicon is reasonably compact -it contains about 3 million entries. Table 1 gives an example of top 10 lexicon entries with highest positive and negative scores. Interestingly, one would expect to find words such as amazing, cool, etc. as having the highest positive sentiment score. However, an SVM model assigns higher scores to bigrams containing negative words problem, bad, worries, to outweigh their negative impact. This helps to handle the inversion of the sentiment due to negations.",
+                "cite_spans": [
+                    {
+                        "start": 74,
+                        "end": 91,
+                        "text": "(Go et al., 2009)",
+                        "ref_id": "BIBREF3"
+                    },
+                    {
+                        "start": 747,
+                        "end": 768,
+                        "text": "(Gimpel et al., 2011)",
+                        "ref_id": "BIBREF2"
+                    },
+                    {
+                        "start": 1031,
+                        "end": 1049,
+                        "text": "(Fan et al., 2008)",
+                        "ref_id": "BIBREF1"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 1311,
+                        "end": 1312,
+                        "text": "1",
+                        "ref_id": "TABREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Lexicon learning",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "It is important to note that our goal is different from constructing sentiment lexicons that are interpretable by humans, e.g., manually built lexicons, but, similar to (Mohammad et al., 2013) , we build automatic lexicons to derive highly discriminative features improving the accuracy of our sentiment prediction models.",
+                "cite_spans": [
+                    {
+                        "start": 169,
+                        "end": 192,
+                        "text": "(Mohammad et al., 2013)",
+                        "ref_id": "BIBREF11"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Lexicon learning",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "Task. We focused on the Twitter Sentiment Analysis (Task 2) from Semeval-2013 (Nakov et al., 2013) and its rerun (Task 9) from Semeval-2014 (Rosenthal et al., 2014) . Both tasks include two subtasks: an expression-level and a message-level subtasks. Being more general, we focus only on predicting the sentiment of tweets at the message level, where given a tweet, the goal is to classify whether it expresses positive, negative, or neutral sentiment. Evaluation. We used the official scorers from the Semeval 2013 & 2014, which compute the average between F-measures for the positive and negative classes. Data. We evaluated our models on both Semeval-2013 and Semeval-2014 tasks with 44 and 42 par-ticipating systems correspondingly. The Semeval-2013 task released the training set containing 9,728 tweets, dev and two test sets: Twitter'13 and SMS'13. We train our model on a combined train and dev sets4 . The Semeval-2014 re-uses the same training data and systems are evaluated on 5 test sets: two test sets from Semeval-2013 and three new test sets: LiveJournal'14, Twitter'14 and Sarcasm'14. The datasets are summarized in Table 3 ",
+                "cite_spans": [
+                    {
+                        "start": 78,
+                        "end": 98,
+                        "text": "(Nakov et al., 2013)",
+                        "ref_id": "BIBREF12"
+                    },
+                    {
+                        "start": 127,
+                        "end": 139,
+                        "text": "Semeval-2014",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 140,
+                        "end": 164,
+                        "text": "(Rosenthal et al., 2014)",
+                        "ref_id": "BIBREF15"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 1137,
+                        "end": 1138,
+                        "text": "3",
+                        "ref_id": "TABREF3"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Setup",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "\u2022 \u2022 \u2022 \u2022 \u2022 68.47 (+4.94) \u2022 \u2022 \u2022 \u2022 \u2022 69.08 (+5.55) \u2022 \u2022 \u2022 \u2022 \u2022 \u2022 70.06 (+6.53) \u2022 \u2022 \u2022 \u2022 \u2022 69.47 (+5.94) \u2022 \u2022 \u2022 \u2022 \u2022 69.89 (+6.36) \u2022 \u2022 \u2022 \u2022 \u2022 \u2022 70.93 (+7.40) \u2022 \u2022 \u2022 \u2022 \u2022 \u2022 \u2022 \u2022 71.32 (+7.79)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Setup",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "best Semeval'13 system 69.06 ",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Setup",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "We report the results on two runs of the Twitter Sentiment Analysis challenge organized by Semeval from 2013 and 2014.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "The n-grams model includes word and character n-grams, negation and various surface form features as described in Section 2. We use this feature set as a yardstick to assess the value of adding features from various lexicons. Firstly, we note that using three manual lexicons: MPQA (M), BingLiu (B), and NRC (N) results in almost 4 points of absolute improvement. Notably, among all manual lexicons the BingLiu lexicon accounts for the largest improvement. Next, we explore the value of automatically generated lexicons using PMI scoring extracted from two large Twitter datasets: Emoti-con140 (s140) and hashtag (hash). Both lexicons rely on PMI scoring formula to derive wordsentiment association scores. Adding features from these automatically generated lexicons results in further improvement over the n-grams feature set and yields F-score: 70.06.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Semeval-2013",
+                "sec_num": "3.3.1"
+            },
+            {
+                "text": "Next, we explore the value of features derived from our ML based lexicon. We use the lexicon in two modalities: (i) including the raw scores (raw) of each lexicon entry (unigrams and bigrams) found in the given tweet; (ii) deriving aggregate features (agg) from the raw scores as described in Sec. 2; and (iii) using both. We note that the features from our ML-based lexicon yield superior performance to any of the PMI lexicons providing at least 2% gains and is even better when the two PMI lexicons are combined. Finally, adding the ML-based lexicon on top of the models including manual and auto lexicons provides the new state-of-the-art result on Semeval-2013 with an improvement of almost 8 points w.r.t. to the basic model. Our model achieves the score of 71.32 vs. 69.06 for the previous best system.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Semeval-2013",
+                "sec_num": "3.3.1"
+            },
+            {
+                "text": "Table 4 shows that adding features from our MLbased vocabulary provides a substantial improvement over the previous best NRC system on 4 out of 5 test sets. Interestingly, we observe a strong drop on the Sarcasm'14 test set. One possible reason is that the labels for Emoticon140 corpus are inferred automatically using emoticons, which may strongly bias our model to incorrectly predict sentiment for those tweets containing sarcasm. With more than 40 systems participating in Semeval-2014 challenge, we note that the majority of systems perform well only on few test sets at once while failing on the others5 . The performance of our system is rather high across all the test sets with an average rank of 3.4, which is the second best result in Semeval-2014 messagelevel task (the best system is from the NRC team with an ave-rank 2.4, whereas the closest follow up system has an ave-rank 6).",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 6,
+                        "end": 7,
+                        "text": "4",
+                        "ref_id": "TABREF4"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Semeval-2014",
+                "sec_num": "3.3.2"
+            },
+            {
+                "text": "We demonstrated a simple and principled approach grounded in machine learning to construct sentiment lexicons. We show that using off-the-shelf machine learning tools to automatically extract lexicons greatly outperforms other automatically constructed lexicons that use pointwise mutual information to estimate sentiment scores for the lexicon items.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusions",
+                "sec_num": "4"
+            },
+            {
+                "text": "We have shown that combining our machinelearned lexicon with the previous best system yields state-of-the-art results in Semeval-2013 gaining over 2 points in F-score and ranking our system 2nd according to the average rank over the five test sets of Semeval-2014. Finally, our ML-based lexicon shows excellent results when added on top of the current state-of-the-art NRC system. While our experimental study is focused on Twitter, our method is general enough to be applied to sentiment classification tasks on other domains. In the future, we plan to experiment with constructing ML lexicons from larger Twitter corpora also using hashtags.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusions",
+                "sec_num": "4"
+            },
+            {
+                "text": "Recently, deep convolutional neural networks for sentence modelling (Kalchbrenner et al., 2014; Kim, 2014) have shown promising results on several NLP tasks. In particular, (Tang et al., 2014) showed that learning sentiment-specific word embeddings and using them as features can boost the accuracy of existing sentiment classifiers. In the future work we plan to explore such approaches.",
+                "cite_spans": [
+                    {
+                        "start": 68,
+                        "end": 95,
+                        "text": "(Kalchbrenner et al., 2014;",
+                        "ref_id": "BIBREF6"
+                    },
+                    {
+                        "start": 96,
+                        "end": 106,
+                        "text": "Kim, 2014)",
+                        "ref_id": "BIBREF7"
+                    },
+                    {
+                        "start": 173,
+                        "end": 192,
+                        "text": "(Tang et al., 2014)",
+                        "ref_id": "BIBREF18"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusions",
+                "sec_num": "4"
+            },
+            {
+                "text": "unfortunately, the corpus to build the NRC Hashtag lexicon(Mohammad et al., 2013) is not freely available due to Twitter data distribution policies.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "3 Adding tri-grams yielded a very minor improvement, yet the size of the dictionary exploded, so to keep the size of the dictionary relatively small we use only uni-and bi-grams.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "While in the real setting it is also possible to include additional weakly labeled data, e.g. Emoticon140, for training a model, we stick to the constrained setting of the Semeval tasks, where training is allowed only on the train and dev sets.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "http://alt.qcri.org/semeval2014/task9/",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            }
+        ],
+        "back_matter": [],
+        "bib_entries": {
+            "BIBREF0": {
+                "ref_id": "b0",
+                "title": "Automatic construction of domain and aspect specific sentiment lexicons for customer review mining",
+                "authors": [
+                    {
+                        "first": "Jrgen",
+                        "middle": [],
+                        "last": "Bro",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Heiko",
+                        "middle": [],
+                        "last": "Ehrig",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "CIKM",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jrgen Bro and Heiko Ehrig. 2013. Automatic construc- tion of domain and aspect specific sentiment lexicons for customer review mining. In CIKM.",
+                "links": null
+            },
+            "BIBREF1": {
+                "ref_id": "b1",
+                "title": "LIBLINEAR: A library for large linear classification",
+                "authors": [
+                    {
+                        "first": "Rong-En",
+                        "middle": [],
+                        "last": "Fan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kai-Wei",
+                        "middle": [],
+                        "last": "Chang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Cho-Jui",
+                        "middle": [],
+                        "last": "Hsieh",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xiang-Rui",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chih-Jen",
+                        "middle": [],
+                        "last": "Lin",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2008,
+                "venue": "Journal of Machine Learning Research",
+                "volume": "9",
+                "issue": "",
+                "pages": "1871--1874",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Rong-En Fan, Kai-Wei Chang, Cho-Jui Hsieh, Xiang-Rui Wang, and Chih-Jen Lin. 2008. LIBLINEAR: A li- brary for large linear classification. Journal of Ma- chine Learning Research, 9:1871-1874.",
+                "links": null
+            },
+            "BIBREF2": {
+                "ref_id": "b2",
+                "title": "Part-of-speech tagging for Twitter: annotation, features, and experiments",
+                "authors": [
+                    {
+                        "first": "Kevin",
+                        "middle": [],
+                        "last": "Gimpel",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nathan",
+                        "middle": [],
+                        "last": "Schneider",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Brendan O'",
+                        "middle": [],
+                        "last": "Connor",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dipanjan",
+                        "middle": [],
+                        "last": "Das",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Daniel",
+                        "middle": [],
+                        "last": "Mills",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jacob",
+                        "middle": [],
+                        "last": "Eisenstein",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Michael",
+                        "middle": [],
+                        "last": "Heilman",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dani",
+                        "middle": [],
+                        "last": "Yogatama",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jeffrey",
+                        "middle": [],
+                        "last": "Flanigan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Noah",
+                        "middle": [
+                            "A"
+                        ],
+                        "last": "Smith",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2011,
+                "venue": "ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Kevin Gimpel, Nathan Schneider, Brendan O'Connor, Dipanjan Das, Daniel Mills, Jacob Eisenstein, Michael Heilman, Dani Yogatama, Jeffrey Flanigan, and Noah A. Smith. 2011. Part-of-speech tagging for Twitter: annotation, features, and experiments. In ACL.",
+                "links": null
+            },
+            "BIBREF3": {
+                "ref_id": "b3",
+                "title": "Twitter sentiment classification using distant supervision",
+                "authors": [
+                    {
+                        "first": "Alex",
+                        "middle": [],
+                        "last": "Go",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Richa",
+                        "middle": [],
+                        "last": "Bhayani",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Lei",
+                        "middle": [],
+                        "last": "Huang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "CS224N Project Report",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Alex Go, Richa Bhayani, and Lei Huang. 2009. Twitter sentiment classification using distant supervision. In CS224N Project Report, Stanford.",
+                "links": null
+            },
+            "BIBREF4": {
+                "ref_id": "b4",
+                "title": "Mining and summarizing customer reviews",
+                "authors": [
+                    {
+                        "first": "Minqing",
+                        "middle": [],
+                        "last": "Hu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Bing",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2004,
+                "venue": "KDD",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Minqing Hu and Bing Liu. 2004. Mining and summariz- ing customer reviews. In KDD.",
+                "links": null
+            },
+            "BIBREF5": {
+                "ref_id": "b5",
+                "title": "Automatic construction of domain-specific sentiment lexicon based on constrained label propagation",
+                "authors": [
+                    {
+                        "first": "Sheng",
+                        "middle": [],
+                        "last": "Huang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zhendong",
+                        "middle": [],
+                        "last": "Niu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chongyang",
+                        "middle": [],
+                        "last": "Shi",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "Knowl.-Based Syst",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Sheng Huang, Zhendong Niu, and Chongyang Shi. 2014. Automatic construction of domain-specific sen- timent lexicon based on constrained label propagation. Knowl.-Based Syst.",
+                "links": null
+            },
+            "BIBREF6": {
+                "ref_id": "b6",
+                "title": "A convolutional neural network for modelling sentences",
+                "authors": [
+                    {
+                        "first": "Nal",
+                        "middle": [],
+                        "last": "Kalchbrenner",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Edward",
+                        "middle": [],
+                        "last": "Grefenstette",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Phil",
+                        "middle": [],
+                        "last": "Blunsom",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Nal Kalchbrenner, Edward Grefenstette, and Phil Blun- som. 2014. A convolutional neural network for mod- elling sentences. In ACL.",
+                "links": null
+            },
+            "BIBREF7": {
+                "ref_id": "b7",
+                "title": "Convolutional neural networks for sentence classification",
+                "authors": [
+                    {
+                        "first": "Yoon",
+                        "middle": [],
+                        "last": "Kim",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "EMNLP",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Yoon Kim. 2014. Convolutional neural networks for sen- tence classification. In EMNLP.",
+                "links": null
+            },
+            "BIBREF8": {
+                "ref_id": "b8",
+                "title": "Leveraging web 2.0 data for scalable semi-supervised learning of domainspecific sentiment lexicons",
+                "authors": [
+                    {
+                        "first": "Raymond Yiu-Keung",
+                        "middle": [],
+                        "last": "Lau",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chun",
+                        "middle": [
+                            "Lam"
+                        ],
+                        "last": "Lai",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Peter",
+                        "middle": [],
+                        "last": "Bruza",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kam-Fai",
+                        "middle": [],
+                        "last": "Wong",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2011,
+                "venue": "CIKM",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Raymond Yiu-Keung Lau, Chun Lam Lai, Peter Bruza, and Kam-Fai Wong. 2011. Leveraging web 2.0 data for scalable semi-supervised learning of domain- specific sentiment lexicons. In CIKM.",
+                "links": null
+            },
+            "BIBREF9": {
+                "ref_id": "b9",
+                "title": "Combining domain-specific sentiment lexicon with hownet for chinese sentiment analysis",
+                "authors": [
+                    {
+                        "first": "Lizhen",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mengyun",
+                        "middle": [],
+                        "last": "Lei",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hanshi",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Lizhen Liu, Mengyun Lei, and Hanshi Wang. 2013. Combining domain-specific sentiment lexicon with hownet for chinese sentiment analysis.",
+                "links": null
+            },
+            "BIBREF10": {
+                "ref_id": "b10",
+                "title": "Learning for microblogs with distant supervision: Political forecasting with twitter",
+                "authors": [
+                    {
+                        "first": "Micol",
+                        "middle": [],
+                        "last": "Marchetti",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "-",
+                        "middle": [],
+                        "last": "Bowick",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nathanael",
+                        "middle": [],
+                        "last": "Chambers",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2012,
+                "venue": "Computational Intelligence",
+                "volume": "39",
+                "issue": "3",
+                "pages": "555--590",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Micol Marchetti-Bowick and Nathanael Chambers. 2012. Learning for microblogs with distant supervi- sion: Political forecasting with twitter. In EACL. Saif Mohammad and Peter Turney. 2013. Crowdsourc- ing a word-emotion association lexicon. Computa- tional Intelligence, 39(3):555-590.",
+                "links": null
+            },
+            "BIBREF11": {
+                "ref_id": "b11",
+                "title": "Nrc-canada: Building the state-of-the-art in sentiment analysis of tweets",
+                "authors": [
+                    {
+                        "first": "M",
+                        "middle": [],
+                        "last": "Saif",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Svetlana",
+                        "middle": [],
+                        "last": "Mohammad",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xiaodan",
+                        "middle": [],
+                        "last": "Kiritchenko",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Zhu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Saif M. Mohammad, Svetlana Kiritchenko, and Xiaodan Zhu. 2013. Nrc-canada: Building the state-of-the-art in sentiment analysis of tweets. In Semeval.",
+                "links": null
+            },
+            "BIBREF12": {
+                "ref_id": "b12",
+                "title": "In semeval-2013 task 2: Sentiment analysis in twitter",
+                "authors": [
+                    {
+                        "first": "Preslav",
+                        "middle": [],
+                        "last": "Nakov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zornitsa",
+                        "middle": [],
+                        "last": "Kozareva",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alan",
+                        "middle": [],
+                        "last": "Ritter",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sara",
+                        "middle": [],
+                        "last": "Rosenthal",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Veselin",
+                        "middle": [],
+                        "last": "Stoyanov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Theresa",
+                        "middle": [],
+                        "last": "Wilson",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "Semeval",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Preslav Nakov, Zornitsa Kozareva, Alan Ritter, Sara Rosenthal, Veselin Stoyanov, and Theresa Wilson. 2013. In semeval-2013 task 2: Sentiment analysis in twitter. In Semeval.",
+                "links": null
+            },
+            "BIBREF13": {
+                "ref_id": "b13",
+                "title": "A sentimental education: Sentiment analysis using subjectivity summarization based on minimum cuts",
+                "authors": [
+                    {
+                        "first": "Bo",
+                        "middle": [],
+                        "last": "Pang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Lillian",
+                        "middle": [],
+                        "last": "Lee",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2004,
+                "venue": "ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Bo Pang and Lillian Lee. 2004. A sentimental education: Sentiment analysis using subjectivity summarization based on minimum cuts. In ACL.",
+                "links": null
+            },
+            "BIBREF14": {
+                "ref_id": "b14",
+                "title": "Opinion mining and sentiment analysis",
+                "authors": [
+                    {
+                        "first": "Bo",
+                        "middle": [],
+                        "last": "Pang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Lillian",
+                        "middle": [],
+                        "last": "Lee",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2008,
+                "venue": "Found. Trends Inf. Retr",
+                "volume": "2",
+                "issue": "1-2",
+                "pages": "1--135",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Bo Pang and Lillian Lee. 2008. Opinion mining and sentiment analysis. Found. Trends Inf. Retr., 2(1-2):1- 135, January.",
+                "links": null
+            },
+            "BIBREF15": {
+                "ref_id": "b15",
+                "title": "semeval-2014 task 9: Sentiment analysis in twitter",
+                "authors": [
+                    {
+                        "first": "Sara",
+                        "middle": [],
+                        "last": "Rosenthal",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alan",
+                        "middle": [],
+                        "last": "Ritter",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Preslav",
+                        "middle": [],
+                        "last": "Nakov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Veselin",
+                        "middle": [],
+                        "last": "Stoyanov",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Sara Rosenthal, Alan Ritter, Preslav Nakov, and Veselin Stoyanov. 2014. In semeval-2014 task 9: Sentiment analysis in twitter. In Semeval.",
+                "links": null
+            },
+            "BIBREF16": {
+                "ref_id": "b16",
+                "title": "Semisupervised recursive autoencoders for predicting sentiment distributions",
+                "authors": [
+                    {
+                        "first": "Richard",
+                        "middle": [],
+                        "last": "Socher",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jeffrey",
+                        "middle": [],
+                        "last": "Pennington",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Eric",
+                        "middle": [
+                            "H"
+                        ],
+                        "last": "Huang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Andrew",
+                        "middle": [
+                            "Y"
+                        ],
+                        "last": "Ng",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [
+                            "D"
+                        ],
+                        "last": "Manning",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2011,
+                "venue": "EMNLP",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Richard Socher, Jeffrey Pennington, Eric H Huang, An- drew Y Ng, and Christopher D Manning. 2011. Semi- supervised recursive autoencoders for predicting sen- timent distributions. In EMNLP.",
+                "links": null
+            },
+            "BIBREF17": {
+                "ref_id": "b17",
+                "title": "Automatic domain-specific sentiment lexicon generation with label propagation",
+                "authors": [
+                    {
+                        "first": "Yen-Jen",
+                        "middle": [],
+                        "last": "Tai",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hung-Yu",
+                        "middle": [],
+                        "last": "Kao",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Yen-Jen Tai and Hung-Yu Kao. 2013. Automatic domain-specific sentiment lexicon generation with la- bel propagation. In iiWAS.",
+                "links": null
+            },
+            "BIBREF18": {
+                "ref_id": "b18",
+                "title": "Learning sentiment-specific word embedding for twitter sentiment classification",
+                "authors": [
+                    {
+                        "first": "Duyu",
+                        "middle": [],
+                        "last": "Tang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Furu",
+                        "middle": [],
+                        "last": "Wei",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nan",
+                        "middle": [],
+                        "last": "Yang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ming",
+                        "middle": [],
+                        "last": "Zhou",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ting",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Bing",
+                        "middle": [],
+                        "last": "Qin",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Duyu Tang, Furu Wei, Nan Yang, Ming Zhou, Ting Liu, and Bing Qin. 2014. Learning sentiment-specific word embedding for twitter sentiment classification. In ACL.",
+                "links": null
+            },
+            "BIBREF19": {
+                "ref_id": "b19",
+                "title": "Baselines and bigrams: Simple, good sentiment and topic classification",
+                "authors": [
+                    {
+                        "first": "Sida",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [],
+                        "last": "Manning",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2012,
+                "venue": "ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Sida Wang and Christopher Manning. 2012. Baselines and bigrams: Simple, good sentiment and topic classi- fication. In ACL.",
+                "links": null
+            },
+            "BIBREF20": {
+                "ref_id": "b20",
+                "title": "Recognizing contextual polarity in phrase-level sentiment analysis",
+                "authors": [
+                    {
+                        "first": "Theresa",
+                        "middle": [],
+                        "last": "Wilson",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Janyce",
+                        "middle": [],
+                        "last": "Wiebe",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Paul",
+                        "middle": [],
+                        "last": "Hoffmann",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2005,
+                "venue": "EMNLP",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Theresa Wilson, Janyce Wiebe, and Paul Hoffmann. 2005. Recognizing contextual polarity in phrase-level sentiment analysis. In EMNLP.",
+                "links": null
+            },
+            "BIBREF21": {
+                "ref_id": "b21",
+                "title": "Learning domain-specific sentiment lexicon with supervised sentiment-aware lda",
+                "authors": [
+                    {
+                        "first": "Min",
+                        "middle": [],
+                        "last": "Yang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dingju",
+                        "middle": [],
+                        "last": "Zhu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Rashed",
+                        "middle": [],
+                        "last": "Mustafa",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kam-Pui",
+                        "middle": [],
+                        "last": "Chow",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "ECAI",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Min Yang, Dingju Zhu, Rashed Mustafa, and Kam-Pui Chow. 2014. Learning domain-specific sentiment lex- icon with supervised sentiment-aware lda. In ECAI.",
+                "links": null
+            }
+        },
+        "ref_entries": {
+            "TABREF0": {
+                "content": "<table><tr><td>Negative</td><td>Positive</td></tr><tr><td colspan=\"2\">(disappointing,) (no, problem)</td></tr><tr><td>(depressing,)</td><td>(not, bad)</td></tr><tr><td>(bummer,)</td><td>(not, sad)</td></tr><tr><td>(sadly,)</td><td>(cannot, wait)</td></tr><tr><td>(passed, away)</td><td>(no, prob)</td></tr></table>",
+                "type_str": "table",
+                "text": "Lexicon items learned from Emoticon140 corpus with top negative and positive scores.",
+                "html": null,
+                "num": null
+            },
+            "TABREF1": {
+                "content": "<table><tr><td>with L2 regulariza-</td></tr></table>",
+                "type_str": "table",
+                "text": "Datasets.",
+                "html": null,
+                "num": null
+            },
+            "TABREF2": {
+                "content": "<table><tr><td>n-grams</td><td>Manual M B N hash s140 raw agg PMI ML</td><td>Twitter'13</td></tr><tr><td>\u2022</td><td/><td>63.53</td></tr><tr><td>\u2022</td><td>\u2022</td><td>64.96 (+1.43)</td></tr><tr><td>\u2022</td><td>\u2022</td><td>66.74 (+3.21)</td></tr><tr><td>\u2022</td><td>\u2022</td><td>64.21 (+0.68)</td></tr><tr><td>\u2022</td><td>\u2022 \u2022 \u2022</td><td>67.44 (+3.91)</td></tr></table>",
+                "type_str": "table",
+                "text": ".1.",
+                "html": null,
+                "num": null
+            },
+            "TABREF3": {
+                "content": "<table><tr><td>Used fea-</td></tr></table>",
+                "type_str": "table",
+                "text": "Results on Semeval-2013 test set.",
+                "html": null,
+                "num": null
+            },
+            "TABREF4": {
+                "content": "<table><tr><td>System</td><td>NRC</td><td>NRC</td><td>+</td><td>best</td></tr><tr><td/><td/><td>ML lex.</td><td/><td>score</td></tr><tr><td colspan=\"5\">LJournal'14 75.28 (1) 76.54  \u2020 (1) 74.84</td></tr><tr><td>SMS'13</td><td colspan=\"4\">66.86 (5) 67.20 (5) 70.28</td></tr><tr><td>Twitter'13</td><td colspan=\"4\">70.06 (5) 71.32  \u2020 (2) 72.12</td></tr><tr><td>Twitter'14</td><td colspan=\"4\">68.71 (6) 70.51  \u2020 (2) 70.96</td></tr><tr><td colspan=\"5\">Sarcasm'14 59.20 (1) 55.08 (7) 58.16</td></tr><tr><td>ave-rank</td><td>3.8</td><td>3.4 (2)</td><td/><td>2.4 (1)</td></tr></table>",
+                "type_str": "table",
+                "text": "Semeval-2014. Numbers in parenthesis is the absolute rank of a system on a given test set. Bold scores compares using our ML lexicon on top of the NRC system. Results marked with \u2020 are statistically significant at p > 0.05 (via the paired t-test).",
+                "html": null,
+                "num": null
+            }
+        }
+    }
+}

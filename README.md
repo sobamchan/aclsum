@@ -53,3 +53,20 @@ document.get_all_highlights()
 # Get highlighted sentences (list[str])
 document.get_all_highlighted_sentences()
 ```
+
+
+## Get original PDF parses
+
+While not all the texts are included in the final dataset (only Abstract, Introduction, and Conclusion are included), you can also get the raw output data from Grobid as following,
+
+```py
+# This will load a json file in our repo.
+raw_data_from_grobid_in_dict = document.get_fulltext_parse()
+
+# For instance you can get author information
+raw_data_from_grobid_in_dict["authors"]
+
+# Or the fulltext including other sections
+# This will return a list of dicts, {"text": str, "cite_spans": list, "eq_spans": list, "section": str, "sec_num": str}
+raw_data_from_grobid_in_dict["pdf_parse"]["body_text"]
+```

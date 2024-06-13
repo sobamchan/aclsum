@@ -1,0 +1,1496 @@
+{
+    "paper_id": "D07-1056",
+    "header": {
+        "generated_with": "S2ORC 1.0.0",
+        "date_generated": "2023-06-16T11:55:15.772077Z"
+    },
+    "title": "Phrase Reordering Model Integrating Syntactic Knowledge for SMT",
+    "authors": [
+        {
+            "first": "Dongdong",
+            "middle": [],
+            "last": "Zhang",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "Microsoft Research Asia",
+                "location": {
+                    "settlement": "Beijing",
+                    "country": "China"
+                }
+            },
+            "email": "dozhang@microsoft.com"
+        },
+        {
+            "first": "Mu",
+            "middle": [],
+            "last": "Li",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "Microsoft Research Asia",
+                "location": {
+                    "settlement": "Beijing",
+                    "country": "China"
+                }
+            },
+            "email": "muli@microsoft.com"
+        },
+        {
+            "first": "Chi-Ho",
+            "middle": [],
+            "last": "Li",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "Microsoft Research Asia",
+                "location": {
+                    "settlement": "Beijing",
+                    "country": "China"
+                }
+            },
+            "email": ""
+        },
+        {
+            "first": "Ming",
+            "middle": [],
+            "last": "Zhou",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "Microsoft Research Asia",
+                "location": {
+                    "settlement": "Beijing",
+                    "country": "China"
+                }
+            },
+            "email": "mingzhou@microsoft.com"
+        }
+    ],
+    "year": "",
+    "venue": null,
+    "identifiers": {},
+    "abstract": "Reordering model is important for the statistical machine translation (SMT). Current phrase-based SMT technologies are good at capturing local reordering but not global reordering. This paper introduces syntactic knowledge to improve global reordering capability of SMT system. Syntactic knowledge such as boundary words, POS information and dependencies is used to guide phrase reordering. Not only constraints in syntax tree are proposed to avoid the reordering errors, but also the modification of syntax tree is made to strengthen the capability of capturing phrase reordering. Furthermore, the combination of parse trees can compensate for the reordering errors caused by single parse tree. Finally, experimental results show that the performance of our system is superior to that of the state-of-the-art phrase-based SMT system.",
+    "pdf_parse": {
+        "paper_id": "D07-1056",
+        "_pdf_hash": "",
+        "abstract": [
+            {
+                "text": "Reordering model is important for the statistical machine translation (SMT). Current phrase-based SMT technologies are good at capturing local reordering but not global reordering. This paper introduces syntactic knowledge to improve global reordering capability of SMT system. Syntactic knowledge such as boundary words, POS information and dependencies is used to guide phrase reordering. Not only constraints in syntax tree are proposed to avoid the reordering errors, but also the modification of syntax tree is made to strengthen the capability of capturing phrase reordering. Furthermore, the combination of parse trees can compensate for the reordering errors caused by single parse tree. Finally, experimental results show that the performance of our system is superior to that of the state-of-the-art phrase-based SMT system.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            }
+        ],
+        "body_text": [
+            {
+                "text": "In the last decade, statistical machine translation (SMT) has been widely studied and achieved good translation results. Two kinds of SMT system have been developed, one is phrase-based SMT and the other is syntax-based SMT.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "In phrase-based SMT systems (Koehn et al., 2003; Koehn, 2004) , foreign sentences are firstly segmented into phrases which consists of adjacent words. Then source phrases are translated into target phrases respectively according to knowledge usually learned from bilingual parallel corpus. Fi-nally the most likely target sentence based on a certain statistical model is inferred by combining and reordering the target phrases with the aid of search algorithm. On the other hand, syntax-based SMT systems (Liu et al., 2006; Yamada et al., 2001) mainly depend on parse trees to complete the translation of source sentence. As studied in previous SMT projects, language model, translation model and reordering model are the three major components in current SMT systems. Due to the difference between the source and target languages, the order of target phrases in the target sentence may differ from the order of source phrases in the source sentence. To make the translation results be closer to the target language style, a mathematic model based on the statistic theory is constructed to reorder the target phrases. This statistic model is called as reordering model. As shown in Figure 1 , the order of the translations of \"\u6b27\u5143\" and \"\u7684\" is changed. The order of the translation of \"\u6b27\u5143/\u7684\" and \"\u5927\u5e45/\u5347\u503c\" is altered as well. The former reordering case with the smaller distance is usually referred as local reordering and the latter with the longer distance reordering as global reordering. Phrase-based SMT system can effectively capture the local word reordering information which is common enough to be observed in training data. But it is hard to model global phrase reordering. Although syntactic knowledge used in syntax-based SMT systems can help reorder phrases, the resulting model is usually much more complicated than a phrase-based system.",
+                "cite_spans": [
+                    {
+                        "start": 28,
+                        "end": 48,
+                        "text": "(Koehn et al., 2003;",
+                        "ref_id": "BIBREF6"
+                    },
+                    {
+                        "start": 49,
+                        "end": 61,
+                        "text": "Koehn, 2004)",
+                        "ref_id": "BIBREF7"
+                    },
+                    {
+                        "start": 505,
+                        "end": 523,
+                        "text": "(Liu et al., 2006;",
+                        "ref_id": "BIBREF9"
+                    },
+                    {
+                        "start": 524,
+                        "end": 544,
+                        "text": "Yamada et al., 2001)",
+                        "ref_id": "BIBREF15"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 1189,
+                        "end": 1190,
+                        "text": "1",
+                        "ref_id": "FIGREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "There have been considerable amount of efforts to improve the reordering model in SMT systems, ranging from the fundamental distance-based distortion model (Och and Ney, 2004; Koehn et al., 2003) , flat reordering model (Wu, 1996; Zens et al., 2004; Kumar et al., 2005) , to lexicalized reordering model (Tillmann, 2004; Kumar et al., 2005; Koehn et al., 2005) , hierarchical phrase-based model (Chiang, 2005) , and maximum entropy-based phrase reordering model (Xiong et al., 2006) . Due to the absence of syntactic knowledge in these systems, the ability to capture global reordering knowledge is not powerful. Although syntax-based SMT systems (Yamada et al., 2001; Quirk et al., 2005; Liu et al., 2006 ) are good at modeling global reordering, their performance is subject to parsing errors to a large extent.",
+                "cite_spans": [
+                    {
+                        "start": 156,
+                        "end": 175,
+                        "text": "(Och and Ney, 2004;",
+                        "ref_id": "BIBREF4"
+                    },
+                    {
+                        "start": 176,
+                        "end": 195,
+                        "text": "Koehn et al., 2003)",
+                        "ref_id": "BIBREF6"
+                    },
+                    {
+                        "start": 220,
+                        "end": 230,
+                        "text": "(Wu, 1996;",
+                        "ref_id": "BIBREF13"
+                    },
+                    {
+                        "start": 231,
+                        "end": 249,
+                        "text": "Zens et al., 2004;",
+                        "ref_id": "BIBREF17"
+                    },
+                    {
+                        "start": 250,
+                        "end": 269,
+                        "text": "Kumar et al., 2005)",
+                        "ref_id": "BIBREF8"
+                    },
+                    {
+                        "start": 304,
+                        "end": 320,
+                        "text": "(Tillmann, 2004;",
+                        "ref_id": "BIBREF12"
+                    },
+                    {
+                        "start": 321,
+                        "end": 340,
+                        "text": "Kumar et al., 2005;",
+                        "ref_id": "BIBREF8"
+                    },
+                    {
+                        "start": 341,
+                        "end": 360,
+                        "text": "Koehn et al., 2005)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 395,
+                        "end": 409,
+                        "text": "(Chiang, 2005)",
+                        "ref_id": "BIBREF0"
+                    },
+                    {
+                        "start": 462,
+                        "end": 482,
+                        "text": "(Xiong et al., 2006)",
+                        "ref_id": "BIBREF14"
+                    },
+                    {
+                        "start": 647,
+                        "end": 668,
+                        "text": "(Yamada et al., 2001;",
+                        "ref_id": "BIBREF15"
+                    },
+                    {
+                        "start": 669,
+                        "end": 688,
+                        "text": "Quirk et al., 2005;",
+                        "ref_id": "BIBREF10"
+                    },
+                    {
+                        "start": 689,
+                        "end": 705,
+                        "text": "Liu et al., 2006",
+                        "ref_id": "BIBREF9"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "In this paper, we propose a new method to improve reordering model by introducing syntactic information. Syntactic knowledge such as boundary of sub-trees, part-of-speech (POS) and dependency relation is incorporated into the SMT system to strengthen the ability to handle global phrase reordering. Our method is different from previous syntax-based SMT systems in which the translation process was modeled based on specific syntactic structures, either phrase structures or dependency relations. In our system, syntactic knowledge is used just to decide where we should combine adjacent phrases and what their reordering probability is. For example, according to the syntactic information in Figure 1 , the phrase translation combination should take place between \"\u5927\u5e45\" and \"\u5347\u503c\" rather than between \"\u7684\" and \"\u5927\u5e45\". Moreover, the non-monotone phrase reordering should occur between \"\u6b27\u5143/\u7684\" and \"\u5927\u5e45/\u5347\u503c\" rather than between \"\u6b27\u5143/\u7684\" and \"\u5927\u5e45\". We train a maxi-mum entropy model, which is able to integrate rich syntactic knowledge, to estimate phrase reordering probabilities. To enhance the performance of phrase reordering model, some modification on the syntax trees are also made to relax the phrase reordering constraints. Additionally, the combination of other kinds of syntax trees is introduced to overcome the deficiency of single parse tree. The experimental results show that the performance of our system is superior to that of the state-of-art phrasebased SMT system.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 700,
+                        "end": 701,
+                        "text": "1",
+                        "ref_id": "FIGREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "The roadmap of this paper is: Section 2 gives the related work. Section 3 introduces our model. Section 4 explains the generalization of reordering knowledge. The procedures of training and decoding are described in Section 5 and Section 6 respectively. The experimental results are shown in Section 7. Section 8 concludes the paper.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "The Pharaoh system (Koehn et al., 2004) is well known as the typical phrase-based SMT system. Its reordering model is designed to penalize translation according to jump distance regardless of linguistic knowledge. This method just works well for language pairs that trend to have similar wordorders and it has nothing to do with global reordering.",
+                "cite_spans": [
+                    {
+                        "start": 19,
+                        "end": 39,
+                        "text": "(Koehn et al., 2004)",
+                        "ref_id": "BIBREF7"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "A straightforward reordering model used in (Wu, 1996; Zens et al., 2004; Kumar et al., 2005) is to assign constant probabilities to monotone reordering and non-monotone reordering, which can be flexible depending on the different language pairs. This method is also adopted in our system for nonpeer phrase reordering.",
+                "cite_spans": [
+                    {
+                        "start": 43,
+                        "end": 53,
+                        "text": "(Wu, 1996;",
+                        "ref_id": "BIBREF13"
+                    },
+                    {
+                        "start": 54,
+                        "end": 72,
+                        "text": "Zens et al., 2004;",
+                        "ref_id": "BIBREF17"
+                    },
+                    {
+                        "start": 73,
+                        "end": 92,
+                        "text": "Kumar et al., 2005)",
+                        "ref_id": "BIBREF8"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "The lexicalized reordering model was studied in (Tillmann, 2004; Kumar et al., 2005; Koehn et al., 2005) . Their work made a step forward in integrating linguistic knowledge to capture reordering. But their methods have the serious data sparseness problem.",
+                "cite_spans": [
+                    {
+                        "start": 48,
+                        "end": 64,
+                        "text": "(Tillmann, 2004;",
+                        "ref_id": "BIBREF12"
+                    },
+                    {
+                        "start": 65,
+                        "end": 84,
+                        "text": "Kumar et al., 2005;",
+                        "ref_id": "BIBREF8"
+                    },
+                    {
+                        "start": 85,
+                        "end": 104,
+                        "text": "Koehn et al., 2005)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "Beyond standard phrase-based SMT system, a CKY style decoder was developed in (Xiong et al., 2006) . Their method investigated the reordering of any two adjacent phrases. The limited linguistic knowledge on the boundary words of phrases is used to construct the phrase reordering model. The basic difference to our method is that no syntactic knowledge is introduced to guide the global phrase reordering in their system. Besides boundary words, our phrase reordering model also integrates more significant syntactic knowledge such as POS information and dependencies from the syntax tree, which can avoid some intractable phrase reordering errors.",
+                "cite_spans": [
+                    {
+                        "start": 78,
+                        "end": 98,
+                        "text": "(Xiong et al., 2006)",
+                        "ref_id": "BIBREF14"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "A hierarchical phrase-based model was proposed by (Chiang, 2005) . In his method, a synchronous CFG is used to reorganize the phrases into hierarchical ones and grammar rules are automatically learned from corpus. Different from his work, foreign syntactic knowledge is introduced into the synchronous grammar rules in our method to restrict the arbitrary phrase reordering.",
+                "cite_spans": [
+                    {
+                        "start": 50,
+                        "end": 64,
+                        "text": "(Chiang, 2005)",
+                        "ref_id": "BIBREF0"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "Syntax-based SMT systems (Yamada et al., 2001; Quirk et al., 2005; Liu et al., 2006) totally depend on syntax structures to complete phrase translation. They can capture global reordering by simply swapping the children nodes of a parse tree. However, there are also reordering cases which do not agree with syntactic structures. Furthermore, their model is usually much more complex than a phrase-based system. Our method exactly attempts to integrate the advantages of phrase-based SMT system and syntax-based SMT system to improve the phrase reordering model. Phrase translation in our system is independent of syntactic structures.",
+                "cite_spans": [
+                    {
+                        "start": 25,
+                        "end": 46,
+                        "text": "(Yamada et al., 2001;",
+                        "ref_id": "BIBREF15"
+                    },
+                    {
+                        "start": 47,
+                        "end": 66,
+                        "text": "Quirk et al., 2005;",
+                        "ref_id": "BIBREF10"
+                    },
+                    {
+                        "start": 67,
+                        "end": 84,
+                        "text": "Liu et al., 2006)",
+                        "ref_id": "BIBREF9"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "In our work, we focus on building a better reordering model with the help of source parsing information. Although we borrow some fundamental elements from a phrase-based SMT system such as the use of bilingual phrases as basic translation unit, we are more interested in introducing syntactic knowledge to strengthen the ability to handle global reordering phenomena in translation.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "The Model",
+                "sec_num": "3"
+            },
+            {
+                "text": "Given a foreign sentence f and its syntactic parse tree T, each leaf in T corresponds to a single word in f and each sub-tree of T exactly covers a phrase f i in f which is called as linguistic phrase. Except linguistic phrases, any other phrase is regarded as non-linguistic phrase. The height of phrase f i is defined as the distance between the root node of T and the root node of the maximum sub-tree which exactly covers f i . For example, in Figure 1 the phrase \"\u5927\u5e45\" has the maximum sub-tree rooting at ADJP and its height is 3. The height of phrase \" \u7684 \" is 4 since its maximum sub-tree roots at ADBP instead of AD. If two adjacent phrases have the same height, we regard them as peer phrases.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 455,
+                        "end": 456,
+                        "text": "1",
+                        "ref_id": "FIGREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Definitions",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "In our model, we make use of bilingual phrases as well, which refer to source-target aligned phrase pairs extracted using the same criterion as most phrase-based systems (Och and Ney, 2004).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Definitions",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "Similar to the work in Chiang (2005) , our translation model can be formulated as a weighted synchronous context free grammar derivation process. Let D be a derivation that generates a bilingual sentence pair \uf0e1f, e\uf0f1, in which f is the given source sentence, the statistical model that is used to predict the translation probability p(e|f) is defined over Ds as follows:",
+                "cite_spans": [
+                    {
+                        "start": 23,
+                        "end": 36,
+                        "text": "Chiang (2005)",
+                        "ref_id": "BIBREF0"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "\ud835\udc5d \ud835\udc52 \ud835\udc53 \u221d \ud835\udc5d \ud835\udc37 \u221d \ud835\udc5d \ud835\udc59\ud835\udc5a \ud835\udc52 \ud835\udf06 \ud835\udc59\ud835\udc5a \u00d7 \ud835\udf19 \ud835\udc56 \ud835\udc4b \u2192 \uf0e1\ud835\udefe, \ud835\udefc\uf0f1 \ud835\udf06 \ud835\udc56 \ud835\udc4b\u2192\uf0e1\ud835\udefe,\ud835\udefc\uf0f1\u2208\ud835\udc37 \ud835\udc56",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "where p lm (e) is the language model, \uf046 i (X \uf0e0\uf0e1\uf067,\uf061\uf0f1) is a feature function defined over the derivation rule X\uf0e0\uf0e1\uf067,\uf061\uf0f1, and \uf06c i is its weight.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "Although theoretically it is ideal for translation reorder modeling by constructing a synchronous context free grammar based on bilingual linguistic parsing trees, it is generally a very difficult task in practice. In this work we propose to use a small synchronous grammar constructed on the basis of bilingual phrases to model translation reorder probability and constraints by referring to the source syntactic parse trees. In the grammar, the source / target words serve as terminals, and the bilingual phrases and combination of bilingual phrases are presented with non-terminals. There are two non-terminals in the grammar except the start symbol S: Y and Z. The general derivation rules are defined as follows: a) Derivations from non-terminal to nonterminals are restricted to binary branching forms; b) Any non-terminals that derives a list of terminals, or any combination of two non-terminals, if the resulting source string won't cause any cross-bracketing problems in the source parse tree (it exactly corresponds to a linguistic phrase in binary parse trees), are reduced to Y; c) Otherwise, they are reduced to Z.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "Table 1 shows a complete list of derivation rules in our synchronous context grammar. The first nine grammar rules are used to constrain phrase reor-dering during phrase combination. The last two rules are used to represent bilingual phrases. Rule (10) is the start grammar rule to generate the entire sentence translation.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 6,
+                        "end": 7,
+                        "text": "1",
+                        "ref_id": "TABREF3"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Model",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "Rule ( 1)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Rule Name Rule Content",
+                "sec_num": null
+            },
+            {
+                "text": "Y\uf0e0\uf0e1Y 1 Y 2 , Y 1 Y 2 \uf0f1 Rule (2) Y\uf0e0\uf0e1Y 1 Y 2 , Y 2 Y 1 \uf0f1 Rule (3) Y\uf0e0\uf0e1Z 1 Z 2 , Z 1 Z 2 \uf0f1 Rule (4) Y\uf0e0\uf0e1Y 1 Z 2 ,Y 1 Z 2 \uf0f1 Rule (5) Y\uf0e0\uf0e1Z 1 Y 2 , Z 1 Y 2 \uf0f1 Rule (6) Z\uf0e0\uf0e1Y 1 Z 2 , Y 1 Z 2 \uf0f1 Rule (7) Z\uf0e0\uf0e1Z 1 Y 2 , Z 1 Y 2 \uf0f1 Rule (8) Z\uf0e0\uf0e1Z 1 Z 2 , Z 1 Z 2 \uf0f1 Rule (9) Z\uf0e0\uf0e1Y 1 Y 2 , Y 1 Y 2 \uf0f1 Rule (10) S\uf0e0\uf0e1Y 1 ,Y 1 \uf0f1 Rule (11) Z\uf0e0\uf0e1Z 1 , Z 1 \uf0f1 Rule (12) Y\uf0e0\uf0e1Y 1 ,Y 1 \uf0f1",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Rule Name Rule Content",
+                "sec_num": null
+            },
+            {
+                "text": "Table 1 : Synchronous grammar rules Rule (1) and Rule (2) are only applied to two adjacent peer phrases. Note that, according to the constraints of foreign syntactic structures, only Rule (2) among all rules in Table 1 can be applied to conduct non-monotone phrase reordering in our framework. This can avoid arbitrary phrase reordering. For example, as shown in Figure 1 , Rule (1) is applied to the monotone combination of phrases \"\u6b27\u5143\" and \"\u7684\", and Rule (2) is applied to the non-monotone combination of phrases \"\u6b27\u5143/\u7684\" and \" \u5927\u5e45/ \u5347\u503c\". However, the non-monotone combination of \"\u7684\" and \"\u5927\u5e45\" is not allowed in our method since there is no proper rule for it.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 6,
+                        "end": 7,
+                        "text": "1",
+                        "ref_id": "TABREF3"
+                    },
+                    {
+                        "start": 370,
+                        "end": 371,
+                        "text": "1",
+                        "ref_id": "FIGREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Rule Name Rule Content",
+                "sec_num": null
+            },
+            {
+                "text": "Non-linguistic phrases are involved in Rule (3)~(9). We do not allow these grammar rules for non-monotone combination of non-peer phrases, which really harm the translation results as proved in experimental results. Although these rules violate the syntactic constraints, they not only provide the option to leverage non-linguistic translation knowledge to avoid syntactic errors but also take advantage of phrase local reordering capabili-ties. Rule (3) and Rule (8) are applied to the combination of two adjacent non-linguistic phrases. Rule (4)~( 7) deal with the situation where one is a linguistic phrase and the other is a non-linguistic phrase. Rule ( 9) is applied to the combination of two adjacent linguistic phrases but their combination result is not a linguistic phrase.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Rule Name Rule Content",
+                "sec_num": null
+            },
+            {
+                "text": "Rule (11) and Rule ( 12) are applied to generate bilingual phrases learned from training corpus. Table 2 demonstrates an example how these rules are applied to translate the foreign sentence \"\u6b27\u5143/\u7684/\u5927\u5e45/\u5347\u503c\" into the English sentence \"the significant appreciation of the Euro\".",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 103,
+                        "end": 104,
+                        "text": "2",
+                        "ref_id": "TABREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Rule Name Rule Content",
+                "sec_num": null
+            },
+            {
+                "text": "Step Partial derivations Rule However, there are always other kinds of bilingual phrases extracted directly from training corpus, such as \uf0e1\u6b27\u5143, the Euro\uf0f1 and \uf0e1\u7684 \u5927\u5e45 \u5347 \u503c, 's significant appreciation\uf0f1, which can produce different candidate sentence translations. Here, the phrase \"\u7684 \u5927\u5e45 \u5347\u503c\" is a non-linguistic phrase. The above derivations can also be rewritten as S\uf0e0\uf0e1Y 1 , Y 1 \uf0f1\uf0e0\uf0e1Y 2 Z 3 ,Y 2 Z 3 \uf0f1\uf0e0\uf0e1 \u6b27\u5143 Z 3 , the Euro Z 3 \uf0f1\uf0e0\uf0e1\u6b27\u5143\u7684 \u5927\u5e45 \u5347\u503c, the Euro 's significant appreciation\uf0f1, where Rule (10), (4), ( 12) and ( 11) are applied respectively.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Rule Name Rule Content",
+                "sec_num": null
+            },
+            {
+                "text": "1 S\uf0e0\uf0e1Y 1 , Y 1 \uf0f1 (10) 2 \uf0e0\uf0e1Y 2 Y 3 , Y 3 Y 2 \uf0f1 (2) 3 \uf0e0\uf0e1Y 4 Y 5 Y 3 , Y 3 Y 5 Y 4 \uf0f1 (2) 4 \uf0e0\uf0e1\u6b27\u5143 Y 5 Y 3 , Y 3 Y 5 the Euro\uf0f1 (12) 5 \uf0e0\uf0e1\u6b27\u5143 \u7684 Y 3 , Y 3 of",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Rule Name Rule Content",
+                "sec_num": null
+            },
+            {
+                "text": "Similar to the default features in Pharaoh (Koehn, Och and Marcu 2003) 1 . We will explain the score estimation in detail in Section 3.4.",
+                "cite_spans": [
+                    {
+                        "start": 43,
+                        "end": 70,
+                        "text": "(Koehn, Och and Marcu 2003)",
+                        "ref_id": "BIBREF6"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 71,
+                        "end": 72,
+                        "text": "1",
+                        "ref_id": "TABREF3"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Features",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "Based on the syntax constraints and involved nonterminal types, we separate the grammar rules into three groups to estimate their application scores which are also treated as reordering probabilities.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Scoring of Rules",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "For Rule (1) and Rule (2), they strictly comply with the syntactic structures. Given two peer phrases, we have two choices to use one of them. Thus, we use maximum entropy (ME) model algorithm to estimate their reordering probabilities separately, where the boundary words of foreign phrases and candidate target translation phrases, POS information and dependencies are integrated as features. As listed in Table 3 , there are totally twelve categories of features used to train the ME model. In fact, the probability of Rule (1) is just equal to the supplementary probability of Rule (2), and vice versa.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 414,
+                        "end": 415,
+                        "text": "3",
+                        "ref_id": "TABREF2"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Scoring of Rules",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "For Rule (3)~( 9), according to the syntactic structures, their application is determined since there is only one choice to complete reordering, which is similar to the \"glue rules\" in Chiang (2005) . Due to the appearance of non-linguistic phrases, non-monotone phrase reordering is not allowed in these rules. We just assign these rules a constant score trained using our implementation of Minimum Error Rate Training (Och, 2003b) , which is 0.7 in our system.",
+                "cite_spans": [
+                    {
+                        "start": 185,
+                        "end": 198,
+                        "text": "Chiang (2005)",
+                        "ref_id": "BIBREF0"
+                    },
+                    {
+                        "start": 392,
+                        "end": 432,
+                        "text": "Minimum Error Rate Training (Och, 2003b)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Scoring of Rules",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "For Rule (10)~( 12), they are also determined rules since there is no other optional rules competing with them. Constant score is simply assigned to them as well, which is 1.0 in our system. ",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Scoring of Rules",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "The grammar rules proposed in Section 3 are only applied to binary syntax tree nodes. For n-ary syntax trees (n>2), some modification is needed to generate more peer phrases. As shown in Figure 2 (a), the syntactic tree of Chinese sentence \"\u5e7f\u4e1c \u7701 / \u9ad8 \u65b0 \u6280 \u672f / \u4ea7\u54c1/ \u51fa\u53e3\" (Guangdong/hightech/products/export), parsed by the Stanford Parser (Klein, 2003) , has a 3-ary sub-tree. Referring to its English translation result \"export of high-tech products in Guangdong\", we understand there should be a non-monotone combination between the phrases \"\u5e7f\u4e1c\u7701\" and \"\u9ad8\u65b0\u6280\u672f/\u4ea7\u54c1\". However, \"\u9ad8\u65b0\u6280\u672f/\u4ea7\u54c1\" is not a linguistic phrase though its component phrases \"\u9ad8\u65b0\u6280\u672f\" and \"\u4ea7 \u54c1\" are peer phrases. To avoid the conflict with the Rule (2), we just add some extra virtual nodes in the n-ary sub-trees to make sure that only binary sub-trees survive in the modified parse tree. Figure 2 (b) is the modification result of the syntactic tree from Figure 2 (a), where two virtual nodes with the new distinguishable POS of M are added.",
+                "cite_spans": [
+                    {
+                        "start": 334,
+                        "end": 347,
+                        "text": "(Klein, 2003)",
+                        "ref_id": "BIBREF5"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 194,
+                        "end": 195,
+                        "text": "2",
+                        "ref_id": "FIGREF3"
+                    },
+                    {
+                        "start": 853,
+                        "end": 854,
+                        "text": "2",
+                        "ref_id": "FIGREF3"
+                    },
+                    {
+                        "start": 920,
+                        "end": 921,
+                        "text": "2",
+                        "ref_id": "FIGREF3"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Enriching Parse Trees",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "In general, we add virtual nodes for each set of the continuous peer phrases and let them have the same height. Thus, for a n-ary sub-tree, there are",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Enriching Parse Trees",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "\uf0e5 \uf02d \uf03d \uf02d 1 1 ) ( n i i n",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Enriching Parse Trees",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "= (n\uf02d1) 2 /2 virtual nodes being added where n>2. The phrases exactly covered by the virtual nodes are called as virtual peer phrases. ",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Enriching Parse Trees",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "It is well known that parse errors in syntactic trees always are inescapable even if the state-of-the-art parser is used. Incorrect syntactic knowledge may harm the reordering probability estimation. To minimize the impact of parse error of a single tree, more parse trees are introduced. To support the combination of parse trees, the synchronous grammar rules are applied independently, but they will compete against each other with the effect of other models such as language model.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Combination of Parse Trees",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "In our system, we combine the parse trees generated respectively by Stanford parser (Klein, 2003) and a dependency parser developed by (Zhou, 2000) . Compared with the Stanford parser, the dependency parser only conducts shallow syntactic analysis. It is powerful to identify the base NPs and base VPs and their dependencies. Additionally, dependency parser runs much faster. For example, it took about three minutes for the dependency parser to parse one thousand sentences with aver-age length of 25 words, but the Stanford parser needs about one hour to complete the same work. More importantly, as shown in the experimental results, the dependency parser can achieve the comparable quality of final translation results with Stanford parser in our system.",
+                "cite_spans": [
+                    {
+                        "start": 84,
+                        "end": 97,
+                        "text": "(Klein, 2003)",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 135,
+                        "end": 147,
+                        "text": "(Zhou, 2000)",
+                        "ref_id": "BIBREF18"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Combination of Parse Trees",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "We developed a CKY style decoder to complete the sentence translation. A two-dimension array CA is constructed to store all the local candidate phrase translation and each valid cell CA ij in CA corresponds to a foreign phrase where i is the phrase start position and j is the phrase end position. The cells in CA are filled in a bottom-up way. Firstly we fill in smaller cells with the translation in bilingual phrases learned from corpus. Then the candidate translation in the larger cell CA ij is generated based on the content in smaller adjacent cells CA ik and CA k+1j with the monotone combination and non-monotone combination, where i\uf0a3k\uf0a3j. To reduce the cost of system resources, the well known pruning methods, such as histogram pruning, threshold pruning and recombination, are used to only keep the top N candidate translation in each cell.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "The Decoder",
+                "sec_num": "5"
+            },
+            {
+                "text": "Similar to most state-of-the-art phrase-based SMT systems, we use the SRI toolkit (Stolcke, 2002) for language model training and Giza++ toolkit (Och and Ney, 2003) for word alignment. For reordering model training, two kinds of parse trees for each foreign sentence in the training corpus were obtained through the Stanford parser (Klein, 2003) and a dependency parser (Zhou, 2000) . After that, we picked all the foreign linguistic phrases of the same sentence according to syntactic structures. Based on the word alignment results, if the aligned target words of any two adjacent foreign linguistic phrases can also be formed into two valid adjacent phrase according to constraints proposed in the phrase extraction algorithm by Och (2003a), they will be extracted as a reordering training sample. Finally, the ME modeling toolkit developed by Zhang (2004) is used to train the reordering model over the extracted samples. ",
+                "cite_spans": [
+                    {
+                        "start": 82,
+                        "end": 97,
+                        "text": "(Stolcke, 2002)",
+                        "ref_id": "BIBREF11"
+                    },
+                    {
+                        "start": 145,
+                        "end": 164,
+                        "text": "(Och and Ney, 2003)",
+                        "ref_id": "BIBREF3"
+                    },
+                    {
+                        "start": 332,
+                        "end": 345,
+                        "text": "(Klein, 2003)",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 370,
+                        "end": 382,
+                        "text": "(Zhou, 2000)",
+                        "ref_id": "BIBREF18"
+                    },
+                    {
+                        "start": 847,
+                        "end": 859,
+                        "text": "Zhang (2004)",
+                        "ref_id": "BIBREF16"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training",
+                "sec_num": "6"
+            },
+            {
+                "text": "We conducted our experiments on Chinese-to-English translation task of NIST MT-05 on a 3.0GHz system with 4G RAM memory. The bilingual training data comes from the FBIS corpus. The Xinhua news in GIGAWORD corpus is used to train a four-gram language model. The development set used in our system is the NIST MT-02 evaluation test data. For phrase extraction, we limit the maximum length of foreign and English phrases to 3 and 5 respectively. But there is no phrase length constraint for reordering sample extraction. About 1.93M and 1.1M reordering samples are extracted from the FBIS corpus based on the Stanford parser and the dependency parser respectively. To reduce the search space in decoder, we set the histogram pruning threshold to 20 and relative pruning threshold to 0.1.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experimental Results and Analysis",
+                "sec_num": "7"
+            },
+            {
+                "text": "In the following experiments, we compared our system performance with that of the other state-ofthe-art systems. Additionally, the effect of some strategies on system performance is investigated as well. Case-sensitive BLEU-4 score is adopted to evaluate system performance.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experimental Results and Analysis",
+                "sec_num": "7"
+            },
+            {
+                "text": "Our baseline system is Pharaoh (Koehn, 2004 ). Xiong's system (Xiong, et al., 2006) which used ME model to train the reordering model is also regarded as a competitor. To have a fair comparison, we used the same language model and translation model for these three systems. The experimental results are showed in Table 4 .",
+                "cite_spans": [
+                    {
+                        "start": 31,
+                        "end": 43,
+                        "text": "(Koehn, 2004",
+                        "ref_id": "BIBREF7"
+                    },
+                    {
+                        "start": 62,
+                        "end": 83,
+                        "text": "(Xiong, et al., 2006)",
+                        "ref_id": "BIBREF14"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 319,
+                        "end": 320,
+                        "text": "4",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Comparing with Baseline SMT system",
+                "sec_num": "7.1"
+            },
+            {
+                "text": "Bleu Score Pharaoh 0.2487",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "System",
+                "sec_num": null
+            },
+            {
+                "text": "Xiong's System 0.2616",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "System",
+                "sec_num": null
+            },
+            {
+                "text": "Our System 0.2737 Table 4 : Performance against baseline system These three systems are the same in that the final sentence translation results are generated by the combination of local phrase translation. Thus, they are capable of local reordering but not global reordering. The phrase reordering in Pharaoh depends only on distance distortion information which does not contain any linguistic knowledge. The experi-mental result shows that the performance of both Xiong's system and our system is better than that of Pharaoh. It proves that linguistic knowledge can help the global reordering probability estimation. Additionally, our system is superior to Xiong's system in which only use phrase boundary words to guide global reordering. It indicates that syntactic knowledge is more powerful to guide global reordering than boundary words. On the other hand, it proves the importance of syntactic knowledge constraints in avoiding the arbitrary phrase reordering.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 24,
+                        "end": 25,
+                        "text": "4",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "System",
+                "sec_num": null
+            },
+            {
+                "text": "Rule (3)~(9) in Section 3 not only play the role to compensate for syntactic errors, but also take the advantage of the capability of capturing local phrase reordering. However, the non-monotone combination for non-peer phrases is really harmful to system performance. To prove these ideas, we conducted experiments with different constrains.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Syntactic Error Analysis",
+                "sec_num": "7.2"
+            },
+            {
+                "text": "Bleu Score From the experimental results shown in Table 5 , just as claimed in other previous work, the combination between non-linguistic phrases is useful and cannot be abandoned. On the other hand, if we relax the constraint of non-peer phrase combination (that is, allowing non-monotone combination for on-peer phrases), some more serious errors in nonsyntactic knowledge is introduced, thereby degrading performance from 0.2737 to 0.2647.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 56,
+                        "end": 57,
+                        "text": "5",
+                        "ref_id": "TABREF4"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Constraints",
+                "sec_num": null
+            },
+            {
+                "text": "As discussed in Section 4, for n-ary nodes (n>2) in the original syntax trees, the relationship among nary sub-trees is always not clearly captured. To give them the chance of free reordering, we add the virtual peer nodes to make sure that the combination of a set of peer phrases can still be a peer phrase. An experiment was done to compare with the case where the virtual peer nodes were not added to n-ary syntax trees. The Bleu score dropped to 26.20 from 27.37, which shows the virtual nodes have great effect on system performance.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Effect of Virtual Peer Phrases",
+                "sec_num": "7.3"
+            },
+            {
+                "text": "In this section, we conducted three experiments to investigate the effect of constituency parse tree and dependency parse tree. Over the same platform, we tried to use only one of them to complete the translation task. The experimental results are shown in Table 6 .",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 263,
+                        "end": 264,
+                        "text": "6",
+                        "ref_id": "TABREF5"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Effect of Mixed Syntax Trees",
+                "sec_num": "7.4"
+            },
+            {
+                "text": "Surprisingly, there is no significant difference in performance. The reason may be that both parsers produce approximately equivalent parse results. However, the combination of syntax trees outperforms merely only one syntax tree. This suggests that the N-best syntax parse trees may enhance the quality of reordering model. ",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Effect of Mixed Syntax Trees",
+                "sec_num": "7.4"
+            },
+            {
+                "text": "In this paper, syntactic knowledge is introduced to capture global reordering of SMT system. This method can not only inherit the advantage of local reordering ability of standard phrase-based SMT system, but also capture the global reordering as the syntax-based SMT system. The experimental results showed the effectiveness of our method.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion and Future Work",
+                "sec_num": "8"
+            },
+            {
+                "text": "In the future work, we plan to improve the reordering model by introducing N-best syntax trees and exploiting richer syntactic knowledge.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion and Future Work",
+                "sec_num": "8"
+            }
+        ],
+        "back_matter": [],
+        "bib_entries": {
+            "BIBREF0": {
+                "ref_id": "b0",
+                "title": "A hierarchical phrase-based model for statistical machine translation",
+                "authors": [
+                    {
+                        "first": "David",
+                        "middle": [],
+                        "last": "Chiang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2005,
+                "venue": "Proceedings of ACL 2005",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "David Chiang. 2005. A hierarchical phrase-based mod- el for statistical machine translation. In Proceedings of ACL 2005.",
+                "links": null
+            },
+            "BIBREF1": {
+                "ref_id": "b1",
+                "title": "Statistical Machine Translation: From Single-Word Models to Alignment Templates Thesis",
+                "authors": [
+                    {
+                        "first": "Josef",
+                        "middle": [],
+                        "last": "Franz",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Och",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2003,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Franz Josef Och. 2003a. Statistical Machine Translation: From Single-Word Models to Alignment Templates Thesis.",
+                "links": null
+            },
+            "BIBREF2": {
+                "ref_id": "b2",
+                "title": "Minmum Error Rate Training in Statistical Machine Translation",
+                "authors": [
+                    {
+                        "first": "Josef",
+                        "middle": [],
+                        "last": "Franz",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Och",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2003,
+                "venue": "Proceedings for ACL 2003",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Franz Josef Och. 2003b. Minmum Error Rate Training in Statistical Machine Translation. In Proceedings for ACL 2003.",
+                "links": null
+            },
+            "BIBREF3": {
+                "ref_id": "b3",
+                "title": "A Systematic Comparison of Various Statistical Alignment Models",
+                "authors": [
+                    {
+                        "first": "Josef",
+                        "middle": [],
+                        "last": "Franz",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hermann",
+                        "middle": [],
+                        "last": "Och",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Ney",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2003,
+                "venue": "Computational Linguistics",
+                "volume": "29",
+                "issue": "",
+                "pages": "19--51",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Franz Josef Och, Hermann Ney. 2003. A Systematic Comparison of Various Statistical Alignment Models. Computational Linguistics, 29:19-51.",
+                "links": null
+            },
+            "BIBREF4": {
+                "ref_id": "b4",
+                "title": "The alignment template approach to statistical machine translation",
+                "authors": [
+                    {
+                        "first": "Josef",
+                        "middle": [],
+                        "last": "Franz",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hermann",
+                        "middle": [],
+                        "last": "Och",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Ney",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2004,
+                "venue": "Computational Linguistics",
+                "volume": "30",
+                "issue": "",
+                "pages": "417--449",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Franz Josef Och and Hermann Ney. 2004. The align- ment template approach to statistical machine trans- lation. Computational Linguistics, 30:417-449.",
+                "links": null
+            },
+            "BIBREF5": {
+                "ref_id": "b5",
+                "title": "Accurate Unlexicalized Parsing",
+                "authors": [
+                    {
+                        "first": "Dan",
+                        "middle": [],
+                        "last": "Klein",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [
+                            "D"
+                        ],
+                        "last": "Manning",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2003,
+                "venue": "Proceedings of ACL 2003",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Dan Klein and Christopher D. Manning. 2003. Accurate Unlexicalized Parsing. In Proceedings of ACL 2003.",
+                "links": null
+            },
+            "BIBREF6": {
+                "ref_id": "b6",
+                "title": "Statistical Phrase-Based Translation",
+                "authors": [
+                    {
+                        "first": "Philipp",
+                        "middle": [],
+                        "last": "Koehn",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Franz",
+                        "middle": [],
+                        "last": "Joseph Och",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Daniel",
+                        "middle": [],
+                        "last": "Marcu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2003,
+                "venue": "Proceedings of HLT/NAACL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Philipp Koehn, Franz Joseph Och, and Daniel Marcu. 2003. Statistical Phrase-Based Translation. In Pro- ceedings of HLT/NAACL 2003.",
+                "links": null
+            },
+            "BIBREF7": {
+                "ref_id": "b7",
+                "title": "Pharaoh: a Beam Search Decoder for Phrased-Based Statistical Machine Translation Models",
+                "authors": [
+                    {
+                        "first": "Philipp",
+                        "middle": [],
+                        "last": "Koehn",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2004,
+                "venue": "Proceedings of AMTA 2004",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Philipp Koehn. 2004. Pharaoh: a Beam Search Decoder for Phrased-Based Statistical Machine Translation Models. In Proceedings of AMTA 2004.",
+                "links": null
+            },
+            "BIBREF8": {
+                "ref_id": "b8",
+                "title": "Local phrase reordering models for statistical machine translation",
+                "authors": [
+                    {
+                        "first": "Shankar",
+                        "middle": [],
+                        "last": "Kumar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "William",
+                        "middle": [],
+                        "last": "Byrne",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2005,
+                "venue": "Proceedings of HLT-EMNLP",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Shankar Kumar and William Byrne. 2005. Local phrase reordering models for statistical machine translation. In Proceedings of HLT-EMNLP 2005.",
+                "links": null
+            },
+            "BIBREF9": {
+                "ref_id": "b9",
+                "title": "Tree-to-String Alignment Template for Statistical Machine Translation",
+                "authors": [
+                    {
+                        "first": "Yang",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Qun",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Shouxun",
+                        "middle": [],
+                        "last": "Lin",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2006,
+                "venue": "Proceedings of COLING-ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Yang Liu, Qun Liu, Shouxun Lin. 2006. Tree-to-String Alignment Template for Statistical Machine Transla- tion. In Proceedings of COLING-ACL 2006.",
+                "links": null
+            },
+            "BIBREF10": {
+                "ref_id": "b10",
+                "title": "Dependency treelet translation: Syntactically informed phrasal SMT",
+                "authors": [
+                    {
+                        "first": "Chris",
+                        "middle": [],
+                        "last": "Quirk",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Arul",
+                        "middle": [],
+                        "last": "Menezes",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Colin",
+                        "middle": [],
+                        "last": "Cherry",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2005,
+                "venue": "Proceedings of ACL 2005",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Chris Quirk, Arul Menezes, and Colin Cherry. 2005. Dependency treelet translation: Syntactically in- formed phrasal SMT. In Proceedings of ACL 2005.",
+                "links": null
+            },
+            "BIBREF11": {
+                "ref_id": "b11",
+                "title": "SRILM-An Extensible Language Modeling Toolkit",
+                "authors": [
+                    {
+                        "first": "Andreas",
+                        "middle": [],
+                        "last": "Stolcke",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2002,
+                "venue": "Proceedings of ICSLP",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Andreas Stolcke. 2002. SRILM-An Extensible Language Modeling Toolkit. In Proceedings of ICSLP 2002.",
+                "links": null
+            },
+            "BIBREF12": {
+                "ref_id": "b12",
+                "title": "A block orientation model for statistical machine translation",
+                "authors": [
+                    {
+                        "first": "Christoph",
+                        "middle": [],
+                        "last": "Tillmann",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2004,
+                "venue": "Proceedings of HLT-NAACL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Christoph Tillmann. 2004. A block orientation model for statistical machine translation. In Proceedings of HLT-NAACL 2004.",
+                "links": null
+            },
+            "BIBREF13": {
+                "ref_id": "b13",
+                "title": "A Polynomial-Time Algorithm for Statistical Machine Translation",
+                "authors": [
+                    {
+                        "first": "Dekai",
+                        "middle": [],
+                        "last": "Wu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1996,
+                "venue": "Proceedings of ACL 1996",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Dekai Wu. 1996. A Polynomial-Time Algorithm for Sta- tistical Machine Translation. In Proceedings of ACL 1996.",
+                "links": null
+            },
+            "BIBREF14": {
+                "ref_id": "b14",
+                "title": "Maximum Entropy Based Phrase Reordering Model for Statistical Machine Translation",
+                "authors": [
+                    {
+                        "first": "Deyi",
+                        "middle": [],
+                        "last": "Xiong",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Qun",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Shouxun",
+                        "middle": [],
+                        "last": "Lin",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2006,
+                "venue": "Proceedings of COLING-ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Deyi Xiong, Qun Liu, and Shouxun Lin. 2006. Maxi- mum Entropy Based Phrase Reordering Model for Statistical Machine Translation. In Proceedings of COLING-ACL 2006.",
+                "links": null
+            },
+            "BIBREF15": {
+                "ref_id": "b15",
+                "title": "A syntax based statistical translation model",
+                "authors": [
+                    {
+                        "first": "Kenji",
+                        "middle": [],
+                        "last": "Yamada",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kevin",
+                        "middle": [],
+                        "last": "Knight",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2001,
+                "venue": "Proceedings of ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Kenji Yamada and Kevin Knight. 2001. A syntax based statistical translation model. In Proceedings of ACL 2001.",
+                "links": null
+            },
+            "BIBREF16": {
+                "ref_id": "b16",
+                "title": "Maximum Entropy Modeling Toolkit for Python and C++",
+                "authors": [
+                    {
+                        "first": "Le",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2004,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Le Zhang. 2004. Maximum Entropy Modeling Toolkit for Python and C++. Available at http://homepa ges.inf.ed.ac.uk/s0450736/maxent_toolkit.html.",
+                "links": null
+            },
+            "BIBREF17": {
+                "ref_id": "b17",
+                "title": "Reordering Constraints for Phrase-Based Statistical Machine Translation",
+                "authors": [
+                    {
+                        "first": "R",
+                        "middle": [],
+                        "last": "Zens",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "H",
+                        "middle": [],
+                        "last": "Ney",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "T",
+                        "middle": [],
+                        "last": "Watanabe",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "E",
+                        "middle": [],
+                        "last": "Sumita",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2004,
+                "venue": "Proceedings of CoLing",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "R. Zens, H. Ney, T. Watanabe, and E. Sumita. 2004. Reordering Constraints for Phrase-Based Statistical Machine Translation. In Proceedings of CoLing 2004.",
+                "links": null
+            },
+            "BIBREF18": {
+                "ref_id": "b18",
+                "title": "A block-based robust dependency parser for unrestricted Chinese text",
+                "authors": [
+                    {
+                        "first": "Ming",
+                        "middle": [],
+                        "last": "Zhou",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2000,
+                "venue": "The second Chinese Language Processing Workshop attached to ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ming Zhou. 2000. A block-based robust dependency parser for unrestricted Chinese text. The second Chinese Language Processing Workshop attached to ACL2000.",
+                "links": null
+            }
+        },
+        "ref_entries": {
+            "FIGREF0": {
+                "num": null,
+                "text": "Figure 1: A reordering example",
+                "uris": null,
+                "fig_num": "1",
+                "type_str": "figure"
+            },
+            "FIGREF2": {
+                "num": null,
+                "text": "of first foreign phrase LS2 First word of second foreign phrase RS1 Last word of first foreign phrase RS2 Last word of second foreign phrase LT1 First word of first target phrase LT2 First word of second target phrase RT1 Last word of first target phrase RT2 Last word of second target phrase LPos POS of the node covering first foreign phrase RPos POS of the node covering second foreign phrase Cpos POS of the node covering the combination of foreign phrases DP Dependency between the nodes covering two single foreign phrases respectively",
+                "uris": null,
+                "fig_num": null,
+                "type_str": "figure"
+            },
+            "FIGREF3": {
+                "num": null,
+                "text": "Figure 2: Example of syntax tree modification",
+                "uris": null,
+                "fig_num": "2",
+                "type_str": "figure"
+            },
+            "TABREF0": {
+                "content": "<table><tr><td>the Euro\uf0f1</td><td>(12)</td></tr></table>",
+                "type_str": "table",
+                "text": "Example of application for rules",
+                "html": null,
+                "num": null
+            },
+            "TABREF1": {
+                "content": "<table><tr><td>\uf06c The phrase translation weights p phr (\uf067|\uf061) and</td></tr><tr><td>p phr (\uf061|\uf067) estimating how well the terminal</td></tr><tr><td>words of \uf061 translate the terminal words of \uf067,</td></tr><tr><td>This feature is only applicable to Rule (11) and</td></tr><tr><td>Rule (12).</td></tr><tr><td>\uf06c A word penalty exp(|\uf061|), where |\uf061| denotes the</td></tr><tr><td>count of terminal words of \uf061. This feature is</td></tr><tr><td>only applicable to Rule (11) and Rule (12).</td></tr><tr><td>\uf06c A penalty exp(1) for grammar rules analogous</td></tr><tr><td>to Pharaoh's penalty which allows the model to</td></tr><tr><td>learn a preference for longer or shorter deriva-</td></tr><tr><td>tions. This feature is applicable to all rules in</td></tr><tr><td>Table 1.</td></tr></table>",
+                "type_str": "table",
+                "text": ", we used following features to estimate the weight of our grammar rules. Note that different rules may have different features in our model. \uf06c The lexical weights p lex (\uf067|\uf061) and p lex (\uf061|\uf067) estimating how well the words in \uf061 translate the words in \uf067. This feature is only applicable to Rule (11) and Rule (12).",
+                "html": null,
+                "num": null
+            },
+            "TABREF2": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "Feature categories used for ME model",
+                "html": null,
+                "num": null
+            },
+            "TABREF3": {
+                "content": "<table><tr><td>used</td><td>0.2737</td></tr><tr><td>Allowing the non-monotone</td><td>0.2647</td></tr><tr><td>combination of non-peer phrases</td><td/></tr><tr><td>Rule (3)~(9) are prohibited</td><td>0.2591</td></tr></table>",
+                "type_str": "table",
+                "text": "",
+                "html": null,
+                "num": null
+            },
+            "TABREF4": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "About non-peer phrase combination",
+                "html": null,
+                "num": null
+            },
+            "TABREF5": {
+                "content": "<table><tr><td/><td>Bleu Score</td></tr><tr><td colspan=\"2\">Dependency parser only 0.2667</td></tr><tr><td>Stanford parser only</td><td>0.2670</td></tr><tr><td>Mixed parsing trees</td><td>0.2737</td></tr></table>",
+                "type_str": "table",
+                "text": "Different parsing tree",
+                "html": null,
+                "num": null
+            }
+        }
+    }
+}

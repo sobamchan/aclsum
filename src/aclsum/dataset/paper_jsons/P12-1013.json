@@ -1,0 +1,1930 @@
+{
+    "paper_id": "P12-1013",
+    "header": {
+        "generated_with": "S2ORC 1.0.0",
+        "date_generated": "2023-06-16T12:00:56.310321Z"
+    },
+    "title": "Efficient Tree-based Approximation for Entailment Graph Learning",
+    "authors": [
+        {
+            "first": "Jonathan",
+            "middle": [],
+            "last": "Berant",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "Tel Aviv University",
+                "location": {}
+            },
+            "email": "jonatha6@post.tau.ac.il"
+        },
+        {
+            "first": "Ido",
+            "middle": [],
+            "last": "Dagan",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "Bar-Ilan University",
+                "location": {}
+            },
+            "email": "dagan@eng.biu.ac.il"
+        },
+        {
+            "first": "Meni",
+            "middle": [],
+            "last": "Adler",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "Bar-Ilan University",
+                "location": {}
+            },
+            "email": "adlerm@cs.bgu.ac.il"
+        },
+        {
+            "first": "Jacob",
+            "middle": [],
+            "last": "Goldberger",
+            "suffix": "",
+            "affiliation": {},
+            "email": ""
+        }
+    ],
+    "year": "",
+    "venue": null,
+    "identifiers": {},
+    "abstract": "Learning entailment rules is fundamental in many semantic-inference applications and has been an active field of research in recent years. In this paper we address the problem of learning transitive graphs that describe entailment rules between predicates (termed entailment graphs). We first identify that entailment graphs exhibit a \"tree-like\" property and are very similar to a novel type of graph termed forest-reducible graph. We utilize this property to develop an iterative efficient approximation algorithm for learning the graph edges, where each iteration takes linear time. We compare our approximation algorithm to a recently-proposed state-of-the-art exact algorithm and show that it is more efficient and scalable both theoretically and empirically, while its output quality is close to that given by the optimal solution of the exact algorithm.",
+    "pdf_parse": {
+        "paper_id": "P12-1013",
+        "_pdf_hash": "",
+        "abstract": [
+            {
+                "text": "Learning entailment rules is fundamental in many semantic-inference applications and has been an active field of research in recent years. In this paper we address the problem of learning transitive graphs that describe entailment rules between predicates (termed entailment graphs). We first identify that entailment graphs exhibit a \"tree-like\" property and are very similar to a novel type of graph termed forest-reducible graph. We utilize this property to develop an iterative efficient approximation algorithm for learning the graph edges, where each iteration takes linear time. We compare our approximation algorithm to a recently-proposed state-of-the-art exact algorithm and show that it is more efficient and scalable both theoretically and empirically, while its output quality is close to that given by the optimal solution of the exact algorithm.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            }
+        ],
+        "body_text": [
+            {
+                "text": "Performing textual inference is in the heart of many semantic inference applications such as Question Answering (QA) and Information Extraction (IE). A prominent generic paradigm for textual inference is Textual Entailment (TUE) (Dagan et al., 2009) . In TUE, the goal is to recognize, given two text fragments termed text and hypothesis, whether the hypothesis can be inferred from the text. For example, the text \"Cyprus was invaded by the Ottoman Empire in 1571\" implies the hypothesis \"The Ottomans attacked Cyprus\".",
+                "cite_spans": [
+                    {
+                        "start": 229,
+                        "end": 249,
+                        "text": "(Dagan et al., 2009)",
+                        "ref_id": "BIBREF7"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Semantic inference applications such as QA and IE crucially rely on entailment rules (Ravichandran and Hovy, 2002; Shinyama and Sekine, 2006) or equivalently inference rules, that is, rules that describe a directional inference relation between two fragments of text. An important type of entailment rule specifies the entailment relation between natural language predicates, e.g., the entailment rule 'X invade Y \u2192 X attack Y' can be helpful in inferring the aforementioned hypothesis. Consequently, substantial effort has been made to learn such rules (Lin and Pantel, 2001; Sekine, 2005; Szpektor and Dagan, 2008; Schoenmackers et al., 2010) .",
+                "cite_spans": [
+                    {
+                        "start": 85,
+                        "end": 114,
+                        "text": "(Ravichandran and Hovy, 2002;",
+                        "ref_id": "BIBREF16"
+                    },
+                    {
+                        "start": 115,
+                        "end": 141,
+                        "text": "Shinyama and Sekine, 2006)",
+                        "ref_id": "BIBREF20"
+                    },
+                    {
+                        "start": 554,
+                        "end": 576,
+                        "text": "(Lin and Pantel, 2001;",
+                        "ref_id": "BIBREF12"
+                    },
+                    {
+                        "start": 577,
+                        "end": 590,
+                        "text": "Sekine, 2005;",
+                        "ref_id": "BIBREF19"
+                    },
+                    {
+                        "start": 591,
+                        "end": 616,
+                        "text": "Szpektor and Dagan, 2008;",
+                        "ref_id": "BIBREF22"
+                    },
+                    {
+                        "start": 617,
+                        "end": 644,
+                        "text": "Schoenmackers et al., 2010)",
+                        "ref_id": "BIBREF18"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Textual entailment is inherently a transitive relation , that is, the rules 'x \u2192 y' and 'y \u2192 z' imply the rule 'x \u2192 z'. Accordingly, Berant et al. (2010) formulated the problem of learning entailment rules as a graph optimization problem, where nodes are predicates and edges represent entailment rules that respect transitivity. Since finding the optimal set of edges respecting transitivity is NP-hard, they employed Integer Linear Programming (ILP) to find the exact solution. Indeed, they showed that applying global transitivity constraints improves rule learning comparing to methods that ignore graph structure. More recently, Berant et al. (Berant et al., 2011) introduced a more efficient exact algorithm, which decomposes the graph into connected components and then applies an ILP solver over each component.",
+                "cite_spans": [
+                    {
+                        "start": 133,
+                        "end": 153,
+                        "text": "Berant et al. (2010)",
+                        "ref_id": "BIBREF2"
+                    },
+                    {
+                        "start": 648,
+                        "end": 669,
+                        "text": "(Berant et al., 2011)",
+                        "ref_id": "BIBREF3"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Despite this progress, finding the exact solution remains NP-hard -the authors themselves report they were unable to solve some graphs of rather moderate size and that the coverage of their method is limited. Thus, scaling their algorithm to data sets with tens of thousands of predicates (e.g., the extractions of Fader et al. (2011) ) is unlikely.",
+                "cite_spans": [
+                    {
+                        "start": 315,
+                        "end": 334,
+                        "text": "Fader et al. (2011)",
+                        "ref_id": "BIBREF9"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "In this paper we present a novel method for learning the edges of entailment graphs. Our method computes much more efficiently an approximate solution that is empirically almost as good as the exact solution. To that end, we first (Section 3) conjecture and empirically show that entailment graphs exhibit a \"tree-like\" property, i.e., that they can be reduced into a structure similar to a directed forest.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Then, we present in Section 4 our iterative approximation algorithm, where in each iteration a node is removed and re-attached back to the graph in a locally-optimal way. Combining this scheme with our conjecture about the graph structure enables a linear algorithm for node re-attachment. Section 5 shows empirically that this algorithm is by orders of magnitude faster than the state-of-the-art exact algorithm, and that though an optimal solution is not guaranteed, the area under the precision-recall curve drops by merely a point.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "To conclude, the contribution of this paper is twofold: First, we define a novel modeling assumption about the tree-like structure of entailment graphs and demonstrate its validity. Second, we exploit this assumption to develop a polynomial approximation algorithm for learning entailment graphs that can scale to much larger graphs than in the past. Finally, we note that learning entailment graphs bears strong similarities to related tasks such as Taxonomy Induction (Snow et al., 2006) and Ontology induction (Poon and Domingos, 2010) , and thus our approach may improve scalability in these fields as well.",
+                "cite_spans": [
+                    {
+                        "start": 470,
+                        "end": 489,
+                        "text": "(Snow et al., 2006)",
+                        "ref_id": "BIBREF21"
+                    },
+                    {
+                        "start": 513,
+                        "end": 538,
+                        "text": "(Poon and Domingos, 2010)",
+                        "ref_id": "BIBREF15"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Until recently, work on learning entailment rules between predicates considered each rule independently of others and did not exploit global dependencies. Most methods utilized the distributional similarity hypothesis that states that semantically similar predicates occur with similar arguments (Lin and Pantel, 2001; Szpektor et al., 2004; Yates and Etzioni, 2009; Schoenmackers et al., 2010) . Some methods extracted rules from lexicographic resources such as WordNet (Szpektor and Dagan, 2009) or FrameNet (Bob and Rambow, 2009; Ben Aharon et al., 2010) , and others assumed that semantic relations between predicates can be deduced from their co-occurrence in a corpus via manually-constructed patterns (Chklovski and Pantel, 2004) .",
+                "cite_spans": [
+                    {
+                        "start": 296,
+                        "end": 318,
+                        "text": "(Lin and Pantel, 2001;",
+                        "ref_id": "BIBREF12"
+                    },
+                    {
+                        "start": 319,
+                        "end": 341,
+                        "text": "Szpektor et al., 2004;",
+                        "ref_id": "BIBREF24"
+                    },
+                    {
+                        "start": 342,
+                        "end": 366,
+                        "text": "Yates and Etzioni, 2009;",
+                        "ref_id": "BIBREF25"
+                    },
+                    {
+                        "start": 367,
+                        "end": 394,
+                        "text": "Schoenmackers et al., 2010)",
+                        "ref_id": "BIBREF18"
+                    },
+                    {
+                        "start": 471,
+                        "end": 497,
+                        "text": "(Szpektor and Dagan, 2009)",
+                        "ref_id": "BIBREF23"
+                    },
+                    {
+                        "start": 510,
+                        "end": 532,
+                        "text": "(Bob and Rambow, 2009;",
+                        "ref_id": "BIBREF4"
+                    },
+                    {
+                        "start": 533,
+                        "end": 557,
+                        "text": "Ben Aharon et al., 2010)",
+                        "ref_id": "BIBREF1"
+                    },
+                    {
+                        "start": 708,
+                        "end": 736,
+                        "text": "(Chklovski and Pantel, 2004)",
+                        "ref_id": "BIBREF5"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Background",
+                "sec_num": "2"
+            },
+            {
+                "text": "Recently, Berant et al. (2010; 2011) formulated the problem as the problem of learning global entailment graphs. In entailment graphs, nodes are predicates (e.g., 'X attack Y') and edges represent entailment rules between them ('X invade Y \u2192 X attack Y'). For every pair of predicates i, j, an entailment score w ij was learned by training a classifier over distributional similarity features. A positive w ij indicated that the classifier believes i \u2192 j and a negative w ij indicated that the classifier believes i j. Given the graph nodes V (corresponding to the predicates) and the weighting function w : V \u00d7 V \u2192 R, they aim to find the edges of a graph G = (V, E) that maximize the objective (i,j)\u2208E w ij under the constraint that the graph is transitive (i.e., for every node triplet (i, j, k), if (i, j) \u2208 E and (j, k) \u2208 E, then (i, k) \u2208 E).",
+                "cite_spans": [
+                    {
+                        "start": 10,
+                        "end": 30,
+                        "text": "Berant et al. (2010;",
+                        "ref_id": "BIBREF2"
+                    },
+                    {
+                        "start": 31,
+                        "end": 36,
+                        "text": "2011)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Background",
+                "sec_num": "2"
+            },
+            {
+                "text": "Berant et al. proved that this optimization problem, which we term Max-Trans-Graph, is NP-hard, and so described it as an Integer Linear Program (ILP). Let x ij be a binary variable indicating the existence of an edge i \u2192 j in E. Then, X = {x ij : i = j} are the variables of the following ILP for Max-Trans-Graph: arg max",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Background",
+                "sec_num": "2"
+            },
+            {
+                "text": "X i =j w ij \u2022 x ij (1) s.t. \u2200 i,j,k\u2208V x ij + x jk -x ik \u2264 1 \u2200 i,j\u2208V x ij \u2208 {0, 1}",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Background",
+                "sec_num": "2"
+            },
+            {
+                "text": "The objective function is the sum of weights over the edges of G and the constraint x ij + x jk -x ik \u2264 1 on the binary variables enforces that whenever x ij = x jk = 1, then also x ik = 1 (transitivity).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Background",
+                "sec_num": "2"
+            },
+            {
+                "text": "Since ILP is NP-hard, applying an ILP solver directly does not scale well because the number of variables is O(|V | 2 ) and the number of constraints is O(|V | 3 ). Thus, even a graph with \u223c80 nodes (predicates) has more than half a million constraints. Consequently, in (Berant et al., 2011) , they proposed a method that efficiently decomposes the graph into smaller components and applies an ILP solver on each component separately using a cutting-plane procedure (Riedel and Clarke, 2006) . Although this method is exact and improves scalability, it does not guarantee an efficient solution. When the graph does not decompose into sufficiently small components, and the weights generate many violations of transitivity, solving Max-Trans-Graph becomes intractable. To address this problem, we present in this paper a method for approximating the optimal set of edges within each component and show that it is much more efficient and scalable both theoretically and empirically. Do and Roth (2010) suggested a method for a related task of learning taxonomic relations between terms. Given a pair of terms, a small graph is constructed and constraints are imposed on the graph structure. Their work, however, is geared towards scenarios where relations are determined on-the-fly for a given pair of terms and no global knowledge base is explicitly constructed. Thus, their method easily produces solutions where global constraints, such as transitivity, are violated.",
+                "cite_spans": [
+                    {
+                        "start": 271,
+                        "end": 292,
+                        "text": "(Berant et al., 2011)",
+                        "ref_id": "BIBREF3"
+                    },
+                    {
+                        "start": 467,
+                        "end": 492,
+                        "text": "(Riedel and Clarke, 2006)",
+                        "ref_id": "BIBREF17"
+                    },
+                    {
+                        "start": 982,
+                        "end": 1000,
+                        "text": "Do and Roth (2010)",
+                        "ref_id": "BIBREF8"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Background",
+                "sec_num": "2"
+            },
+            {
+                "text": "Another approximation method that violates transitivity constraints is LP relaxation (Martins et al., 2009) . In LP relaxation, the constraint x ij \u2208 {0, 1} is replaced by 0 \u2264 x ij \u2264 1, transforming the problem from an ILP to a Linear Program (LP), which is polynomial. An LP solver is then applied on the problem, and variables x ij that are assigned a fractional value are rounded to their nearest integer and so many violations of transitivity easily occur. The solution when applying LP relaxation is not a transitive graph, but nevertheless we show for comparison in Section 5 that our method is much faster.",
+                "cite_spans": [
+                    {
+                        "start": 85,
+                        "end": 107,
+                        "text": "(Martins et al., 2009)",
+                        "ref_id": "BIBREF14"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Background",
+                "sec_num": "2"
+            },
+            {
+                "text": "Last, we note that transitive relations have been explored in adjacent fields such as Temporal Information Extraction (Ling and Weld, 2010) , Ontology Induction (Poon and Domingos, 2010) , and Coreference Resolution (Finkel and Manning, 2008) .",
+                "cite_spans": [
+                    {
+                        "start": 118,
+                        "end": 139,
+                        "text": "(Ling and Weld, 2010)",
+                        "ref_id": "BIBREF13"
+                    },
+                    {
+                        "start": 161,
+                        "end": 186,
+                        "text": "(Poon and Domingos, 2010)",
+                        "ref_id": "BIBREF15"
+                    },
+                    {
+                        "start": 216,
+                        "end": 242,
+                        "text": "(Finkel and Manning, 2008)",
+                        "ref_id": "BIBREF10"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Background",
+                "sec_num": "2"
+            },
+            {
+                "text": "The entailment relation, described by entailment graphs, is typically from a \"semantically-specific\" predicate to a more \"general\" one. Thus, intuitively, the topology of an entailment graph is expected to be \"tree-like\". In this section we first formalize this intuition and then empirically analyze its validity. This property of entailment graphs is an interesting topological observation on its own, but also enables the efficient approximation algorithm of Section 4.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Forest-reducible Graphs",
+                "sec_num": "3"
+            },
+            {
+                "text": "For a directed edge i \u2192 j in a directed acyclic graphs (DAG), we term the node i a child of node j, and j a parent of i. A directed forest is a DAG where all nodes have no more than one parent. The entailment graph in Figure 1a (subgraph from the data set described in Section 5) is clearly not a directed forest -it contains a cycle of size two comprising the nodes 'X common in Y' and 'X frequent in Y', and in addition the node 'X be epidemic in Y' has 3 parents. However, we can convert it to a directed forest by applying the following operations. Any directed graph G can be converted into a Strongly-Connected-Component (SCC) graph in the following way: every strongly connected component (a set of semantically-equivalent predicates, in our graphs) is contracted into a single node, and an edge is added from SCC S 1 to SCC S 2 if there is an edge in G from some node in S 1 to some node in S 2 . The SCC graph is always a DAG (Cormen et al., 2002) , and if G is transitive then the SCC graph is also transitive. The graph in Figure 1b is the SCC graph of the one in Figure 1a , but is still not a directed forest since the node 'X be epidemic in Y' has two parents.",
+                "cite_spans": [
+                    {
+                        "start": 935,
+                        "end": 956,
+                        "text": "(Cormen et al., 2002)",
+                        "ref_id": "BIBREF6"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 225,
+                        "end": 227,
+                        "text": "1a",
+                        "ref_id": "FIGREF0"
+                    },
+                    {
+                        "start": 1041,
+                        "end": 1043,
+                        "text": "1b",
+                        "ref_id": "FIGREF0"
+                    },
+                    {
+                        "start": 1082,
+                        "end": 1084,
+                        "text": "1a",
+                        "ref_id": "FIGREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Forest-reducible Graphs",
+                "sec_num": "3"
+            },
+            {
+                "text": "X disease be epidemic in Y country X disease common in Y country X disease occur in Y country X disease frequent in Y country X disease",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Forest-reducible Graphs",
+                "sec_num": "3"
+            },
+            {
+                "text": "The transitive closure of a directed graph G is obtained by adding an edge from node i to node j if there is a path in G from i to j. The transitive reduction of G is obtained by removing all edges whose absence does not affect its transitive closure. In DAGs, the result of transitive reduction is unique (Aho et al., 1972) . We thus define the reduced graph G red = (V red , E red ) of a directed graph G as the transitive reduction of its SCC graph. The graph in Figure 1c is the reduced graph of the one in Figure 1a and is a directed forest. We say a graph is a forest-reducible graph (FRG) if all nodes in its reduced form have no more than one parent.",
+                "cite_spans": [
+                    {
+                        "start": 306,
+                        "end": 324,
+                        "text": "(Aho et al., 1972)",
+                        "ref_id": "BIBREF0"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 473,
+                        "end": 475,
+                        "text": "1c",
+                        "ref_id": "FIGREF0"
+                    },
+                    {
+                        "start": 518,
+                        "end": 520,
+                        "text": "1a",
+                        "ref_id": "FIGREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Forest-reducible Graphs",
+                "sec_num": "3"
+            },
+            {
+                "text": "We now hypothesize that entailment graphs are FRGs. The intuition behind this assumption is that the predicate on the left-hand-side of a unidirectional entailment rule has a more specific meaning than the one on the right-hand-side. For instance, in Figure 1a 'X be epidemic in Y' (where 'X' is a type of disease and 'Y' is a country) is more specific than 'X common in Y' and 'X frequent in Y', which are equivalent, while 'X occur in Y' is even more general. Accordingly, the reduced graph in Figure 1c is an FRG. We note that this is not always the case: for example, the entailment graph in Figure 2 is not an FRG, because 'X annex Y' entails both 'Y be part of X' and 'X invade Y', while the latter two do not entail one another. However, we hypothesize that this scenario is rather uncommon. Consequently, a natural variant of the Max-Trans-Graph problem is to restrict the required output graph of the optimization problem (1) to an FRG. We term this problem Max-Trans-Forest.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 258,
+                        "end": 260,
+                        "text": "1a",
+                        "ref_id": "FIGREF0"
+                    },
+                    {
+                        "start": 503,
+                        "end": 505,
+                        "text": "1c",
+                        "ref_id": "FIGREF0"
+                    },
+                    {
+                        "start": 603,
+                        "end": 604,
+                        "text": "2",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Forest-reducible Graphs",
+                "sec_num": "3"
+            },
+            {
+                "text": "To test whether our hypothesis holds empirically we performed the following analysis. We sampled 7 gold standard entailment graphs from the data set described in Section 5, manually transformed them into FRGs by deleting a minimal number of edges, and measured recall over the set of edges in each graph (precision is naturally 1.0, as we only delete gold standard edges). The lowest recall value obtained was 0.95, illustrating that deleting a very small proportion of edges converts an entailment graph into an FRG. Further support for the practical validity of this hypothesis is obtained from our experiments in Section 5. In these experiments we show that exactly solving Max-Trans-Graph and Max-Trans-Forest (with an ILP solver) results in nearly identical performance.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Forest-reducible Graphs",
+                "sec_num": "3"
+            },
+            {
+                "text": "An ILP formulation for Max-Trans-Forest is simple -a transitive graph is an FRG if all nodes in its reduced graph have no more than one parent. It can be verified that this is equivalent to the following statement: for every triplet of nodes i, j, k, if i \u2192 j and i \u2192 k, then either j \u2192 k or k \u2192 j (or both). Therefore, the ILP is formulated by adding this linear constraint to ILP (1):",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Forest-reducible Graphs",
+                "sec_num": "3"
+            },
+            {
+                "text": "\u2200 i,j,k\u2208V x ij +x ik +(1 -x jk )+(1 -x kj ) \u2264 3 (2)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Forest-reducible Graphs",
+                "sec_num": "3"
+            },
+            {
+                "text": "We note that despite the restriction to FRGs, Max-Trans-Forest is an NP-hard problem by a reduction from the X3C problem (Garey and Johnson, 1979) . We omit the reduction details for brevity.",
+                "cite_spans": [
+                    {
+                        "start": 121,
+                        "end": 146,
+                        "text": "(Garey and Johnson, 1979)",
+                        "ref_id": "BIBREF11"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Forest-reducible Graphs",
+                "sec_num": "3"
+            },
+            {
+                "text": "In this section we present Tree-Node-Fix, an efficient approximation algorithm for Max-Trans-Forest, as well as Graph-Node-Fix, an approximation for Max-Trans-Graph.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Sequential Approximation Algorithms",
+                "sec_num": "4"
+            },
+            {
+                "text": "The scheme of Tree-Node-Fix (TNF) is the following. First, an initial FRG is constructed, using some initialization procedure. Then, at each iteration a single node v is re-attached (see below) to the FRG in a way that improves the objective function. This is repeated until the value of the objective function cannot be improved anymore by re-attaching a node.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Tree-Node-Fix",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "Re-attaching a node v is performed by removing v from the graph and connecting it back with a better set of edges, while maintaining the constraint that it is an FRG. This is done by considering all possible edges from/to the other graph nodes and choosing the optimal subset, while the rest of the graph remains fixed. Formally, let S v-in = i =v w iv \u2022 x iv be the sum of scores over v's incoming edges and S v-out = k =v w vk \u2022 x vk be the sum of scores over v's outgoing edges. Re-attachment amounts to optimizing a linear objective:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Tree-Node-Fix",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "(a) d c v \u2026 c v c d 1 \u2026 d 2 v \u2026 \u2026 \u2026 r 1 r 2 v (b) (b')",
+                        "eq_num": "(c)"
+                    }
+                ],
+                "section": "Tree-Node-Fix",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "arg max Xv (S v-in + S v-out )",
+                        "eq_num": "(3)"
+                    }
+                ],
+                "section": "Tree-Node-Fix",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "where the variables X v \u2286 X are indicators for all pairs of nodes involving v. We approximate a solution for (1) by iteratively optimizing the simpler objective (3). Clearly, at each re-attachment the value of the objective function cannot decrease, since the optimization algorithm considers the previous graph as one of its candidate solutions. We now show that re-attaching a node v is linear. To analyze v's re-attachment, we consider the structure of the directed forest G red just before v is re-inserted, and examine the possibilities for v's insertion relative to that structure. We start by defining some helpful notations. Every node c \u2208 V red is a connected component in G. Let v c \u2208 c be an arbitrary representative node in c. We denote by S v-in (c) the sum of weights from all nodes in c and their descendants to v, and by S v-out (c) the sum of weights from v to all nodes in c and their ancestors:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Tree-Node-Fix",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "S v-in (c) = i\u2208c w iv + k / \u2208c w kv x kvc S v-out (c) = i\u2208c w vi + k / \u2208c w vk x vck",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Tree-Node-Fix",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "Note that {x vck , x kvc } are edge indicators in G and not G red . There are two possibilities for reattaching v -either it is inserted into an existing component c \u2208 V red (Figure 3a ), or it forms a new component. In the latter, there are also two cases: either v is inserted as a child of a component c (Fig-ure 3b ), or not and then it becomes a root in G red (Figure 3c ). We describe the details of these 3 cases:",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 182,
+                        "end": 184,
+                        "text": "3a",
+                        "ref_id": "FIGREF2"
+                    },
+                    {
+                        "start": 316,
+                        "end": 318,
+                        "text": "3b",
+                        "ref_id": "FIGREF2"
+                    },
+                    {
+                        "start": 373,
+                        "end": 375,
+                        "text": "3c",
+                        "ref_id": "FIGREF2"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Tree-Node-Fix",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "Case 1: Inserting v into a component c \u2208 V red . In this case we add in G edges from all nodes in c and their descendants to v and from v to all nodes in c and their ancestors. The score (3) in this case is",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Tree-Node-Fix",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "s 1 (c) S v-in (c) + S v-out (c)",
+                        "eq_num": "(4)"
+                    }
+                ],
+                "section": "Tree-Node-Fix",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "Case 2: Inserting v as a child of some c \u2208 V red . Once c is chosen as the parent of v, choosing v's children in G red is substantially constrained. A node that is not a descendant of c can not become a child of v, since this would create a new path from that node to c and would require by transitivity to add a corresponding directed edge to c (but all graph edges not connecting v are fixed). Moreover, only a direct child of c can choose v as a parent instead of c (Figure 3b ), since for any other descendant of c, v would become a second parent, and G red will no longer be a directed forest (Figure 3b' ). Thus, this case requires adding in G edges from v to all nodes in c and their ancestors, and also for each new child of v, denoted by d \u2208 V red , we add edges from all nodes in d and their descendants to v. Crucially, although the number of possible subsets of c's children in G red is exponential, the fact that they are independent trees in G red allows us to go over them one by one, and decide for each one whether it will be a child of v or not, depending on whether S v-in (d) is positive. Therefore, the score (3) in this case is:",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 477,
+                        "end": 479,
+                        "text": "3b",
+                        "ref_id": "FIGREF2"
+                    },
+                    {
+                        "start": 606,
+                        "end": 609,
+                        "text": "3b'",
+                        "ref_id": "FIGREF2"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Tree-Node-Fix",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "s 2 (c) S v-out (c)+ d\u2208child(c) max(0, S v-in (d))",
+                        "eq_num": "(5)"
+                    }
+                ],
+                "section": "Tree-Node-Fix",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "where child(c) are the children of c.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Tree-Node-Fix",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "Case 3: Inserting v as a new root in G red . Similar to case 2, only roots of G red can become children of v. In this case for each chosen root r we add in G edges from the nodes in r and their descendants to v. Again, each root can be examined independently. Therefore, the score (3) of re-attaching v is:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Tree-Node-Fix",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "s 3 r max(0, S v-in (r)) (6)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Tree-Node-Fix",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "where the summation is over the roots of G red .",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Tree-Node-Fix",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "It can be easily verified that S v-in (c) and S v-out (c) satisfy the recursive definitions:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Tree-Node-Fix",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "Algorithm 1 Computing optimal re-attachment Input: FRG G = (V, E), function w, node v \u2208 V Output: optimal re-attachment of v 1: remove v and compute G red = (V red , E red ).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Tree-Node-Fix",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "2: for all c \u2208 V red in post-order compute S v-in (c) (Eq. 7) 3: for all c \u2208 V red in pre-order compute S v-out (c) (Eq. 8) 4: case 1: s 1 = max c\u2208V red s 1 (c) (Eq. 4) 5: case 2: s 2 = max c\u2208V red s 2 (c) (Eq. 5) 6: case 3: compute s 3 (Eq. 6) 7: re-attach v according to max(s 1 , s 2 , s 3 ).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Tree-Node-Fix",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "S v-in (c) = i\u2208c w iv + d\u2208child(c) S v-in (d), c \u2208 V red (7) S v-out (c) = i\u2208c w vi + S v-out (p), c \u2208 V red (8)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Tree-Node-Fix",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "where p is the parent of c in G red . These recursive definitions allow to compute in linear time S v-in (c) and S v-out (c) for all c (given G red ) using dynamic programming, before going over the cases for reattaching v. S v-in (c) is computed going over V red leaves-to-root (post-order), and S v-out (c) is computed going over V red root-to-leaves (pre-order).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Tree-Node-Fix",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "Re-attachment is summarized in Algorithm 1. Computing an SCC graph is linear (Cormen et al., 2002) and it is easy to verify that transitive reduction in FRGs is also linear (Line 1). Computing S v-in (c) and S v-out (c) (Lines 2-3) is also linear, as explained. Cases 1 and 3 are trivially linear and in case 2 we go over the children of all nodes in V red . As the reduced graph is a forest, this simply means going over all nodes of V red , and so the entire algorithm is linear.",
+                "cite_spans": [
+                    {
+                        "start": 77,
+                        "end": 98,
+                        "text": "(Cormen et al., 2002)",
+                        "ref_id": "BIBREF6"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Tree-Node-Fix",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "Since re-attachment is linear, re-attaching all nodes is quadratic. Thus if we bound the number of iterations over all nodes, the overall complexity is quadratic. This is dramatically more efficient and scalable than applying an ILP solver. In Section 5 we ran TNF until convergence and the maximal number of iterations over graph nodes was 8.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Tree-Node-Fix",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "Next, we show Graph-Node-Fix (GNF), a similar approximation that employs the same re-attachment strategy but does not assume the graph is an FRG. Thus, re-attachment of a node v is done with an ILP solver. Nevertheless, the ILP in GNF is simpler than (1), since we consider only candidate edges involving v. Figure 4 illustrates the three types of possible transitivity constraint violations when reattaching v. The left side depicts a violation when (i, k) / \u2208 E, expressed by the constraint in (9) below, and the middle and right depict two violations when the edge (i, k) \u2208 E, expressed by the constraints in (10). Thus, the ILP is formulated by adding the following constraints to the objective function (3):",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 315,
+                        "end": 316,
+                        "text": "4",
+                        "ref_id": "FIGREF3"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Graph-node-fix",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "v i k v i k v i k v i k",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Graph-node-fix",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "\u2200 i,k\u2208V \\{v} if (i, k) / \u2208 E, x iv + x vk \u2264 1 (9) if (i, k) \u2208 E, x vi \u2264 x vk , x kv \u2264 x iv (10) x iv , x vk \u2208 {0, 1}",
+                        "eq_num": "(11)"
+                    }
+                ],
+                "section": "Graph-node-fix",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "Complexity is exponential due to the ILP solver; however, the ILP size is reduced by an order of magnitude to O(|V |) variables and O(|V | 2 ) constraints.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Graph-node-fix",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "For some pairs of predicates i, j we sometimes have prior knowledge whether i entails j or not. We term such pairs local constraints, and incorporate them into the aforementioned algorithms in the following way. In all algorithms that apply an ILP solver, we add a constraint x ij = 1 if i entails j or x ij = 0 if i does not entail j. Similarly, in TNF we incorporate local constraints by setting w ij = \u221e or w ij = -\u221e.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Adding local constraints",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "In this section we empirically demonstrate that TNF is more efficient than other baselines and its output quality is close to that given by the optimal solution.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments and Results",
+                "sec_num": "5"
+            },
+            {
+                "text": "In our experiments we utilize the data set released by Berant et al. (2011) . The data set contains 10 entailment graphs, where graph nodes are typed predicates. A typed predicate (e.g., 'X disease occur in Y country ') includes a predicate and two typed variables that specify the semantic type of the arguments. For instance, the typed variable X disease can be instantiated by arguments such as 'flu' or 'diabetes'. The data set contains 39,012 potential edges, of which 3,427 are annotated as edges (valid entailment rules) and 35,585 are annotated as non-edges.",
+                "cite_spans": [
+                    {
+                        "start": 55,
+                        "end": 75,
+                        "text": "Berant et al. (2011)",
+                        "ref_id": "BIBREF3"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experimental setting",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "The data set also contains, for every pair of predicates i, j in every graph, a local score s ij , which is the output of a classifier trained over distributional similarity features. A positive s ij indicates that the classifier believes i \u2192 j. The weighting function for the graph edges w is defined as w ij = s ij -\u03bb, where \u03bb is a single parameter controlling graph sparseness: as \u03bb increases, w ij decreases and becomes negative for more pairs of predicates, rendering the graph more sparse. In addition, the data set contains a set of local constraints (see Section 4.3).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experimental setting",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "We implemented the following algorithms for learning graph edges, where in all of them the graph is first decomposed into components according to Berant et al's method, as explained in Section 2.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experimental setting",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "No-trans Local scores are used without transitivity constraints -an edge (i, j) is inserted iff w ij > 0.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experimental setting",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "Exact-graph Berant et al.'s exact method (2011) for Max-Trans-Graph, which utilizes an ILP solver 1 .",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experimental setting",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "Exact-forest Solving Max-Trans-Forest exactly by applying an ILP solver (see Eq. 2).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experimental setting",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "LP-relax Solving Max-Trans-Graph approximately by applying LP-relaxation (see Section 2) on each graph component. We apply the LP solver within the same cutting-plane procedure as Exactgraph to allow for a direct comparison. This also keeps memory consumption manageable, as otherwise all |V | 3 constraints must be explicitly encoded into the LP. As mentioned, our goal is to present a method for learning transitive graphs, while LPrelax produces solutions that violate transitivity. However, we run it on our data set to obtain empirical results, and to compare run-times against TNF.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experimental setting",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "Graph-Node-Fix (GNF) Initialization of each component is performed in the following way: if the graph is very sparse, i.e. \u03bb \u2265 C for some constant C (set to 1 in our experiments), then solving the graph exactly is not an issue and we use Exact-graph. Otherwise, we initialize by applying Exact-graph in a sparse configuration, i.e., \u03bb = C.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experimental setting",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "Tree-Node-Fix (TNF) Initialization is done as in GNF, except that if it generates a graph that is not an FRG, it is corrected by a simple heuristic: for every node in the reduced graph G red that has more than 1 We use the Gurobi optimization package in all experiments. q q q q q q q -0. one parent, we choose from its current parents the single one whose SCC is composed of the largest number of nodes in G.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experimental setting",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "We evaluate algorithms by comparing the set of gold standard edges with the set of edges learned by each algorithm. We measure recall, precision and F 1 for various values of the sparseness parameter \u03bb, and compute the area under the precision-recall Curve (AUC) generated. Efficiency is evaluated by comparing run-times.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experimental setting",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "We first focus on run-times and show that TNF is efficient and has potential to scale to large data sets.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "5.2"
+            },
+            {
+                "text": "Figure 5 compares run-times2 of Exact-graph, GNF, TNF, and LP-relax as -\u03bb increases and the graph becomes denser. Note that the y-axis is in logarithmic scale. Clearly, Exact-graph is extremely slow and run-time increases quickly. For \u03bb = 0.3 run-time was already 12 hours and we were unable to obtain results for \u03bb < 0.3, while in TNF we easily got a solution for any \u03bb. When \u03bb = 0.6, where both Exact-graph and TNF achieve best F 1 , TNF is 10 times faster than Exact-graph. When \u03bb = 0.5, TNF is 50 times faster than Exact-graph and so on. Most importantly, run-time for GNF and TNF increases much more slowly than for Exact-graph. 1.0 recall precision q q q q q q q q q q q q q q q q q q q q q q q q Exact-graph TNF No-trans Run-time of LP-relax is also bad compared to TNF and GNF. Run-time increases more slowly than Exact-graph, but still very fast comparing to TNF. When \u03bb = 0.6, LP-relax is almost 10 times slower than TNF, and when \u03bb = -0.1, LP-relax is 200 times slower than TNF. This points to the difficulty of scaling LP-relax to large graphs.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 7,
+                        "end": 8,
+                        "text": "5",
+                        "ref_id": "FIGREF4"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "5.2"
+            },
+            {
+                "text": "As for the quality of learned graphs, Figure 6 provides a precision-recall curve for Exact-graph, TNF and No-trans (GNF and LP-relax are omitted from the figure and described below to improve readability). We observe that both Exact-graph and TNF substantially outperform No-trans and that TNF's graph quality is only slightly lower than Exact-graph (which is extremely slow). Following Berant et al., we report in the caption the maximal F 1 on the curve and AUC in the recall range 0-0.5 (the widest range for which we have results for all algorithms). Note that compared to Exact-graph, TNF reduces AUC by a point and the maximal F 1 score by 2 points only.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 45,
+                        "end": 46,
+                        "text": "6",
+                        "ref_id": "FIGREF6"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "5.2"
+            },
+            {
+                "text": "GNF results are almost identical to those of TNF (maximal F 1 =0.41, AUC: 0.31), and in fact for all \u03bb configurations TNF outperforms GNF by no more than one F 1 point. As for LP-relax, results are just slightly lower than Exact-graph (maximal F 1 : 0.43, AUC: 0.32), but its output is not a transitive graph, and as shown above run-time is quite slow. Last, we note that the results of Exact-forest are almost identical to Exact-graph (maximal F 1 : 0.43), illustrating that assuming that entailment graphs are FRGs (Section 3) is reasonable in this data set.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "5.2"
+            },
+            {
+                "text": "To conclude, TNF learns transitive entailment graphs of good quality much faster than Exactgraph. Our experiment utilized an available data set of moderate size; However, we expect TNF to scale to large data sets (that are currently unavailable), where other baselines would be impractical.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "5.2"
+            },
+            {
+                "text": "Learning large and accurate resources of entailment rules is essential in many semantic inference applications. Employing transitivity has been shown to improve rule learning, but raises issues of efficiency and scalability.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion",
+                "sec_num": "6"
+            },
+            {
+                "text": "The first contribution of this paper is a novel modeling assumption that entailment graphs are very similar to FRGs, which is analyzed and validated empirically. The main contribution of the paper is an efficient polynomial approximation algorithm for learning entailment rules, which is based on this assumption. We demonstrate empirically that our method is by orders of magnitude faster than the state-of-the-art exact algorithm, but still produces an output that is almost as good as the optimal solution.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion",
+                "sec_num": "6"
+            },
+            {
+                "text": "We suggest our method as an important step towards scalable acquisition of precise entailment resources. In future work, we aim to evaluate TNF on large graphs that are automatically generated from huge corpora. This of course requires substantial efforts of pre-processing and test-set annotation. We also plan to examine the benefit of TNF in learning similar structures, e.g., taxonomies or ontologies.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion",
+                "sec_num": "6"
+            },
+            {
+                "text": "Run on a multi-core 2.5GHz server with",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "32GB of RAM.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            }
+        ],
+        "back_matter": [
+            {
+                "text": "This work was partially supported by the Israel Science Foundation grant 1112/08, the PASCAL-2 Network of Excellence of the European Community FP7-ICT-2007-1-216886, and the European Community's Seventh Framework Programme (FP7/2007-2013) under grant agreement no. 287923 (EXCITEMENT). The first author has carried out this research in partial fulfilment of the requirements for the Ph.D. degree.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Acknowledgments",
+                "sec_num": null
+            }
+        ],
+        "bib_entries": {
+            "BIBREF0": {
+                "ref_id": "b0",
+                "title": "The transitive reduction of a directed graph",
+                "authors": [
+                    {
+                        "first": "Alfred",
+                        "middle": [
+                            "V"
+                        ],
+                        "last": "Aho",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Michael",
+                        "middle": [
+                            "R"
+                        ],
+                        "last": "Garey",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jeffrey",
+                        "middle": [
+                            "D"
+                        ],
+                        "last": "Ullman",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1972,
+                "venue": "SIAM Journal on Computing",
+                "volume": "1",
+                "issue": "2",
+                "pages": "131--137",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Alfred V. Aho, Michael R. Garey, and Jeffrey D. Ullman. 1972. The transitive reduction of a directed graph. SIAM Journal on Computing, 1(2):131-137.",
+                "links": null
+            },
+            "BIBREF1": {
+                "ref_id": "b1",
+                "title": "Generating entailment rules from framenet",
+                "authors": [
+                    {
+                        "first": "Roni",
+                        "middle": [],
+                        "last": "Ben",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Aharon",
+                        "middle": [],
+                        "last": "",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Idan",
+                        "middle": [],
+                        "last": "Szpektor",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ido",
+                        "middle": [],
+                        "last": "Dagan",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2010,
+                "venue": "Proceedings of the 48th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Roni Ben Aharon, Idan Szpektor, and Ido Dagan. 2010. Generating entailment rules from framenet. In Pro- ceedings of the 48th Annual Meeting of the Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF2": {
+                "ref_id": "b2",
+                "title": "Global learning of focused entailment graphs",
+                "authors": [
+                    {
+                        "first": "Jonathan",
+                        "middle": [],
+                        "last": "Berant",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ido",
+                        "middle": [],
+                        "last": "Dagan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jacob",
+                        "middle": [],
+                        "last": "Goldberger",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2010,
+                "venue": "Proceedings of the 48th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jonathan Berant, Ido Dagan, and Jacob Goldberger. 2010. Global learning of focused entailment graphs. In Proceedings of the 48th Annual Meeting of the As- sociation for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF3": {
+                "ref_id": "b3",
+                "title": "Global learning of typed entailment rules",
+                "authors": [
+                    {
+                        "first": "Jonathan",
+                        "middle": [],
+                        "last": "Berant",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ido",
+                        "middle": [],
+                        "last": "Dagan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jacob",
+                        "middle": [],
+                        "last": "Goldberger",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2011,
+                "venue": "Proceedings of the 49th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jonathan Berant, Ido Dagan, and Jacob Goldberger. 2011. Global learning of typed entailment rules. In Proceedings of the 49th Annual Meeting of the Associ- ation for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF4": {
+                "ref_id": "b4",
+                "title": "Lexpar: A freely available english paraphrase lexicon automatically extracted from framenet",
+                "authors": [
+                    {
+                        "first": "Coyne",
+                        "middle": [],
+                        "last": "Bob",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Owen",
+                        "middle": [],
+                        "last": "Rambow",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "Proceedings of IEEE International Conference on Semantic Computing",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Coyne Bob and Owen Rambow. 2009. Lexpar: A freely available english paraphrase lexicon automatically ex- tracted from framenet. In Proceedings of IEEE Inter- national Conference on Semantic Computing.",
+                "links": null
+            },
+            "BIBREF5": {
+                "ref_id": "b5",
+                "title": "Verb ocean: Mining the web for fine-grained semantic verb relations",
+                "authors": [
+                    {
+                        "first": "Timothy",
+                        "middle": [],
+                        "last": "Chklovski",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Patrick",
+                        "middle": [],
+                        "last": "Pantel",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2004,
+                "venue": "Proceedings of Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Timothy Chklovski and Patrick Pantel. 2004. Verb ocean: Mining the web for fine-grained semantic verb relations. In Proceedings of Empirical Methods in Natural Language Processing.",
+                "links": null
+            },
+            "BIBREF6": {
+                "ref_id": "b6",
+                "title": "Introduction to Algorithms",
+                "authors": [
+                    {
+                        "first": "H",
+                        "middle": [],
+                        "last": "Thomas",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Charles",
+                        "middle": [
+                            "E"
+                        ],
+                        "last": "Cormen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ronald",
+                        "middle": [
+                            "L"
+                        ],
+                        "last": "Leiserson",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Clifford",
+                        "middle": [],
+                        "last": "Rivest",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Stein",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2002,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Thomas H. Cormen, Charles E. leiserson, Ronald L. Rivest, and Clifford Stein. 2002. Introduction to Al- gorithms. The MIT Press.",
+                "links": null
+            },
+            "BIBREF7": {
+                "ref_id": "b7",
+                "title": "Recognizing textual entailment: Rational, evaluation and approaches",
+                "authors": [
+                    {
+                        "first": "Ido",
+                        "middle": [],
+                        "last": "Dagan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Bill",
+                        "middle": [],
+                        "last": "Dolan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Bernardo",
+                        "middle": [],
+                        "last": "Magnini",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dan",
+                        "middle": [],
+                        "last": "Roth",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "Natural Language Engineering",
+                "volume": "15",
+                "issue": "4",
+                "pages": "1--17",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ido Dagan, Bill Dolan, Bernardo Magnini, and Dan Roth. 2009. Recognizing textual entailment: Rational, eval- uation and approaches. Natural Language Engineer- ing, 15(4):1-17.",
+                "links": null
+            },
+            "BIBREF8": {
+                "ref_id": "b8",
+                "title": "Constraints based taxonomic relation classification",
+                "authors": [
+                    {
+                        "first": "Quang",
+                        "middle": [],
+                        "last": "Do",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dan",
+                        "middle": [],
+                        "last": "Roth",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2010,
+                "venue": "Proceedings of Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Quang Do and Dan Roth. 2010. Constraints based tax- onomic relation classification. In Proceedings of Em- pirical Methods in Natural Language Processing.",
+                "links": null
+            },
+            "BIBREF9": {
+                "ref_id": "b9",
+                "title": "Identifying relations for open information extraction",
+                "authors": [
+                    {
+                        "first": "Anthony",
+                        "middle": [],
+                        "last": "Fader",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Stephen",
+                        "middle": [],
+                        "last": "Soderland",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Oren",
+                        "middle": [],
+                        "last": "Etzioni",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2011,
+                "venue": "Proceedings of Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Anthony Fader, Stephen Soderland, and Oren Etzioni. 2011. Identifying relations for open information ex- traction. In Proceedings of Empirical Methods in Nat- ural Language Processing.",
+                "links": null
+            },
+            "BIBREF10": {
+                "ref_id": "b10",
+                "title": "Enforcing transitivity in coreference resolution",
+                "authors": [
+                    {
+                        "first": "J",
+                        "middle": [
+                            "R"
+                        ],
+                        "last": "Finkel",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "C",
+                        "middle": [
+                            "D"
+                        ],
+                        "last": "Manning",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2008,
+                "venue": "Proceedings of the 46th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "J. R. Finkel and C. D. Manning. 2008. Enforcing transi- tivity in coreference resolution. In Proceedings of the 46th Annual Meeting of the Association for Computa- tional Linguistics.",
+                "links": null
+            },
+            "BIBREF11": {
+                "ref_id": "b11",
+                "title": "Computers and Intractability: A Guide to the Theory of NP-Completeness",
+                "authors": [
+                    {
+                        "first": "Michael",
+                        "middle": [
+                            "R"
+                        ],
+                        "last": "Garey",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "David",
+                        "middle": [
+                            "S"
+                        ],
+                        "last": "Johnson",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1979,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Michael R. Garey and David S. Johnson. 1979. Comput- ers and Intractability: A Guide to the Theory of NP- Completeness. W. H. Freeman.",
+                "links": null
+            },
+            "BIBREF12": {
+                "ref_id": "b12",
+                "title": "Discovery of inference rules for question answering",
+                "authors": [
+                    {
+                        "first": "Dekang",
+                        "middle": [],
+                        "last": "Lin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Patrick",
+                        "middle": [],
+                        "last": "Pantel",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2001,
+                "venue": "Natural Language Engineering",
+                "volume": "7",
+                "issue": "4",
+                "pages": "343--360",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Dekang Lin and Patrick Pantel. 2001. Discovery of infer- ence rules for question answering. Natural Language Engineering, 7(4):343-360.",
+                "links": null
+            },
+            "BIBREF13": {
+                "ref_id": "b13",
+                "title": "Temporal information extraction",
+                "authors": [
+                    {
+                        "first": "Xiao",
+                        "middle": [],
+                        "last": "Ling",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dan",
+                        "middle": [
+                            "S"
+                        ],
+                        "last": "Weld",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2010,
+                "venue": "Proceedings of the 24th AAAI Conference on Artificial Intelligence",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Xiao Ling and Dan S. Weld. 2010. Temporal informa- tion extraction. In Proceedings of the 24th AAAI Con- ference on Artificial Intelligence.",
+                "links": null
+            },
+            "BIBREF14": {
+                "ref_id": "b14",
+                "title": "Concise integer linear programming formulations for dependency parsing",
+                "authors": [
+                    {
+                        "first": "Andre",
+                        "middle": [],
+                        "last": "Martins",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Noah",
+                        "middle": [],
+                        "last": "Smith",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Eric",
+                        "middle": [],
+                        "last": "Xing",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "Proceedings of the 47th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Andre Martins, Noah Smith, and Eric Xing. 2009. Con- cise integer linear programming formulations for de- pendency parsing. In Proceedings of the 47th Annual Meeting of the Association for Computational Linguis- tics.",
+                "links": null
+            },
+            "BIBREF15": {
+                "ref_id": "b15",
+                "title": "Unsupervised ontology induction from text",
+                "authors": [
+                    {
+                        "first": "Hoifung",
+                        "middle": [],
+                        "last": "Poon",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Pedro",
+                        "middle": [],
+                        "last": "Domingos",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2010,
+                "venue": "Proceedings of the 48th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Hoifung Poon and Pedro Domingos. 2010. Unsuper- vised ontology induction from text. In Proceedings of the 48th Annual Meeting of the Association for Com- putational Linguistics.",
+                "links": null
+            },
+            "BIBREF16": {
+                "ref_id": "b16",
+                "title": "Learning surface text patterns for a question answering system",
+                "authors": [
+                    {
+                        "first": "Deepak",
+                        "middle": [],
+                        "last": "Ravichandran",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Eduard",
+                        "middle": [],
+                        "last": "Hovy",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2002,
+                "venue": "Proceedings of the 40th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Deepak Ravichandran and Eduard Hovy. 2002. Learning surface text patterns for a question answering system. In Proceedings of the 40th Annual Meeting of the As- sociation for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF17": {
+                "ref_id": "b17",
+                "title": "Incremental integer linear programming for non-projective dependency parsing",
+                "authors": [
+                    {
+                        "first": "Sebastian",
+                        "middle": [],
+                        "last": "Riedel",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "James",
+                        "middle": [],
+                        "last": "Clarke",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2006,
+                "venue": "Proceedings of Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Sebastian Riedel and James Clarke. 2006. Incremental integer linear programming for non-projective depen- dency parsing. In Proceedings of Empirical Methods in Natural Language Processing.",
+                "links": null
+            },
+            "BIBREF18": {
+                "ref_id": "b18",
+                "title": "Learning first-order horn clauses from web text",
+                "authors": [
+                    {
+                        "first": "Stefan",
+                        "middle": [],
+                        "last": "Schoenmackers",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jesse",
+                        "middle": [],
+                        "last": "Davis",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Oren",
+                        "middle": [],
+                        "last": "Etzioni",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Daniel",
+                        "middle": [
+                            "S"
+                        ],
+                        "last": "Weld",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2010,
+                "venue": "Proceedings of Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Stefan Schoenmackers, Jesse Davis, Oren Etzioni, and Daniel S. Weld. 2010. Learning first-order horn clauses from web text. In Proceedings of Empirical Methods in Natural Language Processing.",
+                "links": null
+            },
+            "BIBREF19": {
+                "ref_id": "b19",
+                "title": "Automatic paraphrase discovery based on context and keywords between ne pairs",
+                "authors": [
+                    {
+                        "first": "Satoshi",
+                        "middle": [],
+                        "last": "Sekine",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2005,
+                "venue": "Proceedings of IWP",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Satoshi Sekine. 2005. Automatic paraphrase discovery based on context and keywords between ne pairs. In Proceedings of IWP.",
+                "links": null
+            },
+            "BIBREF20": {
+                "ref_id": "b20",
+                "title": "Preemptive information extraction using unrestricted relation discovery",
+                "authors": [
+                    {
+                        "first": "Yusuke",
+                        "middle": [],
+                        "last": "Shinyama",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Satoshi",
+                        "middle": [],
+                        "last": "Sekine",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2006,
+                "venue": "Proceedings of the Human Language Technology Conference of the NAACL, Main Conference",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Yusuke Shinyama and Satoshi Sekine. 2006. Preemptive information extraction using unrestricted relation dis- covery. In Proceedings of the Human Language Tech- nology Conference of the NAACL, Main Conference.",
+                "links": null
+            },
+            "BIBREF21": {
+                "ref_id": "b21",
+                "title": "Semantic taxonomy induction from heterogenous evidence",
+                "authors": [
+                    {
+                        "first": "Rion",
+                        "middle": [],
+                        "last": "Snow",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dan",
+                        "middle": [],
+                        "last": "Jurafsky",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Andrew",
+                        "middle": [
+                            "Y"
+                        ],
+                        "last": "Ng",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2006,
+                "venue": "Proceedings of the 44th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Rion Snow, Dan Jurafsky, and Andrew Y. Ng. 2006. Semantic taxonomy induction from heterogenous ev- idence. In Proceedings of the 44th Annual Meeting of the Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF22": {
+                "ref_id": "b22",
+                "title": "Learning entailment rules for unary templates",
+                "authors": [
+                    {
+                        "first": "Idan",
+                        "middle": [],
+                        "last": "Szpektor",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ido",
+                        "middle": [],
+                        "last": "Dagan",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2008,
+                "venue": "Proceedings of the 22nd International Conference on Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Idan Szpektor and Ido Dagan. 2008. Learning entail- ment rules for unary templates. In Proceedings of the 22nd International Conference on Computational Lin- guistics.",
+                "links": null
+            },
+            "BIBREF23": {
+                "ref_id": "b23",
+                "title": "Augmenting wordnet-based inference with argument mapping",
+                "authors": [
+                    {
+                        "first": "Idan",
+                        "middle": [],
+                        "last": "Szpektor",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ido",
+                        "middle": [],
+                        "last": "Dagan",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "Proceedings of TextInfer",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Idan Szpektor and Ido Dagan. 2009. Augmenting wordnet-based inference with argument mapping. In Proceedings of TextInfer.",
+                "links": null
+            },
+            "BIBREF24": {
+                "ref_id": "b24",
+                "title": "Scaling web-based acquisition of entailment relations",
+                "authors": [
+                    {
+                        "first": "Idan",
+                        "middle": [],
+                        "last": "Szpektor",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hristo",
+                        "middle": [],
+                        "last": "Tanev",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ido",
+                        "middle": [],
+                        "last": "Dagan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Bonaventura",
+                        "middle": [],
+                        "last": "Coppola",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2004,
+                "venue": "Proceedings of Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Idan Szpektor, Hristo Tanev, Ido Dagan, and Bonaven- tura Coppola. 2004. Scaling web-based acquisition of entailment relations. In Proceedings of Empirical Methods in Natural Language Processing.",
+                "links": null
+            },
+            "BIBREF25": {
+                "ref_id": "b25",
+                "title": "Unsupervised methods for determining object and relation synonyms on the web",
+                "authors": [
+                    {
+                        "first": "Alexander",
+                        "middle": [],
+                        "last": "Yates",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Oren",
+                        "middle": [],
+                        "last": "Etzioni",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "Journal of Artificial Intelligence Research",
+                "volume": "34",
+                "issue": "",
+                "pages": "255--296",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Alexander Yates and Oren Etzioni. 2009. Unsupervised methods for determining object and relation synonyms on the web. Journal of Artificial Intelligence Research, 34:255-296.",
+                "links": null
+            }
+        },
+        "ref_entries": {
+            "FIGREF0": {
+                "num": null,
+                "text": "Figure 1: A fragment of an entailment graph (a), its SCC graph (b) and its reduced graph (c). Nodes are predicates with typed variables (see Section 5), which are omitted in (b) and (c) for compactness.",
+                "uris": null,
+                "fig_num": "1",
+                "type_str": "figure"
+            },
+            "FIGREF1": {
+                "num": null,
+                "text": "Figure2: A fragment of an entailment graph that is not an FRG.",
+                "uris": null,
+                "fig_num": null,
+                "type_str": "figure"
+            },
+            "FIGREF2": {
+                "num": null,
+                "text": "Figure 3: (a) Inserting v into a component c \u2208 V red . (b) Inserting v as a child of c and a parent of a subset of c's children in G red . (b') A node d that is a descendant but not a child of c can not choose v as a parent, as v becomes its second parent. (c) Inserting v as a new root.",
+                "uris": null,
+                "fig_num": "3",
+                "type_str": "figure"
+            },
+            "FIGREF3": {
+                "num": null,
+                "text": "Figure 4: Three types of transitivity constraint violations.",
+                "uris": null,
+                "fig_num": "4",
+                "type_str": "figure"
+            },
+            "FIGREF4": {
+                "num": null,
+                "text": "Figure 5: Run-time in seconds for various -\u03bb values.",
+                "uris": null,
+                "fig_num": "5",
+                "type_str": "figure"
+            },
+            "FIGREF6": {
+                "num": null,
+                "text": "Figure 6: Precision (y-axis) vs. recall (x-axis) curve. Maximal F 1 on the curve is .43 for Exact-graph, .41 for TNF, and .34 for No-trans. AUC in the recall range 0-0.5 is .32 for Exact-graph, .31 for TNF, and .26 for No-trans.",
+                "uris": null,
+                "fig_num": "6",
+                "type_str": "figure"
+            }
+        }
+    }
+}

@@ -1,0 +1,3574 @@
+{
+    "paper_id": "2021",
+    "header": {
+        "generated_with": "S2ORC 1.0.0",
+        "date_generated": "2023-06-16T12:35:47.228843Z"
+    },
+    "title": "Source and Target Bidirectional Knowledge Distillation for End-to-end Speech Translation",
+    "authors": [
+        {
+            "first": "Hirofumi",
+            "middle": [],
+            "last": "Inaguma",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "Kyoto University",
+                "location": {
+                    "country": "Japan"
+                }
+            },
+            "email": "inaguma@sap.ist.i.kyoto-u.ac.jp"
+        },
+        {
+            "first": "Tatsuya",
+            "middle": [],
+            "last": "Kawahara",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "Kyoto University",
+                "location": {
+                    "country": "Japan"
+                }
+            },
+            "email": ""
+        },
+        {
+            "first": "Shinji",
+            "middle": [],
+            "last": "Watanabe",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "Johns Hopkins University",
+                "location": {
+                    "country": "USA"
+                }
+            },
+            "email": ""
+        }
+    ],
+    "year": "",
+    "venue": null,
+    "identifiers": {},
+    "abstract": "A conventional approach to improving the performance of end-to-end speech translation (E2E-ST) models is to leverage the source transcription via pre-training and joint training with automatic speech recognition (ASR) and neural machine translation (NMT) tasks. However, since the input modalities are different, it is difficult to leverage source language text successfully. In this work, we focus on sequencelevel knowledge distillation (SeqKD) from external text-based NMT models. To leverage the full potential of the source language information, we propose backward SeqKD, SeqKD from a target-to-source backward NMT model. To this end, we train a bilingual E2E-ST model to predict paraphrased transcriptions as an auxiliary task with a single decoder. The paraphrases are generated from the translations in bitext via back-translation. We further propose bidirectional SeqKD in which SeqKD from both forward and backward NMT models is combined. Experimental evaluations on both autoregressive and non-autoregressive models show that SeqKD in each direction consistently improves the translation performance, and the effectiveness is complementary regardless of the model capacity.",
+    "pdf_parse": {
+        "paper_id": "2021",
+        "_pdf_hash": "",
+        "abstract": [
+            {
+                "text": "A conventional approach to improving the performance of end-to-end speech translation (E2E-ST) models is to leverage the source transcription via pre-training and joint training with automatic speech recognition (ASR) and neural machine translation (NMT) tasks. However, since the input modalities are different, it is difficult to leverage source language text successfully. In this work, we focus on sequencelevel knowledge distillation (SeqKD) from external text-based NMT models. To leverage the full potential of the source language information, we propose backward SeqKD, SeqKD from a target-to-source backward NMT model. To this end, we train a bilingual E2E-ST model to predict paraphrased transcriptions as an auxiliary task with a single decoder. The paraphrases are generated from the translations in bitext via back-translation. We further propose bidirectional SeqKD in which SeqKD from both forward and backward NMT models is combined. Experimental evaluations on both autoregressive and non-autoregressive models show that SeqKD in each direction consistently improves the translation performance, and the effectiveness is complementary regardless of the model capacity.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            }
+        ],
+        "body_text": [
+            {
+                "text": "End-to-end speech translation (E2E-ST) (B\u00e9rard et al., 2016) , which aims to convert source speech to text in another language directly, is an active research area. Because direct ST is a more difficult task than automatic speech recognition (ASR) and machine translation (MT), various techniques have been proposed to ease the training process by using source transcription. Examples include pretraining (B\u00e9rard et al., 2018; Wang et al., 2020c; Bansal et al., 2019; Wang et al., 2020d) , multi-task learning (Weiss et al., 2017; B\u00e9rard et al., 2018; Bahar et al., 2019) , knowledge distillation (Liu et al., 2019) , meta-learning (Indurthi et al., 2020) , twopass decoding (Anastasopoulos and Chiang, 2018; Sperber et al., 2019) , and interactive decoding (Liu et al., 2020; Le et al., 2020) . However, as input modalities between ST and MT tasks are different, an auxiliary MT task is not always helpful, especially when additional bitext is not available (Bahar et al., 2019) . Moreover, because monotonic speech-to-transcription alignments encourage the ASR task to see surface-level local information, an auxiliary ASR task helps the E2E-ST model to extract acoustic representations, not semantic ones, from speech.",
+                "cite_spans": [
+                    {
+                        "start": 39,
+                        "end": 60,
+                        "text": "(B\u00e9rard et al., 2016)",
+                        "ref_id": "BIBREF6"
+                    },
+                    {
+                        "start": 405,
+                        "end": 426,
+                        "text": "(B\u00e9rard et al., 2018;",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 427,
+                        "end": 446,
+                        "text": "Wang et al., 2020c;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 447,
+                        "end": 467,
+                        "text": "Bansal et al., 2019;",
+                        "ref_id": "BIBREF2"
+                    },
+                    {
+                        "start": 468,
+                        "end": 487,
+                        "text": "Wang et al., 2020d)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 510,
+                        "end": 530,
+                        "text": "(Weiss et al., 2017;",
+                        "ref_id": "BIBREF50"
+                    },
+                    {
+                        "start": 531,
+                        "end": 551,
+                        "text": "B\u00e9rard et al., 2018;",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 552,
+                        "end": 571,
+                        "text": "Bahar et al., 2019)",
+                        "ref_id": "BIBREF1"
+                    },
+                    {
+                        "start": 597,
+                        "end": 615,
+                        "text": "(Liu et al., 2019)",
+                        "ref_id": "BIBREF31"
+                    },
+                    {
+                        "start": 632,
+                        "end": 655,
+                        "text": "(Indurthi et al., 2020)",
+                        "ref_id": "BIBREF23"
+                    },
+                    {
+                        "start": 675,
+                        "end": 708,
+                        "text": "(Anastasopoulos and Chiang, 2018;",
+                        "ref_id": "BIBREF0"
+                    },
+                    {
+                        "start": 709,
+                        "end": 730,
+                        "text": "Sperber et al., 2019)",
+                        "ref_id": "BIBREF40"
+                    },
+                    {
+                        "start": 758,
+                        "end": 776,
+                        "text": "(Liu et al., 2020;",
+                        "ref_id": "BIBREF32"
+                    },
+                    {
+                        "start": 777,
+                        "end": 793,
+                        "text": "Le et al., 2020)",
+                        "ref_id": "BIBREF30"
+                    },
+                    {
+                        "start": 959,
+                        "end": 979,
+                        "text": "(Bahar et al., 2019)",
+                        "ref_id": "BIBREF1"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Sequence-level knowledge distillation (Se-qKD) (Kim and Rush, 2016) is another approach to transferring knowledge from one model to another. Recent studies have shown that SeqKD has the effect of reducing the complexity of training data and thus eases the training of student models, e.g., non-autoregressive (NAR) models (Gu et al., 2018; Zhou et al., 2019a; Ren et al., 2020) .",
+                "cite_spans": [
+                    {
+                        "start": 47,
+                        "end": 67,
+                        "text": "(Kim and Rush, 2016)",
+                        "ref_id": "BIBREF26"
+                    },
+                    {
+                        "start": 322,
+                        "end": 339,
+                        "text": "(Gu et al., 2018;",
+                        "ref_id": "BIBREF17"
+                    },
+                    {
+                        "start": 340,
+                        "end": 359,
+                        "text": "Zhou et al., 2019a;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 360,
+                        "end": 377,
+                        "text": "Ren et al., 2020)",
+                        "ref_id": "BIBREF37"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Paraphrasing, which represents text in a different form but with the same meaning, can also be regarded as SeqKD when using neural paraphrasing via back-translation (Mallinson et al., 2017; Wieting et al., 2017; Federmann et al., 2019) . It has been studied to improve the reference diversity for MT system evaluations (Thompson and Post, 2020; Bawden et al., 2020a,b) and the performance of low-resource neural MT (NMT) models (Zhou et al., 2019b; Khayrallah et al., 2020) .",
+                "cite_spans": [
+                    {
+                        "start": 165,
+                        "end": 189,
+                        "text": "(Mallinson et al., 2017;",
+                        "ref_id": "BIBREF33"
+                    },
+                    {
+                        "start": 190,
+                        "end": 211,
+                        "text": "Wieting et al., 2017;",
+                        "ref_id": "BIBREF51"
+                    },
+                    {
+                        "start": 212,
+                        "end": 235,
+                        "text": "Federmann et al., 2019)",
+                        "ref_id": "BIBREF12"
+                    },
+                    {
+                        "start": 319,
+                        "end": 344,
+                        "text": "(Thompson and Post, 2020;",
+                        "ref_id": "BIBREF42"
+                    },
+                    {
+                        "start": 345,
+                        "end": 368,
+                        "text": "Bawden et al., 2020a,b)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 428,
+                        "end": 448,
+                        "text": "(Zhou et al., 2019b;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 449,
+                        "end": 473,
+                        "text": "Khayrallah et al., 2020)",
+                        "ref_id": "BIBREF25"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "In this work, due to its simplicity and effectiveness, we focus on SeqKD from text-based NMT models to improve the performance of a bilingual E2E-ST model. In order to fully leverage source language information, we propose backward Se-qKD, which targets paraphrased source transcriptions generated from a target-to-source backward NMT model as an auxiliary task. Then, a single ST decoder is trained to predict both source and target language text as in a multilingual setting (Inaguma et al., 2019) . This way, the decoder is biased to capture semantic representations from speech, un-like joint training with an auxiliary ASR task. We also propose bidirectional SeqKD, which combines SeqKD from two NMT models in both language directions. Therefore, the E2E-ST models can fully exploit the knowledge embedded in both forward and backward NMT models.",
+                "cite_spans": [
+                    {
+                        "start": 477,
+                        "end": 499,
+                        "text": "(Inaguma et al., 2019)",
+                        "ref_id": "BIBREF20"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Experimental evaluations demonstrate that Se-qKD from each direction consistently improves the translation performance of both autoregressive and non-autoregressive E2E-ST models. We also confirm that bidirectional SeqKD outperforms unidirectional SeqKD and that the effectiveness is maintained in large models.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "In this section, we propose bidirectional SeqKD from both forward and backward NMT models that leverages machine-generated source paraphrases as another target in addition to the distilled translation to enhance the training of a bilingual E2E-ST model. Let X denote input speech features in a source language and Y s and Y t denote the corresponding gold transcription and translation, respectively.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Method",
+                "sec_num": "2"
+            },
+            {
+                "text": "Let D st = {(X i , Y s i , Y t i )} I i=1 be an ST dataset including I samples, and D asr = {(X i , Y s i )} I i=1 and D mt = {(Y s i , Y t i )} I i=1",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Method",
+                "sec_num": "2"
+            },
+            {
+                "text": "denote the corresponding ASR and MT datasets, respectively. 1 We drop the subscript i when it is obvious.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Method",
+                "sec_num": "2"
+            },
+            {
+                "text": "We first train a text-based source-to-target forward NMT model M fwd with D mt .2 Then, we perform beam search decoding with M fwd on D st to create a new dataset",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Sequence-level knowledge distillation",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "D fwd st = {(X i , Y s i , \u0176 t i )} I i=1",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Sequence-level knowledge distillation",
+                "sec_num": "2.1"
+            },
+            {
+                "text": ", where \u0176 t i is a distilled translation. D fwd st is used to train the E2E-ST models, referred to as forward SeqKD (or fwd SeqKD).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Sequence-level knowledge distillation",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "To exploit semantic information in the source language, we leverage machine-generated paraphrases of source transcriptions. We train a text-based target-to-source backward NMT model M bwd with D mt and then generate a new dataset",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Paraphrase generation",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "D bwd st = {(X i , \u0176 s i , Y t i )} I i=1 , where \u0176 s i is a paraphrase of Y s i . We use D bwd st",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Paraphrase generation",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "for training the E2E-ST models. As neural paraphrasing can be regarded as SeqKD from M bwd , we referred to it as backward SeqKD (or bwd SeqKD). In this work, we do not use large paraphrase datasets (Wieting and Gimpel, 2018; Hu et al., 2019) because their availability depends on languages and domains. Moreover, neural paraphrasing is applicable to any source languages that lack a sufficient amount of paired paraphrase data.",
+                "cite_spans": [
+                    {
+                        "start": 199,
+                        "end": 225,
+                        "text": "(Wieting and Gimpel, 2018;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 226,
+                        "end": 242,
+                        "text": "Hu et al., 2019)",
+                        "ref_id": "BIBREF19"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Paraphrase generation",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "We also propose combining forward SeqKD with backward SeqKD, referred to as bidirectional SeqKD (or bidir SeqKD), and construct a new dataset D bidir st = {(X i , \u0176 s i , \u0176 t i )} I i=1 . When using two references per utterance (2ref training) (Gordon and Duh, 2019), we concatenate D fwd st and D bwd st , and the suitable combination is analyzed in Section 4.3. This way, we can distill the knowledge of both M fwd and M bwd to a single E2E-ST model.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Paraphrase generation",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "We train an E2E-ST model with a direct ST objective L st (Y t or \u0176 t |X) and an auxiliary speechto-source text objective L src (Y s or \u0176 s |X). We refer to joint training with L src (Y s |X) as joint ASR and with L src ( \u0176 s |X) as backward SeqKD. Both losses are calculated from the same ST decoder. To bias the model to generate the desired target language, we add language embedding to token embedding at every token position in the decoder (Conneau and Lample, 2019) . 3 We then apply bidirectional SeqKD to both autoregressive (AR) and non-autoregressive (NAR) E2E-ST models.",
+                "cite_spans": [
+                    {
+                        "start": 444,
+                        "end": 470,
+                        "text": "(Conneau and Lample, 2019)",
+                        "ref_id": "BIBREF7"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training",
+                "sec_num": "2.3"
+            },
+            {
+                "text": "We use the speech Transformer architecture in (Karita et al., 2019) with an additional language embedding. The total training objective is formulated with a hyperparameter \u03bb src (\u2265 0) as",
+                "cite_spans": [
+                    {
+                        "start": 46,
+                        "end": 67,
+                        "text": "(Karita et al., 2019)",
+                        "ref_id": "BIBREF24"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Autoregressive E2E-ST model",
+                "sec_num": null
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "L total = L st + \u03bb src L src ,",
+                        "eq_num": "(1)"
+                    }
+                ],
+                "section": "Autoregressive E2E-ST model",
+                "sec_num": null
+            },
+            {
+                "text": "where both L st and L src are defined as crossentropy losses. The entire encoder-decoder parameters are shared in both tasks.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Autoregressive E2E-ST model",
+                "sec_num": null
+            },
+            {
+                "text": "We adopt Orthors (Inaguma et al., 2021) , in which a decoder based on a conditional masked language model (CMLM) (Ghazvininejad et al., 2019) is jointly trained with an additional AR decoder (Ghazvininejad et al., 2020) . L st in Eq. ( 1) is modified as",
+                "cite_spans": [
+                    {
+                        "start": 17,
+                        "end": 39,
+                        "text": "(Inaguma et al., 2021)",
+                        "ref_id": "BIBREF21"
+                    },
+                    {
+                        "start": 113,
+                        "end": 141,
+                        "text": "(Ghazvininejad et al., 2019)",
+                        "ref_id": "BIBREF15"
+                    },
+                    {
+                        "start": 191,
+                        "end": 219,
+                        "text": "(Ghazvininejad et al., 2020)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Non-autoregressive E2E-ST model",
+                "sec_num": null
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "L st = L cmlm + \u03bb ar L ar + \u03bb lp L lp ,",
+                        "eq_num": "(2)"
+                    }
+                ],
+                "section": "Non-autoregressive E2E-ST model",
+                "sec_num": null
+            },
+            {
+                "text": "where L cmlm , L ar , and L lp are losses in NAR E2E-ST, AR E2E-ST, and length prediction tasks, respectively. \u03bb * is the corresponding tunable loss weight. During inference, the mask-predict algorithm is used for T iterations with a length beam width of l (Ghazvininejad et al., 2019) . The best candidate at the last iteration is selected from the NAR decoder based on scores from the AR decoder (Inaguma et al., 2021) . Note that we apply L src to the NAR decoder only.",
+                "cite_spans": [
+                    {
+                        "start": 257,
+                        "end": 285,
+                        "text": "(Ghazvininejad et al., 2019)",
+                        "ref_id": "BIBREF15"
+                    },
+                    {
+                        "start": 398,
+                        "end": 420,
+                        "text": "(Inaguma et al., 2021)",
+                        "ref_id": "BIBREF21"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Non-autoregressive E2E-ST model",
+                "sec_num": null
+            },
+            {
+                "text": "Data We used Must-C En-De (408 hours) and En-Fr (492 hours) datasets (Di Gangi et al., 2019) . Both language pairs consist of a triplet of (X, Y s , Y t ). We performed the same data preprocessing as (Inaguma et al., 2020) (see details in Appendix A.1). We report case-sensitive detokenized BLEU scores (Papineni et al., 2002) on the tst-COMMON set with the multi-bleu-detok.perl script in Moses (Koehn et al., 2007) .",
+                "cite_spans": [
+                    {
+                        "start": 69,
+                        "end": 92,
+                        "text": "(Di Gangi et al., 2019)",
+                        "ref_id": "BIBREF9"
+                    },
+                    {
+                        "start": 200,
+                        "end": 222,
+                        "text": "(Inaguma et al., 2020)",
+                        "ref_id": "BIBREF22"
+                    },
+                    {
+                        "start": 303,
+                        "end": 326,
+                        "text": "(Papineni et al., 2002)",
+                        "ref_id": "BIBREF34"
+                    },
+                    {
+                        "start": 396,
+                        "end": 416,
+                        "text": "(Koehn et al., 2007)",
+                        "ref_id": "BIBREF28"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experimental setting",
+                "sec_num": "3"
+            },
+            {
+                "text": "Model configuration We used the Transformer (Vaswani et al., 2017) architecture having 12 encoder layers following two CNN blocks and six decoder layers for the ASR and E2E-ST tasks. For the MT models, we used six encoder layers. We built our models with the ESPnet-ST toolkit (Inaguma et al., 2020) . See details in Appendix A.2.",
+                "cite_spans": [
+                    {
+                        "start": 44,
+                        "end": 66,
+                        "text": "(Vaswani et al., 2017)",
+                        "ref_id": "BIBREF43"
+                    },
+                    {
+                        "start": 277,
+                        "end": 299,
+                        "text": "(Inaguma et al., 2020)",
+                        "ref_id": "BIBREF22"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experimental setting",
+                "sec_num": "3"
+            },
+            {
+                "text": "Training We always initialized the encoder parameters of the E2E-ST model by those of the corresponding pre-trained ASR model (B\u00e9rard et al., 2018) . We follow the same optimization strategies as in (Inaguma et al., 2021 (Inaguma et al., , 2020)) . When using joint ASR or backward SeqKD, we set \u03bb src to 0.3. More details are described in Appendix A.3 and A.4. Inference For the AR models, we used a beam width of 4. For the NAR models, we set T = {4, 10} and l = 9 as in (Inaguma et al., 2021) .",
+                "cite_spans": [
+                    {
+                        "start": 126,
+                        "end": 147,
+                        "text": "(B\u00e9rard et al., 2018)",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 199,
+                        "end": 220,
+                        "text": "(Inaguma et al., 2021",
+                        "ref_id": "BIBREF21"
+                    },
+                    {
+                        "start": 221,
+                        "end": 246,
+                        "text": "(Inaguma et al., , 2020))",
+                        "ref_id": "BIBREF22"
+                    },
+                    {
+                        "start": 473,
+                        "end": 495,
+                        "text": "(Inaguma et al., 2021)",
+                        "ref_id": "BIBREF21"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experimental setting",
+                "sec_num": "3"
+            },
+            {
+                "text": "We first report the paraphrasing quality, which is shown in Table 1 . As confirmed by the BLEU and translation edit rate (TER) scores (Snover et al., 2006) , the paraphrased source text was not just a simple copy of the transcription (see examples in Appendix A.5).",
+                "cite_spans": [
+                    {
+                        "start": 134,
+                        "end": 155,
+                        "text": "(Snover et al., 2006)",
+                        "ref_id": "BIBREF39"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 66,
+                        "end": 67,
+                        "text": "1",
+                        "ref_id": "TABREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Main results",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "The results are shown in Table 2 . Pre-training the ST decoder with the forward MT decoder (A2) improved the baseline performance (A1). Joint ASR showed a marginal improvement on En-De but a degraded performance on En-Fr (A3). We attribute this to the fact that the ASR task was more trivial than the ST task and biased the shared decoder to capture surface-level textual information. In contrast, backward SeqKD showed small but consistent improvements in both language directions (A4), and it was as effective as MT pre-training. As the encoder was already pre-trained with the ASR model, paraphrases had an additional positive effect on the BLEU improvement. Forward SeqKD significantly improved the performance, as previously reported in (Inaguma et al., 2021) . However, the gains by MT pre-training and joint ASR were diminished. Forward SeqKD was more effective than backward SeqKD solely (A4 vs. B1). However, backward SeqKD was still beneficial on top of forward SeqKD (C1, i.e., bidirectional SeqKD) while joint ASR was less so (B3).",
+                "cite_spans": [
+                    {
+                        "start": 742,
+                        "end": 764,
+                        "text": "(Inaguma et al., 2021)",
+                        "ref_id": "BIBREF21"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 31,
+                        "end": 32,
+                        "text": "2",
+                        "ref_id": "TABREF2"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Autoregressive models",
+                "sec_num": null
+            },
+            {
+                "text": "We also augmented the target translations by concatenating D st and D fwd st (2ref training), which further improved forward SeqKD (B4). Nevertheless, a combination of 2ref training and backward Se-qKD (i.e., bidirectional SeqKD with D fwd st \u222a D bwd st ) had a complementary effect and showed the best result (C2). It even outperformed larger multilingual models (Wang et al., 2020a) without using additional data in other language pairs. Non-autoregressive models The results are presented in Table 3 . Following the standard practice in NAR models (Gu et al., 2018) , we always used forward SeqKD. We did not use 2ref training for the NAR models because it increases the multimodality. Joint ASR improved the performance on all NAR models, except for En-Fr with the number of iterations T = 10. However, bidirectional SeqKD with D bidir st further improved the performance consistently regardless of T . Since NAR models assume conditional independence for every token, they prefer monotonic input-output alignments with lower alignment complexity in theory. However, paraphrasing collapses the monotonicity of the ASR task and increases the alignment complexity, making the auxiliary speech-to-source text task non-trivial. Nevertheless, BLEU scores were improved by adding backward SeqKD. This was probably because the complexity of transcriptions in the training data was reduced at the cost of the alignment complexity, which was more effective for the NAR models.",
+                "cite_spans": [
+                    {
+                        "start": 364,
+                        "end": 384,
+                        "text": "(Wang et al., 2020a)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 551,
+                        "end": 568,
+                        "text": "(Gu et al., 2018)",
+                        "ref_id": "BIBREF17"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 501,
+                        "end": 502,
+                        "text": "3",
+                        "ref_id": "TABREF3"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Autoregressive models",
+                "sec_num": null
+            },
+            {
+                "text": "We analyze the performance of bidirectional Se-qKD through a lens of complexity in the training data following (Zhou et al., 2019a) . We aligned words in every source and target sentence pair with (Dyer et al., 2013) . Then, we calculated corpus-level conditional entropy C(D) and faithfulness F(D) for both forward ( -\u2192 D ) and backward ( \u2190 -D ) language directions to evaluate the multimodality. In short, conditional entropy measures uncertainty of translation, and faithfulness is defined as Kullback-Leibler divergence and measures how close the distilled data distribution is to the real data distribution. See the mathematical definition in Appendix A.6.",
+                "cite_spans": [
+                    {
+                        "start": 111,
+                        "end": 131,
+                        "text": "(Zhou et al., 2019a)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 197,
+                        "end": 216,
+                        "text": "(Dyer et al., 2013)",
+                        "ref_id": "BIBREF11"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Analysis",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "The results of entropy and faithfulness are shown in Tables 4 and 5 , respectively. Consistent with (Zhou et al., 2019a) , the entropy of target translations was reduced by forward SeqKD, indicating target translations were converted into a more deterministic and simplified form. Interestingly, the entropy of the original translations was also reduced by backward SeqKD. In other words, backward Se-qKD modified transcriptions so that the target translations can be predicted easier. This would help E2E-ST models learn relationships between source and target languages from speech because E2E-ST models are not conditioned on text in another language explicitly. Therefore, we presume that the encoder representations were enhanced by back- ward SeqKD. Using machine-generated sequences in both languages increased the entropy, probably due to error accumulation. However, E2E-ST models do not suffer from it because they are conditioned on the source speech. We also confirmed similar trends in the reverse language direction. Regarding faithfulness, distilled target sequences degraded faithfulness as expected. However, an interesting finding was that the faithfulness of bidirectional SeqKD was better than that of forward SeqKD, meaning that the former reflected the true word alignment distribution more faithfully than the latter. Although lexical choice might be degraded by targeting distilled text in both languages (Ding et al., 2021) , mixing the original and distilled text by 2ref training would recover it.",
+                "cite_spans": [
+                    {
+                        "start": 100,
+                        "end": 120,
+                        "text": "(Zhou et al., 2019a)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 1429,
+                        "end": 1448,
+                        "text": "(Ding et al., 2021)",
+                        "ref_id": "BIBREF10"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 60,
+                        "end": 61,
+                        "text": "4",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 66,
+                        "end": 67,
+                        "text": "5",
+                        "ref_id": "TABREF4"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Analysis",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "We conduct an ablation study to verify the analysis in the previous section. In Table 4 , we observed that it was better to have the original reference in the target sequence of either the source or target language. For example, to reduce the entropy of German text in the training set, it was best to condition the distilled German translation on the original English transcription, and vice versa. Therefore, we hypothesize that the best way to reduce the entropy in both source and target languages during 2ref training is to combine ( \u0176 s , Y t ) and (Y s , \u0176 t ) for each sample. We compared four ways to leverage source text: gold transcription Y s only, distilled paraphrase \u0176 s only, and both. 5 The results are shown in Table 6 . We confirmed that the model trained with the original reference in either language for every target achieved the best BLEU score, which verifies our hypothesis.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 86,
+                        "end": 87,
+                        "text": "4",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 735,
+                        "end": 736,
+                        "text": "6",
+                        "ref_id": "TABREF5"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Ablation study",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "Finally, we investigate the effectiveness of bidirectional Seq-KD with 2ref training when increasing the model capacity in this experiment is to verify our expectation that large models can model complex target distributions in multi-referenced training better. In addition to simply increasing the model dimensions, we also investigate Conformer (Gulati et al., 2020) , a Transformer encoder augmented by a convolution module. We confirmed that bidirectional Se-qKD always outperformed forward SeqKD in both language directions regardless of model configurations. We also found that the Conformer encoder significantly boosted the translation performance of forward SeqKD, but the gains of bidirectional SeqKD were transferred.",
+                "cite_spans": [
+                    {
+                        "start": 347,
+                        "end": 368,
+                        "text": "(Gulati et al., 2020)",
+                        "ref_id": "BIBREF18"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Increasing model capacity",
+                "sec_num": "4.4"
+            },
+            {
+                "text": "To fully leverage knowledge in both source and target language directions for bilingual E2E-ST models, we have proposed bidirectional SeqKD, in which both forward SeqKD from a source-to-target NMT model and backward SeqKD from a target-tosource NMT model are combined. Backward Se-qKD is performed by targeting source paraphrases generated via back-translation from the original translations in bitext. Then, the E2E-ST model is enhanced by training to generate both source and target language text with a single decoder. We experimentally confirmed that SeqKD from each direction boosted the translation performance of both autoregressive and non-autoregressive E2E-ST models, and the effectiveness was additive.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion",
+                "sec_num": "5"
+            },
+            {
+                "text": "Multi-referenced training with the original and distilled text gave further gains. We also showed that bidirectional SeqKD was effective regardless of model sizes. ",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion",
+                "sec_num": "5"
+            },
+            {
+                "text": "A.1 Data preprocessing",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "A Appendix",
+                "sec_num": null
+            },
+            {
+                "text": "All sentences were tokenized with the tokenizer.perl script in Moses (Koehn et al., 2007) . Non-verbal speech labels such as \"(Applause)\" and \"(Laughter)\" were removed during evaluation (Di Gangi et al., 2019; Inaguma et al., 2021; Le et al., 2020) . We built output vocabularies based on the byte pair encoding (BPE) algorithm (Sennrich et al., 2016) with the Sentencepiece toolkit (Kudo, 2018) 6 . The joint source and target vocabularies were constructed in the ST and MT tasks, while the vocabularies in the ASR task were constructed with transcriptions only. For autoregressive models, we used 5k for ASR models and 8k for E2E-ST and MT models. We used 16k vocabularies for non-autoregressive E2E-ST models (Inaguma et al., 2021) .",
+                "cite_spans": [
+                    {
+                        "start": 69,
+                        "end": 89,
+                        "text": "(Koehn et al., 2007)",
+                        "ref_id": "BIBREF28"
+                    },
+                    {
+                        "start": 186,
+                        "end": 209,
+                        "text": "(Di Gangi et al., 2019;",
+                        "ref_id": "BIBREF9"
+                    },
+                    {
+                        "start": 210,
+                        "end": 231,
+                        "text": "Inaguma et al., 2021;",
+                        "ref_id": "BIBREF21"
+                    },
+                    {
+                        "start": 232,
+                        "end": 248,
+                        "text": "Le et al., 2020)",
+                        "ref_id": "BIBREF30"
+                    },
+                    {
+                        "start": 328,
+                        "end": 351,
+                        "text": "(Sennrich et al., 2016)",
+                        "ref_id": "BIBREF38"
+                    },
+                    {
+                        "start": 383,
+                        "end": 395,
+                        "text": "(Kudo, 2018)",
+                        "ref_id": "BIBREF29"
+                    },
+                    {
+                        "start": 712,
+                        "end": 734,
+                        "text": "(Inaguma et al., 2021)",
+                        "ref_id": "BIBREF21"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "A Appendix",
+                "sec_num": null
+            },
+            {
+                "text": "For input speech features, we extracted 80channel log-mel filterbank coefficients computed with a 25-ms window size and shifted every 10ms with 3-dimensional pitch features using Kaldi (Povey et al., 2011) . This results in 83dimensional features for every frame. The features were normalized by the mean and the standard deviation for each training set. To avoid overfitting, training data was augmented by a factor of 3 with speed perturbation (Ko et al., 2015) and SpecAugment (Park et al., 2019) . We used (m T , m F , T, F ) = (2, 2, 40, 30) for the hyperparameters in SpecAugment.",
+                "cite_spans": [
+                    {
+                        "start": 185,
+                        "end": 205,
+                        "text": "(Povey et al., 2011)",
+                        "ref_id": "BIBREF36"
+                    },
+                    {
+                        "start": 446,
+                        "end": 463,
+                        "text": "(Ko et al., 2015)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 480,
+                        "end": 499,
+                        "text": "(Park et al., 2019)",
+                        "ref_id": "BIBREF35"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "A Appendix",
+                "sec_num": null
+            },
+            {
+                "text": "We used the Transformer (Vaswani et al., 2017) architecture implemented with the ESPnet-ST toolkit (Inaguma et al., 2020) ",
+                "cite_spans": [
+                    {
+                        "start": 24,
+                        "end": 46,
+                        "text": "(Vaswani et al., 2017)",
+                        "ref_id": "BIBREF43"
+                    },
+                    {
+                        "start": 99,
+                        "end": 121,
+                        "text": "(Inaguma et al., 2020)",
+                        "ref_id": "BIBREF22"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "A.2 Model configuration",
+                "sec_num": null
+            },
+            {
+                "text": "In addition to initializing the encoder parameters of the E2E-ST model by those of the pre-trained ASR model, the auxiliary AR decoder parameters of the NAR models were initialized by those of the corresponding pre-trained AR MT model (Inaguma et al., 2021) . The other decoder parameters of both the AR and NAR models were initialized as in BERT (Devlin et al., 2019; Ghazvininejad et al., 2019; Inaguma et al., 2021) , where weight parameters were sampled from N (0, 0.02), biases were set to zero, and layer normalization parameters were set to \u03b2 = 0, \u03b3 = 1. Note that we did not use additional data for pre-training.",
+                "cite_spans": [
+                    {
+                        "start": 235,
+                        "end": 257,
+                        "text": "(Inaguma et al., 2021)",
+                        "ref_id": "BIBREF21"
+                    },
+                    {
+                        "start": 347,
+                        "end": 368,
+                        "text": "(Devlin et al., 2019;",
+                        "ref_id": "BIBREF8"
+                    },
+                    {
+                        "start": 369,
+                        "end": 396,
+                        "text": "Ghazvininejad et al., 2019;",
+                        "ref_id": "BIBREF15"
+                    },
+                    {
+                        "start": 397,
+                        "end": 418,
+                        "text": "Inaguma et al., 2021)",
+                        "ref_id": "BIBREF21"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "A.3 Initialization",
+                "sec_num": null
+            },
+            {
+                "text": "The Adam optimizer (Kingma and Ba, 2015) with \u03b2 1 = 0.9, \u03b2 2 = 0.98, and = 10 -9 was used for training with a Noam learning rate schedule (Vaswani et al., 2017) . We used dropout and label smoothing (Szegedy et al., 2016) with a probability of 0.1 and 0.1, respectively. The other training configurations for all tasks are summarized in Table 9 . We removed utterances having more than 3000 input speech frames or more than 400 characters due to the GPU memory capacity. The last five best checkpoints based on the validation performance were used for model averaging. For the training of ASR models used for E2E-ST encoder pre-training, we removed case and punctuation information from transcriptions and then applied a joint CTC/Attention objective (Watanabe et al., 2017) . However, we retained this information in the transcriptions and paraphrases used for training the E2E-ST and MT models.",
+                "cite_spans": [
+                    {
+                        "start": 19,
+                        "end": 40,
+                        "text": "(Kingma and Ba, 2015)",
+                        "ref_id": "BIBREF27"
+                    },
+                    {
+                        "start": 138,
+                        "end": 160,
+                        "text": "(Vaswani et al., 2017)",
+                        "ref_id": "BIBREF43"
+                    },
+                    {
+                        "start": 199,
+                        "end": 221,
+                        "text": "(Szegedy et al., 2016)",
+                        "ref_id": "BIBREF41"
+                    },
+                    {
+                        "start": 751,
+                        "end": 774,
+                        "text": "(Watanabe et al., 2017)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 343,
+                        "end": 344,
+                        "text": "9",
+                        "ref_id": "TABREF11"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "A.4 Training",
+                "sec_num": null
+            },
+            {
+                "text": "We present examples of generated paraphrases on the Must-C En-De training set in Table 8 . We observed that most paraphrases kept the original meaning while some words were simplified to alternatives having a similar meaning. We also found that the first conjunction in an utterance was more likely to be omitted via paraphrasing.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 87,
+                        "end": 88,
+                        "text": "8",
+                        "ref_id": "TABREF8"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "A.5 Case study",
+                "sec_num": null
+            },
+            {
+                "text": "In this section, we mathematically formulate the corpus-level complexity and faithfulness given D \u2208 {D st , D fwd st , D bwd st , D bidir st }. Our formulation follows (Zhou et al., 2019a) , but we also consider the reverse language direction.",
+                "cite_spans": [
+                    {
+                        "start": 168,
+                        "end": 188,
+                        "text": "(Zhou et al., 2019a)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "A.6 Mathematical formulation of complexity and faithfulness",
+                "sec_num": null
+            },
+            {
+                "text": "The corpuslevel complexity of D in the forward language direction, C( -\u2192 D ), is defined as the conditional entropy H(Y where A is an external alignment model, and T s and T t are the source and target sequence lengths, respectively. We make two assumptions: (1) conditional independence of target tokens given the source text sequence, and (2) the distribution of p(y t |Y s ) follows the alignment model A. Then, C( -\u2192 D ) is calculated as",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conditional entropy (complexity)",
+                "sec_num": null
+            },
+            {
+                "text": "C( -\u2192 D ) = 1 |V s | y s \u2208V s H(y t |y s ),",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conditional entropy (complexity)",
+                "sec_num": null
+            },
+            {
+                "text": "where V s is a set of all words in the source language. Division by |V s | is important to normalize frequent source words.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conditional entropy (complexity)",
+                "sec_num": null
+            },
+            {
+                "text": "The corpus-level complexity of D in the backward language direction, C( \u2190 -D ), is defined similarly as",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conditional entropy (complexity)",
+                "sec_num": null
+            },
+            {
+                "text": "C( \u2190 - D ) = 1 |V t | y t \u2208V t H(y s |y t ),",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conditional entropy (complexity)",
+                "sec_num": null
+            },
+            {
+                "text": "where V t is a set of all words in the target language.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conditional entropy (complexity)",
+                "sec_num": null
+            },
+            {
+                "text": "Faithfulness Although the corpus-level conditional entropy can be used to evaluate the complexity of the training data, there are also trivial solutions to generate new data with smaller complexity when target translations are not adequate. Faithfulness is a good measure to assess how close the distilled data distribution is to the real (original) data distribution. The faithfulness of D in a forward language direction F( -\u2192 D ) and a backward language direction F( \u2190 -D ) is defined as the KLdivergence of the alignment distribution between the real dataset and a distilled dataset, as where p r and p d are alignment distributions of the real and distilled data, respectively. Therefore, when D = D st , F( -\u2192 D ) = F( \u2190 -D ) = 0, and it was omitted in Table 5 .",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 765,
+                        "end": 766,
+                        "text": "5",
+                        "ref_id": "TABREF4"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Conditional entropy (complexity)",
+                "sec_num": null
+            },
+            {
+                "text": "F( -\u2192 D ) = 1 |V s | y s \u2208V",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conditional entropy (complexity)",
+                "sec_num": null
+            },
+            {
+                "text": "We focus on a complete triplet of (X, Y s , Y t ) only. However, the proposed method can easily be extended to a semisupervised setting featuring additional ASR and MT pair",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "data.2 All NMT models are autoregressive in this paper.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "We found this was more effective than replacing the startof-sentence symbol with a language ID(Inaguma et al., 2019; Wang et al., 2020b;Le et al., 2020) as done in previous multilingual E2E-ST studies.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "https://github.com/clab/fast_align",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "https://github.com/google/ sentencepiece",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            }
+        ],
+        "back_matter": [
+            {
+                "text": "The authors thank the anonymous reviewers for useful suggestions and Siddharth Dalmia, Brian Yan, and Pengcheng Guo for helpful discussions.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Acknowledgement",
+                "sec_num": null
+            }
+        ],
+        "bib_entries": {
+            "BIBREF0": {
+                "ref_id": "b0",
+                "title": "Tied multitask learning for neural speech translation",
+                "authors": [
+                    {
+                        "first": "Antonios",
+                        "middle": [],
+                        "last": "Anastasopoulos",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "David",
+                        "middle": [],
+                        "last": "Chiang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 2018 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies",
+                "volume": "1",
+                "issue": "",
+                "pages": "82--91",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/N18-1008"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Antonios Anastasopoulos and David Chiang. 2018. Tied multitask learning for neural speech translation. In Proceedings of the 2018 Conference of the North American Chapter of the Association for Computa- tional Linguistics: Human Language Technologies, Volume 1 (Long Papers), pages 82-91, New Orleans, Louisiana. Association for Computational Linguis- tics.",
+                "links": null
+            },
+            "BIBREF1": {
+                "ref_id": "b1",
+                "title": "A comparative study on end-to-end speech to text translation",
+                "authors": [
+                    {
+                        "first": "Parnia",
+                        "middle": [],
+                        "last": "Bahar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tobias",
+                        "middle": [],
+                        "last": "Bieschke",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hermann",
+                        "middle": [],
+                        "last": "Ney",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of ASRU",
+                "volume": "",
+                "issue": "",
+                "pages": "792--799",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Parnia Bahar, Tobias Bieschke, and Hermann Ney. 2019. A comparative study on end-to-end speech to text translation. In Proceedings of ASRU, pages 792-799.",
+                "links": null
+            },
+            "BIBREF2": {
+                "ref_id": "b2",
+                "title": "Pretraining on high-resource speech recognition improves low-resource speech-to-text translation",
+                "authors": [
+                    {
+                        "first": "Sameer",
+                        "middle": [],
+                        "last": "Bansal",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Herman",
+                        "middle": [],
+                        "last": "Kamper",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Karen",
+                        "middle": [],
+                        "last": "Livescu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Adam",
+                        "middle": [],
+                        "last": "Lopez",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sharon",
+                        "middle": [],
+                        "last": "Goldwater",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies",
+                "volume": "1",
+                "issue": "",
+                "pages": "58--68",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/N19-1006"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Sameer Bansal, Herman Kamper, Karen Livescu, Adam Lopez, and Sharon Goldwater. 2019. Pre- training on high-resource speech recognition im- proves low-resource speech-to-text translation. In Proceedings of the 2019 Conference of the North American Chapter of the Association for Computa- tional Linguistics: Human Language Technologies, Volume 1 (Long and Short Papers), pages 58-68, Minneapolis, Minnesota. Association for Computa- tional Linguistics.",
+                "links": null
+            },
+            "BIBREF3": {
+                "ref_id": "b3",
+                "title": "ParBLEU: Augmenting metrics with automatic paraphrases for the wmt'20 metrics shared task",
+                "authors": [
+                    {
+                        "first": "Rachel",
+                        "middle": [],
+                        "last": "Bawden",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Biao",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Andre",
+                        "middle": [],
+                        "last": "T\u00e4ttar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Matt",
+                        "middle": [],
+                        "last": "Post",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "5th Conference on Machine Translation",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Rachel Bawden, Biao Zhang, Andre T\u00e4ttar, and Matt Post. 2020a. ParBLEU: Augmenting metrics with automatic paraphrases for the wmt'20 metrics shared task. In 5th Conference on Machine Transla- tion.",
+                "links": null
+            },
+            "BIBREF4": {
+                "ref_id": "b4",
+                "title": "Andre T\u00e4ttar, and Matt Post. 2020b. A study in improving BLEU reference coverage with diverse automatic paraphrasing",
+                "authors": [
+                    {
+                        "first": "Rachel",
+                        "middle": [],
+                        "last": "Bawden",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Biao",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Lisa",
+                        "middle": [],
+                        "last": "Yankovskaya",
+                        "suffix": ""
+                    }
+                ],
+                "year": null,
+                "venue": "Findings of the Association for Computational Linguistics: EMNLP 2020",
+                "volume": "",
+                "issue": "",
+                "pages": "918--932",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Rachel Bawden, Biao Zhang, Lisa Yankovskaya, An- dre T\u00e4ttar, and Matt Post. 2020b. A study in im- proving BLEU reference coverage with diverse au- tomatic paraphrasing. In Findings of the Associa- tion for Computational Linguistics: EMNLP 2020, pages 918-932, Online. Association for Computa- tional Linguistics.",
+                "links": null
+            },
+            "BIBREF5": {
+                "ref_id": "b5",
+                "title": "End-to-end automatic speech translation of audiobooks",
+                "authors": [
+                    {
+                        "first": "Alexandre",
+                        "middle": [],
+                        "last": "B\u00e9rard",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Laurent",
+                        "middle": [],
+                        "last": "Besacier",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ali",
+                        "middle": [
+                            "Can"
+                        ],
+                        "last": "Kocabiyikoglu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Olivier",
+                        "middle": [],
+                        "last": "Pietquin",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of ICASSP",
+                "volume": "",
+                "issue": "",
+                "pages": "6224--6228",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Alexandre B\u00e9rard, Laurent Besacier, Ali Can Ko- cabiyikoglu, and Olivier Pietquin. 2018. End-to-end automatic speech translation of audiobooks. In Pro- ceedings of ICASSP, pages 6224-6228.",
+                "links": null
+            },
+            "BIBREF6": {
+                "ref_id": "b6",
+                "title": "Listen and translate: A proof of concept for end-to-end speech-to-text translation",
+                "authors": [
+                    {
+                        "first": "Alexandre",
+                        "middle": [],
+                        "last": "B\u00e9rard",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Olivier",
+                        "middle": [],
+                        "last": "Pietquin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christophe",
+                        "middle": [],
+                        "last": "Servan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Laurent",
+                        "middle": [],
+                        "last": "Besacier",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of NeurIPS 2016 End-to-end Learning for Speech and Audio Processing Workshop",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Alexandre B\u00e9rard, Olivier Pietquin, Christophe Servan, and Laurent Besacier. 2016. Listen and translate: A proof of concept for end-to-end speech-to-text trans- lation. In Proceedings of NeurIPS 2016 End-to-end Learning for Speech and Audio Processing Work- shop.",
+                "links": null
+            },
+            "BIBREF7": {
+                "ref_id": "b7",
+                "title": "Crosslingual language model pretraining",
+                "authors": [
+                    {
+                        "first": "Alexis",
+                        "middle": [],
+                        "last": "Conneau",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Guillaume",
+                        "middle": [],
+                        "last": "Lample",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of NeurIPS",
+                "volume": "",
+                "issue": "",
+                "pages": "7059--7069",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Alexis Conneau and Guillaume Lample. 2019. Cross- lingual language model pretraining. In Proceedings of NeurIPS, pages 7059-7069.",
+                "links": null
+            },
+            "BIBREF8": {
+                "ref_id": "b8",
+                "title": "BERT: Pre-training of deep bidirectional transformers for language understanding",
+                "authors": [
+                    {
+                        "first": "Jacob",
+                        "middle": [],
+                        "last": "Devlin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ming-Wei",
+                        "middle": [],
+                        "last": "Chang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kenton",
+                        "middle": [],
+                        "last": "Lee",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kristina",
+                        "middle": [],
+                        "last": "Toutanova",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies",
+                "volume": "1",
+                "issue": "",
+                "pages": "4171--4186",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/N19-1423"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Jacob Devlin, Ming-Wei Chang, Kenton Lee, and Kristina Toutanova. 2019. BERT: Pre-training of deep bidirectional transformers for language under- standing. In Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies, Volume 1 (Long and Short Papers), pages 4171-4186, Minneapolis, Minnesota. Associ- ation for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF9": {
+                "ref_id": "b9",
+                "title": "MuST-C: a Multilingual Speech Translation Corpus",
+                "authors": [
+                    {
+                        "first": "A",
+                        "middle": [
+                            "Di"
+                        ],
+                        "last": "Mattia",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Roldano",
+                        "middle": [],
+                        "last": "Gangi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Luisa",
+                        "middle": [],
+                        "last": "Cattoni",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Matteo",
+                        "middle": [],
+                        "last": "Bentivogli",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Marco",
+                        "middle": [],
+                        "last": "Negri",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Turchi",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies",
+                "volume": "",
+                "issue": "",
+                "pages": "2012--2017",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/N19-1202"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Mattia A. Di Gangi, Roldano Cattoni, Luisa Bentivogli, Matteo Negri, and Marco Turchi. 2019. MuST-C: a Multilingual Speech Translation Corpus. In Pro- ceedings of the 2019 Conference of the North Amer- ican Chapter of the Association for Computational Linguistics: Human Language Technologies, Vol- ume 1 (Long and Short Papers), pages 2012-2017, Minneapolis, Minnesota. Association for Computa- tional Linguistics.",
+                "links": null
+            },
+            "BIBREF10": {
+                "ref_id": "b10",
+                "title": "Understanding and improving lexical choice in nonautoregressive translation",
+                "authors": [
+                    {
+                        "first": "Liang",
+                        "middle": [],
+                        "last": "Ding",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Longyue",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xuebo",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Derek",
+                        "middle": [
+                            "F"
+                        ],
+                        "last": "Wong",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dacheng",
+                        "middle": [],
+                        "last": "Tao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zhaopeng",
+                        "middle": [],
+                        "last": "Tu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2021,
+                "venue": "Proceedings of ICLR",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Liang Ding, Longyue Wang, Xuebo Liu, Derek F. Wong, Dacheng Tao, and Zhaopeng Tu. 2021. Un- derstanding and improving lexical choice in non- autoregressive translation. In Proceedings of ICLR.",
+                "links": null
+            },
+            "BIBREF11": {
+                "ref_id": "b11",
+                "title": "A simple, fast, and effective reparameterization of IBM model 2",
+                "authors": [
+                    {
+                        "first": "Chris",
+                        "middle": [],
+                        "last": "Dyer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Victor",
+                        "middle": [],
+                        "last": "Chahuneau",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Noah",
+                        "middle": [
+                            "A"
+                        ],
+                        "last": "Smith",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "Proceedings of the 2013 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies",
+                "volume": "",
+                "issue": "",
+                "pages": "644--648",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Chris Dyer, Victor Chahuneau, and Noah A. Smith. 2013. A simple, fast, and effective reparameter- ization of IBM model 2. In Proceedings of the 2013 Conference of the North American Chapter of the Association for Computational Linguistics: Hu- man Language Technologies, pages 644-648, At- lanta, Georgia. Association for Computational Lin- guistics.",
+                "links": null
+            },
+            "BIBREF12": {
+                "ref_id": "b12",
+                "title": "Multilingual whispers: Generating paraphrases with translation",
+                "authors": [
+                    {
+                        "first": "Christian",
+                        "middle": [],
+                        "last": "Federmann",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Oussama",
+                        "middle": [],
+                        "last": "Elachqar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chris",
+                        "middle": [],
+                        "last": "Quirk",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 5th Workshop on Noisy User-generated Text",
+                "volume": "",
+                "issue": "",
+                "pages": "17--26",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/D19-5503"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Christian Federmann, Oussama Elachqar, and Chris Quirk. 2019. Multilingual whispers: Generating paraphrases with translation. In Proceedings of the 5th Workshop on Noisy User-generated Text (W- NUT 2019), pages 17-26, Hong Kong, China. Asso- ciation for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF14": {
+                "ref_id": "b14",
+                "title": "Semiautoregressive training improves mask-predict decoding",
+                "authors": [],
+                "year": null,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:2001.08785"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Semi- autoregressive training improves mask-predict de- coding. arXiv preprint arXiv:2001.08785.",
+                "links": null
+            },
+            "BIBREF15": {
+                "ref_id": "b15",
+                "title": "Mask-predict: Parallel decoding of conditional masked language models",
+                "authors": [
+                    {
+                        "first": "Marjan",
+                        "middle": [],
+                        "last": "Ghazvininejad",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Omer",
+                        "middle": [],
+                        "last": "Levy",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yinhan",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Luke",
+                        "middle": [],
+                        "last": "Zettlemoyer",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing (EMNLP-IJCNLP)",
+                "volume": "",
+                "issue": "",
+                "pages": "6112--6121",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/D19-1633"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Marjan Ghazvininejad, Omer Levy, Yinhan Liu, and Luke Zettlemoyer. 2019. Mask-predict: Parallel de- coding of conditional masked language models. In Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Lan- guage Processing (EMNLP-IJCNLP), pages 6112- 6121, Hong Kong, China. Association for Computa- tional Linguistics.",
+                "links": null
+            },
+            "BIBREF16": {
+                "ref_id": "b16",
+                "title": "Explaining sequence-level knowledge distillation as dataaugmentation for neural machine translation",
+                "authors": [
+                    {
+                        "first": "A",
+                        "middle": [],
+                        "last": "Mitchell",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kevin",
+                        "middle": [],
+                        "last": "Gordon",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Duh",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1912.03334"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Mitchell A Gordon and Kevin Duh. 2019. Explain- ing sequence-level knowledge distillation as data- augmentation for neural machine translation. arXiv preprint arXiv:1912.03334.",
+                "links": null
+            },
+            "BIBREF17": {
+                "ref_id": "b17",
+                "title": "Non-autoregressive neural machine translation",
+                "authors": [
+                    {
+                        "first": "Jiatao",
+                        "middle": [],
+                        "last": "Gu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "James",
+                        "middle": [],
+                        "last": "Bradbury",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Caiming",
+                        "middle": [],
+                        "last": "Xiong",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "O",
+                        "middle": [
+                            "K"
+                        ],
+                        "last": "Victor",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Richard",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Socher",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of ICLR",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jiatao Gu, James Bradbury, Caiming Xiong, Victor OK Li, and Richard Socher. 2018. Non-autoregressive neural machine translation. In Proceedings of ICLR.",
+                "links": null
+            },
+            "BIBREF18": {
+                "ref_id": "b18",
+                "title": "Conformer: Convolution-augmented Transformer for speech recognition",
+                "authors": [
+                    {
+                        "first": "Anmol",
+                        "middle": [],
+                        "last": "Gulati",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "James",
+                        "middle": [],
+                        "last": "Qin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chung-Cheng",
+                        "middle": [],
+                        "last": "Chiu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Niki",
+                        "middle": [],
+                        "last": "Parmar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yu",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jiahui",
+                        "middle": [],
+                        "last": "Yu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Wei",
+                        "middle": [],
+                        "last": "Han",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Shibo",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zhengdong",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yonghui",
+                        "middle": [],
+                        "last": "Wu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ruoming",
+                        "middle": [],
+                        "last": "Pang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "Proceedings of Interspeech",
+                "volume": "",
+                "issue": "",
+                "pages": "5036--5040",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Anmol Gulati, James Qin, Chung-Cheng Chiu, Niki Parmar, Yu Zhang, Jiahui Yu, Wei Han, Shibo Wang, Zhengdong Zhang, Yonghui Wu, and Ruoming Pang. 2020. Conformer: Convolution-augmented Trans- former for speech recognition. In Proceedings of Interspeech, pages 5036-5040.",
+                "links": null
+            },
+            "BIBREF19": {
+                "ref_id": "b19",
+                "title": "ParaBank: Monolingual bitext generation and sentential paraphrasing via lexically-constrained neural machine translation",
+                "authors": [
+                    {
+                        "first": "Edward",
+                        "middle": [],
+                        "last": "Hu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Rachel",
+                        "middle": [],
+                        "last": "Rudinger",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Matt",
+                        "middle": [],
+                        "last": "Post",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Benjamin",
+                        "middle": [],
+                        "last": "Van Durme",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the AAAI Conference on Artificial Intelligence",
+                "volume": "33",
+                "issue": "",
+                "pages": "6521--6528",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "J Edward Hu, Rachel Rudinger, Matt Post, and Ben- jamin Van Durme. 2019. ParaBank: Monolingual bitext generation and sentential paraphrasing via lexically-constrained neural machine translation. In Proceedings of the AAAI Conference on Artificial In- telligence, volume 33, pages 6521-6528.",
+                "links": null
+            },
+            "BIBREF20": {
+                "ref_id": "b20",
+                "title": "Multilingual end-to-end speech translation",
+                "authors": [
+                    {
+                        "first": "Hirofumi",
+                        "middle": [],
+                        "last": "Inaguma",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kevin",
+                        "middle": [],
+                        "last": "Duh",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tatsuya",
+                        "middle": [],
+                        "last": "Kawahara",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Shinji",
+                        "middle": [],
+                        "last": "Watanabe",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of ASRU",
+                "volume": "",
+                "issue": "",
+                "pages": "570--577",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Hirofumi Inaguma, Kevin Duh, Tatsuya Kawahara, and Shinji Watanabe. 2019. Multilingual end-to-end speech translation. In Proceedings of ASRU, pages 570-577.",
+                "links": null
+            },
+            "BIBREF21": {
+                "ref_id": "b21",
+                "title": "Orthros: Non-autoregressive end-to-end speech translation with dual-decoder",
+                "authors": [
+                    {
+                        "first": "Hirofumi",
+                        "middle": [],
+                        "last": "Inaguma",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yosuke",
+                        "middle": [],
+                        "last": "Higuchi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kevin",
+                        "middle": [],
+                        "last": "Duh",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tatsuya",
+                        "middle": [],
+                        "last": "Kawahara",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Shinji",
+                        "middle": [],
+                        "last": "Watanabe",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2021,
+                "venue": "Proceedings of ICASSP",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Hirofumi Inaguma, Yosuke Higuchi, Kevin Duh, Tat- suya Kawahara, and Shinji Watanabe. 2021. Or- thros: Non-autoregressive end-to-end speech transla- tion with dual-decoder. In Proceedings of ICASSP.",
+                "links": null
+            },
+            "BIBREF22": {
+                "ref_id": "b22",
+                "title": "ESPnet-ST: All-in-one speech translation toolkit",
+                "authors": [
+                    {
+                        "first": "Hirofumi",
+                        "middle": [],
+                        "last": "Inaguma",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Shun",
+                        "middle": [],
+                        "last": "Kiyono",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kevin",
+                        "middle": [],
+                        "last": "Duh",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Shigeki",
+                        "middle": [],
+                        "last": "Karita",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nelson",
+                        "middle": [],
+                        "last": "Yalta",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tomoki",
+                        "middle": [],
+                        "last": "Hayashi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Shinji",
+                        "middle": [],
+                        "last": "Watanabe",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics: System Demonstrations",
+                "volume": "",
+                "issue": "",
+                "pages": "302--311",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/2020.acl-demos.34"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Hirofumi Inaguma, Shun Kiyono, Kevin Duh, Shigeki Karita, Nelson Yalta, Tomoki Hayashi, and Shinji Watanabe. 2020. ESPnet-ST: All-in-one speech translation toolkit. In Proceedings of the 58th An- nual Meeting of the Association for Computational Linguistics: System Demonstrations, pages 302- 311, Online. Association for Computational Linguis- tics.",
+                "links": null
+            },
+            "BIBREF23": {
+                "ref_id": "b23",
+                "title": "End-end speech-to-text translation with modality agnostic meta-learning",
+                "authors": [
+                    {
+                        "first": "Sathish",
+                        "middle": [],
+                        "last": "Indurthi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Houjeung",
+                        "middle": [],
+                        "last": "Han",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nikhil",
+                        "middle": [],
+                        "last": "Kumar Lakumarapu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Beomseok",
+                        "middle": [],
+                        "last": "Lee",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Insoo",
+                        "middle": [],
+                        "last": "Chung",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sangha",
+                        "middle": [],
+                        "last": "Kim",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chanwoo",
+                        "middle": [],
+                        "last": "Kim",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "Proceedings of ICASSP",
+                "volume": "",
+                "issue": "",
+                "pages": "7904--7908",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Sathish Indurthi, Houjeung Han, Nikhil Kumar Laku- marapu, Beomseok Lee, Insoo Chung, Sangha Kim, and Chanwoo Kim. 2020. End-end speech-to-text translation with modality agnostic meta-learning. In Proceedings of ICASSP, pages 7904-7908.",
+                "links": null
+            },
+            "BIBREF24": {
+                "ref_id": "b24",
+                "title": "A comparative study on Transformer vs RNN in speech applications",
+                "authors": [
+                    {
+                        "first": "Shigeki",
+                        "middle": [],
+                        "last": "Karita",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nanxin",
+                        "middle": [],
+                        "last": "Chen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tomoki",
+                        "middle": [],
+                        "last": "Hayashi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Takaaki",
+                        "middle": [],
+                        "last": "Hori",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hirofumi",
+                        "middle": [],
+                        "last": "Inaguma",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ziyan",
+                        "middle": [],
+                        "last": "Jiang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Masao",
+                        "middle": [],
+                        "last": "Someki",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nelson",
+                        "middle": [],
+                        "last": "Enrique",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yalta",
+                        "middle": [],
+                        "last": "Soplin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ryuichi",
+                        "middle": [],
+                        "last": "Yamamoto",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xiaofei",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of ASRU",
+                "volume": "",
+                "issue": "",
+                "pages": "499--456",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Shigeki Karita, Nanxin Chen, Tomoki Hayashi, Takaaki Hori, Hirofumi Inaguma, Ziyan Jiang, Masao Someki, Nelson Enrique Yalta Soplin, Ryuichi Yamamoto, Xiaofei Wang, et al. 2019. A comparative study on Transformer vs RNN in speech applications. In Proceedings of ASRU, pages 499-456.",
+                "links": null
+            },
+            "BIBREF25": {
+                "ref_id": "b25",
+                "title": "Simulated multiple reference training improves low-resource machine translation",
+                "authors": [
+                    {
+                        "first": "Huda",
+                        "middle": [],
+                        "last": "Khayrallah",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Brian",
+                        "middle": [],
+                        "last": "Thompson",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Matt",
+                        "middle": [],
+                        "last": "Post",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Philipp",
+                        "middle": [],
+                        "last": "Koehn",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "Proceedings of the 2020 Conference on Empirical Methods in Natural Language Processing (EMNLP)",
+                "volume": "",
+                "issue": "",
+                "pages": "82--89",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Huda Khayrallah, Brian Thompson, Matt Post, and Philipp Koehn. 2020. Simulated multiple reference training improves low-resource machine translation. In Proceedings of the 2020 Conference on Empirical Methods in Natural Language Processing (EMNLP), pages 82-89, Online. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF26": {
+                "ref_id": "b26",
+                "title": "Sequencelevel knowledge distillation",
+                "authors": [
+                    {
+                        "first": "Yoon",
+                        "middle": [],
+                        "last": "Kim",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alexander",
+                        "middle": [
+                            "M"
+                        ],
+                        "last": "Rush",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of the 2016 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "1317--1327",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/D16-1139"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Yoon Kim and Alexander M. Rush. 2016. Sequence- level knowledge distillation. In Proceedings of the 2016 Conference on Empirical Methods in Natu- ral Language Processing, pages 1317-1327, Austin, Texas. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF27": {
+                "ref_id": "b27",
+                "title": "Adam: A method for stochastic optimization",
+                "authors": [
+                    {
+                        "first": "Diederik",
+                        "middle": [],
+                        "last": "Kingma",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jimmy",
+                        "middle": [],
+                        "last": "Ba",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Proceedings of ICLR. Tom Ko, Vijayaditya Peddinti, Daniel Povey, and Sanjeev Khudanpur",
+                "volume": "",
+                "issue": "",
+                "pages": "3586--3589",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Diederik Kingma and Jimmy Ba. 2015. Adam: A method for stochastic optimization. Proceedings of ICLR. Tom Ko, Vijayaditya Peddinti, Daniel Povey, and San- jeev Khudanpur. 2015. Audio augmentation for speech recognition. In Proceedings of Interspeech, pages 3586-3589.",
+                "links": null
+            },
+            "BIBREF28": {
+                "ref_id": "b28",
+                "title": "Moses: Open source toolkit for statistical machine translation",
+                "authors": [
+                    {
+                        "first": "Philipp",
+                        "middle": [],
+                        "last": "Koehn",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hieu",
+                        "middle": [],
+                        "last": "Hoang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alexandra",
+                        "middle": [],
+                        "last": "Birch",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chris",
+                        "middle": [],
+                        "last": "Callison-Burch",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Marcello",
+                        "middle": [],
+                        "last": "Federico",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nicola",
+                        "middle": [],
+                        "last": "Bertoldi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Brooke",
+                        "middle": [],
+                        "last": "Cowan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Wade",
+                        "middle": [],
+                        "last": "Shen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christine",
+                        "middle": [],
+                        "last": "Moran",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Richard",
+                        "middle": [],
+                        "last": "Zens",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chris",
+                        "middle": [],
+                        "last": "Dyer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ond\u0159ej",
+                        "middle": [],
+                        "last": "Bojar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alexandra",
+                        "middle": [],
+                        "last": "Constantin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Evan",
+                        "middle": [],
+                        "last": "Herbst",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2007,
+                "venue": "Proceedings of the 45th Annual Meeting of the Association for Computational Linguistics Companion Volume Proceedings of the Demo and Poster Sessions",
+                "volume": "",
+                "issue": "",
+                "pages": "177--180",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Philipp Koehn, Hieu Hoang, Alexandra Birch, Chris Callison-Burch, Marcello Federico, Nicola Bertoldi, Brooke Cowan, Wade Shen, Christine Moran, Richard Zens, Chris Dyer, Ond\u0159ej Bojar, Alexandra Constantin, and Evan Herbst. 2007. Moses: Open source toolkit for statistical machine translation. In Proceedings of the 45th Annual Meeting of the As- sociation for Computational Linguistics Companion Volume Proceedings of the Demo and Poster Ses- sions, pages 177-180, Prague, Czech Republic. As- sociation for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF29": {
+                "ref_id": "b29",
+                "title": "Subword regularization: Improving neural network translation models with multiple subword candidates",
+                "authors": [
+                    {
+                        "first": "Taku",
+                        "middle": [],
+                        "last": "Kudo",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 56th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "1",
+                "issue": "",
+                "pages": "66--75",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/P18-1007"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Taku Kudo. 2018. Subword regularization: Improving neural network translation models with multiple sub- word candidates. In Proceedings of the 56th Annual Meeting of the Association for Computational Lin- guistics (Volume 1: Long Papers), pages 66-75, Mel- bourne, Australia. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF30": {
+                "ref_id": "b30",
+                "title": "Dualdecoder transformer for joint automatic speech recognition and multilingual speech translation",
+                "authors": [
+                    {
+                        "first": "Hang",
+                        "middle": [],
+                        "last": "Le",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Juan",
+                        "middle": [],
+                        "last": "Pino",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Changhan",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jiatao",
+                        "middle": [],
+                        "last": "Gu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Didier",
+                        "middle": [],
+                        "last": "Schwab",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Laurent",
+                        "middle": [],
+                        "last": "Besacier",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "Proceedings of the 28th International Conference on Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "3520--3533",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/2020.coling-main.314"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Hang Le, Juan Pino, Changhan Wang, Jiatao Gu, Di- dier Schwab, and Laurent Besacier. 2020. Dual- decoder transformer for joint automatic speech recognition and multilingual speech translation. In Proceedings of the 28th International Conference on Computational Linguistics, pages 3520-3533, Barcelona, Spain (Online). International Committee on Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF31": {
+                "ref_id": "b31",
+                "title": "End-to-end speech translation with knowledge distillation",
+                "authors": [
+                    {
+                        "first": "Yuchen",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hao",
+                        "middle": [],
+                        "last": "Xiong",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zhongjun",
+                        "middle": [],
+                        "last": "He",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jiajun",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hua",
+                        "middle": [],
+                        "last": "Wu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Haifeng",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chengqing",
+                        "middle": [],
+                        "last": "Zong",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of Interspeech",
+                "volume": "",
+                "issue": "",
+                "pages": "1128--1132",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Yuchen Liu, Hao Xiong, Zhongjun He, Jiajun Zhang, Hua Wu, Haifeng Wang, and Chengqing Zong. 2019. End-to-end speech translation with knowledge distil- lation. In Proceedings of Interspeech, pages 1128- 1132.",
+                "links": null
+            },
+            "BIBREF32": {
+                "ref_id": "b32",
+                "title": "Synchronous speech recognition and speech-to-text translation with interactive decoding",
+                "authors": [
+                    {
+                        "first": "Yuchen",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jiajun",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hao",
+                        "middle": [],
+                        "last": "Xiong",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Long",
+                        "middle": [],
+                        "last": "Zhou",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zhongjun",
+                        "middle": [],
+                        "last": "He",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hua",
+                        "middle": [],
+                        "last": "Wu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Haifeng",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chengqing",
+                        "middle": [],
+                        "last": "Zong",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "Proceedings of AAAI",
+                "volume": "",
+                "issue": "",
+                "pages": "8417--8424",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Yuchen Liu, Jiajun Zhang, Hao Xiong, Long Zhou, Zhongjun He, Hua Wu, Haifeng Wang, and Chengqing Zong. 2020. Synchronous speech recog- nition and speech-to-text translation with interactive decoding. In Proceedings of AAAI, pages 8417- 8424.",
+                "links": null
+            },
+            "BIBREF33": {
+                "ref_id": "b33",
+                "title": "Paraphrasing revisited with neural machine translation",
+                "authors": [
+                    {
+                        "first": "Jonathan",
+                        "middle": [],
+                        "last": "Mallinson",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Rico",
+                        "middle": [],
+                        "last": "Sennrich",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mirella",
+                        "middle": [],
+                        "last": "Lapata",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Proceedings of the 15th Conference of the European Chapter",
+                "volume": "1",
+                "issue": "",
+                "pages": "881--893",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jonathan Mallinson, Rico Sennrich, and Mirella Lap- ata. 2017. Paraphrasing revisited with neural ma- chine translation. In Proceedings of the 15th Con- ference of the European Chapter of the Association for Computational Linguistics: Volume 1, Long Pa- pers, pages 881-893, Valencia, Spain. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF34": {
+                "ref_id": "b34",
+                "title": "Bleu: a method for automatic evaluation of machine translation",
+                "authors": [
+                    {
+                        "first": "Kishore",
+                        "middle": [],
+                        "last": "Papineni",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Salim",
+                        "middle": [],
+                        "last": "Roukos",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Todd",
+                        "middle": [],
+                        "last": "Ward",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Wei-Jing",
+                        "middle": [],
+                        "last": "Zhu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2002,
+                "venue": "Proceedings of the 40th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "311--318",
+                "other_ids": {
+                    "DOI": [
+                        "10.3115/1073083.1073135"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Kishore Papineni, Salim Roukos, Todd Ward, and Wei- Jing Zhu. 2002. Bleu: a method for automatic eval- uation of machine translation. In Proceedings of the 40th Annual Meeting of the Association for Com- putational Linguistics, pages 311-318, Philadelphia, Pennsylvania, USA. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF35": {
+                "ref_id": "b35",
+                "title": "SpecAugment: A simple data augmentation method for automatic speech recognition",
+                "authors": [
+                    {
+                        "first": "William",
+                        "middle": [],
+                        "last": "Daniel S Park",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yu",
+                        "middle": [],
+                        "last": "Chan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chung-Cheng",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Barret",
+                        "middle": [],
+                        "last": "Chiu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ekin",
+                        "middle": [
+                            "D"
+                        ],
+                        "last": "Zoph",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Quoc V",
+                        "middle": [],
+                        "last": "Cubuk",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Le",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of Interspeech",
+                "volume": "",
+                "issue": "",
+                "pages": "2613--2617",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Daniel S Park, William Chan, Yu Zhang, Chung-Cheng Chiu, Barret Zoph, Ekin D Cubuk, and Quoc V Le. 2019. SpecAugment: A simple data augmentation method for automatic speech recognition. In Pro- ceedings of Interspeech, pages 2613-2617.",
+                "links": null
+            },
+            "BIBREF36": {
+                "ref_id": "b36",
+                "title": "The kaldi speech recognition toolkit",
+                "authors": [
+                    {
+                        "first": "Daniel",
+                        "middle": [],
+                        "last": "Povey",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Arnab",
+                        "middle": [],
+                        "last": "Ghoshal",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Gilles",
+                        "middle": [],
+                        "last": "Boulianne",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Lukas",
+                        "middle": [],
+                        "last": "Burget",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ondrej",
+                        "middle": [],
+                        "last": "Glembek",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nagendra",
+                        "middle": [],
+                        "last": "Goel",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mirko",
+                        "middle": [],
+                        "last": "Hannemann",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Petr",
+                        "middle": [],
+                        "last": "Motlicek",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yanmin",
+                        "middle": [],
+                        "last": "Qian",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Petr",
+                        "middle": [],
+                        "last": "Schwarz",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2011,
+                "venue": "Proceedings of ASRU",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Daniel Povey, Arnab Ghoshal, Gilles Boulianne, Lukas Burget, Ondrej Glembek, Nagendra Goel, Mirko Hannemann, Petr Motlicek, Yanmin Qian, Petr Schwarz, et al. 2011. The kaldi speech recognition toolkit. In Proceedings of ASRU.",
+                "links": null
+            },
+            "BIBREF37": {
+                "ref_id": "b37",
+                "title": "A study of nonautoregressive model for sequence generation",
+                "authors": [
+                    {
+                        "first": "Yi",
+                        "middle": [],
+                        "last": "Ren",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jinglin",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xu",
+                        "middle": [],
+                        "last": "Tan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zhou",
+                        "middle": [],
+                        "last": "Zhao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sheng",
+                        "middle": [],
+                        "last": "Zhao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tie-Yan",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "149--159",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/2020.acl-main.15"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Yi Ren, Jinglin Liu, Xu Tan, Zhou Zhao, Sheng Zhao, and Tie-Yan Liu. 2020. A study of non- autoregressive model for sequence generation. In Proceedings of the 58th Annual Meeting of the As- sociation for Computational Linguistics, pages 149- 159, Online. Association for Computational Linguis- tics.",
+                "links": null
+            },
+            "BIBREF38": {
+                "ref_id": "b38",
+                "title": "Neural machine translation of rare words with subword units",
+                "authors": [
+                    {
+                        "first": "Rico",
+                        "middle": [],
+                        "last": "Sennrich",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Barry",
+                        "middle": [],
+                        "last": "Haddow",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alexandra",
+                        "middle": [],
+                        "last": "Birch",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of the 54th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "1",
+                "issue": "",
+                "pages": "1715--1725",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/P16-1162"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Rico Sennrich, Barry Haddow, and Alexandra Birch. 2016. Neural machine translation of rare words with subword units. In Proceedings of the 54th An- nual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers), pages 1715- 1725, Berlin, Germany. Association for Computa- tional Linguistics.",
+                "links": null
+            },
+            "BIBREF39": {
+                "ref_id": "b39",
+                "title": "A study of translation edit rate with targeted human annotation",
+                "authors": [
+                    {
+                        "first": "Matthew",
+                        "middle": [],
+                        "last": "Snover",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Bonnie",
+                        "middle": [],
+                        "last": "Dorr",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Richard",
+                        "middle": [],
+                        "last": "Schwartz",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Linnea",
+                        "middle": [],
+                        "last": "Micciulla",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "John",
+                        "middle": [],
+                        "last": "Makhoul",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2006,
+                "venue": "Proceedings of association for machine translation in the Americas",
+                "volume": "200",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Matthew Snover, Bonnie Dorr, Richard Schwartz, Lin- nea Micciulla, and John Makhoul. 2006. A study of translation edit rate with targeted human annotation. In Proceedings of association for machine transla- tion in the Americas, volume 200. Cambridge, MA.",
+                "links": null
+            },
+            "BIBREF40": {
+                "ref_id": "b40",
+                "title": "Attention-passing models for robust and data-efficient end-to-end speech translation",
+                "authors": [
+                    {
+                        "first": "Matthias",
+                        "middle": [],
+                        "last": "Sperber",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Graham",
+                        "middle": [],
+                        "last": "Neubig",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jan",
+                        "middle": [],
+                        "last": "Niehues",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alex",
+                        "middle": [],
+                        "last": "Waibel",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Transactions of the Association for Computational Linguistics",
+                "volume": "7",
+                "issue": "",
+                "pages": "313--325",
+                "other_ids": {
+                    "DOI": [
+                        "10.1162/tacl_a_00270"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Matthias Sperber, Graham Neubig, Jan Niehues, and Alex Waibel. 2019. Attention-passing models for ro- bust and data-efficient end-to-end speech translation. Transactions of the Association for Computational Linguistics, 7:313-325.",
+                "links": null
+            },
+            "BIBREF41": {
+                "ref_id": "b41",
+                "title": "Rethinking the inception architecture for computer vision",
+                "authors": [
+                    {
+                        "first": "Christian",
+                        "middle": [],
+                        "last": "Szegedy",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Vincent",
+                        "middle": [],
+                        "last": "Vanhoucke",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sergey",
+                        "middle": [],
+                        "last": "Ioffe",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jon",
+                        "middle": [],
+                        "last": "Shlens",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zbigniew",
+                        "middle": [],
+                        "last": "Wojna",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proc. of CVPR",
+                "volume": "",
+                "issue": "",
+                "pages": "2818--2826",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Christian Szegedy, Vincent Vanhoucke, Sergey Ioffe, Jon Shlens, and Zbigniew Wojna. 2016. Rethinking the inception architecture for computer vision. In Proc. of CVPR, pages 2818-2826.",
+                "links": null
+            },
+            "BIBREF42": {
+                "ref_id": "b42",
+                "title": "Automatic machine translation evaluation in many languages via zero-shot paraphrasing",
+                "authors": [
+                    {
+                        "first": "Brian",
+                        "middle": [],
+                        "last": "Thompson",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Matt",
+                        "middle": [],
+                        "last": "Post",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "Proceedings of the 2020 Conference on Empirical Methods in Natural Language Processing (EMNLP)",
+                "volume": "",
+                "issue": "",
+                "pages": "90--121",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Brian Thompson and Matt Post. 2020. Automatic ma- chine translation evaluation in many languages via zero-shot paraphrasing. In Proceedings of the 2020 Conference on Empirical Methods in Natural Lan- guage Processing (EMNLP), pages 90-121, Online. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF43": {
+                "ref_id": "b43",
+                "title": "Attention is all you need",
+                "authors": [
+                    {
+                        "first": "Ashish",
+                        "middle": [],
+                        "last": "Vaswani",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Noam",
+                        "middle": [],
+                        "last": "Shazeer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Niki",
+                        "middle": [],
+                        "last": "Parmar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jakob",
+                        "middle": [],
+                        "last": "Uszkoreit",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Llion",
+                        "middle": [],
+                        "last": "Jones",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Aidan",
+                        "middle": [
+                            "N"
+                        ],
+                        "last": "Gomez",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "\u0141ukasz",
+                        "middle": [],
+                        "last": "Kaiser",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Illia",
+                        "middle": [],
+                        "last": "Polosukhin",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Advances in neural information processing systems",
+                "volume": "",
+                "issue": "",
+                "pages": "5998--6008",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N Gomez, \u0141ukasz Kaiser, and Illia Polosukhin. 2017. Attention is all you need. In Advances in neural information pro- cessing systems, pages 5998-6008.",
+                "links": null
+            },
+            "BIBREF44": {
+                "ref_id": "b44",
+                "title": "Fairseq S2T: Fast speech-to-text modeling with fairseq",
+                "authors": [
+                    {
+                        "first": "Changhan",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yun",
+                        "middle": [],
+                        "last": "Tang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xutai",
+                        "middle": [],
+                        "last": "Ma",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Anne",
+                        "middle": [],
+                        "last": "Wu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dmytro",
+                        "middle": [],
+                        "last": "Okhonko",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Juan",
+                        "middle": [],
+                        "last": "Pino",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "Proceedings of the 1st Conference of the Asia-Pacific Chapter of the Association for Computational Linguistics and the 10th International Joint Conference on Natural Language Processing: System Demonstrations",
+                "volume": "",
+                "issue": "",
+                "pages": "33--39",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Changhan Wang, Yun Tang, Xutai Ma, Anne Wu, Dmytro Okhonko, and Juan Pino. 2020a. Fairseq S2T: Fast speech-to-text modeling with fairseq. In Proceedings of the 1st Conference of the Asia-Pacific Chapter of the Association for Computational Lin- guistics and the 10th International Joint Conference on Natural Language Processing: System Demon- strations, pages 33-39, Suzhou, China. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF45": {
+                "ref_id": "b45",
+                "title": "A massively multilingual speechto-text translation corpus",
+                "authors": [
+                    {
+                        "first": "Changhan",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Anne",
+                        "middle": [],
+                        "last": "Wu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Juan",
+                        "middle": [],
+                        "last": "Pino",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "",
+                "volume": "2",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:2007.10310"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Changhan Wang, Anne Wu, and Juan Pino. 2020b. CoVoST 2: A massively multilingual speech- to-text translation corpus. arXiv preprint arXiv:2007.10310.",
+                "links": null
+            },
+            "BIBREF46": {
+                "ref_id": "b46",
+                "title": "Bridging the gap between pretraining and fine-tuning for end-to-end speech translation",
+                "authors": [
+                    {
+                        "first": "Chengyi",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yu",
+                        "middle": [],
+                        "last": "Wu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Shujie",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zhenglu",
+                        "middle": [],
+                        "last": "Yang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ming",
+                        "middle": [],
+                        "last": "Zhou",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "Proceedings of AAAI",
+                "volume": "",
+                "issue": "",
+                "pages": "9161--9168",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Chengyi Wang, Yu Wu, Shujie Liu, Zhenglu Yang, and Ming Zhou. 2020c. Bridging the gap between pre- training and fine-tuning for end-to-end speech trans- lation. In Proceedings of AAAI, pages 9161-9168.",
+                "links": null
+            },
+            "BIBREF47": {
+                "ref_id": "b47",
+                "title": "Curriculum pre-training for end-to-end speech translation",
+                "authors": [
+                    {
+                        "first": "Chengyi",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yu",
+                        "middle": [],
+                        "last": "Wu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Shujie",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ming",
+                        "middle": [],
+                        "last": "Zhou",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zhenglu",
+                        "middle": [],
+                        "last": "Yang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "3728--3738",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/2020.acl-main.344"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Chengyi Wang, Yu Wu, Shujie Liu, Ming Zhou, and Zhenglu Yang. 2020d. Curriculum pre-training for end-to-end speech translation. In Proceedings of the 58th Annual Meeting of the Association for Compu- tational Linguistics, pages 3728-3738, Online. As- sociation for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF49": {
+                "ref_id": "b49",
+                "title": "Hybrid CTC/attention architecture for end-to-end speech recognition",
+                "authors": [],
+                "year": null,
+                "venue": "IEEE Journal of Selected Topics in Signal Processing",
+                "volume": "11",
+                "issue": "8",
+                "pages": "1240--1253",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Hybrid CTC/attention architecture for end-to-end speech recognition. IEEE Journal of Selected Topics in Sig- nal Processing, 11(8):1240-1253.",
+                "links": null
+            },
+            "BIBREF50": {
+                "ref_id": "b50",
+                "title": "ParaNMT-50M: Pushing the limits of paraphrastic sentence embeddings with millions of machine translations",
+                "authors": [
+                    {
+                        "first": "Ron",
+                        "middle": [
+                            "J"
+                        ],
+                        "last": "Weiss",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jan",
+                        "middle": [],
+                        "last": "Chorowski",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Navdeep",
+                        "middle": [],
+                        "last": "Jaitly",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yonghui",
+                        "middle": [],
+                        "last": "Wu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zhifeng",
+                        "middle": [],
+                        "last": "Chen",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Proceedings of the 56th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "1",
+                "issue": "",
+                "pages": "451--462",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/P18-1042"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Ron J Weiss, Jan Chorowski, Navdeep Jaitly, Yonghui Wu, and Zhifeng Chen. 2017. Sequence-to- sequence models can directly translate foreign speech. In Proceedings of Interspeech, pages 2625- 2629. John Wieting and Kevin Gimpel. 2018. ParaNMT- 50M: Pushing the limits of paraphrastic sentence em- beddings with millions of machine translations. In Proceedings of the 56th Annual Meeting of the As- sociation for Computational Linguistics (Volume 1: Long Papers), pages 451-462, Melbourne, Australia. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF51": {
+                "ref_id": "b51",
+                "title": "Learning paraphrastic sentence embeddings from back-translated bitext",
+                "authors": [
+                    {
+                        "first": "John",
+                        "middle": [],
+                        "last": "Wieting",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jonathan",
+                        "middle": [],
+                        "last": "Mallinson",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kevin",
+                        "middle": [],
+                        "last": "Gimpel",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Proceedings of the 2017 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "274--285",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/D17-1026"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "John Wieting, Jonathan Mallinson, and Kevin Gimpel. 2017. Learning paraphrastic sentence embeddings from back-translated bitext. In Proceedings of the 2017 Conference on Empirical Methods in Natural Language Processing, pages 274-285, Copenhagen, Denmark. Association for Computational Linguis- tics.",
+                "links": null
+            },
+            "BIBREF52": {
+                "ref_id": "b52",
+                "title": "Reference1 She took our order, and then went to the couple in the booth next to us, and she lowered her voice so much",
+                "authors": [
+                    {
+                        "first": "Chunting",
+                        "middle": [],
+                        "last": "Zhou",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jiatao",
+                        "middle": [],
+                        "last": "Gu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Graham",
+                        "middle": [],
+                        "last": "Neubig",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics: Student Research Workshop",
+                "volume": "",
+                "issue": "",
+                "pages": "113--122",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/P19-2015"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Chunting Zhou, Jiatao Gu, and Graham Neubig. 2019a. Understanding knowledge distillation in non- autoregressive machine translation. In Proceedings of ICLR. Zhong Zhou, Matthias Sperber, and Alexander Waibel. 2019b. Paraphrases as foreign languages in multi- lingual neural machine translation. In Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics: Student Research Work- shop, pages 113-122, Florence, Italy. Association for Computational Linguistics. Reference1 She took our order, and then went to the couple in the booth next to us, and she lowered her voice so much, I had to really strain to hear what she was saying.",
+                "links": null
+            },
+            "BIBREF53": {
+                "ref_id": "b53",
+                "title": "Paraphrase1 (Backward NMT) She picked up our order, and then went to the pair in the niche next to us and lowered her voice so much that I had to really try to understand them. Reference2 And she said \"Yes, that's former Vice President Al Gore and his wife, Tipper",
+                "authors": [],
+                "year": null,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Paraphrase1 (Backward NMT) She picked up our order, and then went to the pair in the niche next to us and lowered her voice so much that I had to really try to understand them. Reference2 And she said \"Yes, that's former Vice President Al Gore and his wife, Tipper.\" And the man said, \"He's come down a long way, hasn't he?\" (Laughter)",
+                "links": null
+            },
+            "BIBREF54": {
+                "ref_id": "b54",
+                "title": "Yes, that's ex-vice President Al Gore and his wife Tipper",
+                "authors": [],
+                "year": null,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Paraphrase2 (Backward NMT) She said, \"Yes, that's ex-vice President Al Gore and his wife Tipper.\" And the man said, \"It's a nice gap, what?\" (Laughter)",
+                "links": null
+            }
+        },
+        "ref_entries": {
+            "TABREF0": {
+                "content": "<table><tr><td>De \u2192 En</td><td>43.49</td><td>38.60</td></tr><tr><td>Fr \u2192 En</td><td>48.55</td><td>34.30</td></tr></table>",
+                "type_str": "table",
+                "text": "Quality of paraphrases in the training set on the shared speech encoder. The training of the NAR decoder is further enhanced with semiautoregressive training (SMART)",
+                "html": null,
+                "num": null
+            },
+            "TABREF2": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "BLEU scores of AR models on Must-C tst-COMMON set. \u2020 (Inaguma et al., 2020), \u2021 (Wanget al., 2020a). Large model trained with eight language pairs(Wang et al., 2020a).",
+                "html": null,
+                "num": null
+            },
+            "TABREF3": {
+                "content": "<table><tr><td>Model</td><td>T</td><td>BLEU (\u2191)</td></tr><tr><td/><td/><td>En-De En-Fr</td></tr><tr><td>Fwd SeqKD</td><td/><td>21.93 30.46</td></tr><tr><td>+ Joint ASR</td><td>4</td><td>22.13 30.80</td></tr><tr><td>Bidir SeqKD</td><td/><td>22.22 31.21</td></tr><tr><td>(Inaguma et al., 2021)</td><td/><td>22.88 32.20</td></tr><tr><td>Fwd SeqKD (ours) + Joint ASR</td><td>10</td><td>22.96 32.42 23.31 32.41</td></tr><tr><td>Bidir SeqKD</td><td/><td>23.41 32.64</td></tr></table>",
+                "type_str": "table",
+                "text": "BLEU scores of NAR models on Must-C tst-COMMON set. All methods used forward SeqKD.",
+                "html": null,
+                "num": null
+            },
+            "TABREF4": {
+                "content": "<table><tr><td/><td colspan=\"2\">Entropy</td></tr><tr><td>Condition</td><td colspan=\"2\">(\u2191 more complex)</td></tr><tr><td/><td>En-De</td><td>En-Fr</td></tr><tr><td>C( -\u2192 D st ) (Real) C( --\u2192 D fwd st ) (Fwd SeqKD) C( ---\u2192 D bwd st ) (Bwd SeqKD) C( ---\u2192 D bidir st ) (Bidir SeqKD)</td><td>0.70 0.52 0.54 0.63</td><td>0.65 0.47 0.47 0.61</td></tr><tr><td>C( \u2190 -D st ) (Real) C( \u2190--D fwd st ) (Fwd SeqKD) C( \u2190 ---D bwd st ) (Bwd SeqKD) C( \u2190 ---D bidir st ) (Bidir SeqKD)</td><td>0.40 0.28 0.25 0.37</td><td>0.54 0.36 0.31 0.49</td></tr><tr><td colspan=\"3\">Table 4: Corpus-level conditional entropy</td></tr><tr><td/><td colspan=\"2\">Faithfulness</td></tr><tr><td>Condition</td><td colspan=\"2\">(\u2193 more faithful)</td></tr><tr><td/><td colspan=\"2\">En-De En-Fr</td></tr><tr><td colspan=\"2\">F( --\u2192 D fwd st ) (Fwd SeqKD) F( ---\u2192 D bwd st ) (Bwd SeqKD) F( ---\u2192 D bidir st ) (Bidir SeqKD) 11.42 12.61 9.31</td><td>11.65 8.67 10.72</td></tr><tr><td colspan=\"2\">F( \u2190--D fwd st ) (Fwd SeqKD) F( \u2190 ---D bwd st ) (Bwd SeqKD) F( \u2190 ---D bidir st ) (Bidir SeqKD) 11.23 9.58 12.97</td><td>8.48 10.70 9.98</td></tr></table>",
+                "type_str": "table",
+                "text": "Faithfulness to training data distribution fast_align 4",
+                "html": null,
+                "num": null
+            },
+            "TABREF5": {
+                "content": "<table><tr><td>Training data</td><td>Target1</td><td>Target2</td><td>BLEU (\u2191)</td></tr><tr><td/><td/><td/><td>En-De En-Fr</td></tr><tr><td colspan=\"4\">D st \u222a D fwd st (B4 + Joint ASR) (Y s , Y t ) (Y s , \u0176 t ) 25.00 35.05 D st \u222a D bidir (Y s , Y t ) ( \u0176 s , \u0176 t ) 25.21 35.17 st D bwd st \u222a D bidir ( \u0176 s , Y t ) ( \u0176 s , \u0176 t ) 25.01 35.22 st D fwd st \u222a D bwd st (C2) ( \u0176 s</td></tr></table>",
+                "type_str": "table",
+                "text": ", Y t ) (Y s , \u0176 t ) 25.28 35.29 Ablation study of dataset concatenation on Must-C tst-COMMON set. 2ref training was used.",
+                "html": null,
+                "num": null
+            },
+            "TABREF6": {
+                "content": "<table><tr><td>Model</td><td>BLEU (\u2191)</td></tr><tr><td/><td>En-De En-Fr</td></tr><tr><td colspan=\"2\">Transformer Large + Fwd SeqKD 25.19 35.47</td></tr><tr><td>+ Bidir SeqKD</td><td>25.62 35.74</td></tr><tr><td>Conformer + Fwd SeqKD</td><td>26.81 37.23</td></tr><tr><td>+ Bidir SeqKD</td><td>27.01 37.33</td></tr><tr><td>Text-based NMT (WER: 0%) \u2020</td><td>27.56 39.09</td></tr></table>",
+                "type_str": "table",
+                "text": "The purpose of5 Both gold translation Y t and distilled translation \u0176 t were always used as target sequences.",
+                "html": null,
+                "num": null
+            },
+            "TABREF7": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "BLEU scores of large AR models on Must-C tst-COMMON set. 2ref training was used. \u2020 Punctuation and case information is removed on the source side.",
+                "html": null,
+                "num": null
+            },
+            "TABREF8": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "Examples of source paraphrases on the Must-C En-De training set",
+                "html": null,
+                "num": null
+            },
+            "TABREF9": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "for all tasks. ASR and E2E-ST models consisted of 12 speech encoder blocks and six decoder blocks. The speech encoders had two CNN blocks with a kernel size of 3 and a channel size of 256 before the first Transformer encoder layer, which resulted in 4fold downsampling in the time and frequency axes. The text encoder in the MT models consisted of six Transformer blocks. The dimensions of the self-attention layer d model and feed-forward network d ff were set to 256 and 2048, respectively, and the number of attention heads H was set to 4. For a large Transformer model configuration, we increased d ff from 256 to 512 and H from 4 to 8. For a Conformer model configuration, we set d model = 256, d ff = 2048, and H = 4. The kernel size of depthwise separable convolution was set to 15. None of the other training or decoding hyperparameters were modified.",
+                "html": null,
+                "num": null
+            },
+            "TABREF11": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "Summary of training configuration. Numbers inside parentheses correspond to Conformer.",
+                "html": null,
+                "num": null
+            },
+            "TABREF12": {
+                "content": "<table><tr><td>I</td><td/><td/><td/></tr><tr><td>= -</td><td colspan=\"3\">p(Y t i |Y s i ) \u2022 log p(Y t i |Y s i )</td></tr><tr><td>i=1</td><td/><td/><td/></tr><tr><td>I</td><td>|Y t i |</td><td>|Y t i |</td><td/></tr><tr><td>\u2248 -</td><td>(</td><td>p(Y t i,k |Y s i )) \u2022</td><td>log p(Y t i,k |Y s i )</td></tr><tr><td>i=1</td><td>k=1</td><td>k=1</td><td/></tr><tr><td>T t</td><td/><td/><td/></tr><tr><td>\u2248 -</td><td/><td colspan=\"2\">p(y t k |Align(y t k )) \u2022 log p(y t k |Align(y t k ))</td></tr><tr><td colspan=\"3\">k=1 y t k \u2208A(Y s i )</td><td/></tr><tr><td>T s</td><td/><td/><td/></tr><tr><td>=</td><td/><td/><td/></tr></table>",
+                "type_str": "table",
+                "text": "t |Y s ) normalized over all samples. H(Y t |Y s ) is defined as H(Y t |Y s )",
+                "html": null,
+                "num": null
+            },
+            "TABREF13": {
+                "content": "<table><tr><td>F( \u2190 -D ) =</td><td>1 |V t |</td></tr></table>",
+                "type_str": "table",
+                "text": "s y t \u2208V t p r (y t |y s ) log p r (y t |y s ) p d (y t |y s ) , t \u2208V t y s \u2208V s p r (y s |y t ) log p r (y s |y t ) p d (y s |y t ) ,",
+                "html": null,
+                "num": null
+            }
+        }
+    }
+}

@@ -1,0 +1,2319 @@
+{
+    "paper_id": "D19-1098",
+    "header": {
+        "generated_with": "S2ORC 1.0.0",
+        "date_generated": "2023-06-16T12:04:18.101401Z"
+    },
+    "title": "Tree Transformer: Integrating Tree Structures into Self-Attention",
+    "authors": [
+        {
+            "first": "Yau-Shian",
+            "middle": [],
+            "last": "Wang",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "National Taiwan University",
+                "location": {
+                    "settlement": "Taipei",
+                    "country": "Taiwan"
+                }
+            },
+            "email": ""
+        },
+        {
+            "first": "Hung-Yi",
+            "middle": [],
+            "last": "Lee",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "National Taiwan University",
+                "location": {
+                    "settlement": "Taipei",
+                    "country": "Taiwan"
+                }
+            },
+            "email": "hungyilee@ntu.edu.twy.v.chen@ieee.org"
+        },
+        {
+            "first": "Yun-Nung",
+            "middle": [],
+            "last": "Chen",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "National Taiwan University",
+                "location": {
+                    "settlement": "Taipei",
+                    "country": "Taiwan"
+                }
+            },
+            "email": ""
+        }
+    ],
+    "year": "",
+    "venue": null,
+    "identifiers": {},
+    "abstract": "Pre-training Transformer from large-scale raw texts and fine-tuning on the desired task have achieved state-of-the-art results on diverse NLP tasks. However, it is unclear what the learned attention captures. The attention computed by attention heads seems not to match human intuitions about hierarchical structures. This paper proposes Tree Transformer, which adds an extra constraint to attention heads of the bidirectional Transformer encoder in order to encourage the attention heads to follow tree structures. The tree structures can be automatically induced from raw texts by our proposed \"Constituent Attention\" module, which is simply implemented by self-attention between two adjacent words. With the same training procedure identical to BERT, the experiments demonstrate the effectiveness of Tree Transformer in terms of inducing tree structures, better language modeling, and further learning more explainable attention scores 1 .",
+    "pdf_parse": {
+        "paper_id": "D19-1098",
+        "_pdf_hash": "",
+        "abstract": [
+            {
+                "text": "Pre-training Transformer from large-scale raw texts and fine-tuning on the desired task have achieved state-of-the-art results on diverse NLP tasks. However, it is unclear what the learned attention captures. The attention computed by attention heads seems not to match human intuitions about hierarchical structures. This paper proposes Tree Transformer, which adds an extra constraint to attention heads of the bidirectional Transformer encoder in order to encourage the attention heads to follow tree structures. The tree structures can be automatically induced from raw texts by our proposed \"Constituent Attention\" module, which is simply implemented by self-attention between two adjacent words. With the same training procedure identical to BERT, the experiments demonstrate the effectiveness of Tree Transformer in terms of inducing tree structures, better language modeling, and further learning more explainable attention scores 1 .",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            }
+        ],
+        "body_text": [
+            {
+                "text": "Human languages exhibit a rich hierarchical structure which is currently not exploited nor mirrored by the self-attention mechanism that is the core of the now popular Transformer architecture. Prior work that integrated hierarchical structure into neural networks either used recursive neural networks (Tree-RNNs) (C. Goller and A.Kuchler, 1996; Socher et al., 2011; Tai et al., 2015) or simultaneously generated a syntax tree and language in RNN (Dyer et al., 2016) , which have shown beneficial for many downstream tasks (Aharoni and Goldberg, 2017; Eriguchi et al., 2017; Strubell et al., 2018; Zaremoodi and Haffari, 2018) . Considering the requirement of the annotated parse trees and the 1 The source code is publicly available at https:// github.com/yaushian/Tree-Transformer.",
+                "cite_spans": [
+                    {
+                        "start": 319,
+                        "end": 346,
+                        "text": "Goller and A.Kuchler, 1996;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 347,
+                        "end": 367,
+                        "text": "Socher et al., 2011;",
+                        "ref_id": "BIBREF21"
+                    },
+                    {
+                        "start": 368,
+                        "end": 385,
+                        "text": "Tai et al., 2015)",
+                        "ref_id": "BIBREF23"
+                    },
+                    {
+                        "start": 448,
+                        "end": 467,
+                        "text": "(Dyer et al., 2016)",
+                        "ref_id": "BIBREF8"
+                    },
+                    {
+                        "start": 524,
+                        "end": 552,
+                        "text": "(Aharoni and Goldberg, 2017;",
+                        "ref_id": "BIBREF0"
+                    },
+                    {
+                        "start": 553,
+                        "end": 575,
+                        "text": "Eriguchi et al., 2017;",
+                        "ref_id": "BIBREF9"
+                    },
+                    {
+                        "start": 576,
+                        "end": 598,
+                        "text": "Strubell et al., 2018;",
+                        "ref_id": "BIBREF22"
+                    },
+                    {
+                        "start": 599,
+                        "end": 627,
+                        "text": "Zaremoodi and Haffari, 2018)",
+                        "ref_id": "BIBREF29"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "costly annotation effort, most prior work relied on the supervised syntactic parser. However, a supervised parser may be unavailable when the language is low-resourced or the target data has different distribution from the source domain.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Therefore, the task of learning latent tree structures without human-annotated data, called grammar induction (Carroll and Charniak, 1992; Klein and Manning, 2002; Smith and Eisner, 2005) , has become an important problem and attractd more attention from researchers recently. Prior work mainly focused on inducing tree structures from recurrent neural networks (Shen et al., 2018a,b) or recursive neural networks (Yogatama et al., 2017; Drozdov et al., 2019) , while integrating tree structures into Transformer remains an unexplored direction.",
+                "cite_spans": [
+                    {
+                        "start": 110,
+                        "end": 138,
+                        "text": "(Carroll and Charniak, 1992;",
+                        "ref_id": "BIBREF2"
+                    },
+                    {
+                        "start": 139,
+                        "end": 163,
+                        "text": "Klein and Manning, 2002;",
+                        "ref_id": "BIBREF13"
+                    },
+                    {
+                        "start": 164,
+                        "end": 187,
+                        "text": "Smith and Eisner, 2005)",
+                        "ref_id": "BIBREF20"
+                    },
+                    {
+                        "start": 362,
+                        "end": 384,
+                        "text": "(Shen et al., 2018a,b)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 414,
+                        "end": 437,
+                        "text": "(Yogatama et al., 2017;",
+                        "ref_id": "BIBREF28"
+                    },
+                    {
+                        "start": 438,
+                        "end": 459,
+                        "text": "Drozdov et al., 2019)",
+                        "ref_id": "BIBREF7"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Pre-training Transformer from large-scale raw texts successfully learns high-quality language representations. By further fine-tuning pre-trained Transformer on desired tasks, wide range of NLP tasks obtain the state-of-the-art results (Radford et al., 2019; Devlin et al., 2018; Dong et al., 2019) . However, what pre-trained Transformer self-attention heads capture remains unknown. Although an attention can be easily explained by observing how words attend to each other, only some distinct patterns such as attending previous words or named entities can be found informative (Vig, 2019) . The attention matrices do not match our intuitions about hierarchical structures.",
+                "cite_spans": [
+                    {
+                        "start": 236,
+                        "end": 258,
+                        "text": "(Radford et al., 2019;",
+                        "ref_id": "BIBREF17"
+                    },
+                    {
+                        "start": 259,
+                        "end": 279,
+                        "text": "Devlin et al., 2018;",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 280,
+                        "end": 298,
+                        "text": "Dong et al., 2019)",
+                        "ref_id": "BIBREF6"
+                    },
+                    {
+                        "start": 580,
+                        "end": 591,
+                        "text": "(Vig, 2019)",
+                        "ref_id": "BIBREF24"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "In order to make the attention learned by Transformer more interpretable and allow Transformer to comprehend language hierarchically, we propose Tree Transformer, which integrates tree structures into bidirectional Transformer encoder. At each layer, words are constrained to attend to other words in the same constituents. This constraint has been proven to be effective in prior work (Wu et al., 2018) . Different from the prior work that required a supervised parser, in Tree Transformer, the constituency tree structures is automatically induced from raw texts by our proposed \"Constituent Attention\" module, which is simply implemented by self-attention. Motivated by Tree-RNNs, which compose each phrase and the sentence representation from its constituent sub-phrases, Tree Transformer gradually attaches several smaller constituents into larger ones from lower layers to higher layers.",
+                "cite_spans": [
+                    {
+                        "start": 386,
+                        "end": 403,
+                        "text": "(Wu et al., 2018)",
+                        "ref_id": "BIBREF26"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "The contributions of this paper are 3-fold:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "\u2022 Our proposed Tree Transformer is easy to implement, which simply inserts an additional \"Constituent Attention\" module implemented by self-attention to the original Transformer encoder, and achieves good performance on the unsupervised parsing task.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "\u2022 As the induced tree structures guide words to compose the meaning of longer phrases hierarchically, Tree Transformer improves the perplexity on masked language modeling compared to the original Transformer.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "\u2022 The behavior of attention heads learned by Tree Transformer expresses better interpretability, because they are constrained to follow the induced tree structures. By visualizing the self-attention matrices, our model provides the information that better matchs the human intuition about hierarchical structures than the original Transformer.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "This section reviews the recent progress about grammar induction. Grammar induction is the task of inducing latent tree structures from raw texts without human-annotated data. The models for grammar induction are usually trained on other target tasks such as language modeling. To obtain better performance on the target tasks, the models have to induce reasonable tree structures and utilize the induced tree structures to guide text encoding in a hierarchical order. One prior attempt formulated this problem as a reinforcement learning (RL) problem (Yogatama et al., 2017) , where the unsupervised parser is an actor in RL and the parsing operations are regarded as its actions. The actor manages to maximize total rewards, which are the performance of downstream tasks. PRPN (Shen et al., 2018a) and On-LSTM (Shen et al., 2018b) induce tree structures by introducing a bias to recurrent neural networks. PRPN proposes a parsing network to compute the syntactic distance of all word pairs, and a reading network utilizes the syntactic structure to attend relevant memories. On-LSTM allows hidden neurons to learn long-term or short-term information by the proposed new gating mechanism and new activation function. In URNNG (Kim et al., 2019b) , they applied amortized variational inference between a recurrent neural network grammar (RNNG) (Dyer et al., 2016) decoder and a tree structures inference network, which encourages the decoder to generate reasonable tree structures. DIORA (Drozdov et al., 2019) proposed using inside-outside dynamic programming to compose latent representations from all possible binary trees. The representations of inside and outside passes from same sentences are optimized to be close to each other. Compound PCFG (Kim et al., 2019a) achieves grammar induction by maximizing the marginal likelihood of the sentences which are generated by a probabilistic context-free grammar (PCFG) in a corpus.",
+                "cite_spans": [
+                    {
+                        "start": 552,
+                        "end": 575,
+                        "text": "(Yogatama et al., 2017)",
+                        "ref_id": "BIBREF28"
+                    },
+                    {
+                        "start": 779,
+                        "end": 799,
+                        "text": "(Shen et al., 2018a)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 812,
+                        "end": 832,
+                        "text": "(Shen et al., 2018b)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 1227,
+                        "end": 1246,
+                        "text": "(Kim et al., 2019b)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 1344,
+                        "end": 1363,
+                        "text": "(Dyer et al., 2016)",
+                        "ref_id": "BIBREF8"
+                    },
+                    {
+                        "start": 1488,
+                        "end": 1510,
+                        "text": "(Drozdov et al., 2019)",
+                        "ref_id": "BIBREF7"
+                    },
+                    {
+                        "start": 1751,
+                        "end": 1770,
+                        "text": "(Kim et al., 2019a)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "Given a sentence as input, Tree Transformer induces a tree structure. A 3-layer Tree Transformer is illustrated in Figure 1 The words in different constituents are constrained to not attend to each other. In the 0th layer, some neighboring words are merged into constituents; for example, given the sentence \"the cute dog is wagging its tail\", the tree Transformer automatically determines that \"cute\" and \"dog\" form a constituent, while \"its\" and \"tail\" also form one. The two neighboring constituents may merge together in the next layer, so the sizes of constituents gradually grow from layer to layer. In the top layer, the layer 2, all words are grouped into the same constituent. Because all words are into the same constituent, the attention heads freely attend to any other words, in this layer, Tree Transformer behaves the same as the typical Transformer encoder. Tree Transformer can be trained in an end-to-end fashion by using \"masked LM\", which is one of the unsupervised training task used for BERT training.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 122,
+                        "end": 123,
+                        "text": "1",
+                        "ref_id": "FIGREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Tree Transformer",
+                "sec_num": "3"
+            },
+            {
+                "text": "Whether two words belonging to the same constituent is determined by \"Constituent Prior\" that guides the self-attention. Constituent Prior is detailed in Section 4, which is computed by the proposed Constituent Attention module in Section 5. By using BERT masked language model as training, latent tree structures emerge from Constituent Prior and unsupervised parsing is thereby achieved. The method for extracting the constituency parse trees from Tree Transformer is described in Section 6.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Tree Transformer",
+                "sec_num": "3"
+            },
+            {
+                "text": "In each layer of Transformer, there are a query matrix Q consisting of query vectors with dimension d k and a key matrix K consisting of key vectors with dimension d k . The attention probability matrix is denoted as E, which is an N by N matrix, where N is the number of words in an input sentence. E i,j is the probability that the position i attends to the position j. The Scaled Dot-Product Attention computes the E as:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Constituent Prior",
+                "sec_num": "4"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "E = softmax( QK T d ),",
+                        "eq_num": "(1)"
+                    }
+                ],
+                "section": "Constituent Prior",
+                "sec_num": "4"
+            },
+            {
+                "text": "where the dot-product is scaled by 1/d. In Transformer, the scaling factor d is set to be \u221a d k . In Tree Transformer, the E is not only determined by the query matrix Q and key matrix K, but also guided by Constituent Prior C generating from Constituent Attention module. Same as E, the constituent prior C is also a N by N matrix, where C i,j is the probability that word w i and word w j belong to the same constituency. This matrix is symmetric that C i,j is same as C j,i . Each layer has its own Constituent Prior C. An example of Constituent Prior C is illustrated in Figure 1 (C), which indicates that in layer 1, \"the cute dog\" and \"is wagging its tail\" are two constituents.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Constituent Prior",
+                "sec_num": "4"
+            },
+            {
+                "text": "To make each position not attend to the position in different constituents, Tree Transformer constrains the attention probability matrix E by constituent prior C as below,",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Constituent Prior",
+                "sec_num": "4"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "E = C softmax( QK T d ),",
+                        "eq_num": "(2)"
+                    }
+                ],
+                "section": "Constituent Prior",
+                "sec_num": "4"
+            },
+            {
+                "text": "where is the element-wise multiplication. Therefore, if C i,j has small value, it indicates that the positions i and j belong to different constituents, where the attention weight E i,j would be small. As Transformer uses multi-head attention with h different heads, there are h different query matrices Q and key matrices K at each position, but here in the same layer, all attention heads in multi-head attention share the same C. The multihead attention module produces the output of dimension",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Constituent Prior",
+                "sec_num": "4"
+            },
+            {
+                "text": "d model = h \u00d7 d k .",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Constituent Prior",
+                "sec_num": "4"
+            },
+            {
+                "text": "The proposed Constituent Attention module is to generate the constituent prior C. Instead of directly generating C, we decompose the problem into estimating the breakpoints between constituents, or the probability that two adjacent words belong to the same constituent. In each layer, the Constituent Attention module generates a sequence a = {a 1 , ..., a i , ..., a N }, where a i is the probability that the word w i and its neighbor word w i+1 are in the same constituent. The small value of a i implies that there is a breakpoint between w i and w i+1 , so the constituent prior C is obtained from the sequence a as follows. C i,j is the multiplication of all a i k<j between word w i and word w j :",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Constituent Attention",
+                "sec_num": "5"
+            },
+            {
+                "text": "C i,j = j-1 k=i a k .",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Constituent Attention",
+                "sec_num": "5"
+            },
+            {
+                "text": "(3)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Constituent Attention",
+                "sec_num": "5"
+            },
+            {
+                "text": "In (3), we choose to use multiplication instead of summation, because if one of a i k<j between two words w i and w j is small, the value of C i,j with multiplication also becomes small. In implementation, to avoid probability vanishing, we use logsum instead of directly multiplying all a:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Constituent Attention",
+                "sec_num": "5"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "C i,j = e j-1 k=i log(a k ) .",
+                        "eq_num": "(4)"
+                    }
+                ],
+                "section": "Constituent Attention",
+                "sec_num": "5"
+            },
+            {
+                "text": "The sequence a is obtained based on the following two mechanisms: Neighboring Attention and Hierarchical Constraint.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Constituent Attention",
+                "sec_num": "5"
+            },
+            {
+                "text": "We compute the score s i,i+1 indicating that w i links to w i+1 by scaled dot-product attention:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Neighboring Attention",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "s i,i+1 = q i \u2022 k i+1 d ,",
+                        "eq_num": "(5)"
+                    }
+                ],
+                "section": "Neighboring Attention",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "where q i is a link query vector of w i with d model dimensions, and k i+1 is a link key vector of w i+1 with d model dimensions. We use q i \u2022 k i+1 to represent the tendency that w i and w i+1 belong to the same constituent. Here, we set the scaling factor d to be d model 2 . The query and key vectors in (5) are different from (1). They are computed by the same network architecture, but with different sets of network parameters.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Neighboring Attention",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "For each word, we constrain it to either link to its right neighbor or left neighbor as illustrated in Figure 2 . This constraint is implemented by applying a softmax function to two attention links of w i :",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 110,
+                        "end": 111,
+                        "text": "2",
+                        "ref_id": "FIGREF2"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Neighboring Attention",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "p i,i+1 , p i,i-1 = softmax(s i,i+1 , s i,i-1 ),",
+                        "eq_num": "(6)"
+                    }
+                ],
+                "section": "Neighboring Attention",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "where p i,i+1 is the probability that w i attends to w i+1 , and (p i,i+1 + p i,i-1 ) = 1. We find that without the constraint of the softmax operation in (6) the model prefers to link all words together and assign all words to the same constituency. That is, giving both s i,i+1 and s i,i-1 large values, so the attention head freely attends to any position without restriction of constituent prior, which is the same as the original Transformer. Therefore, the softmax function is to constraint the attention to be sparse.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Neighboring Attention",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "As p i,i+1 and p i+1,i may have different values, we average its two attention links:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Neighboring Attention",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "\u00e2i = p i,i+1 \u00d7 p i+1,i .",
+                        "eq_num": "(7)"
+                    }
+                ],
+                "section": "Neighboring Attention",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "The \u00e2i links two adjacent words only if two words attend to each other. \u00e2i is used in the next subsection to obtain a i .",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Neighboring Attention",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "As mentioned in Section 3, constituents in the lower layer merge into larger one in the higher layer. That is, once two words belong to the same constituent in the lower layer, they would still belong to the same constituent in the higher layer. To apply the hierarchical constraint to the tree Transformer, we restrict a l k to be always larger than a l-1 k for the layer l and word index k. Hence, at the layer l, the link probability a l k is set as:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Hierarchical Constraint",
+                "sec_num": "5.2"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "a l k = a l-1 k + (1 -a l-1 k )\u00e2 l k ,",
+                        "eq_num": "(8)"
+                    }
+                ],
+                "section": "Hierarchical Constraint",
+                "sec_num": "5.2"
+            },
+            {
+                "text": "where a l-1 k is the link probability from the previous layer l -1, and \u00e2l k is obtained from Neighboring Attention (Section 5.1) of the current layer l. Finally, at the layer l, we apply (4) for computing C l from a l . Initially, different words are regarded as different constituents, and thus we initialize a -1 k as zero.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Hierarchical Constraint",
+                "sec_num": "5.2"
+            },
+            {
+                "text": "After training, the neighbor link probability a can be used for unsupervised parsing. The small value of a suggests this link be the breakpoint of two constituents. By top-down greedy parsing (Shen et al., 2018a) , which recursively splits the sentence into two constituents with minimum a, a parse tree can be formed. However, because each layer has a set of a l , we have to decide to use which layer for parsing. Instead of using a from a specific layer for parsing return (tree1, tree2) Return tree (Shen et al., 2018b) , we propose a new parsing algorithm, which utilizes a from all layers for unsupervised parsing. As mentioned in Section 5.2, the values of a are strictly increasing, which indicates that a directly learns the hierarchical structures from layer to layer. Algorithm 1 details how we utilize hierarchical information of a for unsupervised parsing.",
+                "cite_spans": [
+                    {
+                        "start": 192,
+                        "end": 212,
+                        "text": "(Shen et al., 2018a)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 503,
+                        "end": 523,
+                        "text": "(Shen et al., 2018b)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Unsupervised Parsing from Tree Transformer",
+                "sec_num": "6"
+            },
+            {
+                "text": "The unsupervised parsing starts from the top layer, and recursively moves down to the last layer after finding a breakpoint until reaching the bottom layer m. The bottom layer m is a hyperparameter needed to be tuned, and is usually set to 2 or 3. We discard a from layers below m, because we find the lowest few layers do not learn good representations (Liu et al., 2019) and thus the parsing results are poor (Shen et al., 2018b) . All values of a on top few layers are very close to 1, suggesting that those are not good breakpoints. Therefore, we set a threshold for deciding a breakpoint, where a minimum a will be viewed as a valid breakpoint only if its value is below the threshold. As we find that our model is not very sensitive to the threshold value, we set it to be 0.8 for all experiments.",
+                "cite_spans": [
+                    {
+                        "start": 354,
+                        "end": 372,
+                        "text": "(Liu et al., 2019)",
+                        "ref_id": "BIBREF15"
+                    },
+                    {
+                        "start": 411,
+                        "end": 431,
+                        "text": "(Shen et al., 2018b)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Unsupervised Parsing from Tree Transformer",
+                "sec_num": "6"
+            },
+            {
+                "text": "In order to evaluate the performance of our proposed model, we conduct the experiments detailed below.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "7"
+            },
+            {
+                "text": "Our model is built upon a bidirectional Transformer encoder. The implementation of our Transformer encoder is identical to the original Transformer encoder. For all experiments, we set the hidden size d model of Constituent Attention and Transformer as 512, the number of self-attention heads h as 8, the feed-forward size as 2048 and the dropout rate as 0.1. We analyze and discuss the sensitivity of the number of layers, denoted as L, in the following experiments.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model Architecture",
+                "sec_num": "7.1"
+            },
+            {
+                "text": "In this section, we evaluate the performance of our model on unsupervised constituency parsing. Our model is trained on WSJ training set and WSJ-all (i.e. including testing and validation sets) by using BERT Masked LM (Devlin et al., 2018) as unsupervised training task. We use WordPiece (Wu et al., 2016) tokenizer from BERT to tokenize words with a 16k token vocabulary. Our best result is optimized by adam with a learning rate of 0.0001, \u03b2 1 = 0.9 and \u03b2 2 = 0.98. Following the evaluation settings of prior work (Htut et al., 2018; Shen et al., 2018b) 2 , we evaluate F1 scores of our model on WSJ-test and WSJ-10 of Penn Treebank (PTB) (Marcus et al., 1993) . The WSJ-10 has 7422 sentences from whole PTB with sentence length restricted to 10 after punctuation removal, while WSJ-test has 2416 sentences from the PTB testing set with unrestricted sentence length.",
+                "cite_spans": [
+                    {
+                        "start": 218,
+                        "end": 239,
+                        "text": "(Devlin et al., 2018)",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 288,
+                        "end": 305,
+                        "text": "(Wu et al., 2016)",
+                        "ref_id": "BIBREF27"
+                    },
+                    {
+                        "start": 516,
+                        "end": 535,
+                        "text": "(Htut et al., 2018;",
+                        "ref_id": "BIBREF10"
+                    },
+                    {
+                        "start": 536,
+                        "end": 555,
+                        "text": "Shen et al., 2018b)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 641,
+                        "end": 662,
+                        "text": "(Marcus et al., 1993)",
+                        "ref_id": "BIBREF16"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Grammar Induction",
+                "sec_num": "7.2"
+            },
+            {
+                "text": "The results on WSJ-test are in Table 1 . We mainly compare our model to PRPN (Shen et al., 2018a) , On-lstm (Shen et al., 2018b) and Compound PCFG(C-PCFG) (Kim et al., 2019a) , in which the evaluation settings and the training data are identical to our model. DIORA (Drozdov et al., 2019) and URNNG (Kim et al., 2019b) The F1 scores on WSJ-test. Tree Transformer is abbreviated as Tree-T, and L is the number of layers(blocks). DIORA is trained on multi-NLI dataset (Williams et al., 2018) . URNNG is trained on the subset of one billion words (Chelba et al., 2013) with 1M training data. LB and RB are the left and right-brancing baselines. increasing the layer number results in better performance, because it allows the Tree Transformer to model deeper trees. However, the performance stops growing when the depth is above 10. The words in the layers above the certain layer are all grouped into the same constituent, and therefore increasing the layer number will no longer help model discover useful tree structures. In Table 2, we report the results on WSJ-10. Some of the baselines including CCM (Klein and Manning, 2002) , DMV+CCM (Klein and Manning, 2005) and UML-DOP (Bod, 2006) are not directly comparable to our model, because they are trained using POS tags our model does not consider.",
+                "cite_spans": [
+                    {
+                        "start": 77,
+                        "end": 97,
+                        "text": "(Shen et al., 2018a)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 108,
+                        "end": 128,
+                        "text": "(Shen et al., 2018b)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 155,
+                        "end": 174,
+                        "text": "(Kim et al., 2019a)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 266,
+                        "end": 288,
+                        "text": "(Drozdov et al., 2019)",
+                        "ref_id": "BIBREF7"
+                    },
+                    {
+                        "start": 299,
+                        "end": 318,
+                        "text": "(Kim et al., 2019b)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 466,
+                        "end": 489,
+                        "text": "(Williams et al., 2018)",
+                        "ref_id": "BIBREF25"
+                    },
+                    {
+                        "start": 544,
+                        "end": 565,
+                        "text": "(Chelba et al., 2013)",
+                        "ref_id": "BIBREF4"
+                    },
+                    {
+                        "start": 1103,
+                        "end": 1128,
+                        "text": "(Klein and Manning, 2002)",
+                        "ref_id": "BIBREF13"
+                    },
+                    {
+                        "start": 1139,
+                        "end": 1164,
+                        "text": "(Klein and Manning, 2005)",
+                        "ref_id": "BIBREF14"
+                    },
+                    {
+                        "start": 1177,
+                        "end": 1188,
+                        "text": "(Bod, 2006)",
+                        "ref_id": "BIBREF1"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 37,
+                        "end": 38,
+                        "text": "1",
+                        "ref_id": "TABREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Grammar Induction",
+                "sec_num": "7.2"
+            },
+            {
+                "text": "In addition, we further investigate what kinds of trees are induced by our model. Following URNNG, we evaluate the performance of con- stituents by its label in Table 3 . The trees induced by different methods are quite different.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 167,
+                        "end": 168,
+                        "text": "3",
+                        "ref_id": "TABREF3"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Grammar Induction",
+                "sec_num": "7.2"
+            },
+            {
+                "text": "Our model is inclined to discover noun phrases (NP) and adverb phrases (ADVP), but not easy to discover verb phrases (VP) or adjective phrases (ADJP). We show an induced parse tree in Figure 3 and more induced parse trees can be found in Appendix.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 191,
+                        "end": 192,
+                        "text": "3",
+                        "ref_id": "FIGREF3"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Grammar Induction",
+                "sec_num": "7.2"
+            },
+            {
+                "text": "In this section, we study whether Tree Transformer learns hierarchical structures from layers to layers. First, we analyze the influence of the hyperparameter minimum layer m in Algorithm. 1 given the model trained on WSJ-all in Table 1 . As illustrated in Figure 4 (a), setting m to be 3 yields the best performance. Prior work discovered that the representations from the lower layers of Transformer are not informative (Liu et al., 2019) . Therefore, using syntactic structures from lower layers decreases the quality of parse trees. On the other hand, most syntactic information is missing when a from top few layers are close to 1, so too large m also decreases the performance.",
+                "cite_spans": [
+                    {
+                        "start": 422,
+                        "end": 440,
+                        "text": "(Liu et al., 2019)",
+                        "ref_id": "BIBREF15"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 235,
+                        "end": 236,
+                        "text": "1",
+                        "ref_id": "TABREF1"
+                    },
+                    {
+                        "start": 264,
+                        "end": 265,
+                        "text": "4",
+                        "ref_id": "FIGREF5"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Analysis of Induced Structures",
+                "sec_num": "7.3"
+            },
+            {
+                "text": "To further analyze which layer contains richer information of syntactic structures, we evaluate the performance on obtaining parse trees from a specific layer. We use a l from the layer l for parsing with the top-down greedy parsing algorithm (Shen et al., 2018a) . As shown in Figure 4(b) , using a 3 from the layer 3 for parsing yields the best F1 score, which is 49.07. The result is consistent to the best value of m. However, compared to our best result (52.0) obtained by Algorithm 1, the F1-score decreases by 3 (52.0 \u2192 49.07). This demonstrates the effectiveness of Tree Transformer in terms of learning hierarchical structures. The higher layers indeed capture the higher-level syntactic structures such as clause patterns.",
+                "cite_spans": [
+                    {
+                        "start": 243,
+                        "end": 263,
+                        "text": "(Shen et al., 2018a)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 278,
+                        "end": 289,
+                        "text": "Figure 4(b)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Analysis of Induced Structures",
+                "sec_num": "7.3"
+            },
+            {
+                "text": "This section discusses whether the attention heads in Tree Transformer learn hierarchical structures. Considering that the most straightforward way of interpreting what attention heads learn is to visualize the attention scores, we plot the heat maps of Constituent Attention prior C from each layer in Figure 5 .",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 310,
+                        "end": 311,
+                        "text": "5",
+                        "ref_id": "FIGREF7"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Interpretable Self-Attention",
+                "sec_num": "7.4"
+            },
+            {
+                "text": "In the heat map of constituent prior from first layer (Figure 5 (a)), as the size of constituent is small, the words only attend to its adjacent words. We can observe that the model captures some subphrase structures, such as the noun phrase \"delta air line\" or \"american airlines unit\". In , the constituents attach to each other and become larger. In the layer 6, the words from \"involved\" to last word \"lines\" form a high-level adjective phrase (ADJP). In the layer 9, all words are grouped into a large constituent except the first word \"but\". By visualizing the heat maps of the constituent prior from each layer, we can easily know what types of syntactic structures are learned in each layer. The parse tree of this example can be found in Figure 3 of Appendix. We also visualize the heat maps of self-attention from the original Transformer layers and one from the Tree Transformer layers in Appendix A. As the selfattention heads from our model are constrained by the constituent prior, compared to the original Transformer, we can discover hierarchical structures more easily.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 62,
+                        "end": 63,
+                        "text": "5",
+                        "ref_id": "FIGREF7"
+                    },
+                    {
+                        "start": 754,
+                        "end": 755,
+                        "text": "3",
+                        "ref_id": "FIGREF3"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Interpretable Self-Attention",
+                "sec_num": "7.4"
+            },
+            {
+                "text": "Those attention heat maps demonstrate that: (1) the size of constituents gradually grows from layer to layer, and (2) at each layer, the attention heads tend to attend to other words within constituents posited in that layer. Those two evidences support the success of the proposed Tree Transformer in terms of learning tree-like structures. ",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Interpretable Self-Attention",
+                "sec_num": "7.4"
+            },
+            {
+                "text": "To investigate the capability of Tree Transformer in terms of capturing abstract concepts and syntactic knowledge, we evaluate the performance on language modeling. As our model is a bidirectional encoder, in which the model can see its subsequent words, we cannot evaluate the language model in a left-to-right manner. We evaluate the performance on masked language modeling by measuring the perplexity on masked words 3 . To perform the inference without randomness, for each sentence in the testing set, we mask all words in the sentence, but not at once. In each masked testing data, only one word is replaced with a \"[MASK]\" token. Therefore, each sentence creates the number of testing samples equal to its 3 The perplexity of masked words is e log(p) n mask , where p is the probability of correct masked word to be predicted and n mask is the total number of masked words.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Masked Language Modeling",
+                "sec_num": "7.5"
+            },
+            {
+                "text": "In Table 4 , the models are trained on WSJ-train with BERT masked LM and evaluated on WSJtest. All hyperparameters except the number of layers in Tree Transformer and Transformer are set to be the same and optimized by the same optimizer. We use adam as our optimizer with learning rate of 0.0001, \u03b2 1 = 0.9 and \u03b2 2 = 0.999. Our proposed Constituent Attention module increases about 10% hyperparameters to the original Transformer encoder and the computational speed is 1.2 times slower. The results with best performance on validation set are reported. Compared to the original Transformer, Tree Transformer achieves better performance on masked language modeling. As the performance gain is possibly due to more parameters, we adjust the number of layers or increase the number of hidden layers in Transformer L = 10 -B. Even with fewer parameters than Transformer, Tree Transformer still performs bet-ter.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 9,
+                        "end": 10,
+                        "text": "4",
+                        "ref_id": "TABREF4"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "length.",
+                "sec_num": null
+            },
+            {
+                "text": "The performance gain is because the induced tree structures guide the self-attention processes language in a more straightforward and humanlike manner, and thus the knowledge can be better generalized from training data to testing data. Also, Tree Transformer acquires positional information not only from positional encoding but also from the induced tree structures, where the words attend to other words from near to distant (lower layers to higher layers)4 .",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "length.",
+                "sec_num": null
+            },
+            {
+                "text": "It is worth mentioning that we have tried to initialize our Transformer model with pre-trained BERT, and then fine-tuning on WSJ-train. However, in this setting, even when the training loss becomes lower than the loss of training from scratch, the parsing result is still far from our best results. This suggests that the attention heads in pre-trained BERT learn quite different structures from the tree-like structures in Tree Transformer. In addition, with a well-trained Transformer, it is not necessary for the Constituency Attention module to induce reasonable tree structures, because the training loss decreases anyway.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Limitations and Discussion",
+                "sec_num": "7.6"
+            },
+            {
+                "text": "This paper proposes Tree Transformer, a first attempt of integrating tree structures into Transformer by constraining the attention heads to attend within constituents. The tree structures are automatically induced from the raw texts by our proposed Constituent Attention module, which attaches the constituents to each other by selfattention. The performance on unsupervised parsing demonstrates the effectiveness of our model in terms of inducing tree structures coherent to human expert annotations. We believe that incorporating tree structures into Transformer is an important and worth exploring direction, because it allows Transformer to learn more interpretable attention heads and achieve better language modeling. The interpretable attention can better explain how the model processes the natural language and guide the future improvement.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion",
+                "sec_num": "8"
+            },
+            {
+                "text": "https://github.com/yikangshen/ Ordered-Neurons",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "We do not remove the positional encoding from the Transformer and we find that without positional encoding the quality of induced parse trees drops.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            }
+        ],
+        "back_matter": [
+            {
+                "text": "We would like to thank reviewers for their insightful comments. This work was financially supported from the Young Scholar Fellowship Program by Ministry of Science and Technology (MOST) in Taiwan, under Grant 108-2636-E002-003.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Acknowledgements",
+                "sec_num": null
+            }
+        ],
+        "bib_entries": {
+            "BIBREF0": {
+                "ref_id": "b0",
+                "title": "Towards string-to-tree neural machine translation",
+                "authors": [
+                    {
+                        "first": "Roee",
+                        "middle": [],
+                        "last": "Aharoni",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yoav",
+                        "middle": [],
+                        "last": "Goldberg",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Proceedings of the 55th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "2",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Roee Aharoni and Yoav Goldberg. 2017. Towards string-to-tree neural machine translation. In Pro- ceedings of the 55th Annual Meeting of the Associa- tion for Computational Linguistics (Volume 2: Short Papers).",
+                "links": null
+            },
+            "BIBREF1": {
+                "ref_id": "b1",
+                "title": "An all-subtrees approach to unsupervised parsing",
+                "authors": [
+                    {
+                        "first": "Rens",
+                        "middle": [],
+                        "last": "Bod",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2006,
+                "venue": "Proceedings of the 21st International Conference on Computational Linguistics and the 44th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "DOI": [
+                        "10.3115/1220175.1220284"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Rens Bod. 2006. An all-subtrees approach to unsuper- vised parsing. In Proceedings of the 21st Interna- tional Conference on Computational Linguistics and the 44th Annual Meeting of the Association for Com- putational Linguistics.",
+                "links": null
+            },
+            "BIBREF2": {
+                "ref_id": "b2",
+                "title": "Two experiments on learning probabilistic dependency grammars from corpora",
+                "authors": [
+                    {
+                        "first": "Glenn",
+                        "middle": [],
+                        "last": "Carroll",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Eugene",
+                        "middle": [],
+                        "last": "Charniak",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1992,
+                "venue": "WORKING NOTES OF THE WORKSHOP STATISTICALLY-BASED NLP TECH-NIQUES",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Glenn Carroll and Eugene Charniak. 1992. Two exper- iments on learning probabilistic dependency gram- mars from corpora. In WORKING NOTES OF THE WORKSHOP STATISTICALLY-BASED NLP TECH- NIQUES.",
+                "links": null
+            },
+            "BIBREF3": {
+                "ref_id": "b3",
+                "title": "Learning taskdependent distributed representations by backpropagation through structure",
+                "authors": [
+                    {
+                        "first": "C",
+                        "middle": [],
+                        "last": "Goller",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "A",
+                        "middle": [],
+                        "last": "Kuchler",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1996,
+                "venue": "Proceedings of International Conference on Neural Networks (ICNN'96)",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "C.Goller and A.Kuchler. 1996. Learning task- dependent distributed representations by backpropa- gation through structure. In Proceedings of Interna- tional Conference on Neural Networks (ICNN'96).",
+                "links": null
+            },
+            "BIBREF4": {
+                "ref_id": "b4",
+                "title": "One billion word benchmark for measuring progress in statistical language modeling",
+                "authors": [
+                    {
+                        "first": "Ciprian",
+                        "middle": [],
+                        "last": "Chelba",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tomas",
+                        "middle": [],
+                        "last": "Mikolov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mike",
+                        "middle": [],
+                        "last": "Schuster",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Qi",
+                        "middle": [],
+                        "last": "Ge",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Thorsten",
+                        "middle": [],
+                        "last": "Brants",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Phillipp",
+                        "middle": [],
+                        "last": "Koehn",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tony",
+                        "middle": [],
+                        "last": "Robinson",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1312.3005"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Ciprian Chelba, Tomas Mikolov, Mike Schuster, Qi Ge, Thorsten Brants, Phillipp Koehn, and Tony Robin- son. 2013. One billion word benchmark for measur- ing progress in statistical language modeling. arXiv preprint arXiv:1312.3005.",
+                "links": null
+            },
+            "BIBREF5": {
+                "ref_id": "b5",
+                "title": "Bert: Pre-training of deep bidirectional transformers for language understanding",
+                "authors": [
+                    {
+                        "first": "Jacob",
+                        "middle": [],
+                        "last": "Devlin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ming-Wei",
+                        "middle": [],
+                        "last": "Chang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kenton",
+                        "middle": [],
+                        "last": "Lee",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kristina",
+                        "middle": [],
+                        "last": "Toutanova",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1810.04805"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Jacob Devlin, Ming-Wei Chang, Kenton Lee, and Kristina Toutanova. 2018. Bert: Pre-training of deep bidirectional transformers for language understand- ing. arXiv preprint arXiv:1810.04805.",
+                "links": null
+            },
+            "BIBREF6": {
+                "ref_id": "b6",
+                "title": "Unified language model pre-training for natural language understanding and generation",
+                "authors": [
+                    {
+                        "first": "Li",
+                        "middle": [],
+                        "last": "Dong",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nan",
+                        "middle": [],
+                        "last": "Yang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Wenhui",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Furu",
+                        "middle": [],
+                        "last": "Wei",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xiaodong",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yu",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jianfeng",
+                        "middle": [],
+                        "last": "Gao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ming",
+                        "middle": [],
+                        "last": "Zhou",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hsiao-Wuen",
+                        "middle": [],
+                        "last": "Hon",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1905.03197"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Li Dong, Nan Yang, Wenhui Wang, Furu Wei, Xiaodong Liu, Yu Wang, Jianfeng Gao, Ming Zhou, and Hsiao-Wuen Hon. 2019. Unified language model pre-training for natural language understanding and generation. arXiv preprint arXiv:1905.03197.",
+                "links": null
+            },
+            "BIBREF7": {
+                "ref_id": "b7",
+                "title": "Unsupervised latent tree induction with deep inside-outside recursive autoencoders",
+                "authors": [
+                    {
+                        "first": "Andrew",
+                        "middle": [],
+                        "last": "Drozdov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Pat",
+                        "middle": [],
+                        "last": "Verga",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mohit",
+                        "middle": [],
+                        "last": "Yadav",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mohit",
+                        "middle": [],
+                        "last": "Iyyer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Andrew",
+                        "middle": [],
+                        "last": "Mccallum",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Andrew Drozdov, Pat Verga, Mohit Yadav, Mohit Iyyer, and Andrew McCallum. 2019. Unsupervised latent tree induction with deep inside-outside recur- sive autoencoders. In North American Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF8": {
+                "ref_id": "b8",
+                "title": "Recurrent neural network grammars",
+                "authors": [
+                    {
+                        "first": "Chris",
+                        "middle": [],
+                        "last": "Dyer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Adhiguna",
+                        "middle": [],
+                        "last": "Kuncoro",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Miguel",
+                        "middle": [],
+                        "last": "Ballesteros",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Noah",
+                        "middle": [
+                            "A"
+                        ],
+                        "last": "Smith",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proc. of NAACL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Chris Dyer, Adhiguna Kuncoro, Miguel Ballesteros, and Noah A. Smith. 2016. Recurrent neural network grammars. In Proc. of NAACL.",
+                "links": null
+            },
+            "BIBREF9": {
+                "ref_id": "b9",
+                "title": "Learning to parse and translate improves neural machine translation",
+                "authors": [
+                    {
+                        "first": "Akiko",
+                        "middle": [],
+                        "last": "Eriguchi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yoshimasa",
+                        "middle": [],
+                        "last": "Tsuruoka",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kyunghyun",
+                        "middle": [],
+                        "last": "Cho",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Proceedings of the 55th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "2",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Akiko Eriguchi, Yoshimasa Tsuruoka, and Kyunghyun Cho. 2017. Learning to parse and translate improves neural machine translation. In Proceedings of the 55th Annual Meeting of the Association for Compu- tational Linguistics (Volume 2: Short Papers).",
+                "links": null
+            },
+            "BIBREF10": {
+                "ref_id": "b10",
+                "title": "Grammar induction with neural language models: An unusual replication",
+                "authors": [
+                    {
+                        "first": "Kyunghyun",
+                        "middle": [],
+                        "last": "Phu Mon Htut",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Samuel",
+                        "middle": [],
+                        "last": "Cho",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Bowman",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 2018 EMNLP Workshop BlackboxNLP: Analyzing and Interpreting Neural Networks for NLP. Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Phu Mon Htut, Kyunghyun Cho, and Samuel Bowman. 2018. Grammar induction with neural language models: An unusual replication. In Proceedings of the 2018 EMNLP Workshop BlackboxNLP: Analyz- ing and Interpreting Neural Networks for NLP. As- sociation for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF11": {
+                "ref_id": "b11",
+                "title": "Compound probabilistic context-free grammars for grammar induction",
+                "authors": [
+                    {
+                        "first": "Yoon",
+                        "middle": [],
+                        "last": "Kim",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chris",
+                        "middle": [],
+                        "last": "Dyer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alexander",
+                        "middle": [],
+                        "last": "Rush",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "2369--2385",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Yoon Kim, Chris Dyer, and Alexander Rush. 2019a. Compound probabilistic context-free grammars for grammar induction. In Proceedings of the 57th An- nual Meeting of the Association for Computational Linguistics, pages 2369-2385.",
+                "links": null
+            },
+            "BIBREF12": {
+                "ref_id": "b12",
+                "title": "Unsupervised recurrent neural network grammars",
+                "authors": [
+                    {
+                        "first": "Yoon",
+                        "middle": [],
+                        "last": "Kim",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alexander",
+                        "middle": [
+                            "M"
+                        ],
+                        "last": "Rush",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Lei",
+                        "middle": [],
+                        "last": "Yu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Adhiguna",
+                        "middle": [],
+                        "last": "Kuncoro",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chris",
+                        "middle": [],
+                        "last": "Dyer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "G\u00e1bor",
+                        "middle": [],
+                        "last": "Melis",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1904.03746"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Yoon Kim, Alexander M. Rush, Lei Yu, Adhiguna Kuncoro, Chris Dyer, and G\u00e1bor Melis. 2019b. Unsupervised recurrent neural network grammars. arXiv preprint arXiv:1904.03746.",
+                "links": null
+            },
+            "BIBREF13": {
+                "ref_id": "b13",
+                "title": "A generative constituent-context model for improved grammar induction",
+                "authors": [
+                    {
+                        "first": "Dan",
+                        "middle": [],
+                        "last": "Klein",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [
+                            "D"
+                        ],
+                        "last": "Manning",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2002,
+                "venue": "Proceedings of 40th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Dan Klein and Christopher D. Manning. 2002. A generative constituent-context model for improved grammar induction. In Proceedings of 40th Annual Meeting of the Association for Computational Lin- guistics.",
+                "links": null
+            },
+            "BIBREF14": {
+                "ref_id": "b14",
+                "title": "Natural language grammar induction with a generative constituent-context model",
+                "authors": [
+                    {
+                        "first": "Dan",
+                        "middle": [],
+                        "last": "Klein",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [
+                            "D"
+                        ],
+                        "last": "Manning",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2005,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "DOI": [
+                        "10.1016/j.patcog.2004.03.023"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Dan Klein and Christopher D. Manning. 2005. Nat- ural language grammar induction with a generative constituent-context model. Pattern Recogn.",
+                "links": null
+            },
+            "BIBREF15": {
+                "ref_id": "b15",
+                "title": "Linguistic knowledge and transferability of contextual representations",
+                "authors": [
+                    {
+                        "first": "Nelson",
+                        "middle": [
+                            "F"
+                        ],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Matt",
+                        "middle": [],
+                        "last": "Gardner",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yonatan",
+                        "middle": [],
+                        "last": "Belinkov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Matthew",
+                        "middle": [
+                            "E"
+                        ],
+                        "last": "Peters",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Noah",
+                        "middle": [
+                            "A"
+                        ],
+                        "last": "Smith",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1903.08855"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Nelson F. Liu, Matt Gardner, Yonatan Belinkov, Matthew E. Peters, and Noah A. Smith. 2019. Lin- guistic knowledge and transferability of contextual representations. arXiv preprint arXiv:1903.08855.",
+                "links": null
+            },
+            "BIBREF16": {
+                "ref_id": "b16",
+                "title": "Building a large annotated corpus of english: The penn treebank",
+                "authors": [
+                    {
+                        "first": "Mitchell",
+                        "middle": [
+                            "P"
+                        ],
+                        "last": "Marcus",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mary",
+                        "middle": [],
+                        "last": "",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ann",
+                        "middle": [],
+                        "last": "Marcinkiewicz",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Beatrice",
+                        "middle": [],
+                        "last": "Santorini",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1993,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Mitchell P. Marcus, Mary Ann Marcinkiewicz, and Beatrice Santorini. 1993. Building a large annotated corpus of english: The penn treebank. Comput. Lin- guist.",
+                "links": null
+            },
+            "BIBREF17": {
+                "ref_id": "b17",
+                "title": "Language models are unsupervised multitask learners",
+                "authors": [
+                    {
+                        "first": "Alec",
+                        "middle": [],
+                        "last": "Radford",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jeff",
+                        "middle": [],
+                        "last": "Wu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Rewon",
+                        "middle": [],
+                        "last": "Child",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "David",
+                        "middle": [],
+                        "last": "Luan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dario",
+                        "middle": [],
+                        "last": "Amodei",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ilya",
+                        "middle": [],
+                        "last": "Sutskever",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Alec Radford, Jeff Wu, Rewon Child, David Luan, Dario Amodei, and Ilya Sutskever. 2019. Language models are unsupervised multitask learners.",
+                "links": null
+            },
+            "BIBREF18": {
+                "ref_id": "b18",
+                "title": "Neural language modeling by jointly learning syntax and lexicon",
+                "authors": [
+                    {
+                        "first": "Yikang",
+                        "middle": [],
+                        "last": "Shen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zhouhan",
+                        "middle": [],
+                        "last": "Lin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chin",
+                        "middle": [],
+                        "last": "Wei Huang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Aaron",
+                        "middle": [],
+                        "last": "Courville",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "International Conference on Learning Representations",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Yikang Shen, Zhouhan Lin, Chin wei Huang, and Aaron Courville. 2018a. Neural language modeling by jointly learning syntax and lexicon. In Interna- tional Conference on Learning Representations.",
+                "links": null
+            },
+            "BIBREF19": {
+                "ref_id": "b19",
+                "title": "Ordered neurons: Integrating tree structures into recurrent neural networks",
+                "authors": [
+                    {
+                        "first": "Yikang",
+                        "middle": [],
+                        "last": "Shen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Shawn",
+                        "middle": [],
+                        "last": "Tan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alessandro",
+                        "middle": [],
+                        "last": "Sordoni",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Aaron",
+                        "middle": [],
+                        "last": "Courville",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1810.09536"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Yikang Shen, Shawn Tan, Alessandro Sordoni, and Aaron Courville. 2018b. Ordered neurons: Integrat- ing tree structures into recurrent neural networks. arXiv preprint arXiv:1810.09536.",
+                "links": null
+            },
+            "BIBREF20": {
+                "ref_id": "b20",
+                "title": "Guiding unsupervised grammar induction using contrastive estimation",
+                "authors": [
+                    {
+                        "first": "Noah",
+                        "middle": [
+                            "A"
+                        ],
+                        "last": "Smith",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jason",
+                        "middle": [],
+                        "last": "Eisner",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2005,
+                "venue": "Proc. of IJCAI Workshop on Grammatical Inference Applications",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Noah A. Smith and Jason Eisner. 2005. Guiding un- supervised grammar induction using contrastive es- timation. In In Proc. of IJCAI Workshop on Gram- matical Inference Applications.",
+                "links": null
+            },
+            "BIBREF21": {
+                "ref_id": "b21",
+                "title": "Parsing natural scenes and natural language with recursive neural networks",
+                "authors": [
+                    {
+                        "first": "Richard",
+                        "middle": [],
+                        "last": "Socher",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Cliff",
+                        "middle": [],
+                        "last": "Chiung-Yu Lin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Andrew",
+                        "middle": [
+                            "Y"
+                        ],
+                        "last": "Ng",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [
+                            "D"
+                        ],
+                        "last": "Manning",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2011,
+                "venue": "Proceedings of the 28th International Conference on International Conference on Machine Learning",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Richard Socher, Cliff Chiung-Yu Lin, Andrew Y. Ng, and Christopher D. Manning. 2011. Parsing natu- ral scenes and natural language with recursive neu- ral networks. In Proceedings of the 28th Interna- tional Conference on International Conference on Machine Learning.",
+                "links": null
+            },
+            "BIBREF22": {
+                "ref_id": "b22",
+                "title": "Linguistically-informed self-attention for semantic role labeling",
+                "authors": [
+                    {
+                        "first": "Emma",
+                        "middle": [],
+                        "last": "Strubell",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Patrick",
+                        "middle": [],
+                        "last": "Verga",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Daniel",
+                        "middle": [],
+                        "last": "Andor",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "David",
+                        "middle": [
+                            "I"
+                        ],
+                        "last": "Weiss",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Andrew",
+                        "middle": [],
+                        "last": "Mccallum",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "EMNLP",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Emma Strubell, Patrick Verga, Daniel Andor, David I Weiss, and Andrew McCallum. 2018. Linguistically-informed self-attention for semantic role labeling. In EMNLP.",
+                "links": null
+            },
+            "BIBREF23": {
+                "ref_id": "b23",
+                "title": "Improved semantic representations from tree-structured long short-term memory networks",
+                "authors": [
+                    {
+                        "first": "Kai",
+                        "middle": [],
+                        "last": "Sheng",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tai",
+                        "middle": [],
+                        "last": "",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Richard",
+                        "middle": [],
+                        "last": "Socher",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [
+                            "D"
+                        ],
+                        "last": "Manning",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1503.00075"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Kai Sheng Tai, Richard Socher, and Christopher D. Manning. 2015. Improved semantic representations from tree-structured long short-term memory net- works. arXiv preprint arXiv:1503.00075.",
+                "links": null
+            },
+            "BIBREF24": {
+                "ref_id": "b24",
+                "title": "Visualizing attention in transformerbased language representation models",
+                "authors": [
+                    {
+                        "first": "Jesse",
+                        "middle": [],
+                        "last": "Vig",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1904.02679"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Jesse Vig. 2019. Visualizing attention in transformer- based language representation models. arXiv preprint arXiv:1904.02679.",
+                "links": null
+            },
+            "BIBREF25": {
+                "ref_id": "b25",
+                "title": "A broad-coverage challenge corpus for sentence understanding through inference",
+                "authors": [
+                    {
+                        "first": "Adina",
+                        "middle": [],
+                        "last": "Williams",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nikita",
+                        "middle": [],
+                        "last": "Nangia",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Samuel",
+                        "middle": [],
+                        "last": "Bowman",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 2018 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies",
+                "volume": "1",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Adina Williams, Nikita Nangia, and Samuel Bowman. 2018. A broad-coverage challenge corpus for sen- tence understanding through inference. In Proceed- ings of the 2018 Conference of the North American Chapter of the Association for Computational Lin- guistics: Human Language Technologies, Volume 1 (Long Papers).",
+                "links": null
+            },
+            "BIBREF26": {
+                "ref_id": "b26",
+                "title": "Phrase-level self-attention networks for universal sentence encoding",
+                "authors": [
+                    {
+                        "first": "Wei",
+                        "middle": [],
+                        "last": "Wu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Houfeng",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tianyu",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Shuming",
+                        "middle": [],
+                        "last": "Ma",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "3729--3738",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Wei Wu, Houfeng Wang, Tianyu Liu, and Shuming Ma. 2018. Phrase-level self-attention networks for universal sentence encoding. In Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing, pages 3729-3738.",
+                "links": null
+            },
+            "BIBREF27": {
+                "ref_id": "b27",
+                "title": "Google's neural machine translation system: Bridging the gap between human and machine translation",
+                "authors": [
+                    {
+                        "first": "Yonghui",
+                        "middle": [],
+                        "last": "Wu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mike",
+                        "middle": [],
+                        "last": "Schuster",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zhifeng",
+                        "middle": [],
+                        "last": "Chen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Quoc",
+                        "middle": [
+                            "V"
+                        ],
+                        "last": "Le",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mohammad",
+                        "middle": [],
+                        "last": "Norouzi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Wolfgang",
+                        "middle": [],
+                        "last": "Macherey",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Maxim",
+                        "middle": [],
+                        "last": "Krikun",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yuan",
+                        "middle": [],
+                        "last": "Cao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Qin",
+                        "middle": [],
+                        "last": "Gao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Klaus",
+                        "middle": [],
+                        "last": "Macherey",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1609.08144"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Yonghui Wu, Mike Schuster, Zhifeng Chen, Quoc V. Le, Mohammad Norouzi, Wolfgang Macherey, Maxim Krikun, Yuan Cao, Qin Gao, Klaus Macherey, and et al. 2016. Google's neural ma- chine translation system: Bridging the gap between human and machine translation. arXiv preprint arXiv:1609.08144.",
+                "links": null
+            },
+            "BIBREF28": {
+                "ref_id": "b28",
+                "title": "Learning to compose words into sentences with reinforcement learning",
+                "authors": [
+                    {
+                        "first": "Dani",
+                        "middle": [],
+                        "last": "Yogatama",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Phil",
+                        "middle": [],
+                        "last": "Blunsom",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chris",
+                        "middle": [],
+                        "last": "Dyer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Edward",
+                        "middle": [],
+                        "last": "Grefenstette",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Wang",
+                        "middle": [],
+                        "last": "Ling",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "International Conference on Learning Representations",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Dani Yogatama, Phil Blunsom, Chris Dyer, Edward Grefenstette, and Wang Ling. 2017. Learning to compose words into sentences with reinforcement learning. In International Conference on Learning Representations.",
+                "links": null
+            },
+            "BIBREF29": {
+                "ref_id": "b29",
+                "title": "Incorporating syntactic uncertainty in neural machine translation with a forest-to-sequence model",
+                "authors": [
+                    {
+                        "first": "Poorya",
+                        "middle": [],
+                        "last": "Zaremoodi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Gholamreza",
+                        "middle": [],
+                        "last": "Haffari",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 27th International Conference on Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Poorya Zaremoodi and Gholamreza Haffari. 2018. In- corporating syntactic uncertainty in neural machine translation with a forest-to-sequence model. In Pro- ceedings of the 27th International Conference on Computational Linguistics.",
+                "links": null
+            }
+        },
+        "ref_entries": {
+            "FIGREF0": {
+                "num": null,
+                "text": "(A). The building blocks of Tree Transformer is shown in Figure 1(B), which is the same as those used in bidirectional Transformer encoder, except the proposed Constituent Attention module. The blocks in Figure 1(A) are constituents induced from the input sentence. The red arrows indicate the selfattention.",
+                "uris": null,
+                "fig_num": null,
+                "type_str": "figure"
+            },
+            "FIGREF1": {
+                "num": null,
+                "text": "Figure 1: (A) A 3-layer Tree Transformer, where the blocks are constituents induced from the input sentence. The two neighboring constituents may merge together in the next layer, so the sizes of constituents gradually grow from layer to layer. The red arrows indicate the self-attention. (B) The building blocks of Tree Transformer. (C) Constituent prior C for the layer 1.",
+                "uris": null,
+                "fig_num": "1",
+                "type_str": "figure"
+            },
+            "FIGREF2": {
+                "num": null,
+                "text": "Figure 2: The example illustration about how neighboring attention works.",
+                "uris": null,
+                "fig_num": "2",
+                "type_str": "figure"
+            },
+            "FIGREF3": {
+                "num": null,
+                "text": "Figure 3: A parse tree induced by Tree Transformer. As shown in the figure, because we set a threshold in Algorithm 1, the leaf nodes are not strictly binary.",
+                "uris": null,
+                "fig_num": "3",
+                "type_str": "figure"
+            },
+            "FIGREF4": {
+                "num": null,
+                "text": "(a) F1 in terms of different minimum layers.(b) F1 of parsing via a specific layer.",
+                "uris": null,
+                "fig_num": null,
+                "type_str": "figure"
+            },
+            "FIGREF5": {
+                "num": null,
+                "text": "Figure 4: Performance of unsupervised parsing.",
+                "uris": null,
+                "fig_num": "4",
+                "type_str": "figure"
+            },
+            "FIGREF7": {
+                "num": null,
+                "text": "Figure 5: The constituent prior heat maps.",
+                "uris": null,
+                "fig_num": "5",
+                "type_str": "figure"
+            },
+            "TABREF1": {
+                "content": "<table><tr><td>use a</td></tr></table>",
+                "type_str": "table",
+                "text": "",
+                "html": null,
+                "num": null
+            },
+            "TABREF2": {
+                "content": "<table><tr><td>Model</td><td>Data</td><td colspan=\"2\">F1 median F1 max</td></tr><tr><td>PRPN</td><td>WSJ-train</td><td>70.5</td><td>71.3</td></tr><tr><td>On-lstm</td><td>WSJ-train</td><td>65.1</td><td>66.8</td></tr><tr><td>C-PCFG</td><td>WSJ-train</td><td>70.5</td><td>-</td></tr><tr><td colspan=\"2\">Tree-T,L=10 WSJ-train</td><td>66.2</td><td>67.9</td></tr><tr><td>DIORA</td><td>NLI</td><td>67.7</td><td>68.5</td></tr><tr><td>Tree-T,L=10</td><td>WSJ-all</td><td>66.2</td><td>68.0</td></tr><tr><td>CCM</td><td>WSJ-10</td><td>-</td><td>71.9</td></tr><tr><td>DMV+CCM</td><td>WSJ-10</td><td>-</td><td>77.6</td></tr><tr><td>UML-DOP</td><td>WSJ-10</td><td>-</td><td>82.9</td></tr><tr><td>Random</td><td>-</td><td>31.9</td><td>32.6</td></tr><tr><td>LB</td><td>-</td><td>19.6</td><td>19.6</td></tr><tr><td>RB</td><td>-</td><td>56.6</td><td>56.6</td></tr><tr><td colspan=\"4\">Label Tree-T URNNG PRPN</td></tr><tr><td>NP</td><td>67.6</td><td>39.5</td><td>63.9</td></tr><tr><td>VP</td><td>38.5</td><td>76.6</td><td>27.3</td></tr><tr><td>PP</td><td>52.3</td><td>55.8</td><td>55.1</td></tr><tr><td>ADJP</td><td>24.7</td><td>33.9</td><td>42.5</td></tr><tr><td>SBAR</td><td>36.4</td><td>74.8</td><td>28.9</td></tr><tr><td>ADVP</td><td>55.1</td><td>50.4</td><td>45.1</td></tr></table>",
+                "type_str": "table",
+                "text": "The F1 scores on WSJ-10. Tree Transformer is abbreviated as Tree-T, and L is the number of layers (blocks).",
+                "html": null,
+                "num": null
+            },
+            "TABREF3": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "Recall",
+                "html": null,
+                "num": null
+            },
+            "TABREF4": {
+                "content": "<table><tr><td>Model</td><td>L</td><td colspan=\"2\">Params Perplexity</td></tr><tr><td>Transformer</td><td>8</td><td>40M</td><td>48.8</td></tr><tr><td>Transformer</td><td>10</td><td>46M</td><td>48.5</td></tr><tr><td colspan=\"2\">Transformer 10-B</td><td>67M</td><td>49.2</td></tr><tr><td>Transformer</td><td>12</td><td>52M</td><td>48.1</td></tr><tr><td>Tree-T</td><td>8</td><td>44M</td><td>46.1</td></tr><tr><td>Tree-T</td><td>10</td><td>51M</td><td>45.7</td></tr><tr><td>Tree-T</td><td>12</td><td>58M</td><td>45.6</td></tr></table>",
+                "type_str": "table",
+                "text": "The perplexity of masked words. Params is the number of parameters. We denote the number of layers as L. In Transformer L = 10 -B, the increased hidden size results in more parameters.",
+                "html": null,
+                "num": null
+            }
+        }
+    }
+}

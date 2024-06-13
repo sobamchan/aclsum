@@ -1,0 +1,1300 @@
+{
+    "paper_id": "D07-1016",
+    "header": {
+        "generated_with": "S2ORC 1.0.0",
+        "date_generated": "2023-06-16T12:11:42.023897Z"
+    },
+    "title": "Using Foreign Inclusion Detection to Improve Parsing Performance",
+    "authors": [
+        {
+            "first": "Beatrice",
+            "middle": [],
+            "last": "Alex",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "University of Edinburgh",
+                "location": {
+                    "addrLine": "2 Buccleuch Place Edinburgh",
+                    "postCode": "EH8 9LW",
+                    "country": "UK"
+                }
+            },
+            "email": "balex@inf.ed.ac.uk"
+        },
+        {
+            "first": "Amit",
+            "middle": [],
+            "last": "Dubey",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "University of Edinburgh",
+                "location": {
+                    "addrLine": "2 Buccleuch Place Edinburgh",
+                    "postCode": "EH8 9LW",
+                    "country": "UK"
+                }
+            },
+            "email": "adubey@inf.ed.ac.uk"
+        },
+        {
+            "first": "Frank",
+            "middle": [],
+            "last": "Keller",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "University of Edinburgh",
+                "location": {
+                    "addrLine": "2 Buccleuch Place Edinburgh",
+                    "postCode": "EH8 9LW",
+                    "country": "UK"
+                }
+            },
+            "email": "keller@inf.ed.ac.uk"
+        }
+    ],
+    "year": "",
+    "venue": null,
+    "identifiers": {},
+    "abstract": "Inclusions from other languages can be a significant source of errors for monolingual parsers. We show this for English inclusions, which are sufficiently frequent to present a problem when parsing German. We describe an annotation-free approach for accurately detecting such inclusions, and develop two methods for interfacing this approach with a state-of-the-art parser for German. An evaluation on the TIGER corpus shows that our inclusion entity model achieves a performance gain of 4.3 points in F-score over a baseline of no inclusion detection, and even outperforms a parser with access to gold standard part-of-speech tags.",
+    "pdf_parse": {
+        "paper_id": "D07-1016",
+        "_pdf_hash": "",
+        "abstract": [
+            {
+                "text": "Inclusions from other languages can be a significant source of errors for monolingual parsers. We show this for English inclusions, which are sufficiently frequent to present a problem when parsing German. We describe an annotation-free approach for accurately detecting such inclusions, and develop two methods for interfacing this approach with a state-of-the-art parser for German. An evaluation on the TIGER corpus shows that our inclusion entity model achieves a performance gain of 4.3 points in F-score over a baseline of no inclusion detection, and even outperforms a parser with access to gold standard part-of-speech tags.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            }
+        ],
+        "body_text": [
+            {
+                "text": "The status of English as a global language means that English words and phrases are frequently borrowed by other languages, especially in domains such as science and technology, commerce, advertising, and current affairs. This is an instance of language mixing, whereby inclusions from other languages appear in an otherwise monolingual text. While the processing of foreign inclusions has received some attention in the text-to-speech (TTS) literature (see Section 2), the natural language processing (NLP) community has paid little attention both to the problem of inclusion detection, and to potential applications thereof. Also the extent to which inclusions pose a problem to existing NLP methods has not been investigated.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "In this paper, we address this challenge. We focus on English inclusions in German text. Anglicisms and other borrowings from English form by far the most frequent foreign inclusions in German. In specific domains, up to 6.4% of the tokens of a German text can be English inclusions. Even in regular newspaper text as used for many NLP applications, English inclusions can be found in up to 7.4% of all sentences (see Section 3 for both figures).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Virtually all existing NLP algorithms assume that the input is monolingual, and does not contain foreign inclusions. It is possible that this is a safe assumption, and inclusions can be dealt with accurately by existing methods, without resorting to specialized mechanisms. The alternative hypothesis, however, seems more plausible: foreign inclusions pose a problem for existing approaches, and sentences containing them are processed less accurately. A parser, for example, is likely to have problems with inclusions -most of the time, they are unknown words, and as they originate from another language, standard methods for unknown words guessing (suffix stripping, etc.) are unlikely to be successful. Furthermore, the fact that inclusions are often multiword expressions (e.g., named entities) means that simply part-of-speech (POS) tagging them accurately is not sufficient: if the parser posits a phrase boundary within an inclusion this is likely to severely decrease parsing accuracy.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "In this paper, we focus on the impact of English inclusions on the parsing of German text. We describe an annotation-free method that accurately recognizes English inclusions, and demonstrate that inclusion detection improves the performance of a state-of-the-art parser for German. We show that the way of interfacing the inclusion detection and the parser is crucial, and propose a method for modifying the underlying probabilistic grammar in order to enable the parser to process inclusions accurately.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "This paper is organized as follows. We review related work in Section 2, and present the English inclusion classifier in Section 3. Section 4 describes our results on interfacing inclusion detection with parsing, and Section 5 presents an error analysis. Discussion and conclusion follow in Section 6.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Previous work on inclusion detection exists in the TTS literature. Here, the aim is to design a system that recognizes foreign inclusions on the word and sentence level and functions at the front-end to a polyglot TTS synthesizer. Pfister and Romsdorfer (2003) propose morpho-syntactic analysis combined with lexicon lookup to identify foreign words in mixed-lingual text. While they state that their system is precise at detecting the language of tokens and determining the sentence structure, it is not evaluated on real mixed-lingual text. A further approach to inclusion detection is that of Marcadet et. al (2005) . They present experiments with a dictionarydriven transformation-based learning method and a corpus-based n-gram approach and show that a combination of both methods yields the best results. Evaluated on three mixed-lingual test sets in different languages, the combined approach yields wordbased language identification error rates (i.e. the percentage of tokens for which the language is identified incorrectly) of 0.78% on the French data, 1.33% on the German data and 0.84% on the Spanish data. Consisting of 50 sentences or less for each language, their test sets are very small and appear to be selected specifically for evaluation purposes. It would therefore be interesting to determine the system's performance on random and unseen data and examine how it scales up to larger data sets. Andersen (2005) , noting the importance of recognizing anglicisms to lexicographers, tests algorithms based on lexicon lookup, character n-grams and regular expressions and a combination thereof to automatically extract anglicisms in Norwegian text. On a 10,000 word subset of the neologism archive (Wangensteen, 2002) , the best method of combining character n-grams and regular expression matching yields an accuracy of 96.32% and an F-score of 59.4 (P = 75.8%, R = 48.8%). This result is unsur-prisingly low as no differentiation is made between full-word anglicisms and tokens with mixed-lingual morphemes in the gold standard.",
+                "cite_spans": [
+                    {
+                        "start": 231,
+                        "end": 260,
+                        "text": "Pfister and Romsdorfer (2003)",
+                        "ref_id": "BIBREF13"
+                    },
+                    {
+                        "start": 596,
+                        "end": 618,
+                        "text": "Marcadet et. al (2005)",
+                        "ref_id": "BIBREF12"
+                    },
+                    {
+                        "start": 1416,
+                        "end": 1431,
+                        "text": "Andersen (2005)",
+                        "ref_id": "BIBREF3"
+                    },
+                    {
+                        "start": 1715,
+                        "end": 1734,
+                        "text": "(Wangensteen, 2002)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "In the context of parsing, Forst and Kaplan (2006) have observed that the failure to properly deal with foreign inclusions is detrimental to a parser's accuracy. However, they do not substantiate this claim using numeric results.",
+                "cite_spans": [
+                    {
+                        "start": 27,
+                        "end": 50,
+                        "text": "Forst and Kaplan (2006)",
+                        "ref_id": "BIBREF8"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "Previous work reported by Alex (2006; 2005) has focused on devising a classifier that detects anglicisms and other English inclusions in text written in other languages, namely German and French. This inclusion classifier is based on a lexicon and search engine lookup as well as a post-processing step.",
+                "cite_spans": [
+                    {
+                        "start": 26,
+                        "end": 37,
+                        "text": "Alex (2006;",
+                        "ref_id": "BIBREF2"
+                    },
+                    {
+                        "start": 38,
+                        "end": 43,
+                        "text": "2005)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "English Inclusion Detection",
+                "sec_num": "3"
+            },
+            {
+                "text": "The lexicon lookup is performed for tokens tagged as noun (NN ), named entity (NE ), foreign material (FM ) or adjective (ADJA/ADJD ) using the German and English CELEX lexicons. Tokens only found in the English lexicon are classified as English. Tokens found in neither lexicon are passed to the search engine module. Tokens found in both databases are classified by the post-processing module. The search engine module performs language classification based on the maximum normalised score of the number of hits returned for two searches per token, one for each language (Alex, 2005) . This score is determined by weighting the number of hits, i.e. the \"absolute frequency\" by the estimated size of the accessible Web corpus for that language (Alex, 2006) . Finally, the rule-based postprocessing module classifies single-character tokens and resolves language classification ambiguities for interlingual homographs, English function words, names of currencies and units of measurement. A further post-processing step relates language information between abbreviations or acronyms and their definitions in combination with an abbreviation extraction algorithm (Schwartz and Hearst, 2003) . Finally, a set of rules disambiguates English inclusions from person names (Alex, 2006) .",
+                "cite_spans": [
+                    {
+                        "start": 573,
+                        "end": 585,
+                        "text": "(Alex, 2005)",
+                        "ref_id": "BIBREF1"
+                    },
+                    {
+                        "start": 745,
+                        "end": 757,
+                        "text": "(Alex, 2006)",
+                        "ref_id": "BIBREF2"
+                    },
+                    {
+                        "start": 1162,
+                        "end": 1189,
+                        "text": "(Schwartz and Hearst, 2003)",
+                        "ref_id": "BIBREF14"
+                    },
+                    {
+                        "start": 1267,
+                        "end": 1279,
+                        "text": "(Alex, 2006)",
+                        "ref_id": "BIBREF2"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "English Inclusion Detection",
+                "sec_num": "3"
+            },
+            {
+                "text": "For German, the classifier has been evaluated on test sets in three different domains: newspaper articles, selected from the Frankfurter Allgemeine Zeitung, on internet and telecoms, space travel and European Union related topics. The recognition of English inclusions bears similarity to classification tasks such as named entity recognition, for which various machine learning (ML) techniques have proved successful. In order to compare the performance of the English inclusion classifier against a trained ML classifier, we pooled the annotated English inclusion evaluation data for all three domains. As the English inclusion classifier does not rely on annotated data, it can be tested and evaluated once for the entire corpus. The ML classifier used for this experiment is a conditional Markov model tagger which is designed for, and proved successful in, named entity recognition in newspaper and biomedical text (Klein et al., 2003; Finkel et al., 2005) . It can be trained to perform similar information extraction tasks such as English inclusion detection. To determine the tagger's performance over the entire set and to investigate the effect of the amount of annotated training data available, a 10-fold crossvalidation test was conducted whereby increasing sub-parts of the training data are provided when testing on each fold. The resulting learning curves in Figure 1 show that the English inclusion classifier has an advantage over the supervised ML approach, despite the fact the latter requires expensive handannotated data. A large training set of 80,000 tokens is required to yield a performance that approximates that of our annotation-free inclusion classifier. This system has been shown to perform similarly well on unseen texts in different domains, plus it is easily extendable to a new language (Alex, 2006) .",
+                "cite_spans": [
+                    {
+                        "start": 920,
+                        "end": 940,
+                        "text": "(Klein et al., 2003;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 941,
+                        "end": 961,
+                        "text": "Finkel et al., 2005)",
+                        "ref_id": "BIBREF7"
+                    },
+                    {
+                        "start": 1823,
+                        "end": 1835,
+                        "text": "(Alex, 2006)",
+                        "ref_id": "BIBREF2"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 1382,
+                        "end": 1383,
+                        "text": "1",
+                        "ref_id": "FIGREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "English Inclusion Detection",
+                "sec_num": "3"
+            },
+            {
+                "text": "The primary focus of this paper is to apply the English inclusion classifier to the German TIGER treebank (Brants et al., 2002) and to evaluate the classifier on a standard NLP task, namely parsing. The aim is to investigate the occurrence of English inclusions in more general newspaper text, and to examine if the detection of English inclusions can improve parsing performance.",
+                "cite_spans": [
+                    {
+                        "start": 106,
+                        "end": 127,
+                        "text": "(Brants et al., 2002)",
+                        "ref_id": "BIBREF4"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "4"
+            },
+            {
+                "text": "The TIGER treebank is a bracketed corpus consisting of 40,020 sentences of newspaper text. The English inclusion classifier was run once over the entire TIGER corpus. In total, the system detected English inclusions in 2,948 of 40,020 sentences (7.4%), 596 of which contained at least one multiword inclusion. This subset of 596 sentences is the focus of the work reported in the remainder of this paper, and will be referred to as the inclusion set.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "4"
+            },
+            {
+                "text": "A gold standard parse tree for a sentence containing a typical multi-word English inclusion is illustrated in Figure 2 . The tree is relatively flat, which is a trait trait of TIGER treebank annotation (Brants et al., 2002) . The non-terminal nodes of the tree represent the phrase categories, and the edge labels the grammatical functions. In the example sentence, the English inclusion is contained in a proper noun (PN ) phrase with a grammatical function of type noun kernel element (NK ). Each terminal node is POStagged as a named entity (NE ) with the grammatical function ot type proper noun component (PNC ).",
+                "cite_spans": [
+                    {
+                        "start": 202,
+                        "end": 223,
+                        "text": "(Brants et al., 2002)",
+                        "ref_id": "BIBREF4"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 117,
+                        "end": 118,
+                        "text": "2",
+                        "ref_id": "FIGREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "4"
+            },
+            {
+                "text": "Two different data sets are used in the experiments:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Data",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "(1) the inclusion set, i.e., the sentences containing multi-word English inclusions recognized by the inclusion classifier, and (2) a stratified sample of sentences randomly extracted from the TIGER corpus, with strata for different sentence lengths. The strata were chosen so that the sentence length distribution of the random set matches that of the inclusion set. The average sentence length of this random set and the inclusion set is therefore the same at 28.4 tokens. This type of sampling is necessary as the inclusion set has a higher average sentence length than a random sample of sentences from TIGER, and because parsing accuracy is correlated with sentence length. Both the inclusion set and the random set consist of 596 sentences and do not overlap.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Data",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "The parsing experiments were performed with a state-of-the-art parser trained on the TIGER corpus which returns both phrase categories and grammatical functions (Dubey, 2005b) . Following Klein and Manning (2003) , the parser uses an unlexicalized probabilistic context-free grammar (PCFG) and relies on treebank transformations to increase parsing accuracy. Crucially, these transformations make use of TIGER's grammatical functions to relay pertinent lexical information from lexical elements up into the tree.",
+                "cite_spans": [
+                    {
+                        "start": 161,
+                        "end": 175,
+                        "text": "(Dubey, 2005b)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 188,
+                        "end": 212,
+                        "text": "Klein and Manning (2003)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Parser",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "The parser also makes use of suffix analysis. However, beam search or smoothing are not employed. Based upon an evaluation on the NEGRA treebank (Skut et al., 1998) , using a 90%-5%-5% training-development-test split, the parser performs with an accuracy of 73.1 F-score on labelled brackets with a coverage of 99.1% (Dubey, 2005b) . These figures were derived on a test set limited to sentences containing 40 tokens or less. In the data set used in this paper, however, sentence length is not limited. Moreover, the average sentence length of our test sets is considerably higher than that of the NE-GRA test set. Consequently, a slightly lower performance and/or coverage is anticipated, albeit the type and domain as well as the annotation of both the NE-GRA and the TIGER treebanks are very similar. The minor annotation differences that do exist between NEGRA and TIGER are explained in Brants et. al (2002) .",
+                "cite_spans": [
+                    {
+                        "start": 145,
+                        "end": 164,
+                        "text": "(Skut et al., 1998)",
+                        "ref_id": "BIBREF15"
+                    },
+                    {
+                        "start": 317,
+                        "end": 331,
+                        "text": "(Dubey, 2005b)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 892,
+                        "end": 912,
+                        "text": "Brants et. al (2002)",
+                        "ref_id": "BIBREF4"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Parser",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "We test several variations of the parser. The baseline parser does not treat foreign inclusions in any special way: the parser attempts to guess the POS tag and grammatical function labels of the word using the same suffix analysis as for rare or unseen German words. The additional versions of the parser are inspired by the hypothesis that inclusions make parsing difficult, and this difficulty arises primarily because the parser cannot detect inclusions properly. Therefore, a suitable upper bound is to give the parser perfect tagging information. Two further versions interface with our inclusion classifier and treat words marked as inclusions differently from native words. The first version does so on a wordby-word basis. In contrast, the inclusion entity approach attempts to group inclusions, even if a grouping is not posited by phrase structure rules. We now describe each version in more detail.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Parser Modifications",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "In the TIGER annotation, preterminals include both POS tags and grammatical function labels. For example, rather than a preterminal node having the category PRELS (personal pronoun), it is given the category PRELS-OA (accusative personal pronoun). Due to these grammatical function tags, the perfect tagging parser may disambiguate more syntactic information than provided with POS tags alone. Therefore, to make this model more realistic, the parser is required to guess grammatical functions (allowing it to, for example, mistakenly tag an accusative pronoun as nominative, dative or genitive). This gives the parser information about the POS tags of English inclusions (along with other words), but does not give any additional hints about the syntax of the sentence.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Parser Modifications",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "The two remaining models both take advantage of information from the inclusion detector. To interface the detector with the parser, we simply mark any inclusion with a special FOM (foreign material) tag. The word-by-word parser attempts to guess POS tags itself, much like the baseline. However, whenever it encounters a FOM tag, it restricts itself to the set of POS tags observed in inclusions during training (the tags listed in Table 2 ). When a FOM is detected, these and only these POS tags are guessed; all other aspects of the parser remain the same.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 438,
+                        "end": 439,
+                        "text": "2",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Parser Modifications",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "The word-by-word parser fails to take advantage of one important trend in the data: that foreign inclusion tokens tend to be adjacent, and these adjacent words usually refer to the same entity. There is nothing stopping the word-by-word parser from positing a constituent boundary between two adjacent foreign inclusions. The inclusion entity model was developed to restrict such spurious bracketing. It does so by way of another tree transformation. The new category FP (foreign phrase) is added below any node dominating at least one token marked FOM during training. For example, when encountering a FOM sequence dominated by PN as in Figure 3 (a), the tree is modified so that it is the FP rule which generates the FOM tokens. Figure 3(b) shows the modified tree. In all cases, a unary rule PN \u2192FP is introduced. As this extra rule decreases the probability of the entire tree, the parser has a bias to introduce as few of these rules as possible -thus limiting the number of categories which expand to FOM s. Once a candidate parse is created during testing, the inverse operation is applied, removing the FP node.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 645,
+                        "end": 646,
+                        "text": "3",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 738,
+                        "end": 742,
+                        "text": "3(b)",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Parser Modifications",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "For all experiments reported in this paper, the parser is trained on the TIGER treebank. As the inclusion and random sets are drawn from the whole TIGER treebank, it is necessary to ensure that the data used to train the parser does not overlap with these test sentences. The experiments are therefore designed as multifold cross-validation tests. Using 5 folds, each model is trained on 80% of the data while the remaining 20% are held out. intersected with the inclusion set (or, respectively, the random set). The evaluation metrics are calculated on this subset of the inclusion set (or random set), using the parser trained on the corresponding training data. This process ensures that the test sentences are not contained in the training data.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Method",
+                "sec_num": "4.4"
+            },
+            {
+                "text": "The overall performance metrics of the parser are calculated on the aggregated totals of the five held out test sets. For each experiment, we report parsing performance in terms of the standard PARSE-VAL scores (Abney et al., 1991) , including coverage (Cov), labeled precision (P) and recall (R), F-score, the average number of crossing brackets (AvgCB), and the percentage of sentences parsed with zero and with two or fewer crossing brackets (0CB and \u22642CB). In addition, we also report dependency accuracy (Dep), calculated using the approach described in Lin (1995) , using the headpicking method used by Dubey (2005a) . The labeled bracketing figures (P, R and F), and the dependency score are calculated on all sentences, with those which are out-of-coverage getting zero nodes. The crossing bracket scores are calculated only on those sentences which are successfully parsed.",
+                "cite_spans": [
+                    {
+                        "start": 211,
+                        "end": 231,
+                        "text": "(Abney et al., 1991)",
+                        "ref_id": "BIBREF0"
+                    },
+                    {
+                        "start": 559,
+                        "end": 569,
+                        "text": "Lin (1995)",
+                        "ref_id": "BIBREF11"
+                    },
+                    {
+                        "start": 609,
+                        "end": 622,
+                        "text": "Dubey (2005a)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Method",
+                "sec_num": "4.4"
+            },
+            {
+                "text": "The baseline, for which the unmodified parser is used, achieves a high coverage at over 99% for both the inclusion and the random sets (see Table 3 ).",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 146,
+                        "end": 147,
+                        "text": "3",
+                        "ref_id": "TABREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Baseline and Perfect Tagging",
+                "sec_num": "4.5"
+            },
+            {
+                "text": "However, scores differ for the bracketing measures. Using stratified shuffling1 , we performed a t-test on precision and recall, and found both to be significantly worse in the inclusion condition. Overall, the harmonic mean (F) of precision and recall was 65.2 on the random set, 6 points better than 59.2 F observed on the inclusion set. Similarly, dependency and cross-bracketing scores are higher on the random test set. This result strongly indicates that sentences containing English inclusions present difficulty for the parser, compared to length-matched sentences without inclusions.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Baseline and Perfect Tagging",
+                "sec_num": "4.5"
+            },
+            {
+                "text": "When providing the parser with perfect tagging information, scores improve both for the inclusion and the random TIGER samples, resulting in Fscores of 62.2 and 67.3, respectively. However, the coverage for the inclusion set decreases to 92.7% whereas the coverage for the random set is 97.7%. In both cases, the lower coverage is caused by the parser being forced to use infrequent tag sequences, with the much lower coverage of the inclusion set likely due to infrequent tags (notable FM ), solely associated with inclusions. While perfect tagging increases overall accuracy, a difference of 5.1 in Fscore remains between the random and inclusion test sets. Although smaller than that of the baseline runs, this difference shows that even with perfect tagging, parsing English inclusions is harder than parsing monolingual data.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Baseline and Perfect Tagging",
+                "sec_num": "4.5"
+            },
+            {
+                "text": "So far, we have shown that the English inclusion classifier is able to detect sentences that are difficult to parse. We have also shown that perfect tagging helps to improve parsing performance but is insufficient when it comes to parsing sentences containing English inclusions. In the next section, we will examine how the knowledge provided by the English inclusion classifier can be exploited to improve parsing performance for such sentences.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Baseline and Perfect Tagging",
+                "sec_num": "4.5"
+            },
+            {
+                "text": "The word-by-word model achieves the same coverage on the inclusion set as the baseline but with a slightly lower F of 59.0. All other scores, including dependency accuracy and cross bracketing results are similar to those of the baseline (see Table 3 ). This shows that limiting the parser's choice of POS tags to those encountered for English inclusions is not sufficient to deal with such constructions correctly. In the error analysis presented in Section 5, we report that the difficulty in parsing multiword English inclusions is recognizing them as constituents, rather than recognizing their POS tags. We attempt to overcome this problem with the inclusion entity model.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 249,
+                        "end": 250,
+                        "text": "3",
+                        "ref_id": "TABREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Word-by-word Model",
+                "sec_num": "4.6"
+            },
+            {
+                "text": "The inclusion entity parser attains a coverage of 99.0% on the inclusion set, similiar to the coverage of 99.2% obtained by the baseline model on the same data. On all other measures, the inclusion entity model exceeds the performance of the baseline, with a precision of 61.3% (5.2% higher than the baseline), a recall of 65.9% (3.3% higher), an F of 63.5 (4.3 higher) and a dependency accuracy of 78.3% (3.4% higher). The average number of crossing brackets is 1.7 (0.4 lower), with 42.4% of the parsed sentences having no crossing brackets (8.2% higher), and 77.1% having two or fewer crossing brackets (8.1% higher). When testing the inclusion entity model on the random set, the performance is very similar to the baseline model on this data. While coverage is the same, F and crossbrackting scores are marginally improved, and the dependency score is marginally deteriorated. This shows that the inclusion entity model does not harm the parsing accuracy of sentences that do not actually contain foreign inclusions.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inclusion Entity Model",
+                "sec_num": "4.7"
+            },
+            {
+                "text": "Not only did the inclusion entity parser perform above the baseline on every metric for the inclusion set, its performance also exceeds that of the perfect tagging model on all measures except precision and average crossing brackets, where both models are tied. These results clearly indicate that the inclusion entity model is able to leverage the additional information about English inclusions provided by our inclusion classifier. However, it is also important to note that the performance of this model on the inclusion set is still consistently lower than that of all models on the random set. This demonstrates that sentences with inclusions are more difficult to parse than monolingual sentences, even in the presence of information about the inclusions that the parser can exploit.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inclusion Entity Model",
+                "sec_num": "4.7"
+            },
+            {
+                "text": "Comparing the inclusion set to the lengthmatched random set is arguably not entirely fair as the latter may not contain as many infrequent tokens as the inclusion set. Figure 4 shows the average relative token frequencies for sentences of equal length for both sets. The frequency profiles of the two data sets are broadly similar (the difference in means of both groups is only 0.000676), albeit significantly different according to a paired t-test (p \u2264 0.05). This is one reason why the inclusion entity model's performance on the inclusion set does not reach the upper limit set by the random sample. ",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 175,
+                        "end": 176,
+                        "text": "4",
+                        "ref_id": "FIGREF2"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Inclusion Entity Model",
+                "sec_num": "4.7"
+            },
+            {
+                "text": "The error analysis is limited to 100 sentences selected from the inclusion set parsed with both the baseline and the inclusion entity model. This sample contains 109 English inclusions, five of which are false positives, i.e., the output of the English inclusion classifier is incorrect. The precision of the classifier in recognizing multi-word English inclusions is therefore 95.4% for this TIGER sample. Table 4 illustrates that the majority of multi-word English inclusions are contained in a proper noun (PN ) phrase, including names of companies, political parties, organizations, films, newspapers, etc. A less frequent phrasal category is chunk (CH ) which tends to be used for slogans, quotes or expressions like Made in Germany. Even in this small sample, annotations of inclusions as either PN or CH , and not the other, can be misleading. For example, the organization Friends of the Earth is annotated as a PN , whereas another organization International Union for the Conservation of Nature is marked as a CH in the gold standard. This suggests that the annotation guidelines on foreign inclusions could be improved when differentiating between phrase categories containing foreign material.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 413,
+                        "end": 414,
+                        "text": "4",
+                        "ref_id": "TABREF2"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Error Analysis",
+                "sec_num": "5"
+            },
+            {
+                "text": "For the majority of sentences (62%), the baseline model predicts more brackets than are present in the gold standard parse tree (see Table 5 ). This number decreases by 11% to 51% when parsing with the inclusion entity model. This suggests that the baseline parser does not recognize English inclusions as constituents, and instead parses their individual tokens as separate phrases. Provided with additional information of multi-word English inclusions in the training data, the parser is able to overcome this problem.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 139,
+                        "end": 140,
+                        "text": "5",
+                        "ref_id": "TABREF4"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Error Analysis",
+                "sec_num": "5"
+            },
+            {
+                "text": "We now turn our attention to how accurately the various parsers are at predicting both phrase bracketing and phrase categories (see (42.2%) of inclusions, the baseline model makes an error with a negative effect on performance. In 39 cases (35.8%), the phrase bracketing and phrase category are incorrect, and constituent boundaries occur within the inclusion, as illustrated in Figure 5 (a). Such errors also have a detrimental effect on the parsing of the remainder of the sentence. Overall, the baseline model predicts the correct phrase bracketing and phrase category for 63 inclusions (57.8%).",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 386,
+                        "end": 387,
+                        "text": "5",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Error Analysis",
+                "sec_num": "5"
+            },
+            {
+                "text": "Conversely, the inclusion entity model, which is given information on tag consistency within inclusions via the FOM tags, is able to determine the correct phrase bracketing and phrase category for 67.9% inclusions (10.1% more), e.g. see Figure 5 (b).",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 244,
+                        "end": 245,
+                        "text": "5",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Error Analysis",
+                "sec_num": "5"
+            },
+            {
+                "text": "Both the phrase bracketing and phrase category are predicted incorrectly in only 6 cases (5.5%). The inclusion entity model's improved phrase boundary prediction for 31 inclusions (28.4% more correct) is likely to have an overall positive effect on the parsing decisions made for the context which they appear in. Nevertheless, the inclusion entity parser still has difficulty determining the correct phrase category in 25 cases (22.9%). The main confusion lies between assigning the categories PN , CH and NP , the most frequent phrase categories of multi-word English inclusions. This is also partially due to the ambiguity between these phrases in the gold standard. Finally, few parsing errors (4) are caused by the inclusion entity parser due to the markup of false positive inclusions (mainly boundary errors).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Error Analysis",
+                "sec_num": "5"
+            },
+            {
+                "text": "This paper has argued that English inclusions in German text is an increasingly pervasive instance of language mixing. Starting with the hypothesis that such inclusions can be a significant source of errors for monolingual parsers, we found evidence that an unmodified state-of-the-art parser for Ger- man performs substantially worse on a set of sentences with English inclusions compared to a set of length-matched sentences randomly sampled from the same corpus. The lower performance on the inclusion set persisted even when the parser when given gold standard POS tags in the input.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Discussion and Conclusion",
+                "sec_num": "6"
+            },
+            {
+                "text": "To overcome the poor accuracy of parsing inclusions, we developed two methods for interfacing the parser with an existing annotation-free inclusion detection system. The first method restricts the POS tags for inclusions that the parser can assign to those found in the data. The second method applies tree transformations to ensure that inclusions are treated as phrases. An evaluation on the TIGER corpus shows that the second method yields a performance gain of 4.3 in F-score over a baseline of no inclusion detection, and even outperforms a model involving perfect POS tagging of inclusions.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Discussion and Conclusion",
+                "sec_num": "6"
+            },
+            {
+                "text": "To summarize, we have shown that foreign inclusions present a problem for a monolingual parser. We also demonstrated that it is insufficient to know where inclusions are or even what their parts of speech are. Parsing performance only improves if the parser also has knowledge about the structure of the inclusions. It is particularly important to know when adjacent foreign words are likely to be part of the same phrase. As our error analysis showed, this prevents cascading errors further up in the parse tree.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Discussion and Conclusion",
+                "sec_num": "6"
+            },
+            {
+                "text": "Finally, our results indicate that future work could improve parsing performance for inclusions further: we found that parsing the inclusion set is still harder than parsing a randomly sampled test set, even for our best-performing model. This provides an upper bound on the performance we can expect from a parser that uses inclusion detection. Future work will also involve determining the English inclusion classifier's merit when applied to rule-based parsing.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Discussion and Conclusion",
+                "sec_num": "6"
+            },
+            {
+                "text": "This approach to statistical testing is described in: http: //www.cis.upenn.edu/\u02dcdbikel/software.html",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            }
+        ],
+        "back_matter": [
+            {
+                "text": "This research is supported by grants from the Scottish Enterprise Edinburgh-Stanford Link (R36759), ESRC, and the University of Edinburgh. We would also like to thank Claire Grover for her comments and feedback.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Acknowledgements",
+                "sec_num": null
+            }
+        ],
+        "bib_entries": {
+            "BIBREF0": {
+                "ref_id": "b0",
+                "title": "Procedure for quantitatively comparing the syntactic coverage of English grammars",
+                "authors": [
+                    {
+                        "first": "Steven",
+                        "middle": [],
+                        "last": "Abney",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dan",
+                        "middle": [],
+                        "last": "Flickenger",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Claudia",
+                        "middle": [],
+                        "last": "Gdaniec",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ralph",
+                        "middle": [],
+                        "last": "Grishman",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Philip",
+                        "middle": [],
+                        "last": "Harrison",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Donald",
+                        "middle": [],
+                        "last": "Hindle",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Robert",
+                        "middle": [],
+                        "last": "Ingria",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Frederick",
+                        "middle": [],
+                        "last": "Jelinek",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Judith",
+                        "middle": [],
+                        "last": "Klavans",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mark",
+                        "middle": [],
+                        "last": "Liberman",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mitchell",
+                        "middle": [
+                            "P"
+                        ],
+                        "last": "Marcus",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Salim",
+                        "middle": [],
+                        "last": "Roukos",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Beatrice",
+                        "middle": [],
+                        "last": "Santorini",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tomek",
+                        "middle": [],
+                        "last": "Strzalkowski",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1991,
+                "venue": "HLT'91: Proceedings of the workshop on Speech and Natural Language",
+                "volume": "",
+                "issue": "",
+                "pages": "306--311",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Steven Abney, Dan Flickenger, Claudia Gdaniec, Ralph Grishman, Philip Harrison, Donald Hindle, Robert In- gria, Frederick Jelinek, Judith Klavans, Mark Liber- man, Mitchell P. Marcus, Salim Roukos, Beatrice San- torini, and Tomek Strzalkowski. 1991. Procedure for quantitatively comparing the syntactic coverage of En- glish grammars. In Ezra Black, editor, HLT'91: Pro- ceedings of the workshop on Speech and Natural Lan- guage, pages 306-311, Morristown, NJ, USA. Associ- ation for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF1": {
+                "ref_id": "b1",
+                "title": "An unsupervised system for identifying English inclusions in German text",
+                "authors": [
+                    {
+                        "first": "Beatrice",
+                        "middle": [],
+                        "last": "Alex",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2005,
+                "venue": "Proceedings of the 43rd Annual Meeting of the Association for Computational Linguistics (ACL 2005), Student Research Workshop",
+                "volume": "",
+                "issue": "",
+                "pages": "133--138",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Beatrice Alex. 2005. An unsupervised system for identi- fying English inclusions in German text. In Proceed- ings of the 43rd Annual Meeting of the Association for Computational Linguistics (ACL 2005), Student Re- search Workshop, pages 133-138, Ann Arbor, Michi- gan, USA.",
+                "links": null
+            },
+            "BIBREF2": {
+                "ref_id": "b2",
+                "title": "Integrating language knowledge resources to extend the English inclusion classifier to a new language",
+                "authors": [
+                    {
+                        "first": "Beatrice",
+                        "middle": [],
+                        "last": "Alex",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2006,
+                "venue": "Proceedings of the 5th International Conference on Language Resources and Evaluation (LREC 2006)",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Beatrice Alex. 2006. Integrating language knowledge resources to extend the English inclusion classifier to a new language. In Proceedings of the 5th Interna- tional Conference on Language Resources and Evalu- ation (LREC 2006), Genoa, Italy.",
+                "links": null
+            },
+            "BIBREF3": {
+                "ref_id": "b3",
+                "title": "Assessing algorithms for automatic extraction of Anglicisms in Norwegian texts",
+                "authors": [
+                    {
+                        "first": "Gisle",
+                        "middle": [],
+                        "last": "Andersen",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2005,
+                "venue": "Corpus Linguistics 2005",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Gisle Andersen. 2005. Assessing algorithms for auto- matic extraction of Anglicisms in Norwegian texts. In Corpus Linguistics 2005, Birmingham, UK.",
+                "links": null
+            },
+            "BIBREF4": {
+                "ref_id": "b4",
+                "title": "The TIGER Treebank",
+                "authors": [
+                    {
+                        "first": "Sabine",
+                        "middle": [],
+                        "last": "Brants",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Stefanie",
+                        "middle": [],
+                        "last": "Dipper",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Silvia",
+                        "middle": [],
+                        "last": "Hansen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Wolfgang",
+                        "middle": [],
+                        "last": "Lezius",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "George",
+                        "middle": [],
+                        "last": "Smith",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2002,
+                "venue": "Proceedings of the Workshop on Treebanks and Linguistic Theories (TLT02)",
+                "volume": "",
+                "issue": "",
+                "pages": "24--41",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Sabine Brants, Stefanie Dipper, Silvia Hansen, Wolfgang Lezius, and George Smith. 2002. The TIGER Tree- bank. In Proceedings of the Workshop on Treebanks and Linguistic Theories (TLT02), pages 24-41, So- zopol, Bulgaria.",
+                "links": null
+            },
+            "BIBREF5": {
+                "ref_id": "b5",
+                "title": "Statistical Parsing for German: Modeling syntactic properties and annotation differences",
+                "authors": [
+                    {
+                        "first": "Amit",
+                        "middle": [],
+                        "last": "Dubey",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2005,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Amit Dubey. 2005a. Statistical Parsing for German: Modeling syntactic properties and annotation differ- ences. Ph.D. thesis, Saarland University, Germany.",
+                "links": null
+            },
+            "BIBREF6": {
+                "ref_id": "b6",
+                "title": "What to do when lexicalization fails: parsing German with suffix analysis and smoothing",
+                "authors": [
+                    {
+                        "first": "Amit",
+                        "middle": [],
+                        "last": "Dubey",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2005,
+                "venue": "Proceedings of the 43rd Annual Meeting of the Association for Computational Linguistics (ACL 2005)",
+                "volume": "",
+                "issue": "",
+                "pages": "314--321",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Amit Dubey. 2005b. What to do when lexicalization fails: parsing German with suffix analysis and smooth- ing. In Proceedings of the 43rd Annual Meeting of the Association for Computational Linguistics (ACL 2005), pages 314-321, Ann Arbor, Michigan, USA.",
+                "links": null
+            },
+            "BIBREF7": {
+                "ref_id": "b7",
+                "title": "Exploring the boundaries: Gene and protein identification in biomedical text",
+                "authors": [
+                    {
+                        "first": "Jenny",
+                        "middle": [],
+                        "last": "Finkel",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Shipra",
+                        "middle": [],
+                        "last": "Dingare",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [
+                            "D"
+                        ],
+                        "last": "Manning",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Malvina",
+                        "middle": [],
+                        "last": "Nissim",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Beatrice",
+                        "middle": [],
+                        "last": "Alex",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Claire",
+                        "middle": [],
+                        "last": "Grover",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2005,
+                "venue": "BMC Bioinformatics",
+                "volume": "6",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jenny Finkel, Shipra Dingare, Christopher D. Manning, Malvina Nissim, Beatrice Alex, and Claire Grover. 2005. Exploring the boundaries: Gene and protein identification in biomedical text. BMC Bioinformat- ics, 6(Suppl 1):S5.",
+                "links": null
+            },
+            "BIBREF8": {
+                "ref_id": "b8",
+                "title": "The importance of precise tokenizing for deep grammars",
+                "authors": [
+                    {
+                        "first": "Martin",
+                        "middle": [],
+                        "last": "Forst",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ronald",
+                        "middle": [
+                            "M"
+                        ],
+                        "last": "Kaplan",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2006,
+                "venue": "Proceedings of the 5th International Conference on Language Resources and Evaluation (LREC 2006)",
+                "volume": "",
+                "issue": "",
+                "pages": "369--372",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Martin Forst and Ronald M. Kaplan. 2006. The impor- tance of precise tokenizing for deep grammars. In Pro- ceedings of the 5th International Conference on Lan- guage Resources and Evaluation (LREC 2006), pages 369-372, Genoa, Italy.",
+                "links": null
+            },
+            "BIBREF9": {
+                "ref_id": "b9",
+                "title": "Accurate unlexicalized parsing",
+                "authors": [
+                    {
+                        "first": "Dan",
+                        "middle": [],
+                        "last": "Klein",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [
+                            "D"
+                        ],
+                        "last": "Manning",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2003,
+                "venue": "Proceedings of the 41st Annual Meeting of the Association for Computational Linguistics (ACL 2003)",
+                "volume": "",
+                "issue": "",
+                "pages": "423--430",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Dan Klein and Christopher D. Manning. 2003. Ac- curate unlexicalized parsing. In Proceedings of the 41st Annual Meeting of the Association for Com- putational Linguistics (ACL 2003), pages 423-430, Saporo, Japan.",
+                "links": null
+            },
+            "BIBREF10": {
+                "ref_id": "b10",
+                "title": "Named entity recognition with character-level models",
+                "authors": [
+                    {
+                        "first": "Dan",
+                        "middle": [],
+                        "last": "Klein",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Joseph",
+                        "middle": [],
+                        "last": "Smarr",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Huy",
+                        "middle": [],
+                        "last": "Nguyen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [
+                            "D"
+                        ],
+                        "last": "Manning",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2003,
+                "venue": "Proceedings of the Seventh Conference on Natural Language Learning (CoNLL-03)",
+                "volume": "",
+                "issue": "",
+                "pages": "180--183",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Dan Klein, Joseph Smarr, Huy Nguyen, and Christo- pher D. Manning. 2003. Named entity recognition with character-level models. In Proceedings of the Seventh Conference on Natural Language Learning (CoNLL-03), pages 180-183, Edmonton, Canada.",
+                "links": null
+            },
+            "BIBREF11": {
+                "ref_id": "b11",
+                "title": "A dependency-based method for evaluating broad-coverage parsers",
+                "authors": [
+                    {
+                        "first": "Dekang",
+                        "middle": [],
+                        "last": "Lin",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1995,
+                "venue": "Proceedings of the International Joint Conference on Artificial Intelligence (IJCAI-95)",
+                "volume": "",
+                "issue": "",
+                "pages": "1420--1425",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Dekang Lin. 1995. A dependency-based method for evaluating broad-coverage parsers. In Proceedings of the International Joint Conference on Artificial In- telligence (IJCAI-95), pages 1420-1425, Montreal, Canada.",
+                "links": null
+            },
+            "BIBREF12": {
+                "ref_id": "b12",
+                "title": "A transformation-based learning approach to language identification for mixedlingual text-to-speech synthesis",
+                "authors": [
+                    {
+                        "first": "Jean-Christophe",
+                        "middle": [],
+                        "last": "Marcadet",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Volker",
+                        "middle": [],
+                        "last": "Fischer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Claire",
+                        "middle": [],
+                        "last": "Waast-Richard",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2005,
+                "venue": "Proceedings of Interspeech 2005 -ICSLP",
+                "volume": "",
+                "issue": "",
+                "pages": "2249--2252",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jean-Christophe Marcadet, Volker Fischer, and Claire Waast-Richard. 2005. A transformation-based learn- ing approach to language identification for mixed- lingual text-to-speech synthesis. In Proceedings of Interspeech 2005 -ICSLP, pages 2249-2252, Lisbon, Portugal.",
+                "links": null
+            },
+            "BIBREF13": {
+                "ref_id": "b13",
+                "title": "Mixedlingual analysis for polyglot TTS synthesis",
+                "authors": [
+                    {
+                        "first": "Beat",
+                        "middle": [],
+                        "last": "Pfister",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Harald",
+                        "middle": [],
+                        "last": "Romsdorfer",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2003,
+                "venue": "Proceedings of Eurospeech 2003",
+                "volume": "",
+                "issue": "",
+                "pages": "2037--2040",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Beat Pfister and Harald Romsdorfer. 2003. Mixed- lingual analysis for polyglot TTS synthesis. In Proceedings of Eurospeech 2003, pages 2037-2040, Geneva, Switzerland.",
+                "links": null
+            },
+            "BIBREF14": {
+                "ref_id": "b14",
+                "title": "A simple algorithm for identifying abbreviation definitions in biomedical text",
+                "authors": [
+                    {
+                        "first": "Ariel",
+                        "middle": [],
+                        "last": "Schwartz",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Marti",
+                        "middle": [],
+                        "last": "Hearst",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2003,
+                "venue": "Proceedings of the Pacific Symposium on Biocomputing (PSB 2003)",
+                "volume": "",
+                "issue": "",
+                "pages": "451--462",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ariel Schwartz and Marti Hearst. 2003. A simple algorithm for identifying abbreviation definitions in biomedical text. In Proceedings of the Pacific Sym- posium on Biocomputing (PSB 2003), pages 451-462, Kauai, Hawaii.",
+                "links": null
+            },
+            "BIBREF15": {
+                "ref_id": "b15",
+                "title": "A linguistically interpreted corpus of German newspaper text",
+                "authors": [
+                    {
+                        "first": "Wojciech",
+                        "middle": [],
+                        "last": "Skut",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Thorsten",
+                        "middle": [],
+                        "last": "Brants",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Brigitte",
+                        "middle": [],
+                        "last": "Krenn",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hans",
+                        "middle": [],
+                        "last": "Uszkoreit",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1998,
+                "venue": "Proceedings of the Conference on Language Resources and Evaluation (LREC 1998)",
+                "volume": "",
+                "issue": "",
+                "pages": "705--712",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Wojciech Skut, Thorsten Brants, Brigitte Krenn, and Hans Uszkoreit. 1998. A linguistically interpreted corpus of German newspaper text. In Proceedings of the Conference on Language Resources and Evalua- tion (LREC 1998), pages 705-712, Granada, Spain.",
+                "links": null
+            }
+        },
+        "ref_entries": {
+            "FIGREF0": {
+                "num": null,
+                "text": "Figure 1: Learning curve of a ML classifier versus the English inclusion classifier's performance.",
+                "uris": null,
+                "fig_num": "1",
+                "type_str": "figure"
+            },
+            "FIGREF1": {
+                "num": null,
+                "text": "Figure 2: Example parse tree of a German TIGER sentence containing an English inclusion. Translation: The nicest road movie came from Switzerland.",
+                "uris": null,
+                "fig_num": "2",
+                "type_str": "figure"
+            },
+            "FIGREF2": {
+                "num": null,
+                "text": "Figure 4: Average relative token frequencies for sentences of equal length.",
+                "uris": null,
+                "fig_num": "4",
+                "type_str": "figure"
+            },
+            "FIGREF3": {
+                "num": null,
+                "text": "Partial parsing output of the baseline model with a constiuent boundary in the English inclusion. Partial parsing output of the inclusion entity model with the English inclusion parsed correctly.",
+                "uris": null,
+                "fig_num": null,
+                "type_str": "figure"
+            },
+            "FIGREF4": {
+                "num": null,
+                "text": "Figure 5: Comparing baseline model output to inclusion entity model output.",
+                "uris": null,
+                "fig_num": null,
+                "type_str": "figure"
+            },
+            "TABREF0": {
+                "content": "<table><tr><td>presents an</td></tr></table>",
+                "type_str": "table",
+                "text": "",
+                "html": null,
+                "num": null
+            },
+            "TABREF1": {
+                "content": "<table><tr><td>Data</td><td>P</td><td>R</td><td>F</td><td colspan=\"2\">Dep. Cov. AvgCB 0CB \u22642CB</td></tr><tr><td/><td/><td/><td colspan=\"2\">Baseline model</td></tr><tr><td colspan=\"5\">Inclusion set 56.1 62.6 59.2 74.9 99.2</td><td>2.1</td><td>34.0</td><td>69.0</td></tr><tr><td>Random set</td><td colspan=\"4\">63.3 67.3 65.2 81.1 99.2</td><td>1.6</td><td>40.4</td><td>75.1</td></tr><tr><td/><td/><td/><td colspan=\"2\">Perfect tagging model</td></tr><tr><td colspan=\"5\">Inclusion set 61.3 63.0 62.2 75.1 92.7</td><td>1.7</td><td>41.5</td><td>72.6</td></tr><tr><td>Random set</td><td colspan=\"4\">65.8 68.9 67.3 82.4 97.7</td><td>1.4</td><td>45.9</td><td>77.1</td></tr><tr><td/><td/><td/><td colspan=\"2\">Word-by-word model</td></tr><tr><td colspan=\"5\">Inclusion set 55.6 62.8 59.0 73.1 99.2</td><td>2.1</td><td>34.2</td><td>70.2</td></tr><tr><td>Random set</td><td colspan=\"4\">63.3 67.3 65.2 81.1 99.2</td><td>1.6</td><td>40.4</td><td>75.1</td></tr><tr><td/><td/><td/><td colspan=\"2\">Inclusion entity model</td></tr><tr><td colspan=\"5\">Inclusion set 61.3 65.9 63.5 78.3 99.0</td><td>1.7</td><td>42.4</td><td>77.1</td></tr><tr><td>Random set</td><td colspan=\"4\">63.4 67.5 65.4 80.8 99.2</td><td>1.6</td><td>40.1</td><td>75.7</td></tr></table>",
+                "type_str": "table",
+                "text": "The held out set is then Baseline and perfect tagging for inclusion and random sets and results for the word-by-word and the inclusion entity models.",
+                "html": null,
+                "num": null
+            },
+            "TABREF2": {
+                "content": "<table><tr><td colspan=\"2\">Phrase cat. Frequency</td><td>Example</td></tr><tr><td>PN</td><td>91</td><td>The Independent</td></tr><tr><td>CH</td><td colspan=\"2\">10 Made in Germany</td></tr><tr><td>NP</td><td colspan=\"2\">4 Peace Enforcement</td></tr><tr><td>CNP</td><td colspan=\"2\">2 Botts and Company</td></tr><tr><td>-</td><td>2</td><td>Chief Executives</td></tr></table>",
+                "type_str": "table",
+                "text": "Gold phrase categories of inclusions.",
+                "html": null,
+                "num": null
+            },
+            "TABREF3": {
+                "content": "<table><tr><td>). For 46</td></tr></table>",
+                "type_str": "table",
+                "text": "",
+                "html": null,
+                "num": null
+            },
+            "TABREF4": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "Bracket frequency of the predicted baseline (BL) and inclusion entity (IE) model output compared to the gold standard.",
+                "html": null,
+                "num": null
+            },
+            "TABREF5": {
+                "content": "<table><tr><td>Errors</td><td colspan=\"2\">No. of inclusions (in %)</td></tr><tr><td colspan=\"3\">Parser: baseline model, data: inclusion set</td></tr><tr><td>Incorrect PB and PC</td><td colspan=\"2\">39 (35.8%)</td></tr><tr><td>Incorrect PC</td><td>5</td><td>(4.6%)</td></tr><tr><td>Incorrect PB</td><td>2</td><td>(1.8%)</td></tr><tr><td>Correct PB and PC</td><td colspan=\"2\">63 (57.8%)</td></tr><tr><td colspan=\"3\">Parser: inclusion entity model, data: inclusion set</td></tr><tr><td>Incorrect PB and PC</td><td>6</td><td>(5.5%)</td></tr><tr><td>Incorrect PC</td><td colspan=\"2\">25 (22.9%)</td></tr><tr><td>Incorrect PB</td><td>4</td><td>(3.7%)</td></tr><tr><td>Correct PB and PC</td><td colspan=\"2\">74 (67.9%)</td></tr></table>",
+                "type_str": "table",
+                "text": "5: Comparing baseline model output to inclusion entity model output. Baseline and inclusion entity model errors for inclusions with respect to their phrase bracketing (PB) and phrase category (PC).",
+                "html": null,
+                "num": null
+            }
+        }
+    }
+}

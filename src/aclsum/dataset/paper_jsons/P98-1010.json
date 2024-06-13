@@ -1,0 +1,1405 @@
+{
+    "paper_id": "P98-1010",
+    "header": {
+        "generated_with": "S2ORC 1.0.0",
+        "date_generated": "2023-06-16T12:21:50.437292Z"
+    },
+    "title": "A Memory-Based Approach to Learning Shallow Natural Language Patterns",
+    "authors": [
+        {
+            "first": "Shlomo",
+            "middle": [],
+            "last": "Argamon",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "Ilan University",
+                "location": {
+                    "postCode": "52900",
+                    "settlement": "Ramat Gan",
+                    "country": "Israel"
+                }
+            },
+            "email": "argamon@biu.ac.il"
+        },
+        {
+            "first": "Ido",
+            "middle": [],
+            "last": "Dagan",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "Ilan University",
+                "location": {
+                    "postCode": "52900",
+                    "settlement": "Ramat Gan",
+                    "country": "Israel"
+                }
+            },
+            "email": "dagan@biu.ac.il"
+        },
+        {
+            "first": "Yuval",
+            "middle": [],
+            "last": "Krymolowski",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "Ilan University",
+                "location": {
+                    "postCode": "52900",
+                    "settlement": "Ramat Gan",
+                    "country": "Israel"
+                }
+            },
+            "email": "yuvalk@cs@biu.ac.il"
+        }
+    ],
+    "year": "",
+    "venue": null,
+    "identifiers": {},
+    "abstract": "Recognizing shallow linguistic patterns, such as basic syntactic relationships between words, is a common task in applied natural language and text processing. The common practice for approaching this task is by tedious manual definition of possible pattern structures, often in the form of regular expressions or finite automata. This paper presents a novel memory-based learning method that recognizes shallow patterns in new text based on a bracketed training corpus. The training data are stored as-is, in efficient suffix-tree data structures. Generalization is performed on-line at recognition time by comparing subsequences of the new text to positive and negative evidence in the corpus. This way, no information in the training is lost, as can happen in other learning systems that construct a single generalized model at the time of training. The paper presents experimental results for recognizing noun phrase, subject-verb and verb-object patterns in English. Since the learning approach enables easy porting to new domains, we plan to apply it to syntactic patterns in other languages and to sub-language patterns for information extraction.",
+    "pdf_parse": {
+        "paper_id": "P98-1010",
+        "_pdf_hash": "",
+        "abstract": [
+            {
+                "text": "Recognizing shallow linguistic patterns, such as basic syntactic relationships between words, is a common task in applied natural language and text processing. The common practice for approaching this task is by tedious manual definition of possible pattern structures, often in the form of regular expressions or finite automata. This paper presents a novel memory-based learning method that recognizes shallow patterns in new text based on a bracketed training corpus. The training data are stored as-is, in efficient suffix-tree data structures. Generalization is performed on-line at recognition time by comparing subsequences of the new text to positive and negative evidence in the corpus. This way, no information in the training is lost, as can happen in other learning systems that construct a single generalized model at the time of training. The paper presents experimental results for recognizing noun phrase, subject-verb and verb-object patterns in English. Since the learning approach enables easy porting to new domains, we plan to apply it to syntactic patterns in other languages and to sub-language patterns for information extraction.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            }
+        ],
+        "body_text": [
+            {
+                "text": "Identifying local patterns of syntactic sequences and relationships is a fundamental task in natural language processing (NLP). Such patterns may correspond to syntactic phrases, like noun phrases, or to pairs of words that participate in a syntactic relationship, like the heads of a verb-object relation. Such patterns have been found useful in various application areas, including information extraction, text summarization, and bilingual alignment. Syntactic patterns are useful also for many basic computational linguistic tasks, such as statistical word similarity and various disambiguation problems.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "One approach for detecting syntactic patterns is to obtain a full parse of a sentence and then extract the required patterns. However, obtaining a complete parse tree for a sentence is difficult in many cases, and may not be necessary at all for identifying most instances of local syntactic patterns.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "An alternative approach is to avoid the complexity of full parsing and instead to rely only on local information. A variety of methods have been developed within this framework, known as shallow parsing, chunking, local parsing etc. (e.g., (Abney, 1991; Greffenstette, 1993) ). These works have shown that it is possible to identify most instances of local syntactic patterns by rules that examine only the pattern itself and its nearby context. Often, the rules are applied to sentences that were tagged by partof-speech (POS) and are phrased by some form of regular expressions or finite state automata.",
+                "cite_spans": [
+                    {
+                        "start": 240,
+                        "end": 253,
+                        "text": "(Abney, 1991;",
+                        "ref_id": "BIBREF0"
+                    },
+                    {
+                        "start": 254,
+                        "end": 274,
+                        "text": "Greffenstette, 1993)",
+                        "ref_id": "BIBREF10"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Manual writing of local syntactic rules has become a common practice for many applications. However, writing rules is often tedious and time consuming. Furthermore, extending the rules to different languages or sub-language domains can require substantial resources and expertise that are often not available. As in many areas of NLP, a learning approach is appealing. Surprisingly, though, rather little work has been devoted to learning local syntactic patterns, mostly noun phrases (Ramshaw and Marcus, 1995; Vilain and Day, 1996) .",
+                "cite_spans": [
+                    {
+                        "start": 485,
+                        "end": 511,
+                        "text": "(Ramshaw and Marcus, 1995;",
+                        "ref_id": "BIBREF11"
+                    },
+                    {
+                        "start": 512,
+                        "end": 533,
+                        "text": "Vilain and Day, 1996)",
+                        "ref_id": "BIBREF17"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "This paper presents a novel general learning approach for recognizing local sequential patterns, that may be perceived as falling within the memorybased learning paradigm. The method utilizes a part-of-speech tagged training corpus in which all instances of the target pattern are marked (bracketed).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "The training data are stored as-is in suffix-tree data structures, which enable linear time searching for subsequences in the corpus.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "The memory-based nature of the presented algorithm stems from its deduction strategy: a new instance of the target pattern is recognized by examining the raw training corpus, searching for positive and negative evidence with respect to the given test sequence. No model is created for the training corpus, and the raw examples are not converted to any other representation.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Consider the following example 1. Suppose we 1We use here the POS tags: DT ----determiner, ADJ = adjective, hDV = adverb, C0NJ = conjunction, VB=verb, PP=preposition, NN = singular noun, and NNP ----plural noun. want to decide whether the candidate sequence DT ADJ ADJ NN NNP is a noun phrase (NP) by comparing it to the training corpus. A good match would be if the entire sequence appears as-is several times in the corpus. However, due to data sparseness, an exact match cannot always be expected.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "A somewhat weaker match may be obtained if we consider sub-parts of the candidate sequence (called tiles). For example, suppose the corpus contains noun phrase instances with the following structures:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "(i) DT ADJ ADJ NN NN (2) DT ADJ NN NNP",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "The first structure provides positive evidence that the sequence \"DT ADJ ADJ NN\" is a possible NP prefix while the second structure provides evidence for \"ADJ NN NNP\" being an NP suffix. Together, these two training instances provide positive evidence that covers the entire candidate. Considering evidence for sub-parts of the pattern enables us to generalize over the exact structures that are present in the corpus. Similarly, we also consider the negative evidence for such sub-parts by noting where they occur in the corpus without being a corresponding part of a target instance.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "The proposed method, as described in detail in the next section, formalizes this type of reasoning. It searches specialized data structures for both positive and negative evidence for sub-parts of the candidate structure, and considers additional factors such as context and evidence overlap. Section 3 presents experimental results for three target syntactic patterns in English, and Section 4 describes related work.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "The Algorithm",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "2",
+                "sec_num": null
+            },
+            {
+                "text": "The input to the Memory-Based Sequence Learning (MBSL) algorithm is a sentence represented as a sequence of POS tags, and its output is a bracketed sentence, indicating which subsequences of the sentence are to be considered instances of the target pattern (target instances). MBSL determines the bracketing by first considering each subsequence of the sentence as a candidate to be a target instance.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "2",
+                "sec_num": null
+            },
+            {
+                "text": "It computes a score for each candidate by comparing it to the training corpus, which consists of a set of pre-bracketed sentences. The algorithm then finds a consistent bracketing for the input sentence, giving preference to high scoring subsequences. In the remainder of this section we describe the scoring and bracketing methods in more detail.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "2",
+                "sec_num": null
+            },
+            {
+                "text": "We first describe the mechanism for scoring an individual candidate. The input is a candidate subsequence, along with its context, i.e., the other tags in the input sentence. The method is presented at two levels: a general memory-based learning schema and a particular instantiation of it. Further instantiations of the schema are expected in future work.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Scoring candidates",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "The MBSL scoring algorithm works by considering situated candidates. A situated candidate is a sentence containing one pair of brackets, indicating a candidate to be a target instance. The portion of the sentence between the brackets is the candidate (as above), while the portion before and after the candidate is its context. (Although we describe the algorithm here for the general case of unlimited context, for computational reasons our implementation only considers a limited amount of context on either side of the candidate.) This subsection describes how to compute the score of a situated candidate from the training corpus.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "The general MBSL schema",
+                "sec_num": "2.1.1"
+            },
+            {
+                "text": "The idea of the MBSL scoring algorithm is to construct a tiling of subsequences of a situated candidate which covers the entire candidate. We consider as tiles subsequences of the situated candidate which contain a bracket. (We thus consider only tiles within or adjacent to the candidate that also include a candidate boundary.)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "The general MBSL schema",
+                "sec_num": "2.1.1"
+            },
+            {
+                "text": "Each tile is assigned a score based on its occurrence in the training memory. Since brackets correspond to the boundaries of potential target instances, it is important to consider how the bracket positions in the tile correspond to those in the training memory.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "The general MBSL schema",
+                "sec_num": "2.1.1"
+            },
+            {
+                "text": "For example, consider the training sentence",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "The general MBSL schema",
+                "sec_num": "2.1.1"
+            },
+            {
+                "text": "We may now examine the occurrence in this sentence of several possible tiles:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "[ NN ] VB [ ADJ NN NN ] ADV PP [ NN ]",
+                "sec_num": null
+            },
+            {
+                "text": "VB [ ADJ NN occurs positively in the sentence, and",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "[ NN ] VB [ ADJ NN NN ] ADV PP [ NN ]",
+                "sec_num": null
+            },
+            {
+                "text": "NN NN ] ADV also occurs positively, while NN [ NN ADV occurs negatively in the training sentence, since the bracket does not correspond.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "[ NN ] VB [ ADJ NN NN ] ADV PP [ NN ]",
+                "sec_num": null
+            },
+            {
+                "text": "The positive evidence for a tile is measured by its positive count, the number of times the tile (including brackets) occurs in the training memory with corresponding brackets. Similarly, the negative evidence for a tile is measured by its negative count, the number of times that the POS sequence of the tile occurs in the training memory with noncorresponding brackets (either brackets in the training where they do not occur in the tile, or vice versa).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "[ NN ] VB [ ADJ NN NN ] ADV PP [ NN ]",
+                "sec_num": null
+            },
+            {
+                "text": "The total count of a tile is its positive count plus its negative count, that is, the total count of the POS sequence of the tile, regardless of bracket position.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "[ NN ] VB [ ADJ NN NN ] ADV PP [ NN ]",
+                "sec_num": null
+            },
+            {
+                "text": "The score ](t) of a tile t is a function of its positive and negative counts. The overall score of a situated candidate is generally a function of the scores of all the tiles for the candidate, as well as the relations between the tiles' positions. These relations include tile adjacency, overlap between tiles, the amount of context in a tile, and so on.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "[ NN ] VB [ ADJ NN NN ] ADV PP [ NN ]",
+                "sec_num": null
+            },
+            {
+                "text": "In our instantiation of the MBSL schema, we define the score fit) of a tile t as the ratio of its positive count pos(t) and its total count total(t):",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "An instantiation of the MBSL schema",
+                "sec_num": "2.1.2"
+            },
+            {
+                "text": "1 if -P-P--~!!-> 0 total(t) I(t) = 0 otherwise",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "An instantiation of the MBSL schema",
+                "sec_num": "2.1.2"
+            },
+            {
+                "text": "for a predefined threshold O. Tiles with a score of 1, and so with sufficient positive evidence, are called matching tiles.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "An instantiation of the MBSL schema",
+                "sec_num": "2.1.2"
+            },
+            {
+                "text": "Each matching tile gives supporting evidence that a part of the candidate can be a part of a target instance. In order to combine this evidence, we try to cover the entire candidate by a set of matching tiles, with no gaps. Such a covering constitutes evidence that the entire candidate is a target instance. For example, consider the matching tiles shown for the candidate in Figure 1 . The set of matching tiles 2, 4, and 5 covers the candidate, as does the set of tiles 1 and 5. Also note that tile 1 constitutes a cover on its own.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 384,
+                        "end": 385,
+                        "text": "1",
+                        "ref_id": "FIGREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "An instantiation of the MBSL schema",
+                "sec_num": "2.1.2"
+            },
+            {
+                "text": "To make this precise, we first say that a tile T1 connects to a tile T2 if (i) T2 starts after T1 starts, (ii) there is no gap between the end of T1 and the start of T2 (there may be some overlap), and (iii) T2 ends after T1 (neither tile includes the other). For example, tiles 2 and 4 in the figure connect, while tiles 2 and 5 do not, and neither do tiles 1 and 4 (since tile 1 includes tile 4 as a subsequence).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "An instantiation of the MBSL schema",
+                "sec_num": "2.1.2"
+            },
+            {
+                "text": "A cover for a situated candidate c is a sequence of matching tiles which collectively cover the entire candidate, including the boundary brackets, and possibly some context, such that each tile connects to the following one. A cover thus provides positive evidence for the entire sequence of tags in the candidate.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "An instantiation of the MBSL schema",
+                "sec_num": "2.1.2"
+            },
+            {
+                "text": "The set of all the covers for a candidate summarizes all of the evidence for the candidate being a target instance. We therefore compute the score of a candidate as a function of some statistics of the set of all its covers. For example, if a candidate has many different covers, it is more likely to be a target instance, since many different pieces of evidence can be brought to bear.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "An instantiation of the MBSL schema",
+                "sec_num": "2.1.2"
+            },
+            {
+                "text": "We have empirically found several statistics of the cover set to be useful. These include, for each cover, the number of tiles it contains, the total number of context tags it contains, and the number of positions which more than one tile covers (the amount of overlap). We thus compute, for the set of all covers of a candidate c, the \u2022 Total number of different covers, num(c), * Minimum number of matches in any cover, minsize(c),",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "An instantiation of the MBSL schema",
+                "sec_num": "2.1.2"
+            },
+            {
+                "text": "\u2022 Maximum amount of context in any cover, maxcontext(c), and",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "An instantiation of the MBSL schema",
+                "sec_num": "2.1.2"
+            },
+            {
+                "text": "\u2022 Maximum total overlap between tiles for any cover, maxoverlap(c).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "An instantiation of the MBSL schema",
+                "sec_num": "2.1.2"
+            },
+            {
+                "text": "Each of these items gives an indication regarding the overall strength of the cover-based evidence for the candidate.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "An instantiation of the MBSL schema",
+                "sec_num": "2.1.2"
+            },
+            {
+                "text": "The score of the candidate is a linear function of its statistics:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "An instantiation of the MBSL schema",
+                "sec_num": "2.1.2"
+            },
+            {
+                "text": "f(c) = anum(c) -13minsize(c)+ 3' maxcontext (c) + maxoverlap (c)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "An instantiation of the MBSL schema",
+                "sec_num": "2.1.2"
+            },
+            {
+                "text": "If candidate c has no covers, we set f(c) = O. Note that minsize is weighted negatively, since a cover with fewer tiles provides stronger evidence for the candidate.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "An instantiation of the MBSL schema",
+                "sec_num": "2.1.2"
+            },
+            {
+                "text": "In the current implementation, the weights were chosen so as to give a lexicographic ordering, preferring first candidates with more covers, then those with covers containing fewer tiles, then those with larger contexts, and finally, when all else is equal, preferring candidates with more overlap between tiles. We plan to investigate in the future a datadriven approach (based on the Winnow algorithm) for optimal selection and weighting of statistical features of the score.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "An instantiation of the MBSL schema",
+                "sec_num": "2.1.2"
+            },
+            {
+                "text": "We compute a candidate's statistics efficiently by performing a depth-first traversal of the cover graph of the candidate. The cover graph is a directed acyclic graph (DAG) whose nodes represent matching tiles of the candidate, such that an arc exists between nodes n and n', if tile n connects to n'. A special start node is added as the root of the DAG, that connects to all of the nodes (tiles) that contain an open bracket. There is a cover corresponding to each path from the start node to a node (tile) that contains a close bracket. Thus the statistics of all the covers may be efficiently computed by traversing the cover graph.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "An instantiation of the MBSL schema",
+                "sec_num": "2.1.2"
+            },
+            {
+                "text": "Given a candidate sequence and its context (a situated candidate):",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Summary",
+                "sec_num": "2.1.3"
+            },
+            {
+                "text": "1. Consider all the subsequences of the situated candidate which include a bracket as tiles;",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Summary",
+                "sec_num": "2.1.3"
+            },
+            {
+                "text": "2. Compute a tile score as a function of its positive count and total counts, by searching the training corpus. Determine which tiles are matching tiles;",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Summary",
+                "sec_num": "2.1.3"
+            },
+            {
+                "text": "3. Construct the set of all possible covers for the candidate, that is, sequences of connected matching tiles that cover the entire candidate;",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Summary",
+                "sec_num": "2.1.3"
+            },
+            {
+                "text": "4. Compute the candidate score based on the statistics of its covers.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Summary",
+                "sec_num": "2.1.3"
+            },
+            {
+                "text": "The MBSL scoring algorithm searches the training corpus for each subsequence of the sentence in order to find matching tiles. Implementing this search efficiently is therefore of prime importance. We do so by encoding the training corpus using suffix trees (Edward and McCreight, 1976) , which provide string searching in time which is linear in the length of the searched string.",
+                "cite_spans": [
+                    {
+                        "start": 257,
+                        "end": 285,
+                        "text": "(Edward and McCreight, 1976)",
+                        "ref_id": "BIBREF7"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Searching the training memory",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "Inspired by Satta (1997) , we build two suffix trees for retrieving the positive and total counts for a tile. The first suffix tree holds all pattern instances from the training corpus surrounded by bracket symbols and a fixed amount of context. Searching a given tile (which includes a bracket symbol) in this tree yields the positive count for the tile. The second suffix tree holds an unbracketed version of the entire training corpus. This tree is used for searching the POS sequence of a tile, with brackets omitted, yielding the total count for the tile (recall that the negative count is the difference between the total and positive counts).",
+                "cite_spans": [
+                    {
+                        "start": 12,
+                        "end": 24,
+                        "text": "Satta (1997)",
+                        "ref_id": "BIBREF13"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Searching the training memory",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "After the above procedure, each situated candidate is assigned a score. In order to select a bracketing for the input sentence, we assume that target instances are non-overlapping (this is usually the case for the types of patterns with which we experimented). We use a simple constraint propagation algorithm that finds the best choice of non-overlapping candidates in an input sentence: 3 Evaluation",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Selecting candidates",
+                "sec_num": "2.3"
+            },
+            {
+                "text": "We have tested our algorithm in recognizing three syntactic patterns: noun phrase sequences (NP), verb-object (VO), and subject-verb (SV) relations.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "The Data",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "The NP patterns were delimited by ' [' and ']' symbols at the borders of the phrase. For VO patterns, we have put the starting delimiter before the main verb and the ending delimiter after the object head, thus covering the whole noun phrase comprising the object; for example:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "The Data",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "... investigators started to [ view the lower price levels ] as attractive ...",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "The Data",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "We used a similar policy for SV patterns, defining the start of the pattern at the start of the subject noun phrase and the end at the first verb encountered (not including auxiliaries and medals); for example:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "The Data",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "... argue that [ the U.S. should regulate ] the class ... The subject and object noun-phrase borders were those specified by the annotators, phrases which contain conjunctions or appositives were not further analyzed.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "The Data",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "The training and testing data were derived from the Penn TreeBank. We used the NP data prepared by Ramshaw and Marcus (1995) , hereafter RM95. The SV and VO data were obtained using T (Tree-Bank's search script language) scripts. 2 Table 1 summarizes the sizes of the training and test data sets and the number of examples in each.",
+                "cite_spans": [
+                    {
+                        "start": 99,
+                        "end": 124,
+                        "text": "Ramshaw and Marcus (1995)",
+                        "ref_id": "BIBREF11"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 238,
+                        "end": 239,
+                        "text": "1",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "The Data",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "The T scripts did not attempt to match dependencies over very complex structures, since we are concerned with shallow, or local, patterns. Table 2 shows the distribution of pattern length in the train data. We also did not attempt to extract passivevoice VO relations.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 145,
+                        "end": 146,
+                        "text": "2",
+                        "ref_id": "TABREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "The Data",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "The test procedure has two parameters: (a) maximum context size of a candidate, which limits what queries are performed on the memory, and (b) the threshold 8 used for establishing a matching tile, which determines how to make use of the query results.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Testing Methodology",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "Recall and precision figures were obtained for various parameter values. F~ (van Rijsbergen, 1979) , a common measure in information retrieval, was used (f12 + 1). P. n",
+                "cite_spans": [
+                    {
+                        "start": 76,
+                        "end": 98,
+                        "text": "(van Rijsbergen, 1979)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Testing Methodology",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "We use ~ = 1 which gives no preference to either recall or precision.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "F~ = f12 . P + R",
+                "sec_num": null
+            },
+            {
+                "text": "Table 3 summarizes the optimal parameter settings and results for NP, VO, and SV on the test set. In order to find the optimal values of the context size and threshold, we tried 0.1 < t~ < 0.95, and maximum context sizes of 1,2, and 3. Our experiments used 5-fold cross-validation on the training data to determine the optimal parameter settings.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 6,
+                        "end": 7,
+                        "text": "3",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "In experimenting with the maximum context size parameter, we found that the difference between the values of F~ for context sizes of 2 and 3 is less than 0.5% for the optimal threshold. Scores for a context size of 1 yielded F~ values smaller by more than 1% than the values for the larger contexts.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "Figure 2 shows recall/precision curves for the three data sets, obtained by varying 8 while keeping the maximum context size at its optimal value. The difference between F~=I values for different thresholds was always less than 2%.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 7,
+                        "end": 8,
+                        "text": "2",
+                        "ref_id": "FIGREF2"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "Performance may be measured also on a word-by word basis, counting as a success any word which was identified correctly as being part of the target pattern. That method was employed, along with recall/precision, by RM95. We preferred to measure performance by recall and precision for complete patterns. Most errors involved identifications of slightly shifted, shorter or longer sequences. Given a pattern consisting of five words, for example, identifying only a four-word portion of this pattern would yield both a recall and precision errors. Tagassignment scoring, on the other hand, will give it a score of 80%. We hold the view that such an identification is an error, rather than a partial success.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "We used the datasets created by RM95 for NP learning; their results are shown in Table 3 . 3 The F~ difference is small (0.4%), yet they use a richer feature set, which incorporates lexicai information as well. The method of Ramshaw and Marcus makes a decision per word, relying on predefined rule templates. The method presented here makes decisions on sequences and uses sequences as its memory, thereby attaining a dynamic perspective of the SNotice that our results, as well as those we cite from RM95, pertains to a training set of 229,000 words. RM95 report also results for a larger training set, of 950,000 words, for which recall/precision is 93.5%/93.1%, correspondingly (F~=93.3%). Our system needs to be further optimized in order to handle that amount of data, though our major concern in future work is to reduce the overall amount of labeled training data. ",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 87,
+                        "end": 88,
+                        "text": "3",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "Table 3 : Results with optimal parameter settings for context size and threshold, and breakeven points. The last line shows the results of Ramshaw and Marcus (1995) (recognizing NP's) with the same train/test data. The optimal parameters were obtained by 5-fold cross-validation.",
+                "cite_spans": [
+                    {
+                        "start": 139,
+                        "end": 164,
+                        "text": "Ramshaw and Marcus (1995)",
+                        "ref_id": "BIBREF11"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 6,
+                        "end": 7,
+                        "text": "3",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "192.0",
+                "sec_num": null
+            },
+            {
+                "text": "Two previous methods for learning local syntactic patterns follow the transformation-based paradigm introduced by Brill (1992) . Vilain and Day (1996) identify (and classify) name phrases such as company names, locations, etc. Ramshaw and Marcus (1995) detect noun phrases, by classifying each word as being inside a phrase, outside or on the boundary between phrases.",
+                "cite_spans": [
+                    {
+                        "start": 114,
+                        "end": 126,
+                        "text": "Brill (1992)",
+                        "ref_id": "BIBREF3"
+                    },
+                    {
+                        "start": 129,
+                        "end": 150,
+                        "text": "Vilain and Day (1996)",
+                        "ref_id": "BIBREF17"
+                    },
+                    {
+                        "start": 227,
+                        "end": 252,
+                        "text": "Ramshaw and Marcus (1995)",
+                        "ref_id": "BIBREF11"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "192.0",
+                "sec_num": null
+            },
+            {
+                "text": "Finite state machines (FSMs) are a natural formalism for learning linear sequences. It was used for learning linguistic structures other than shallow syntax. Gold (1978) showed that learning regular languages from positive examples is undecidable in the limit. Recently, however, several learning methods have been proposed for restricted classes of FSM. OSTIA (Onward Subsequential Transducer Inference Algorithm; Oncina, Garcia, and Vidal 1993), learns a subsequential transducer in the limit. This algorithm was used for natural-language tasks by Vi-lar, Marzal, and Vidal (1994) for learning translation of a limited-domain language, as well as by Gildea and Jurafsky (1994) for learning phonological rules. Ahonen et al. (1994) describe an algorithm for learning (k,h)-contextual regular languages, which they use for learning the structure of SGML documents.",
+                "cite_spans": [
+                    {
+                        "start": 158,
+                        "end": 169,
+                        "text": "Gold (1978)",
+                        "ref_id": "BIBREF9"
+                    },
+                    {
+                        "start": 550,
+                        "end": 582,
+                        "text": "Vi-lar, Marzal, and Vidal (1994)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 652,
+                        "end": 678,
+                        "text": "Gildea and Jurafsky (1994)",
+                        "ref_id": "BIBREF8"
+                    },
+                    {
+                        "start": 712,
+                        "end": 732,
+                        "text": "Ahonen et al. (1994)",
+                        "ref_id": "BIBREF1"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "192.0",
+                "sec_num": null
+            },
+            {
+                "text": "Apart from deterministic FSMs, there are a number of algorithms for learning stochastic models, eg., (Stolcke and Omohundro, 1992; Carrasco and Oncina, 1994; Ron et al., 1995) . These algorithms differ mainly by their state-merging strategies, used for generalizing from the training data.",
+                "cite_spans": [
+                    {
+                        "start": 101,
+                        "end": 130,
+                        "text": "(Stolcke and Omohundro, 1992;",
+                        "ref_id": "BIBREF15"
+                    },
+                    {
+                        "start": 131,
+                        "end": 157,
+                        "text": "Carrasco and Oncina, 1994;",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 158,
+                        "end": 175,
+                        "text": "Ron et al., 1995)",
+                        "ref_id": "BIBREF12"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "192.0",
+                "sec_num": null
+            },
+            {
+                "text": "A major difference between the abovementioned learning methods and our memory-based approach is that the former employ generalized models that were created at training time while the latter uses the training corpus as-is and generalizes only at recognition time.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "192.0",
+                "sec_num": null
+            },
+            {
+                "text": "Much work aimed at learning models for full parsing, i.e., learning hierarchical structures. We refer here only to the DOP (Data Oriented Parsing) method (Bod, 1992) which, like the present work, is a memory-based approach. This method constructs parse alternatives for a sentence based on combinations of subtrees in the training corpus. The MBSL approach may be viewed as a linear analogy to DOP in that it constructs a cover for a candidate based on subsequences of training instances.",
+                "cite_spans": [
+                    {
+                        "start": 154,
+                        "end": 165,
+                        "text": "(Bod, 1992)",
+                        "ref_id": "BIBREF2"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "192.0",
+                "sec_num": null
+            },
+            {
+                "text": "Other implementations of the memory-based paradigm for NLP tasks include Daelemans et al. (1996), for POS tagging; Cardie (1993) , for syntactic and semantic tagging; and Stanfill and Waltz (1986) , for word pronunciation. In all these works, examples are represented as sets of features and the deduction is carried out by finding the most similar cases. The method presented here is radically different in that it makes use of the raw sequential form of the data, and generalizes by reconstructing test examples from different pieces of the training data.",
+                "cite_spans": [
+                    {
+                        "start": 73,
+                        "end": 114,
+                        "text": "Daelemans et al. (1996), for POS tagging;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 115,
+                        "end": 128,
+                        "text": "Cardie (1993)",
+                        "ref_id": "BIBREF4"
+                    },
+                    {
+                        "start": 171,
+                        "end": 196,
+                        "text": "Stanfill and Waltz (1986)",
+                        "ref_id": "BIBREF14"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "192.0",
+                "sec_num": null
+            },
+            {
+                "text": "We have presented a novel general schema and a particular instantiation of it for learning sequential patterns. Applying the method to three syntactic patterns in English yielded positive results, suggesting its applicability for recognizing local linguistic patterns. In future work we plan to investigate a datadriven approach for optimal selection and weighting of statistical features of candidate scores, as well as to apply the method to syntactic patterns of Hebrew and to domain-specific patterns for information extraction.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusions",
+                "sec_num": "5"
+            },
+            {
+                "text": "RelatedWork",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            }
+        ],
+        "back_matter": [
+            {
+                "text": "The authors wish to thank Yoram Singer for his collaboration in an earlier phase of this research project, and Giorgio Satta for helpful discussions. We also thank the anonymous reviewers for their instructive comments. This research was supported in part by grant 498/95-1 from the Israel Science Foundation, and by grant 8560296 from the Israeli Ministry of Science.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "acknowledgements",
+                "sec_num": null
+            },
+            {
+                "text": "pattern structure. We aim to incorporate lexical information as well in the future, it is still unclear whether that will improve the results.Figure 3 shows the learning curves by amount of training examples and number of words in the training data, for particular parameter settings.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 149,
+                        "end": 150,
+                        "text": "3",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "annex",
+                "sec_num": null
+            }
+        ],
+        "bib_entries": {
+            "BIBREF0": {
+                "ref_id": "b0",
+                "title": "Parsing by chunks",
+                "authors": [
+                    {
+                        "first": "S",
+                        "middle": [
+                            "P"
+                        ],
+                        "last": "Abney",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1991,
+                "venue": "Principle-Based Parsing: Computation and Psycholinguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "257--278",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "S. P. Abney. 1991. Parsing by chunks. In R. C. Berwick, S. P. Abney, and C. Tenny, editors, Principle-Based Parsing: Computation and Psy- cholinguistics, pages 257-278. Kluwer, Dordrecht.",
+                "links": null
+            },
+            "BIBREF1": {
+                "ref_id": "b1",
+                "title": "Forming grammars for structured documents: An application of grammatical inference",
+                "authors": [
+                    {
+                        "first": "H",
+                        "middle": [],
+                        "last": "Ahonen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "H",
+                        "middle": [],
+                        "last": "Mannila",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "E",
+                        "middle": [],
+                        "last": "Nikunen",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1994,
+                "venue": "Grammatical Inference and Applications (ICGI-9~)",
+                "volume": "",
+                "issue": "",
+                "pages": "153--167",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "H. Ahonen, H. Mannila, and E. Nikunen. 1994. Forming grammars for structured documents: An application of grammatical inference. In R. C. Carrasco and J. Oncina, editors, Grammatical In- ference and Applications (ICGI-9~), pages 153- 167. Springer, Berlin, Heidelberg.",
+                "links": null
+            },
+            "BIBREF2": {
+                "ref_id": "b2",
+                "title": "A computational model of language performance: Data oriented parsing",
+                "authors": [
+                    {
+                        "first": "R",
+                        "middle": [],
+                        "last": "Bod",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1992,
+                "venue": "Coling",
+                "volume": "",
+                "issue": "",
+                "pages": "855--859",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "R. Bod. 1992. A computational model of language performance: Data oriented parsing. In Coling, pages 855-859, Nantes, France.",
+                "links": null
+            },
+            "BIBREF3": {
+                "ref_id": "b3",
+                "title": "A simple rule-based part of speech tagger",
+                "authors": [
+                    {
+                        "first": "E",
+                        "middle": [],
+                        "last": "Brill",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1992,
+                "venue": "proc. of the DARPA Workshop on Speech and Natural Language",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "E. Brill. 1992. A simple rule-based part of speech tagger. In proc. of the DARPA Workshop on Speech and Natural Language.",
+                "links": null
+            },
+            "BIBREF4": {
+                "ref_id": "b4",
+                "title": "A case-based approach to knowledge acquisition for domain-specific sentence analysis",
+                "authors": [
+                    {
+                        "first": "C",
+                        "middle": [],
+                        "last": "Cardie",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1993,
+                "venue": "Proceedings of the 11th National Conference on Artificial Intelligence",
+                "volume": "",
+                "issue": "",
+                "pages": "798--803",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "C. Cardie. 1993. A case-based approach to knowl- edge acquisition for domain-specific sentence anal- ysis. In Proceedings of the 11th National Con- ference on Artificial Intelligence, pages 798-803, Menlo Park, CA, USA, July. AAAI Press.",
+                "links": null
+            },
+            "BIBREF5": {
+                "ref_id": "b5",
+                "title": "Learning stochastic regular grammars by means of a state merging method",
+                "authors": [
+                    {
+                        "first": "R",
+                        "middle": [
+                            "C"
+                        ],
+                        "last": "Carrasco",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "J",
+                        "middle": [],
+                        "last": "Oncina",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1994,
+                "venue": "Grammatical Inference and Applications (ICGI-94)",
+                "volume": "",
+                "issue": "",
+                "pages": "139--152",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "R. C. Carrasco and J. Oncina. 1994. Learn- ing stochastic regular grammars by means of a state merging method. In R. C. Carrasco and J. Oncina, editors, Grammatical Inference and Applications (ICGI-94), pages 139-152. Springer, Berlin, Heidelberg.",
+                "links": null
+            },
+            "BIBREF6": {
+                "ref_id": "b6",
+                "title": "Mbt: A memory-based part of speech tagger generator",
+                "authors": [
+                    {
+                        "first": "W",
+                        "middle": [],
+                        "last": "Daelemans",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "J",
+                        "middle": [],
+                        "last": "Zavrel",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "P",
+                        "middle": [],
+                        "last": "Berck",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "S",
+                        "middle": [],
+                        "last": "Gillis",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1996,
+                "venue": "Eva Ejerhed and Ido Dagan, editors, Proceedings of the Fourth Workshop on Very Large Corpora",
+                "volume": "",
+                "issue": "",
+                "pages": "14--27",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "W. Daelemans, J. Zavrel, Berck P., and Gillis S. 1996. Mbt: A memory-based part of speech tag- ger generator. In Eva Ejerhed and Ido Dagan, edi- tors, Proceedings of the Fourth Workshop on Very Large Corpora, pages 14-27. ACL SIGDAT.",
+                "links": null
+            },
+            "BIBREF7": {
+                "ref_id": "b7",
+                "title": "spaceeconomical suffix tree construction algorithm",
+                "authors": [
+                    {
+                        "first": "T",
+                        "middle": [],
+                        "last": "Edward",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "M",
+                        "middle": [],
+                        "last": "Mccreight",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1976,
+                "venue": "Journal of the ACM",
+                "volume": "23",
+                "issue": "2",
+                "pages": "262--272",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "T. Edward and M. McCreight. 1976. space- economical suffix tree construction algorithm. Journal of the ACM, 23(2):262-272, April.",
+                "links": null
+            },
+            "BIBREF8": {
+                "ref_id": "b8",
+                "title": "Automatic induction of finite state transducers for simple phonological rules",
+                "authors": [
+                    {
+                        "first": "D",
+                        "middle": [],
+                        "last": "Gildea",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "D",
+                        "middle": [],
+                        "last": "Jurafsky",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1994,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "D. Gildea and D. Jurafsky. 1994. Automatic induc- tion of finite state transducers for simple phono- logical rules. Technical Report TR-94-052, In- ternational Computer Science Institute, Berkeley, CA, October.",
+                "links": null
+            },
+            "BIBREF9": {
+                "ref_id": "b9",
+                "title": "Complexity of automaton identification from given data",
+                "authors": [
+                    {
+                        "first": "E",
+                        "middle": [
+                            "M"
+                        ],
+                        "last": "Gold",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1978,
+                "venue": "Information and Control",
+                "volume": "37",
+                "issue": "",
+                "pages": "302--320",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "E. M. Gold. 1978. Complexity of automaton iden- tification from given data. Information and Con- trol, 37:302-320.",
+                "links": null
+            },
+            "BIBREF10": {
+                "ref_id": "b10",
+                "title": "Evaluation techniques for automatic semantic extraction: Comparing syntactic and window based approaches",
+                "authors": [
+                    {
+                        "first": "Gregory",
+                        "middle": [],
+                        "last": "Greffenstette",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1993,
+                "venue": "A CL Workshop on Acquisition of Lexical Knowledge From Text",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Gregory Greffenstette. 1993. Evaluation techniques for automatic semantic extraction: Comparing syntactic and window based approaches. In A CL Workshop on Acquisition of Lexical Knowledge From Text, Ohio State University, June.",
+                "links": null
+            },
+            "BIBREF11": {
+                "ref_id": "b11",
+                "title": "Text chunking using transformation-based learning",
+                "authors": [
+                    {
+                        "first": "L",
+                        "middle": [
+                            "A"
+                        ],
+                        "last": "Ramshaw",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "M",
+                        "middle": [
+                            "P"
+                        ],
+                        "last": "Marcus",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1995,
+                "venue": "Proceedings of the Third Workshop on Very Large Corpora",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "L. A. Ramshaw and M. P. Marcus. 1995. Text chunking using transformation-based learning. In Proceedings of the Third Workshop on Very Large Corpora.",
+                "links": null
+            },
+            "BIBREF12": {
+                "ref_id": "b12",
+                "title": "On the learnability and usage of acyclic probabilistic finite automata",
+                "authors": [
+                    {
+                        "first": "D",
+                        "middle": [],
+                        "last": "Ron",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Y",
+                        "middle": [],
+                        "last": "Singer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "N",
+                        "middle": [],
+                        "last": "Tishby",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1995,
+                "venue": "Proceedings of the 8th Annual Conference on Computational Learning Theory (COLT'95)",
+                "volume": "",
+                "issue": "",
+                "pages": "31--40",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "D. Ron, Y. Singer, and N. Tishby. 1995. On the learnability and usage of acyclic probabilistic fi- nite automata. In Proceedings of the 8th Annual Conference on Computational Learning Theory (COLT'95), pages 31-40, New York, NY, USA, July. ACM Press.",
+                "links": null
+            },
+            "BIBREF13": {
+                "ref_id": "b13",
+                "title": "String transformation learning",
+                "authors": [
+                    {
+                        "first": "G",
+                        "middle": [],
+                        "last": "Satta",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1997,
+                "venue": "Proc. of the ACL/EACL Annual Meeting",
+                "volume": "",
+                "issue": "",
+                "pages": "444--451",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "G. Satta. 1997. String transformation learning. In Proc. of the ACL/EACL Annual Meeting, pages 444-451, Madrid, Spain, July.",
+                "links": null
+            },
+            "BIBREF14": {
+                "ref_id": "b14",
+                "title": "Toward memorybased reasoning",
+                "authors": [
+                    {
+                        "first": "C",
+                        "middle": [],
+                        "last": "Stanfill",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "D",
+                        "middle": [],
+                        "last": "Waltz",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1986,
+                "venue": "Communications of the ACM",
+                "volume": "29",
+                "issue": "12",
+                "pages": "1213--1228",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "C. Stanfill and D. Waltz. 1986. Toward memory- based reasoning. Communications of the ACM, 29(12):1213-1228, December.",
+                "links": null
+            },
+            "BIBREF15": {
+                "ref_id": "b15",
+                "title": "Hidden markov model induction by bayesian model merging",
+                "authors": [
+                    {
+                        "first": "A",
+                        "middle": [],
+                        "last": "Stolcke",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "S",
+                        "middle": [],
+                        "last": "Omohundro",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1992,
+                "venue": "Proceedings of Neural Information Processing Systems 5 (NIPS-5)",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "A. Stolcke and S. Omohundro. 1992. Hidden markov model induction by bayesian model merg- ing. In Proceedings of Neural Information Pro- cessing Systems 5 (NIPS-5).",
+                "links": null
+            },
+            "BIBREF17": {
+                "ref_id": "b17",
+                "title": "Finite-state phrase parsing by rule sequences",
+                "authors": [
+                    {
+                        "first": "M",
+                        "middle": [
+                            "B"
+                        ],
+                        "last": "Vilain",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "D",
+                        "middle": [
+                            "S"
+                        ],
+                        "last": "Day",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1996,
+                "venue": "Proc. of COLING",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "M. B. Vilain and D. S. Day. 1996. Finite-state phrase parsing by rule sequences. In Proc. of COLING, Copenhagen, Denmark.",
+                "links": null
+            }
+        },
+        "ref_entries": {
+            "FIGREF0": {
+                "num": null,
+                "text": "Figure1: A candidate subsequence with some of its context, and 5 matching tiles found in the training corpus.",
+                "uris": null,
+                "fig_num": "1",
+                "type_str": "figure"
+            },
+            "FIGREF1": {
+                "num": null,
+                "text": "Examine each situated candidate c with f(c) > 0, in descending order of f(c): (a) Add c's brackets to the sentence; (b) Remove all situated candidates overlapping with c which have not yet been examined. 2. Return the bracketed sentence.",
+                "uris": null,
+                "fig_num": null,
+                "type_str": "figure"
+            },
+            "FIGREF2": {
+                "num": null,
+                "text": "Figure 2: Recall-Precision curves for NP, VO, and SV; 0.1 < 8 < 0.99",
+                "uris": null,
+                "fig_num": "2",
+                "type_str": "figure"
+            },
+            "FIGREF3": {
+                "num": null,
+                "text": "/www.cs.biu.ac.il/,-~yuvalk/MBSL. as a single-figure measure of performance:",
+                "uris": null,
+                "fig_num": null,
+                "type_str": "figure"
+            },
+            "TABREF0": {
+                "content": "<table><tr><td/><td colspan=\"3\">Train Data:</td><td/><td/><td/></tr><tr><td/><td colspan=\"3\">sentences words</td><td colspan=\"2\">patterns</td><td/></tr><tr><td>NP</td><td>8936</td><td/><td>229598</td><td/><td>54760</td><td/></tr><tr><td>VO</td><td colspan=\"2\">16397</td><td>454375</td><td/><td>14271</td><td/></tr><tr><td>SV</td><td colspan=\"2\">16397</td><td>454375</td><td/><td>25024</td><td/></tr><tr><td/><td colspan=\"3\">Test Data:</td><td/><td/><td/></tr><tr><td/><td colspan=\"5\">sentences words patterns</td><td/></tr><tr><td>NP</td><td colspan=\"2\">2012</td><td colspan=\"3\">51401 12335</td><td/></tr><tr><td>VO</td><td colspan=\"2\">1921</td><td>53604</td><td/><td>1626</td><td/></tr><tr><td>SV</td><td colspan=\"2\">1921</td><td>53604</td><td/><td>3044</td><td/></tr><tr><td colspan=\"6\">Table 1: Sizes of training and test data</td><td/></tr><tr><td>Len</td><td/><td/><td/><td/><td/><td/></tr><tr><td>1</td><td colspan=\"2\">16959 31</td><td/><td/><td/><td/></tr><tr><td>2</td><td colspan=\"2\">21577 39</td><td colspan=\"2\">3203 22</td><td colspan=\"2\">7613 30</td></tr><tr><td>3</td><td colspan=\"2\">10264 19</td><td colspan=\"2\">5922 41</td><td colspan=\"2\">7265 29</td></tr><tr><td>4</td><td>3630</td><td>7</td><td colspan=\"2\">2952 21</td><td colspan=\"2\">3284 13</td></tr><tr><td>5</td><td>1460</td><td>3</td><td>1242</td><td>9</td><td colspan=\"2\">1697 7</td></tr><tr><td>6</td><td>521</td><td>1</td><td>506</td><td>4</td><td colspan=\"2\">1112 4</td></tr><tr><td>7</td><td>199</td><td>0</td><td>242</td><td>2</td><td>806</td><td>3</td></tr><tr><td>8</td><td>69</td><td>0</td><td>119</td><td>1</td><td>,592</td><td>2</td></tr><tr><td>9</td><td>40</td><td>0</td><td>44</td><td>0</td><td>446</td><td>2</td></tr><tr><td>10</td><td>18</td><td>0</td><td>20</td><td>0</td><td>392</td><td>2</td></tr><tr><td>&gt;10</td><td>23</td><td>0</td><td>23</td><td>0</td><td colspan=\"2\">1917 8</td></tr><tr><td>total</td><td>54760</td><td/><td>14271</td><td/><td>25024</td><td/></tr><tr><td>avg. len</td><td>2.2</td><td/><td>3.4</td><td/><td>4.5</td><td/></tr></table>",
+                "type_str": "table",
+                "text": "Distribution of pattern lengths, total number of patterns and average length in the training data.",
+                "html": null,
+                "num": null
+            }
+        }
+    }
+}

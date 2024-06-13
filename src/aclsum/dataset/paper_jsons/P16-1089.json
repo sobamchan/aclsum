@@ -1,0 +1,2382 @@
+{
+    "paper_id": "P16-1089",
+    "header": {
+        "generated_with": "S2ORC 1.0.0",
+        "date_generated": "2023-06-16T12:35:03.161529Z"
+    },
+    "title": "Siamese CBOW: Optimizing Word Embeddings for Sentence Representations",
+    "authors": [
+        {
+            "first": "Tom",
+            "middle": [],
+            "last": "Kenter",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "University of Amsterdam",
+                "location": {
+                    "settlement": "Amsterdam"
+                }
+            },
+            "email": "tom.kenter@uva.nl"
+        },
+        {
+            "first": "Alexey",
+            "middle": [],
+            "last": "Borisov",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "University of Amsterdam",
+                "location": {
+                    "settlement": "Amsterdam"
+                }
+            },
+            "email": "alborisov@yandex-team.ru"
+        },
+        {
+            "first": "Maarten",
+            "middle": [],
+            "last": "De Rijke",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "University of Amsterdam",
+                "location": {
+                    "settlement": "Amsterdam"
+                }
+            },
+            "email": "derijke@uva.nl"
+        }
+    ],
+    "year": "",
+    "venue": null,
+    "identifiers": {},
+    "abstract": "We present the Siamese Continuous Bag of Words (Siamese CBOW) model, a neural network for efficient estimation of highquality sentence embeddings. Averaging the embeddings of words in a sentence has proven to be a surprisingly successful and efficient way of obtaining sentence embeddings. However, word embeddings trained with the methods currently available are not optimized for the task of sentence representation, and, thus, likely to be suboptimal. Siamese CBOW handles this problem by training word embeddings directly for the purpose of being averaged. The underlying neural network learns word embeddings by predicting, from a sentence representation, its surrounding sentences. We show the robustness of the Siamese CBOW model by evaluating it on 20 datasets stemming from a wide variety of sources.",
+    "pdf_parse": {
+        "paper_id": "P16-1089",
+        "_pdf_hash": "",
+        "abstract": [
+            {
+                "text": "We present the Siamese Continuous Bag of Words (Siamese CBOW) model, a neural network for efficient estimation of highquality sentence embeddings. Averaging the embeddings of words in a sentence has proven to be a surprisingly successful and efficient way of obtaining sentence embeddings. However, word embeddings trained with the methods currently available are not optimized for the task of sentence representation, and, thus, likely to be suboptimal. Siamese CBOW handles this problem by training word embeddings directly for the purpose of being averaged. The underlying neural network learns word embeddings by predicting, from a sentence representation, its surrounding sentences. We show the robustness of the Siamese CBOW model by evaluating it on 20 datasets stemming from a wide variety of sources.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            }
+        ],
+        "body_text": [
+            {
+                "text": "Word embeddings have proven to be beneficial in a variety of tasks in NLP such as machine translation (Zou et al., 2013) , parsing (Chen and Manning, 2014) , semantic search (Reinanda et al., 2015; Voskarides et al., 2015) , and tracking the meaning of words and concepts over time (Kim et al., 2014; Kenter et al., 2015) . It is not evident, however, how word embeddings should be combined to represent larger pieces of text, like sentences, paragraphs or documents. Surprisingly, simply averaging word embeddings of all words in a text has proven to be a strong baseline or feature across a multitude of tasks (Faruqui et al., 2014; Yu et al., 2014; Gershman and Tenenbaum, 2015; Kenter and de Rijke, 2015) .",
+                "cite_spans": [
+                    {
+                        "start": 102,
+                        "end": 120,
+                        "text": "(Zou et al., 2013)",
+                        "ref_id": "BIBREF32"
+                    },
+                    {
+                        "start": 131,
+                        "end": 155,
+                        "text": "(Chen and Manning, 2014)",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 174,
+                        "end": 197,
+                        "text": "(Reinanda et al., 2015;",
+                        "ref_id": "BIBREF22"
+                    },
+                    {
+                        "start": 198,
+                        "end": 222,
+                        "text": "Voskarides et al., 2015)",
+                        "ref_id": "BIBREF26"
+                    },
+                    {
+                        "start": 282,
+                        "end": 300,
+                        "text": "(Kim et al., 2014;",
+                        "ref_id": "BIBREF15"
+                    },
+                    {
+                        "start": 301,
+                        "end": 321,
+                        "text": "Kenter et al., 2015)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 612,
+                        "end": 634,
+                        "text": "(Faruqui et al., 2014;",
+                        "ref_id": "BIBREF7"
+                    },
+                    {
+                        "start": 635,
+                        "end": 651,
+                        "text": "Yu et al., 2014;",
+                        "ref_id": "BIBREF30"
+                    },
+                    {
+                        "start": 652,
+                        "end": 681,
+                        "text": "Gershman and Tenenbaum, 2015;",
+                        "ref_id": "BIBREF8"
+                    },
+                    {
+                        "start": 682,
+                        "end": 708,
+                        "text": "Kenter and de Rijke, 2015)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Word embeddings, however, are not optimized specifically for representing sentences. In this paper we present a model for obtaining word embeddings that are tailored specifically for the task of averaging them. We do this by directly including a comparison of sentence embeddings-the averaged embeddings of the words they contain-in the cost function of our network.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Word embeddings are typically trained in a fast and scalable way from unlabeled training data. As the training data is unlabeled, word embeddings are usually not task-specific. Rather, word embeddings trained on a large training corpus, like the ones from (Collobert and Weston, 2008; Mikolov et al., 2013b) are employed across different tasks (Socher et al., 2012; Kenter and de Rijke, 2015; Hu et al., 2014) . These two qualities-(i) being trainable from large quantities of unlabeled data in a reasonable amount of time, and (ii) robust performance across different tasks-are highly desirable and allow word embeddings to be used in many large-scale applications. In this work we aim to optimize word embeddings for sentence representations in the same manner. We want to produce general purpose sentence embeddings that should score robustly across multiple test sets, and we want to leverage large amounts of unlabeled training material.",
+                "cite_spans": [
+                    {
+                        "start": 256,
+                        "end": 284,
+                        "text": "(Collobert and Weston, 2008;",
+                        "ref_id": "BIBREF6"
+                    },
+                    {
+                        "start": 285,
+                        "end": 307,
+                        "text": "Mikolov et al., 2013b)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 344,
+                        "end": 365,
+                        "text": "(Socher et al., 2012;",
+                        "ref_id": "BIBREF24"
+                    },
+                    {
+                        "start": 366,
+                        "end": 392,
+                        "text": "Kenter and de Rijke, 2015;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 393,
+                        "end": 409,
+                        "text": "Hu et al., 2014)",
+                        "ref_id": "BIBREF12"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "In the word2vec algorithm, Mikolov et al. (2013a) construe a supervised training criterion for obtaining word embeddings from unsupervised data, by predicting, for every word, its surrounding words. We apply this strategy at the sentence level, where we aim to predict a sentence from its adjacent sentences (Kiros et al., 2015; Hill et al., 2016) . This allows us to use unlabeled training data, which is easy to obtain; the only restriction is that documents need to be split into sentences and that the order between sentences is preserved.",
+                "cite_spans": [
+                    {
+                        "start": 27,
+                        "end": 49,
+                        "text": "Mikolov et al. (2013a)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 308,
+                        "end": 328,
+                        "text": "(Kiros et al., 2015;",
+                        "ref_id": "BIBREF16"
+                    },
+                    {
+                        "start": 329,
+                        "end": 347,
+                        "text": "Hill et al., 2016)",
+                        "ref_id": "BIBREF11"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "The main research question we address is whether directly optimizing word embeddings for the task of being averaged to produce sentence embeddings leads to word embeddings that are better suited for this task than word2vec does. Therefore, we test the embeddings in an unsupervised learning scenario. We use 20 evaluation sets that stem from a wide variety of sources (newswire, video descriptions, dictionary descriptions, microblog posts). Furthermore, we analyze the time complexity of our method and compare it to our baselines methods. Summarizing, our main contributions are: ",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "We present the Siamese Continuous Bag of Words (CBOW) model, a neural network for efficient estimation of high-quality sentence embeddings. Quality should manifest itself in embeddings of semantically close sentences being similar to one another, and embeddings of semantically different sentences being dissimilar. An efficient and surprisingly successful way of computing a sentence embedding is to average the embeddings of its constituent words. Recent work uses pre-trained word embeddings (such as word2vec and GloVe) for this task, which are not optimized for sentence representations. Following these approaches, we compute sentence embeddings by averaging word embeddings, but we optimize word embeddings directly for the purpose of being averaged.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Siamese CBOW",
+                "sec_num": "2"
+            },
+            {
+                "text": "We construct a supervised training criterion by having our network predict sentences occurring next to each other in the training data. Specifically, for a pair of sentences (s i , s j ), we define a probability p(s i , s j ) that reflects how likely it is for the sentences to be adjacent to one another in the training data. We compute the probability p(s i , s j ) using a softmax function:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training objective",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "p \u03b8 (s i , s j ) = e cos(s \u03b8 i ,s \u03b8 j ) s \u2208S e cos(s \u03b8 i ,s \u03b8 ) ,",
+                        "eq_num": "(1)"
+                    }
+                ],
+                "section": "Training objective",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "where s \u03b8 x denotes the embedding of sentence s x , based on the model parameters \u03b8. In theory, the summation in the denominator of Equation 1should range over all possible sentences S, which is not feasible in practice. Therefore, we replace the set S with the union of the set S + of sentences that occur next to the sentence s i in the training data, and S -, a set of n randomly chosen sentences that are not observed next to the sentence s i in the training data. The loss function of the network is categorical cross-entropy:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training objective",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "L = - s j \u2208{S + \u222a S -} p(s i , s j ) \u2022 log(p \u03b8 (s i , s j )),",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training objective",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "where p(\u2022) is the target probability the network should produce, and p \u03b8 (\u2022) is the prediction it estimates based on parameters \u03b8, using Equation 1. The target distribution simply is:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training objective",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "p(s i , s j ) = 1 |S + | , if s j \u2208 S + 0, if s j \u2208 S -.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training objective",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "I.e., if there are 2 positive examples (the sentences preceding and following the input sentence) and 2 negative examples, the target distribution is (0.5, 0.5, 0, 0).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training objective",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "Figure 1 shows the architecture of the proposed Siamese CBOW network. The input is a projection layer that selects embeddings from a word embedding matrix W (that is shared across inputs) for a given input sentence. The word embeddings are averaged in the next layer, which yields a sentence representation with the same dimensionality as the input word embeddings (the boxes labeled average i in Figure 1 ). The cosine similarities between the sentence representation for sentence i and the other sentences are calculated in the penultimate layer and a softmax is applied in the last layer to produce the final probability distribution.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 7,
+                        "end": 8,
+                        "text": "1",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 404,
+                        "end": 405,
+                        "text": "1",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Network architecture",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "The weights in the word embedding matrix are the only trainable parameters in the Siamese CBOW network. They are updated using stochastic gradient descent. The initial learning rate is monotonically decreased proportionally to the number of training batches.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training",
+                "sec_num": "2.3"
+            },
+            {
+                "text": "To test the efficacy of our siamese network for producing sentence embeddings we use multiple As we want a clean way to directly evaluate the embeddings on multiple sets we train our model and the models we compare with on exactly the same training data. We do not compute extra features, perform extra preprocessing steps or incorporate the embeddings in supervised training schemes. Additional steps like these are very likely to improve evaluation scores, but they would obscure our main evaluation purpose in this paper, which is to directly test the embeddings.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experimental Setup",
+                "sec_num": "3"
+            },
+            {
+                "text": "We use the Toronto Book Corpus1 to train word embeddings. This corpus contains 74,004,228 already pre-processed sentences in total, which are made up of 1,057,070,918 tokens, originating from 7,087 unique books. In our experiments, we consider tokens appearing 5 times or more, which leads to a vocabulary of 315,643 words.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Data",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "We employ two baselines for producing sentence embeddings in our experiments. We obtain similarity scores between sentence pairs from the baselines in the same way as the ones produced by Siamese CBOW, i.e., we calculate the cosine similarity between the sentence embeddings they produce.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Baselines",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "We average word embeddings trained with word2vec. 2 We use both architectures, Skipgram and CBOW, and apply default settings: minimum word frequency 5, word embedding size 300, context window 5, sample threshold 10 -5 , no hierarchical softmax, 5 negative examples.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Word2vec",
+                "sec_num": null
+            },
+            {
+                "text": "As a second baseline we use the sentence representations produced by the skipthought architecture (Kiros et al., 2015) .3 Skipthought is a recently proposed method that learns sentence representations in a different way from ours, by using recurrent neural networks. This allows it to take word order into account. As it trains sentence embeddings from unlabeled data, like we do, it is a natural baseline to consider.",
+                "cite_spans": [
+                    {
+                        "start": 98,
+                        "end": 118,
+                        "text": "(Kiros et al., 2015)",
+                        "ref_id": "BIBREF16"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Skip-thought",
+                "sec_num": null
+            },
+            {
+                "text": "Both methods are trained on the Toronto Book Corpus, the same corpus used to train Siamese CBOW. We should note that as we use skipthought vectors as trained by Kiros et al. (2015) , skip-thought has an advantage over both word2vec and Siamese CBOW as the vocabulary used for encoding sentences contains 930,913 words, three times the size of the vocabulary that we use.",
+                "cite_spans": [
+                    {
+                        "start": 161,
+                        "end": 180,
+                        "text": "Kiros et al. (2015)",
+                        "ref_id": "BIBREF16"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Skip-thought",
+                "sec_num": null
+            },
+            {
+                "text": "We use 20 SemEval datasets from the SemEval semantic textual similarity task in 2012 , 2013 , 2014 and 2015 (Agirre et al., 2012;; Agirre et al., 2013; Agirre et al., 2014; Agirre et al., 2015) , which consist of sentence pairs from a wide array of sources (e.g., newswire, tweets, video descriptions) that have been manually annotated by multiple human assessors on a 5 point scale (1: semantically unrelated, 5: semantically similar). In the ground truth, the final similarity score for every sentence pair is the mean of the annotator judgements, and as such can be a floating point number like 2.685. The evaluation metric used by SemEval, and hence by us, is Pearson's r. As Spearman's r is often reported as well, we do so too.",
+                "cite_spans": [
+                    {
+                        "start": 80,
+                        "end": 84,
+                        "text": "2012",
+                        "ref_id": "BIBREF0"
+                    },
+                    {
+                        "start": 85,
+                        "end": 91,
+                        "text": ", 2013",
+                        "ref_id": "BIBREF0"
+                    },
+                    {
+                        "start": 92,
+                        "end": 98,
+                        "text": ", 2014",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 99,
+                        "end": 107,
+                        "text": "and 2015",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 108,
+                        "end": 130,
+                        "text": "(Agirre et al., 2012;;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 131,
+                        "end": 151,
+                        "text": "Agirre et al., 2013;",
+                        "ref_id": "BIBREF1"
+                    },
+                    {
+                        "start": 152,
+                        "end": 172,
+                        "text": "Agirre et al., 2014;",
+                        "ref_id": "BIBREF2"
+                    },
+                    {
+                        "start": 173,
+                        "end": 193,
+                        "text": "Agirre et al., 2015)",
+                        "ref_id": "BIBREF3"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Evaluation",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "Statistical significance To see whether Siamese CBOW yields significantly different scores for the same input sentence pairs from word2vec CBOW-the method it is theoretically most similar to-we compute Wilcoxon signed-rank test statistics between all runs on all evaluation sets. Runs are considered statistically significantly different for p-values < 0.0001.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Evaluation",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "To comply with results reported in other research (Mikolov et al., 2013b; Kusner et al., 2015) we fix the embedding size to 300 and only consider words appearing 5 times or more in the training corpus. We use 2 negative examples (see \u00a74.2.2 for an analysis of different settings). The embeddings are initialized randomly, by drawing from a normal distribution with \u00b5 = 0.0 and \u03c3 = 0.01. The batch size is 100. The initial learning rate \u03b1 is 0.0001, which we obtain by observing the loss on the training data. Training consists of one epoch.",
+                "cite_spans": [
+                    {
+                        "start": 50,
+                        "end": 73,
+                        "text": "(Mikolov et al., 2013b;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 74,
+                        "end": 94,
+                        "text": "Kusner et al., 2015)",
+                        "ref_id": "BIBREF17"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Network",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "We use Theano (Theano Development Team, 2016) to implement our network. 4 We ran our experiments on GPUs in the DAS5 cluster (Bal et al., 2016) .",
+                "cite_spans": [
+                    {
+                        "start": 14,
+                        "end": 45,
+                        "text": "(Theano Development Team, 2016)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 125,
+                        "end": 143,
+                        "text": "(Bal et al., 2016)",
+                        "ref_id": "BIBREF4"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Network",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "In this section we present the results of our experiments, and analyze the stability of Siamese CBOW with respect to its (hyper)parameters.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "4"
+            },
+            {
+                "text": "In Table 1 , the results of Siamese CBOW on 20 SemEval datasets are displayed, together with the results of the baseline systems. As we can see from the table, Siamese CBOW outperforms the baselines in the majority of cases (14 out of 20). The very low scores of skip-thought on MSRpar appear to be a glitch, which we will ignore.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 9,
+                        "end": 10,
+                        "text": "1",
+                        "ref_id": "TABREF2"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Main experiments",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "It is interesting to see that for the set with the highest average sentence length (2013 SMT, with 24.7 words per sentence on average) Siamese CBOW is very close to skip-thought, the best performing baseline. In terms of lexical term overlap, unsurprisingly, all methods have trouble with the sets with little overlap (2013 FNWN, 2015 answers-forums, which both have 7% lexical overlap). It is interesting to see, however, that for the next two sets (2015 belief and 2012 MSRpar, 11% and 14% overlap respectively) Siamese CBOW manages to get the best performance. The highest performance on all sets is 0.7315 Pearson's r of Siamese CBOW on the 2014 tweet-news set. This figure is not very far from the best performing SemEval run that year which has 0.792 Pearson's r. This is remarkable as Siamese CBOW is completely unsupervised, while the NTNU system which scored best on this set (Lynum et al., 2014) was optimized using multiple training sets.",
+                "cite_spans": [
+                    {
+                        "start": 885,
+                        "end": 905,
+                        "text": "(Lynum et al., 2014)",
+                        "ref_id": "BIBREF19"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Main experiments",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "In recent work, Hill et al. (2016) present Fast-Sent, a model similar to ours (see \u00a75 for a more elaborate discussion); results are not reported for all evaluation sets we use, and hence, we compare the results of FastSent and Siamese CBOW separately, in Table 2 .",
+                "cite_spans": [
+                    {
+                        "start": 16,
+                        "end": 34,
+                        "text": "Hill et al. (2016)",
+                        "ref_id": "BIBREF11"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 261,
+                        "end": 262,
+                        "text": "2",
+                        "ref_id": "TABREF3"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Main experiments",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "FastSent and Siamese CBOW each outperform the other on half of the evaluation sets, which clearly suggests that the differences between the two methods are complementary. 5",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Main experiments",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "Next, we investigate the stability of Siamese CBOW with respect to its hyper-parameters. In 5 The comparison is to be interpreted with caution as it is not evident what vocabulary was used for the experiments in (Hill et al., 2016) ; hence, the differences observed here might simply be due to differences in vocabulary coverage. ",
+                "cite_spans": [
+                    {
+                        "start": 212,
+                        "end": 231,
+                        "text": "(Hill et al., 2016)",
+                        "ref_id": "BIBREF11"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Analysis",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "Ideally, the optimization criterion of a learning algorithm ranges over the full domain of its loss function. As discussed in \u00a72, our loss function only observes a sample. As such, convergence is not guaranteed. Regardless, an ideal learning system should not fluctuate in terms of performance relative to the amount of training data it observes, provided this amount is substantial: as training proceeds the performance should stabilize.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Performance across iterations",
+                "sec_num": "4.2.1"
+            },
+            {
+                "text": "To see whether the performance of Siamese CBOW fluctuates during training we monitor it during 5 epochs; at every 10,000,000 examples, and at the end of every epoch. Figure 2 displays the results for all 20 datasets. We observe that on the majority of datasets the performance shows very little variation. There are three exceptions. The performance on the 2014 deft-news dataset steadily decreases while the performance on 2013 OnWN steadily increases, though both seem to stabilize at the end of epoch 5. The most notable exception, however, is 2012 MSRvid, where the score, after an initial increase, drops consistently. This effect might be explained by the fact that this evaluation set primarily consists of very short sentences-it has the lowest average sentence length of all set: 6.63 with a standard deviation of 1.812. Therefore, a 300-dimensional representation appears too large for this dataset; this hypothesis is supported by the fact that 200dimensional embeddings work slightly better for this dataset (see Figure 4 ). ",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 173,
+                        "end": 174,
+                        "text": "2",
+                        "ref_id": "FIGREF0"
+                    },
+                    {
+                        "start": 1032,
+                        "end": 1033,
+                        "text": "4",
+                        "ref_id": "FIGREF2"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Performance across iterations",
+                "sec_num": "4.2.1"
+            },
+            {
+                "text": "In Figure 3 , the results of Siamese CBOW in terms of Pearson's r are plotted for different numbers of negative examples. We observe that on most sets, the number of negative examples has limited effect on the performance of Siamese CBOW. Choosing a higher number, like 10, occasionally leads to slightly better performance, e.g., on the 2013 FNWN set. However, a small number like 1 or 2 typically suffices, and is sometimes markedly better, e.g., in the case of the 2015 belief set. As a high number of negative examples comes at a substantial computational cost, we conclude from the findings presented here that, although Siamese CBOW is robust against different settings of this parameter, setting the number of negative examples to 1 or 2 should be the default choice.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 10,
+                        "end": 11,
+                        "text": "3",
+                        "ref_id": "FIGREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Number of negative examples",
+                "sec_num": "4.2.2"
+            },
+            {
+                "text": "Figure 4 plots the results of Siamese CBOW for different numbers of vector dimensions. We observe from the figure that for some sets (most notably 2014 deft-forum, 2015 answ-forums and 2015 belief) increasing the number of embedding dimensions consistently yields higher performance. A dimensionality that is too low (50 or 100) invariably leads to inferior results. As, similar to a higher number of negative examples, a higher embedding dimension leads to higher computational costs, we conclude from these findings that a moderate number of dimensions (200 or 300) is to be preferred.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 7,
+                        "end": 8,
+                        "text": "4",
+                        "ref_id": "FIGREF2"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Number of dimensions",
+                "sec_num": "4.2.3"
+            },
+            {
+                "text": "2 0 1 2 M S R p a r 2 0 1 2 M S R v id 2 0 1 2 O n W N 2 0 1 2 S M T e u",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Number of dimensions",
+                "sec_num": "4.2.3"
+            },
+            {
+                "text": "For learning systems, time complexity comes into play in the training phase and in the prediction phase. For an end system employing sentence embeddings, the complexity at prediction time is the most crucial factor, which is why we omit an analysis of training complexity. We focus on comparing the time complexity for generating sentence embeddings for Siamese CBOW, and compare it to the baselines we use.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Time complexity",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "The complexity of all algorithms we consider is O(n), i.e., linear in the number of input terms. As in practice the number of arithmetic operations is the critical factor in determining computing time, we will now focus on these.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Time complexity",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "Both word2vec and the Siamese CBOW compute embeddings of a text T = t 1 , . . . , t |T | by averaging the term embeddings. This requires |T |-1 vector additions, and 1 multiplication by a scalar value (namely, 1/|T |). The skip-thought model is a recurrent neural network with GRU cells, which computes a set of equations for every term t in T , which we reprint for reference (Kiros et al., 2015) :",
+                "cite_spans": [
+                    {
+                        "start": 377,
+                        "end": 397,
+                        "text": "(Kiros et al., 2015)",
+                        "ref_id": "BIBREF16"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Time complexity",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "r t = \u03c3(Wrx t + Urh t-1 ) z t = \u03c3(Wzx t + Uzh t-1 ) h t = tanh(Wx t + U(r t h t-1 )) h t = (1 -z t ) h t-1 + z t h t",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Time complexity",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "As we can see from the formulas, there are 5|T | vector additions (+/-), 4|T | element-wise multiplications by a vector, 3|T | element-wise operations and 6|T | matrix multiplications, of which the latter, the matrix multiplications, are most expensive.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Time complexity",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "This considerable difference in numbers of arithmetic operations is also observed in practice. We run tests on a single CPU, using identical code for extracting sentences from the evaluation sets, Table 3 : Time spent per method on all 20 SemEval datasets, 17,608 sentence pairs, and the average time spent on a single sentence pair (time in seconds unless indicated otherwise).",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 203,
+                        "end": 204,
+                        "text": "3",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Time complexity",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "Siamese CBOW (300d) 7.7 0.0004 word2vec (300d) 7.0 0.0004 skip-thought (1200d) 98,804.0 5.6",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "sets 1 pair",
+                "sec_num": "20"
+            },
+            {
+                "text": "for every method. The sentence pairs are presented one by one to the models. We disregard the time it takes to load models. Speedups might of course be gained for all methods by presenting the sentences in batches to the models, by computing sentence representations in parallel and by running code on a GPU. However, as we are interested in the differences between the systems, we run the most simple and straightforward scenario. Table 3 lists the number of seconds each method takes to generate and compare sentence embeddings for an input sentence pair. The difference between word2vec and Siamese CBOW is because of a different implementation of word lookup.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 438,
+                        "end": 439,
+                        "text": "3",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "sets 1 pair",
+                "sec_num": "20"
+            },
+            {
+                "text": "We conclude from the observations presented here, together with the results in \u00a74.1, that in a setting where speed at prediction time is pivotal, simple averaging methods like word2vec or Siamese CBOW are to be preferred over more involved methods like skip-thought.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "sets 1 pair",
+                "sec_num": "20"
+            },
+            {
+                "text": "As Siamese CBOW directly averages word embeddings for sentences, we expect it to learn that words with little semantic impact have a low vector norm. Indeed, we find that the 10 words with lowest vector norm are to, of, and, the, a, in, that, with, on, and as. At the other side of the spectrum we find many personal pronouns: had, they, we, me, my, he, her, you, she, I, which is natural given that the corpus on which we train consists of fiction, which typically contains dialogues.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Qualitative analysis",
+                "sec_num": "4.4"
+            },
+            {
+                "text": "It is interesting to see what the differences in related words are between Siamese CBOW and word2vec when trained on the same corpus. For example, for a cosine similarity > 0.6, the words related to her in word2vec space are she, his, my and hers. For Siamese CBOW, the only closely related word is she. Similarly, for the word me, word2vec finds him as most closely related word, while Siamese CBOW comes up with I and my. It seems from these few examples that Siamese CBOW learns to be very strict in choosing which words to relate to each other.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Qualitative analysis",
+                "sec_num": "4.4"
+            },
+            {
+                "text": "From the results presented in this section we conclude that optimizing word embeddings for the task of being averaged across sentences with Siamese CBOW leads to embeddings that are effective in a large variety of settings. Furthermore, Siamese CBOW is robust to different parameter settings and its performance is stable across itera-tions. Lastly, we show that Siamese CBOW is fast and efficient in computing sentence embeddings at prediction time.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Qualitative analysis",
+                "sec_num": "4.4"
+            },
+            {
+                "text": "A distinction can be made between supervised approaches for obtaining representations of short texts, where a model is optimised for a specific scenario, given a labeled training set, and unsupervised methods, trained on unlabeled data, that aim to capture short text semantics that are robust across tasks. In the first setting, word vectors are typically used as features or network initialisations (Kenter and de Rijke, 2015; Hu et al., 2014; Severyn and Moschitti, 2015; Yin and Sch\u00fctze, 2015) . Our work can be classified in the latter category of unsupervised approaches.",
+                "cite_spans": [
+                    {
+                        "start": 401,
+                        "end": 428,
+                        "text": "(Kenter and de Rijke, 2015;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 429,
+                        "end": 445,
+                        "text": "Hu et al., 2014;",
+                        "ref_id": "BIBREF12"
+                    },
+                    {
+                        "start": 446,
+                        "end": 474,
+                        "text": "Severyn and Moschitti, 2015;",
+                        "ref_id": "BIBREF23"
+                    },
+                    {
+                        "start": 475,
+                        "end": 497,
+                        "text": "Yin and Sch\u00fctze, 2015)",
+                        "ref_id": "BIBREF29"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "5"
+            },
+            {
+                "text": "Many models related to the one we present here are used in a multilingual setting (Hermann and Blunsom, 2014b; Hermann and Blunsom, 2014a; Lauly et al., 2014) . The key difference between this work and ours is that in a multilingual setting the goal is to predict, from a distributed representation of an input sentence, the same sentence in a different language, whereas our goals is to predict surrounding sentences. Wieting et al. (2016) apply a model similar to ours in a related but different setting where explicit semantic knowledge is leveraged. As in our setting, word embeddings are trained by averaging them. However, unlike in our proposal, a margin-based loss function is used, which involves a parameter that has to be tuned. Furthermore, to select negative examples, at every training step, a computationally expensive comparison is made between all sentences in the training batch. The most crucial difference is that a large set of phrase pairs explicitly marked for semantic similarity has to be available as training material. Obtaining such high-quality training material is non-trivial, expensive and limits an approach to settings for which such material is available. In our work, we leverage unlabeled training data, of which there is a virtually unlimited amount.",
+                "cite_spans": [
+                    {
+                        "start": 82,
+                        "end": 110,
+                        "text": "(Hermann and Blunsom, 2014b;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 111,
+                        "end": 138,
+                        "text": "Hermann and Blunsom, 2014a;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 139,
+                        "end": 158,
+                        "text": "Lauly et al., 2014)",
+                        "ref_id": "BIBREF18"
+                    },
+                    {
+                        "start": 419,
+                        "end": 440,
+                        "text": "Wieting et al. (2016)",
+                        "ref_id": "BIBREF27"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "5"
+            },
+            {
+                "text": "As detailed in \u00a72, our network predicts a sentence from its neighbouring sentences. The notion of learning from context sentences is also applied in (Kiros et al., 2015) , where a recurrent neural network is employed. Our way of averaging the vectors of words contained in a sentence is more similar to the CBOW architecture of word2vec (Mikolov et al., 2013a) , in which all context word vectors are aggregated to predict the one omitted word. A crucial difference between our approach and the word2vec CBOW approach is that we compare sentence representations directly, rather than comparing a (partial) sentence representation to a word representation. Given the correspondence between word2vec's CBOW model and ours, we included it as a baseline in our experiments in \u00a73. As the skip-gram architecture has proven to be a strong baseline too in many settings, we include it too. Yih et al. (2011) also propose a siamese architecture. Short texts are represented by tf-idf vectors and a linear combination of input weights is learnt by a two-layer fully connected network, which is used to represent the input text. The cosine similarity between pairs of representations is computed, but unlike our proposal, the differences between similarities of a positive and negative sentence pair are combined in a logistic loss function.",
+                "cite_spans": [
+                    {
+                        "start": 149,
+                        "end": 169,
+                        "text": "(Kiros et al., 2015)",
+                        "ref_id": "BIBREF16"
+                    },
+                    {
+                        "start": 337,
+                        "end": 360,
+                        "text": "(Mikolov et al., 2013a)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 882,
+                        "end": 899,
+                        "text": "Yih et al. (2011)",
+                        "ref_id": "BIBREF28"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "5"
+            },
+            {
+                "text": "Finally, independently from our work, Hill et al. (2016) also present a log-linear model. Rather than comparing sentence representations to each other, as we propose, words in one sentence are compared to the representation of another sentence. As both input and output vectors are learnt, while we tie the parameters across the entire model, Hill et al. (2016) 's model has twice as many parameters as ours. Most importantly, however, the cost function used in (Hill et al., 2016) is crucially different from ours. As words in surrounding sentences are being compared to a sentence representation, the final layer of their network produces a softmax over the entire vocabulary. This is fundamentally different from the final softmax over cosines between sentence representations that we propose. Furthermore, the softmax over the vocabulary is, obviously, of vocabulary size, and hence grows when bigger vocabularies are used, causing additional computational cost. In our case, the size of the softmax is the number of positive plus negative examples (see \u00a72.1). When the vocabulary grows, this size is unaffected.",
+                "cite_spans": [
+                    {
+                        "start": 38,
+                        "end": 56,
+                        "text": "Hill et al. (2016)",
+                        "ref_id": "BIBREF11"
+                    },
+                    {
+                        "start": 343,
+                        "end": 361,
+                        "text": "Hill et al. (2016)",
+                        "ref_id": "BIBREF11"
+                    },
+                    {
+                        "start": 462,
+                        "end": 481,
+                        "text": "(Hill et al., 2016)",
+                        "ref_id": "BIBREF11"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "5"
+            },
+            {
+                "text": "We have presented Siamese CBOW, a neural network architecture that efficiently learns word embeddings optimized for producing sentence representations. The model is trained using only unla-beled text data. It predicts, from an input sentence representation, the preceding and following sentence.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion",
+                "sec_num": "6"
+            },
+            {
+                "text": "We evaluated the model on 20 test sets and show that in a majority of cases, 14 out of 20, Siamese CBOW outperforms a word2vec baseline and a baseline based on the recently proposed skip-thought architecture. As further analysis on various choices of parameters show that the method is stable across settings, we conclude that Siamese CBOW provides a robust way of generating high-quality sentence representations.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion",
+                "sec_num": "6"
+            },
+            {
+                "text": "Word and sentence embeddings are ubiquitous and many different ways of using them in supervised tasks have been proposed. It is beyond the scope of this paper to provide a comprehensive analysis of all supervised methods using word or sentence embeddings and the effect Siamese CBOW would have on them. However, it would be interesting to see how Siamese CBOW embeddings would affect results in supervised tasks.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion",
+                "sec_num": "6"
+            },
+            {
+                "text": "Lastly, although we evaluated Siamese CBOW on sentence pairs, there is no theoretical limitation restricting it to sentences. It would be interesting to see how embeddings for larger pieces of texts, such as documents, would perform in document clustering or filtering tasks.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion",
+                "sec_num": "6"
+            },
+            {
+                "text": "The corpus can be downloaded from http://www. cs.toronto.edu/ \u02dcmbweb/; cf.(Zhu et al.,",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "2015).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "The code is available from https://code. google.com/archive/p/word2vec/.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "The code and the trained models can be downloaded from https://github.com/ryankiros/ skip-thoughts/.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "The code for Siamese CBOW is available under an open-source license at https://bitbucket.org/ TomKenter/siamese-cbow.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            }
+        ],
+        "back_matter": [
+            {
+                "text": "The authors wish to express their gratitude for the valuable advice and relevant pointers of the anonymous reviewers. Many thanks to Christophe Van Gysel for implementation-related help. This research was supported by Ahold, Amsterdam Data Science, the Bloomberg Research Grant program, the Dutch national program COMMIT, Elsevier, the European Community's Seventh Framework Programme (FP7/2007-2013) under grant agreement nr 312827 (VOX-Pol), the ESF Research Network Program ELIAS, the Royal Dutch Academy of Sciences (KNAW) under the Elite Network Shifts project, the Microsoft Research Ph.D. program, the Netherlands eScience Center under project number 027.012.105, the Netherlands Institute for Sound and Vision, the Netherlands Organisation for Scientific Research (NWO) under project nrs 727.011.005, 612.001.116, 640.006.013, 612.066.930, 652.002.001, 612.001.551, the Yahoo Faculty Research and Engagement Program, and Yandex. All content represents the opinion of the authors, which is not necessarily shared or endorsed by their respective employers and/or sponsors.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Acknowledgments",
+                "sec_num": null
+            }
+        ],
+        "bib_entries": {
+            "BIBREF0": {
+                "ref_id": "b0",
+                "title": "Semeval-2012 task 6: A pilot on semantic textual similarity",
+                "authors": [
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Pearson's R",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2012,
+                "venue": "OnWN 2014 deft-forum 2014 deft-news 2014 headlines 2014 images 2014 tweet-news 2015 answers-forums 2015 answers-students 2015 belief 2015 headlines 2015 images References Eneko Agirre",
+                "volume": "1",
+                "issue": "",
+                "pages": "385--393",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Pearson's r 2012 MSRpar 2012 MSRvid 2012 OnWN 2012 SMTeuroparl 2012 SMTnews 2013 FNWN 2013 OnWN 2013 SMT 2013 headlines 2014 OnWN 2014 deft-forum 2014 deft-news 2014 headlines 2014 images 2014 tweet-news 2015 answers-forums 2015 answers-students 2015 belief 2015 headlines 2015 images References Eneko Agirre, Mona Diab, Daniel Cer, and Aitor Gonzalez-Agirre. 2012. Semeval-2012 task 6: A pi- lot on semantic textual similarity. In Proceedings of the First Joint Conference on Lexical and Computa- tional Semantics-Volume 1: Proceedings of the main conference and the shared task, and Volume 2: Pro- ceedings of the Sixth International Workshop on Se- mantic Evaluation (SemEval 2012), pages 385-393.",
+                "links": null
+            },
+            "BIBREF1": {
+                "ref_id": "b1",
+                "title": "sem 2013 shared task: Semantic textual similarity, including a pilot on typed-similarity",
+                "authors": [
+                    {
+                        "first": "Eneko",
+                        "middle": [],
+                        "last": "Agirre",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Daniel",
+                        "middle": [],
+                        "last": "Cer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mona",
+                        "middle": [],
+                        "last": "Diab",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Aitor",
+                        "middle": [],
+                        "last": "Gonzalez-Agirre",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Weiwei",
+                        "middle": [],
+                        "last": "Guo",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "Second Joint Conference on Lexical and Computational Semantics (*SEM), Volume 1: Proceedings of the Main Conference and the Shared Task (*SEM 2013)",
+                "volume": "",
+                "issue": "",
+                "pages": "32--43",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Eneko Agirre, Daniel Cer, Mona Diab, Aitor Gonzalez- Agirre, and Weiwei Guo. 2013. sem 2013 shared task: Semantic textual similarity, including a pilot on typed-similarity. In Second Joint Conference on Lexical and Computational Semantics (*SEM), Vol- ume 1: Proceedings of the Main Conference and the Shared Task (*SEM 2013), pages 32-43.",
+                "links": null
+            },
+            "BIBREF2": {
+                "ref_id": "b2",
+                "title": "Semeval-2014 task 10: Multilingual semantic textual similarity",
+                "authors": [
+                    {
+                        "first": "Eneko",
+                        "middle": [],
+                        "last": "Agirre",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Carmen",
+                        "middle": [],
+                        "last": "Banea",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Claire",
+                        "middle": [],
+                        "last": "Cardie",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Daniel",
+                        "middle": [],
+                        "last": "Cer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mona",
+                        "middle": [],
+                        "last": "Diab",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Aitor",
+                        "middle": [],
+                        "last": "Gonzalez-Agirre",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Weiwei",
+                        "middle": [],
+                        "last": "Guo",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Rada",
+                        "middle": [],
+                        "last": "Mihalcea",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "German",
+                        "middle": [],
+                        "last": "Rigau",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Janyce",
+                        "middle": [],
+                        "last": "Wiebe",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "Proceedings of the 8th International Workshop on Semantic Evaluation",
+                "volume": "",
+                "issue": "",
+                "pages": "81--91",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Eneko Agirre, Carmen Banea, Claire Cardie, Daniel Cer, Mona Diab, Aitor Gonzalez-Agirre, Weiwei Guo, Rada Mihalcea, German Rigau, and Janyce Wiebe. 2014. Semeval-2014 task 10: Multilingual semantic textual similarity. In Proceedings of the 8th International Workshop on Semantic Evaluation (SemEval 2014), pages 81-91.",
+                "links": null
+            },
+            "BIBREF3": {
+                "ref_id": "b3",
+                "title": "Semeval-2015 task 2: Semantic textual similarity, english, spanish and pilot on interpretability",
+                "authors": [
+                    {
+                        "first": "Eneko",
+                        "middle": [],
+                        "last": "Agirre",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Carmen",
+                        "middle": [],
+                        "last": "Banea",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Claire",
+                        "middle": [],
+                        "last": "Cardie",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Daniel",
+                        "middle": [],
+                        "last": "Cer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mona",
+                        "middle": [],
+                        "last": "Diab",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Aitor",
+                        "middle": [],
+                        "last": "Gonzalez-Agirre",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Weiwei",
+                        "middle": [],
+                        "last": "Guo",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "I",
+                        "middle": [],
+                        "last": "Nigo Lopez-Gazpio",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Montse",
+                        "middle": [],
+                        "last": "Maritxalar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Rada",
+                        "middle": [],
+                        "last": "Mihalcea",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "German",
+                        "middle": [],
+                        "last": "Rigau",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Larraitz",
+                        "middle": [],
+                        "last": "Uria",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Janyce",
+                        "middle": [],
+                        "last": "Wiebe",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Proceedings of the 9th International Workshop on Semantic Evaluation",
+                "volume": "",
+                "issue": "",
+                "pages": "252--263",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Eneko Agirre, Carmen Banea, Claire Cardie, Daniel Cer, Mona Diab, Aitor Gonzalez-Agirre, Weiwei Guo, I Nigo Lopez-Gazpio, Montse Maritxalar, Rada Mihalcea, German Rigau, Larraitz Uria, and Janyce Wiebe. 2015. Semeval-2015 task 2: Seman- tic textual similarity, english, spanish and pilot on interpretability. In Proceedings of the 9th Interna- tional Workshop on Semantic Evaluation (SemEval 2015), pages 252-263.",
+                "links": null
+            },
+            "BIBREF4": {
+                "ref_id": "b4",
+                "title": "A medium-scale distributed system for computer science research: Infrastructure for the long term",
+                "authors": [
+                    {
+                        "first": "Henri",
+                        "middle": [],
+                        "last": "Bal",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dick",
+                        "middle": [],
+                        "last": "Epema",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Cees",
+                        "middle": [],
+                        "last": "De Laat",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Rob",
+                        "middle": [],
+                        "last": "Van Nieuwpoort",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "John",
+                        "middle": [],
+                        "last": "Romein",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Frank",
+                        "middle": [],
+                        "last": "Seinstra",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Cees",
+                        "middle": [],
+                        "last": "Snoek",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Harry",
+                        "middle": [],
+                        "last": "Wijshoff",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Computer",
+                "volume": "49",
+                "issue": "5",
+                "pages": "54--63",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Henri Bal, Dick Epema, Cees de Laat, Rob van Nieuw- poort, John Romein, Frank Seinstra, Cees Snoek, and Harry Wijshoff. 2016. A medium-scale dis- tributed system for computer science research: In- frastructure for the long term. Computer, 49(5):54- 63.",
+                "links": null
+            },
+            "BIBREF5": {
+                "ref_id": "b5",
+                "title": "A fast and accurate dependency parser using neural networks",
+                "authors": [
+                    {
+                        "first": "Danqi",
+                        "middle": [],
+                        "last": "Chen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [
+                            "D"
+                        ],
+                        "last": "Manning",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "Proceedings of the Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "740--750",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Danqi Chen and Christopher D Manning. 2014. A fast and accurate dependency parser using neural networks. In Proceedings of the Conference on Empirical Methods in Natural Language Processing (EMNLP 2014), pages 740-750.",
+                "links": null
+            },
+            "BIBREF6": {
+                "ref_id": "b6",
+                "title": "A unified architecture for natural language processing: Deep neural networks with multitask learning",
+                "authors": [
+                    {
+                        "first": "Ronan",
+                        "middle": [],
+                        "last": "Collobert",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jason",
+                        "middle": [],
+                        "last": "Weston",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2008,
+                "venue": "Proceedings of the 25th international conference on Machine learning (ICML 2008)",
+                "volume": "",
+                "issue": "",
+                "pages": "160--167",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ronan Collobert and Jason Weston. 2008. A unified architecture for natural language processing: Deep neural networks with multitask learning. In Pro- ceedings of the 25th international conference on Machine learning (ICML 2008), pages 160-167.",
+                "links": null
+            },
+            "BIBREF7": {
+                "ref_id": "b7",
+                "title": "Retrofitting word vectors to semantic lexicons",
+                "authors": [
+                    {
+                        "first": "Manaal",
+                        "middle": [],
+                        "last": "Faruqui",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jesse",
+                        "middle": [],
+                        "last": "Dodge",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "K",
+                        "middle": [],
+                        "last": "Sujay",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chris",
+                        "middle": [],
+                        "last": "Jauhar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Eduard",
+                        "middle": [],
+                        "last": "Dyer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Noah",
+                        "middle": [
+                            "A"
+                        ],
+                        "last": "Hovy",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Smith",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "Proceedings of the North American Chapter",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Manaal Faruqui, Jesse Dodge, Sujay K Jauhar, Chris Dyer, Eduard Hovy, and Noah A. Smith. 2014. Retrofitting word vectors to semantic lexicons. In Proceedings of the North American Chapter of the Association for Computational Linguistics (NAACL 2014).",
+                "links": null
+            },
+            "BIBREF8": {
+                "ref_id": "b8",
+                "title": "Phrase similarity in humans and machines",
+                "authors": [
+                    {
+                        "first": "J",
+                        "middle": [],
+                        "last": "Samuel",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Joshua",
+                        "middle": [
+                            "B"
+                        ],
+                        "last": "Gershman",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Tenenbaum",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Proceedings of the 37th Annual Conference of the Cognitive Science Society",
+                "volume": "",
+                "issue": "",
+                "pages": "776--781",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Samuel J. Gershman and Joshua B. Tenenbaum. 2015. Phrase similarity in humans and machines. In Pro- ceedings of the 37th Annual Conference of the Cog- nitive Science Society, pages 776-781.",
+                "links": null
+            },
+            "BIBREF9": {
+                "ref_id": "b9",
+                "title": "2014a. Multilingual distributed representations without word alignment",
+                "authors": [],
+                "year": 2014,
+                "venue": "Proceedings of the International Conference on Learning Representations",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Karl Moritz Hermann and Phil Blunsom. 2014a. Mul- tilingual distributed representations without word alignment. In Proceedings of the International Con- ference on Learning Representations (ICLR 2014).",
+                "links": null
+            },
+            "BIBREF10": {
+                "ref_id": "b10",
+                "title": "Multilingual models for compositional distributed semantics",
+                "authors": [
+                    {
+                        "first": "Karl",
+                        "middle": [],
+                        "last": "Moritz",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hermann",
+                        "middle": [],
+                        "last": "",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Phil",
+                        "middle": [],
+                        "last": "Blunsom",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "Proceeedings of the 52nd Annual Meeting of the Association for Computational Linguistics (ACL 2014)",
+                "volume": "",
+                "issue": "",
+                "pages": "58--68",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Karl Moritz Hermann and Phil Blunsom. 2014b. Mul- tilingual models for compositional distributed se- mantics. In Proceeedings of the 52nd Annual Meet- ing of the Association for Computational Linguistics (ACL 2014), pages 58-68.",
+                "links": null
+            },
+            "BIBREF11": {
+                "ref_id": "b11",
+                "title": "Learning distributed representations of sentences from unlabelled data",
+                "authors": [
+                    {
+                        "first": "Felix",
+                        "middle": [],
+                        "last": "Hill",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kyunghyun",
+                        "middle": [],
+                        "last": "Cho",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Anna",
+                        "middle": [],
+                        "last": "Korhonen",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of the North American Chapter",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Felix Hill, Kyunghyun Cho, and Anna Korhonen. 2016. Learning distributed representations of sen- tences from unlabelled data. In Proceedings of the North American Chapter of the Association for Computational Linguistics (NAACL 2016).",
+                "links": null
+            },
+            "BIBREF12": {
+                "ref_id": "b12",
+                "title": "Convolutional neural network architectures for matching natural language sentences",
+                "authors": [
+                    {
+                        "first": "Baotian",
+                        "middle": [],
+                        "last": "Hu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zhengdong",
+                        "middle": [],
+                        "last": "Lu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hang",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Qingcai",
+                        "middle": [],
+                        "last": "Chen",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "Advances in Neural Information Processing Systems (NIPS 2014)",
+                "volume": "",
+                "issue": "",
+                "pages": "2042--2050",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Baotian Hu, Zhengdong Lu, Hang Li, and Qingcai Chen. 2014. Convolutional neural network archi- tectures for matching natural language sentences. In Advances in Neural Information Processing Systems (NIPS 2014), pages 2042-2050.",
+                "links": null
+            },
+            "BIBREF13": {
+                "ref_id": "b13",
+                "title": "Short text similarity with word embeddings",
+                "authors": [
+                    {
+                        "first": "Tom",
+                        "middle": [],
+                        "last": "Kenter",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Maarten",
+                        "middle": [],
+                        "last": "De Rijke",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Proceedings of the 24th ACM International on Conference on Information and Knowledge Management (CIKM 2015)",
+                "volume": "",
+                "issue": "",
+                "pages": "1411--1420",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Tom Kenter and Maarten de Rijke. 2015. Short text similarity with word embeddings. In Proceedings of the 24th ACM International on Conference on Infor- mation and Knowledge Management (CIKM 2015), pages 1411-1420.",
+                "links": null
+            },
+            "BIBREF14": {
+                "ref_id": "b14",
+                "title": "Ad hoc monitoring of vocabulary shifts over time",
+                "authors": [
+                    {
+                        "first": "Tom",
+                        "middle": [],
+                        "last": "Kenter",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Melvin",
+                        "middle": [],
+                        "last": "Wevers",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Pim",
+                        "middle": [],
+                        "last": "Huijnen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Maarten",
+                        "middle": [],
+                        "last": "De Rijke",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Proceedings of the 24th ACM International on Conference on Information and Knowledge Management (CIKM 2015)",
+                "volume": "",
+                "issue": "",
+                "pages": "1191--1200",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Tom Kenter, Melvin Wevers, Pim Huijnen, and Maarten de Rijke. 2015. Ad hoc monitoring of vo- cabulary shifts over time. In Proceedings of the 24th ACM International on Conference on Information and Knowledge Management (CIKM 2015), pages 1191-1200.",
+                "links": null
+            },
+            "BIBREF15": {
+                "ref_id": "b15",
+                "title": "Temporal analysis of language through neural language models",
+                "authors": [
+                    {
+                        "first": "Yoon",
+                        "middle": [],
+                        "last": "Kim",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kentaro",
+                        "middle": [],
+                        "last": "Yi-Chiu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Darshan",
+                        "middle": [],
+                        "last": "Hanaki",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Slav",
+                        "middle": [],
+                        "last": "Hegde",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Petrov",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "Proceeedings of the 52nd Annual Meeting of the Association for Computational Linguistics (ACL 2014)",
+                "volume": "",
+                "issue": "",
+                "pages": "61--65",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Yoon Kim, I Yi-Chiu., Kentaro Hanaki, Darshan Hegde, and Slav Petrov. 2014. Temporal analysis of language through neural language models. Pro- ceeedings of the 52nd Annual Meeting of the Asso- ciation for Computational Linguistics (ACL 2014), pages 61-65.",
+                "links": null
+            },
+            "BIBREF16": {
+                "ref_id": "b16",
+                "title": "Skip-thought vectors",
+                "authors": [
+                    {
+                        "first": "Ryan",
+                        "middle": [],
+                        "last": "Kiros",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yukun",
+                        "middle": [],
+                        "last": "Zhu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "R",
+                        "middle": [],
+                        "last": "Ruslan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Richard",
+                        "middle": [],
+                        "last": "Salakhutdinov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Raquel",
+                        "middle": [],
+                        "last": "Zemel",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Antonio",
+                        "middle": [],
+                        "last": "Urtasun",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sanja",
+                        "middle": [],
+                        "last": "Torralba",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Fidler",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Advances in Neural Information Processing Systems 28 (NIPS 2015)",
+                "volume": "",
+                "issue": "",
+                "pages": "3294--3302",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ryan Kiros, Yukun Zhu, Ruslan R Salakhutdinov, Richard Zemel, Raquel Urtasun, Antonio Torralba, and Sanja Fidler. 2015. Skip-thought vectors. In Advances in Neural Information Processing Systems 28 (NIPS 2015), pages 3294-3302. Curran Asso- ciates, Inc.",
+                "links": null
+            },
+            "BIBREF17": {
+                "ref_id": "b17",
+                "title": "From word embeddings to document distances",
+                "authors": [
+                    {
+                        "first": "Matt",
+                        "middle": [],
+                        "last": "Kusner",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yu",
+                        "middle": [],
+                        "last": "Sun",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nicholas",
+                        "middle": [],
+                        "last": "Kolkin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kilian",
+                        "middle": [
+                            "Q"
+                        ],
+                        "last": "Weinberger",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Proceedings of the 32nd International Conference on Machine Learning (ICML 2015)",
+                "volume": "",
+                "issue": "",
+                "pages": "957--966",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Matt Kusner, Yu Sun, Nicholas Kolkin, and Kilian Q Weinberger. 2015. From word embeddings to docu- ment distances. In Proceedings of the 32nd Inter- national Conference on Machine Learning (ICML 2015), pages 957-966.",
+                "links": null
+            },
+            "BIBREF18": {
+                "ref_id": "b18",
+                "title": "An autoencoder approach to learning bilingual word representations",
+                "authors": [
+                    {
+                        "first": "Stanislas",
+                        "middle": [],
+                        "last": "Lauly",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hugo",
+                        "middle": [],
+                        "last": "Larochelle",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mitesh",
+                        "middle": [],
+                        "last": "Khapra",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Balaraman",
+                        "middle": [],
+                        "last": "Ravindran",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Amrita",
+                        "middle": [],
+                        "last": "Vikas C Raykar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Saha",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "Advances in Neural Information Processing Systems (NIPS 2014)",
+                "volume": "",
+                "issue": "",
+                "pages": "1853--1861",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Stanislas Lauly, Hugo Larochelle, Mitesh Khapra, Balaraman Ravindran, Vikas C Raykar, and Amrita Saha. 2014. An autoencoder approach to learning bilingual word representations. In Advances in Neu- ral Information Processing Systems (NIPS 2014), pages 1853-1861.",
+                "links": null
+            },
+            "BIBREF19": {
+                "ref_id": "b19",
+                "title": "Ntnu: Measuring semantic similarity with sublexical feature representations and soft cardinality",
+                "authors": [
+                    {
+                        "first": "Andr\u00e9",
+                        "middle": [],
+                        "last": "Lynum",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Partha",
+                        "middle": [],
+                        "last": "Pakray",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Bj\u00f6rn",
+                        "middle": [],
+                        "last": "Gamb\u00e4ck",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sergio",
+                        "middle": [],
+                        "last": "Jimenez",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "Proceedings of the 8th International Workshop on Semantic Evaluation",
+                "volume": "",
+                "issue": "",
+                "pages": "448--453",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Andr\u00e9 Lynum, Partha Pakray, Bj\u00f6rn Gamb\u00e4ck, and Ser- gio Jimenez. 2014. Ntnu: Measuring semantic sim- ilarity with sublexical feature representations and soft cardinality. In Proceedings of the 8th Interna- tional Workshop on Semantic Evaluation (SemEval 2014), pages 448-453.",
+                "links": null
+            },
+            "BIBREF20": {
+                "ref_id": "b20",
+                "title": "Efficient estimation of word representations in vector space",
+                "authors": [
+                    {
+                        "first": "Tomas",
+                        "middle": [],
+                        "last": "Mikolov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kai",
+                        "middle": [],
+                        "last": "Chen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Greg",
+                        "middle": [
+                            "S"
+                        ],
+                        "last": "Corrado",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jeffrey",
+                        "middle": [],
+                        "last": "Dean",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Tomas Mikolov, Kai Chen, Greg S. Corrado, and Jef- frey Dean. 2013a. Efficient estimation of word representations in vector space. arXiv e-prints, 1301.3781.",
+                "links": null
+            },
+            "BIBREF21": {
+                "ref_id": "b21",
+                "title": "Distributed representations of words and phrases and their compositionality",
+                "authors": [
+                    {
+                        "first": "Tomas",
+                        "middle": [],
+                        "last": "Mikolov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ilya",
+                        "middle": [],
+                        "last": "Sutskever",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kai",
+                        "middle": [],
+                        "last": "Chen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Greg",
+                        "middle": [
+                            "S"
+                        ],
+                        "last": "Corrado",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jeff",
+                        "middle": [],
+                        "last": "Dean",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "Advances in Neural Information Processing Systems (NIPS 2013)",
+                "volume": "",
+                "issue": "",
+                "pages": "3111--3119",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Tomas Mikolov, Ilya Sutskever, Kai Chen, Greg S. Cor- rado, and Jeff Dean. 2013b. Distributed representa- tions of words and phrases and their compositional- ity. In Advances in Neural Information Processing Systems (NIPS 2013), pages 3111-3119.",
+                "links": null
+            },
+            "BIBREF22": {
+                "ref_id": "b22",
+                "title": "Mining, ranking and recommending entity aspects",
+                "authors": [
+                    {
+                        "first": "Ridho",
+                        "middle": [],
+                        "last": "Reinanda",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Edgar",
+                        "middle": [],
+                        "last": "Meij",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Maarten",
+                        "middle": [],
+                        "last": "De Rijke",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Proceedings of the 38th International ACM SIGIR Conference on Research and Development in Information Retrieval (SIGIR 2015)",
+                "volume": "",
+                "issue": "",
+                "pages": "263--272",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ridho Reinanda, Edgar Meij, and Maarten de Rijke. 2015. Mining, ranking and recommending entity aspects. In Proceedings of the 38th International ACM SIGIR Conference on Research and Develop- ment in Information Retrieval (SIGIR 2015), pages 263-272.",
+                "links": null
+            },
+            "BIBREF23": {
+                "ref_id": "b23",
+                "title": "Learning to rank short text pairs with convolutional deep neural networks",
+                "authors": [
+                    {
+                        "first": "Aliaksei",
+                        "middle": [],
+                        "last": "Severyn",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alessandro",
+                        "middle": [],
+                        "last": "Moschitti",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Proceedings of the 38th International ACM SIGIR Conference on Research and Development in Information Retrieval (SIGIR 2015)",
+                "volume": "",
+                "issue": "",
+                "pages": "373--382",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Aliaksei Severyn and Alessandro Moschitti. 2015. Learning to rank short text pairs with convolutional deep neural networks. In Proceedings of the 38th International ACM SIGIR Conference on Research and Development in Information Retrieval (SIGIR 2015), pages 373-382.",
+                "links": null
+            },
+            "BIBREF24": {
+                "ref_id": "b24",
+                "title": "Semantic compositionality through recursive matrix-vector spaces",
+                "authors": [
+                    {
+                        "first": "Richard",
+                        "middle": [],
+                        "last": "Socher",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Brody",
+                        "middle": [],
+                        "last": "Huval",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [
+                            "D"
+                        ],
+                        "last": "Manning",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Andrew",
+                        "middle": [
+                            "Y"
+                        ],
+                        "last": "Ng",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2012,
+                "venue": "Proceedings of the 2012 Joint Conference on Empirical Methods in Natural Language Processing and Computational Natural Language Learning",
+                "volume": "",
+                "issue": "",
+                "pages": "1201--1211",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Richard Socher, Brody Huval, Christopher D Manning, and Andrew Y Ng. 2012. Semantic compositional- ity through recursive matrix-vector spaces. In Pro- ceedings of the 2012 Joint Conference on Empirical Methods in Natural Language Processing and Com- putational Natural Language Learning (EMNLP- CoNLL 2012), pages 1201-1211.",
+                "links": null
+            },
+            "BIBREF25": {
+                "ref_id": "b25",
+                "title": "Theano: A Python framework for fast computation of mathematical expressions",
+                "authors": [],
+                "year": 2016,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Theano Development Team. 2016. Theano: A Python framework for fast computation of mathematical ex- pressions. arXiv e-prints, abs/1605.02688.",
+                "links": null
+            },
+            "BIBREF26": {
+                "ref_id": "b26",
+                "title": "Learning to explain entity relationships in knowledge graphs",
+                "authors": [
+                    {
+                        "first": "Nikos",
+                        "middle": [],
+                        "last": "Voskarides",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Edgar",
+                        "middle": [],
+                        "last": "Meij",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Manos",
+                        "middle": [],
+                        "last": "Tsagkias",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Maarten",
+                        "middle": [],
+                        "last": "De Rijke",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Wouter",
+                        "middle": [],
+                        "last": "Weerkamp",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Proceedings of the 53rd Annual Meeting of the Association for Computational Linguistics and The 7th International Joint Conference on Natural Language Processing of the Asian Federation of Natural Language Processing (ACL-IJCNLP 2015)",
+                "volume": "",
+                "issue": "",
+                "pages": "564--574",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Nikos Voskarides, Edgar Meij, Manos Tsagkias, Maarten de Rijke, and Wouter Weerkamp. 2015. Learning to explain entity relationships in knowl- edge graphs. In Proceedings of the 53rd Annual Meeting of the Association for Computational Lin- guistics and The 7th International Joint Confer- ence on Natural Language Processing of the Asian Federation of Natural Language Processing (ACL- IJCNLP 2015), pages 564-574.",
+                "links": null
+            },
+            "BIBREF27": {
+                "ref_id": "b27",
+                "title": "Towards universal paraphrastic sentence embeddings",
+                "authors": [
+                    {
+                        "first": "John",
+                        "middle": [],
+                        "last": "Wieting",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mohit",
+                        "middle": [],
+                        "last": "Bansal",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kevin",
+                        "middle": [],
+                        "last": "Gimpel",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Karen",
+                        "middle": [],
+                        "last": "Livescu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of the International Conference on Learning Representations",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "John Wieting, Mohit Bansal, Kevin Gimpel, and Karen Livescu. 2016. Towards universal paraphrastic sentence embeddings. Proceedings of the Inter- national Conference on Learning Representations (ICLR 2016).",
+                "links": null
+            },
+            "BIBREF28": {
+                "ref_id": "b28",
+                "title": "Learning discriminative projections for text similarity measures",
+                "authors": [
+                    {
+                        "first": "Wentau",
+                        "middle": [],
+                        "last": "Yih",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kristina",
+                        "middle": [],
+                        "last": "Toutanova",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "John",
+                        "middle": [
+                            "C"
+                        ],
+                        "last": "Platt",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [],
+                        "last": "Meek",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2011,
+                "venue": "Proceedings of the Fifteenth Conference on Computational Natural Language Learning",
+                "volume": "",
+                "issue": "",
+                "pages": "247--256",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Wentau Yih, Kristina Toutanova, John C. Platt, and Christopher Meek. 2011. Learning discriminative projections for text similarity measures. In Proceed- ings of the Fifteenth Conference on Computational Natural Language Learning, pages 247-256.",
+                "links": null
+            },
+            "BIBREF29": {
+                "ref_id": "b29",
+                "title": "Convolutional neural network for paraphrase identification",
+                "authors": [
+                    {
+                        "first": "Wenpeng",
+                        "middle": [],
+                        "last": "Yin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hinrich",
+                        "middle": [],
+                        "last": "Sch\u00fctze",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Proceedings of the North American Chapter",
+                "volume": "",
+                "issue": "",
+                "pages": "901--911",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Wenpeng Yin and Hinrich Sch\u00fctze. 2015. Convolu- tional neural network for paraphrase identification. In Proceedings of the North American Chapter of the Association for Computational Linguistics (NAACL 2015), pages 901-911.",
+                "links": null
+            },
+            "BIBREF30": {
+                "ref_id": "b30",
+                "title": "Deep learning for answer sentence selection",
+                "authors": [
+                    {
+                        "first": "Lei",
+                        "middle": [],
+                        "last": "Yu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Karl",
+                        "middle": [
+                            "Moritz"
+                        ],
+                        "last": "Hermann",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Phil",
+                        "middle": [],
+                        "last": "Blunsom",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Stephen",
+                        "middle": [],
+                        "last": "Pulman",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "NIPS 2014 Deep Learning and Representation Learning Workshop",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Lei Yu, Karl Moritz Hermann, Phil Blunsom, and Stephen Pulman. 2014. Deep learning for answer sentence selection. In NIPS 2014 Deep Learning and Representation Learning Workshop.",
+                "links": null
+            },
+            "BIBREF31": {
+                "ref_id": "b31",
+                "title": "Aligning books and movies: Towards story-like visual explanations by watching movies and reading books",
+                "authors": [
+                    {
+                        "first": "Yukun",
+                        "middle": [],
+                        "last": "Zhu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ryan",
+                        "middle": [],
+                        "last": "Kiros",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Rich",
+                        "middle": [],
+                        "last": "Zemel",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Proceedings of the IEEE International Conference on Computer Vision",
+                "volume": "",
+                "issue": "",
+                "pages": "19--27",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Yukun Zhu, Ryan Kiros, Rich Zemel, Ruslan Salakhut- dinov, Raquel Urtasun, Antonio Torralba, and Sanja Fidler. 2015. Aligning books and movies: Towards story-like visual explanations by watching movies and reading books. In Proceedings of the IEEE In- ternational Conference on Computer Vision, pages 19-27.",
+                "links": null
+            },
+            "BIBREF32": {
+                "ref_id": "b32",
+                "title": "Bilingual word embeddings for phrase-based machine translation",
+                "authors": [
+                    {
+                        "first": "Will",
+                        "middle": [
+                            "Y"
+                        ],
+                        "last": "Zou",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Richard",
+                        "middle": [],
+                        "last": "Socher",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Daniel",
+                        "middle": [
+                            "M"
+                        ],
+                        "last": "Cer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [
+                            "D"
+                        ],
+                        "last": "Manning",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "Proceedings of the Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "1393--1398",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Will Y. Zou, Richard Socher, Daniel M. Cer, and Christopher D. Manning. 2013. Bilingual word embeddings for phrase-based machine translation. In Proceedings of the Conference on Empirical Methods in Natural Language Processing (EMNLP 2013), pages 1393-1398.",
+                "links": null
+            }
+        },
+        "ref_entries": {
+            "FIGREF0": {
+                "num": null,
+                "text": "Figure 2: Performance of Siamese CBOW across 5 iterations.",
+                "uris": null,
+                "fig_num": "2",
+                "type_str": "figure"
+            },
+            "FIGREF1": {
+                "num": null,
+                "text": "Figure 3: Performance of Siamese CBOW with different numbers of negative examples.",
+                "uris": null,
+                "fig_num": "3",
+                "type_str": "figure"
+            },
+            "FIGREF2": {
+                "num": null,
+                "text": "Figure 4: Performance of Siamese CBOW across number of embedding dimensions.",
+                "uris": null,
+                "fig_num": "4",
+                "type_str": "figure"
+            },
+            "TABREF2": {
+                "content": "<table><tr><td>Dataset</td><td>w2v skipgram</td><td>w2v CBOW</td><td>skip-thought</td><td>Siamese CBOW</td></tr><tr><td>2012</td><td/><td/><td/><td/></tr><tr><td>MSRpar</td><td>.3740 (.3991)</td><td>.3419 (.3521)</td><td>.0560 (.0843)</td><td>.4379  \u2020 (.4311)</td></tr><tr><td>MSRvid</td><td>.5213 (.5519)</td><td>.5099 (.5450)</td><td>.5807 (.5829)</td><td>.4522  \u2020 (.4759)</td></tr><tr><td>OnWN</td><td>.6040 (.6476)</td><td>.6320 (.6440)</td><td>.6045 (.6431)</td><td>.6444  \u2020 (.6475)</td></tr><tr><td>SMTeuroparl</td><td>.3071 (.5238)</td><td>.3976 (.5310)</td><td>.4203 (.4999)</td><td>.4503  \u2020 (.5449)</td></tr><tr><td>SMTnews</td><td>.4487 (.3617)</td><td>.4462 (.3901)</td><td>.3911 (.3628)</td><td>.3902  \u2020 (.4153)</td></tr><tr><td>2013</td><td/><td/><td/><td/></tr><tr><td>FNWN</td><td>.3480 (.3401)</td><td>.2736 (.2867)</td><td>.3124 (.3511)</td><td>.2322  \u2020 (.2235)</td></tr><tr><td>OnWN</td><td>.4745 (.5509)</td><td>.5165 (.6008)</td><td>.2418 (.2766)</td><td>.4985  \u2020 (.5227)</td></tr><tr><td>SMT</td><td>.1838 (.2843)</td><td>.2494 (.2919)</td><td>.3378 (.3498)</td><td>.3312  \u2020 (.3356)</td></tr><tr><td>headlines</td><td>.5935 (.6044)</td><td>.5730 (.5766)</td><td>.3861 (.3909)</td><td>.6534  \u2020 (.6516)</td></tr><tr><td>2014</td><td/><td/><td/><td/></tr><tr><td>OnWN</td><td>.5848 (.6676)</td><td>.6068 (.6887)</td><td>.4682 (.5161)</td><td>.6073  \u2020 (.6554)</td></tr><tr><td>deft-forum</td><td>.3193 (.3810)</td><td>.3339 (.3507)</td><td>.3736 (.3737)</td><td>.4082  \u2020 (.4188)</td></tr><tr><td>deft-news</td><td>.5906 (.5678)</td><td>.5737 (.5577)</td><td>.4617 (.4762)</td><td>.5913  \u2020 (.5754)</td></tr><tr><td>headlines</td><td>.5790 (.5544)</td><td>.5455 (.5095)</td><td>.4031 (.3910)</td><td>.6364  \u2020 (.6260)</td></tr><tr><td>images</td><td>.5131 (.5288)</td><td>.5056 (.5213)</td><td>.4257 (.4233)</td><td>.6497  \u2020 (.6484)</td></tr><tr><td>tweet-news</td><td>.6336 (.6544)</td><td>.6897 (.6615)</td><td>.5138 (.5297)</td><td>.7315  \u2020 (.7128)</td></tr><tr><td>2015</td><td/><td/><td/><td/></tr><tr><td>answ-forums</td><td>.1892 (.1463)</td><td>.1767 (.1294)</td><td>.2784 (.1909)</td><td>.2181 (.1469)</td></tr><tr><td>answ-students</td><td>.3233 (.2654)</td><td>.3344 (.2742)</td><td>.2661 (.2068)</td><td>.3671  \u2020 (.2824)</td></tr><tr><td>belief</td><td>.2435 (.2635)</td><td>.3277 (.3280)</td><td>.4584 (.3368)</td><td>.4769 (.3184)</td></tr><tr><td>headlines</td><td>.1875 (.0754)</td><td>.1806 (.0765)</td><td>.1248 (.0464)</td><td>.2151  \u2020 (.0846)</td></tr><tr><td>images</td><td>.2454 (.1611)</td><td>.2292 (.1438)</td><td>.2100 (.1220)</td><td>.2560  \u2020 (.1467)</td></tr></table>",
+                "type_str": "table",
+                "text": "Results on SemEval datasets in terms of Pearson's r (Spearman's r). Highest scores, in terms of Pearson's r, are displayed in bold. Siamese CBOW runs statistically significantly different from the word2vec CBOW baseline runs are marked with a \u2020. See \u00a73.3 for a discussion of the statistical test used.",
+                "html": null,
+                "num": null
+            },
+            "TABREF3": {
+                "content": "<table><tr><td>Dataset</td><td>FastSent</td><td>Siamese CBOW</td></tr><tr><td>OnWN</td><td>.74 (.70)</td><td>.6073 (.6554)</td></tr><tr><td>deft-forum</td><td>.41 (.36)</td><td>.4082 (.4188)</td></tr><tr><td>deft-news</td><td>.58 (.59)</td><td>.5913 (.5754)</td></tr><tr><td>headlines</td><td>.57 (.59)</td><td>.6364 (.6260)</td></tr><tr><td>images</td><td>.74 (.78)</td><td>.6497 (.6484)</td></tr><tr><td>tweet-news</td><td>.63 (.66)</td><td>.7315 (.7128)</td></tr><tr><td colspan=\"3\">particular, we look into stability across iterations,</td></tr><tr><td colspan=\"3\">different numbers of negative examples, and the</td></tr><tr><td colspan=\"3\">dimensionality of the embeddings. Other parame-</td></tr><tr><td colspan=\"3\">ter settings are set as reported in  \u00a73.4.</td></tr></table>",
+                "type_str": "table",
+                "text": "Results on SemEval 2014 datasets in terms of Pearson's r (Spearman's r). Highest scores (in Pearson's r) are displayed in bold. Fast-Sent results are reprinted from(Hill et al., 2016) where they are reported in two-digit precision.",
+                "html": null,
+                "num": null
+            }
+        }
+    }
+}

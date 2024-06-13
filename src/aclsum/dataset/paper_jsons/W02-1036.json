@@ -1,0 +1,1366 @@
+{
+    "paper_id": "W02-1036",
+    "header": {
+        "generated_with": "S2ORC 1.0.0",
+        "date_generated": "2023-06-16T12:12:21.491614Z"
+    },
+    "title": "Combining Outputs of Multiple Japanese Named Entity Chunkers by Stacking",
+    "authors": [
+        {
+            "first": "Takehito",
+            "middle": [],
+            "last": "Utsuro",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "Toyohashi University of Technology Tenpaku-cho",
+                "location": {
+                    "postCode": "441-8580",
+                    "settlement": "Toyohashi",
+                    "country": "Japan"
+                }
+            },
+            "email": "utsuro@ics.tut.ac.jp"
+        },
+        {
+            "first": "Manabu",
+            "middle": [],
+            "last": "Sassano",
+            "suffix": "",
+            "affiliation": {},
+            "email": "sassano@jp.fujitsu.com"
+        },
+        {
+            "first": "Kiyotaka",
+            "middle": [],
+            "last": "Uchimoto",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "Communications Research Laboratory Hikaridai Seika-cho",
+                "institution": "Keihanna Human Info-Communications Research Center",
+                "location": {
+                    "postCode": "619-0289",
+                    "settlement": "Kyoto",
+                    "country": "Japan"
+                }
+            },
+            "email": "uchimoto@crl.go.jp"
+        }
+    ],
+    "year": "",
+    "venue": null,
+    "identifiers": {},
+    "abstract": "In this paper, we propose a method for learning a classifier which combines outputs of more than one Japanese named entity extractors. The proposed combination method belongs to the family of stacked generalizers, which is in principle a technique of combining outputs of several classifiers at the first stage by learning a second stage classifier to combine those outputs at the first stage. Individual models to be combined are based on maximum entropy models, one of which always considers surrounding contexts of a fixed length, while the other considers those of variable lengths according to the number of constituent morphemes of named entities. As an algorithm for learning the second stage classifier, we employ a decision list learning method. Experimental evaluation shows that the proposed method achieves improvement over the best known results with Japanese named entity extractors based on maximum entropy models.",
+    "pdf_parse": {
+        "paper_id": "W02-1036",
+        "_pdf_hash": "",
+        "abstract": [
+            {
+                "text": "In this paper, we propose a method for learning a classifier which combines outputs of more than one Japanese named entity extractors. The proposed combination method belongs to the family of stacked generalizers, which is in principle a technique of combining outputs of several classifiers at the first stage by learning a second stage classifier to combine those outputs at the first stage. Individual models to be combined are based on maximum entropy models, one of which always considers surrounding contexts of a fixed length, while the other considers those of variable lengths according to the number of constituent morphemes of named entities. As an algorithm for learning the second stage classifier, we employ a decision list learning method. Experimental evaluation shows that the proposed method achieves improvement over the best known results with Japanese named entity extractors based on maximum entropy models.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            }
+        ],
+        "body_text": [
+            {
+                "text": "In the recent corpus-based NLP research, system combination techniques have been successfully applied to several tasks such as parts-of-speech tagging (van Halteren et al., 1998) , base noun phrase chunking (Tjong Kim Sang, 2000) , and parsing (Henderson and Brill, 1999; Henderson and Brill, 2000) . The aim of system combination is to combine portions of the individual systems' outputs which are partial but can be regarded as highly accurate. The process of system combination can be decomposed into the following two sub-processes:",
+                "cite_spans": [
+                    {
+                        "start": 151,
+                        "end": 178,
+                        "text": "(van Halteren et al., 1998)",
+                        "ref_id": "BIBREF10"
+                    },
+                    {
+                        "start": 207,
+                        "end": 229,
+                        "text": "(Tjong Kim Sang, 2000)",
+                        "ref_id": "BIBREF8"
+                    },
+                    {
+                        "start": 244,
+                        "end": 271,
+                        "text": "(Henderson and Brill, 1999;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 272,
+                        "end": 298,
+                        "text": "Henderson and Brill, 2000)",
+                        "ref_id": "BIBREF4"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "1. Collect systems which behave as differently as possible: it would help a lot if at least the collected systems tend to make errors of different types, because simple voting technique can identify correct outputs.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Previously studied techniques for collecting such systems include: i) using several existing real systems (van Halteren et al., 1998; Brill and Wu, 1998; Henderson and Brill, 1999; Tjong Kim Sang, 2000) , ii) bagging/boosting techniques (Henderson and Brill, 1999; Henderson and Brill, 2000) , and iii) switching the data expression and obtaining several models (Tjong Kim Sang, 2000) . 2. Combine the outputs of the several systems: previously studied techniques include: i) voting techniques (van Halteren et al., 1998; Tjong Kim Sang, 2000; Henderson and Brill, 1999; Henderson and Brill, 2000) , ii) switching among several systems according to confidence values they provide (Henderson and Brill, 1999) , iii) stacking techniques (Wolpert, 1992) which train a second stage classifier for combining outputs of classifiers at the first stage (van Halteren et al., 1998; Brill and Wu, 1998; Tjong Kim Sang, 2000) .",
+                "cite_spans": [
+                    {
+                        "start": 106,
+                        "end": 133,
+                        "text": "(van Halteren et al., 1998;",
+                        "ref_id": "BIBREF10"
+                    },
+                    {
+                        "start": 134,
+                        "end": 153,
+                        "text": "Brill and Wu, 1998;",
+                        "ref_id": "BIBREF1"
+                    },
+                    {
+                        "start": 154,
+                        "end": 180,
+                        "text": "Henderson and Brill, 1999;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 181,
+                        "end": 202,
+                        "text": "Tjong Kim Sang, 2000)",
+                        "ref_id": "BIBREF8"
+                    },
+                    {
+                        "start": 237,
+                        "end": 264,
+                        "text": "(Henderson and Brill, 1999;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 265,
+                        "end": 291,
+                        "text": "Henderson and Brill, 2000)",
+                        "ref_id": "BIBREF4"
+                    },
+                    {
+                        "start": 362,
+                        "end": 384,
+                        "text": "(Tjong Kim Sang, 2000)",
+                        "ref_id": "BIBREF8"
+                    },
+                    {
+                        "start": 494,
+                        "end": 521,
+                        "text": "(van Halteren et al., 1998;",
+                        "ref_id": "BIBREF10"
+                    },
+                    {
+                        "start": 522,
+                        "end": 543,
+                        "text": "Tjong Kim Sang, 2000;",
+                        "ref_id": "BIBREF8"
+                    },
+                    {
+                        "start": 544,
+                        "end": 570,
+                        "text": "Henderson and Brill, 1999;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 571,
+                        "end": 597,
+                        "text": "Henderson and Brill, 2000)",
+                        "ref_id": "BIBREF4"
+                    },
+                    {
+                        "start": 680,
+                        "end": 707,
+                        "text": "(Henderson and Brill, 1999)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 735,
+                        "end": 750,
+                        "text": "(Wolpert, 1992)",
+                        "ref_id": "BIBREF11"
+                    },
+                    {
+                        "start": 845,
+                        "end": 872,
+                        "text": "(van Halteren et al., 1998;",
+                        "ref_id": "BIBREF10"
+                    },
+                    {
+                        "start": 873,
+                        "end": 892,
+                        "text": "Brill and Wu, 1998;",
+                        "ref_id": "BIBREF1"
+                    },
+                    {
+                        "start": 893,
+                        "end": 914,
+                        "text": "Tjong Kim Sang, 2000)",
+                        "ref_id": "BIBREF8"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "In this paper, we propose a method for combining outputs of (Japanese) named entity chunkers, which belongs to the family of stacking techniques. In the sub-process 1, we focus on models which differ in the lengths of preceding/subsequent contexts to be incorporated in the models. As the base model for supervised learning of Japanese named entity chunking, we employ a model based on the maximum entropy model (Uchimoto et al., 2000) , which performed the best in IREX (Information Retrieval and Extraction Exercise) Workshop (IREX Committee, 1999) among those based on machine learning techniques. Uchimoto et al. (2000) reported that the optimal number of preceding/subsequent contexts to be incorporated in the model is two morphemes to both left and right from the current position. In this paper, we train several maximum entropy models which differ in the lengths of preceding/subsequent contexts, and then combine their outputs.",
+                "cite_spans": [
+                    {
+                        "start": 412,
+                        "end": 435,
+                        "text": "(Uchimoto et al., 2000)",
+                        "ref_id": "BIBREF9"
+                    },
+                    {
+                        "start": 601,
+                        "end": 623,
+                        "text": "Uchimoto et al. (2000)",
+                        "ref_id": "BIBREF9"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "As the sub-process 2, we propose to apply a stacking technique which learns a classifier for combining outputs of several named entity chunkers. This second stage classifier learns rules for accepting/rejecting outputs of several individual named entity chunkers. The proposed method can be applied to the cases where the number of constituent systems is quite small (e.g., two). Actually, in the experimental evaluation, we show that the results of combining the best performing model of Uchimoto et al. (2000) with the one which performs poorly but extracts named entities quite different from those of the best performing model can help improve the performance of the best model.",
+                "cite_spans": [
+                    {
+                        "start": 489,
+                        "end": 511,
+                        "text": "Uchimoto et al. (2000)",
+                        "ref_id": "BIBREF9"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Maximum Entropy Models",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Named Entity Chunking based on",
+                "sec_num": "2"
+            },
+            {
+                "text": "The task of named entity recognition of the IREX workshop is to recognize eight named entity types in Table 1 (IREX Committee, 1999) . The organizer of the IREX workshop provided 1,174 newspaper articles which include 18,677 named entities as the training data. In the formal run (general domain) of the workshop, the participating systems were requested to recognize 1,510 named entities included in the held-out 71 newspaper articles.",
+                "cite_spans": [
+                    {
+                        "start": 110,
+                        "end": 132,
+                        "text": "(IREX Committee, 1999)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Task of the IREX Workshop",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "We first provide our definition of the task of Japanese named entity chunking (Sekine et al., 1998; Borthwick et al., 1998; Uchimoto et al., 2000) . Suppose that a sequence of morphemes is given as below:",
+                "cite_spans": [
+                    {
+                        "start": 78,
+                        "end": 99,
+                        "text": "(Sekine et al., 1998;",
+                        "ref_id": "BIBREF7"
+                    },
+                    {
+                        "start": 100,
+                        "end": 123,
+                        "text": "Borthwick et al., 1998;",
+                        "ref_id": "BIBREF0"
+                    },
+                    {
+                        "start": 124,
+                        "end": 146,
+                        "text": "Uchimoto et al., 2000)",
+                        "ref_id": "BIBREF9"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Named Entity Chunking",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "( Left Context ) (Named Entity) ( Right Context ) \u2022 \u2022 \u2022 M L -k \u2022 \u2022 \u2022 M L -1 M NE 1 \u2022 \u2022 \u2022 M NE i \u2022 \u2022 \u2022 M NE m M R 1 \u2022 \u2022 \u2022 M R l \u2022 \u2022 \u2022 \u2191 (Current Position)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Named Entity Chunking",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "Given that the current position is at the morpheme M N E i , the task of named entity chunking is to assign a chunking state (to be described in section 2.3.1) to the morpheme M N E i at the current position, considering the patterns of surrounding morphemes. Note that in the supervised learning phase, we can use the chunking information on which morphemes constitute a named entity, and which morphemes are in the left/right contexts of the named entity.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Named Entity Chunking",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "In the maximum entropy model (Della Pietra et al., 1997) , the conditional probability of the output y given the context x can be estimated as the following p \u03bb (y | x) of the form of the exponential family, where binary-valued indicator functions called feature functions f i (x, y) are introduced for expressing a set of \"features\", or \"attributes\" of the context x and the output y. A parameter \u03bb i is introduced for each feature f i , and is estimated from a training data. Uchimoto et al. (2000) defines the context x as the patterns of surrounding morphemes as well as that at the current position, and the output y as the named entity chunking state to be assigned to the morpheme at the current position. Uchimoto et al. (2000) classifies classes of named entity chunking states into the following 40 tags:",
+                "cite_spans": [
+                    {
+                        "start": 29,
+                        "end": 56,
+                        "text": "(Della Pietra et al., 1997)",
+                        "ref_id": "BIBREF2"
+                    },
+                    {
+                        "start": 478,
+                        "end": 500,
+                        "text": "Uchimoto et al. (2000)",
+                        "ref_id": "BIBREF9"
+                    },
+                    {
+                        "start": 713,
+                        "end": 735,
+                        "text": "Uchimoto et al. (2000)",
+                        "ref_id": "BIBREF9"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "The Maximum Entropy Model",
+                "sec_num": "2.3"
+            },
+            {
+                "text": "p \u03bb (y | x) = exp i \u03bb i f i (x, y) y exp i \u03bb i f i (x, y)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "The Maximum Entropy Model",
+                "sec_num": "2.3"
+            },
+            {
+                "text": "\u2022 Each of eight named entity types plus an \"OP-TIONAL\" type are divided into four chunking states, namely, the beginning/middle/end of an named entity, or an named entity consisting of a single morpheme. This amounts to 9\u00d74 = 36 classes. \u2022 Three more classes are distinguished for morphemes immediately preceding/following a named entity, as well as the one between two named entities. \u2022 Other morphemes are assigned the class \"OTHER\".",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Named Entity Chunking States",
+                "sec_num": "2.3.1"
+            },
+            {
+                "text": "Following Uchimoto et al. (2000) , feature functions for morphemes at the current position as well as the surrounding contexts are defined. More specifically, the following three types of feature functions are used:1 1. 2052 lexical items that are observed five times or more within two morphemes from named entities in the training corpus. 2. parts-of-speech tags of morphemes2 . 3. character types of morphemes (i.e., Japanese (hiragana or katakana), Chinese (kanji), numbers, English alphabets, symbols, and their combinations).",
+                "cite_spans": [
+                    {
+                        "start": 10,
+                        "end": 32,
+                        "text": "Uchimoto et al. (2000)",
+                        "ref_id": "BIBREF9"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Features",
+                "sec_num": "2.3.2"
+            },
+            {
+                "text": "As for the number of preceding/subsequent morphemes as contextual clues, we consider the following models:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Features",
+                "sec_num": "2.3.2"
+            },
+            {
+                "text": "This model considers the preceding two morphemes M -2 , M -1 as well as the subsequent two morphemes M 1 , M 2 as the contextual clue. Both in (Uchimoto et al., 2000) and in this paper, this is the model which performs the best among all the individual models without system combination.",
+                "cite_spans": [
+                    {
+                        "start": 143,
+                        "end": 166,
+                        "text": "(Uchimoto et al., 2000)",
+                        "ref_id": "BIBREF9"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "5-gram model",
+                "sec_num": null
+            },
+            {
+                "text": "( Left Context ) ( Current Position ) ( Right Context ) \u2022 \u2022 \u2022 M-2 M-1 M0 M1 M2 \u2022 \u2022 \u2022",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "5-gram model",
+                "sec_num": null
+            },
+            {
+                "text": "This model considers the preceding three morphemes M -3 , M -2 , M -1 as well as the subsequent three morphemes M 1 , M 2 , M 3 as the contextual clue.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "7-gram model",
+                "sec_num": null
+            },
+            {
+                "text": "( Left Context ) ( Current Position ) ( Right Context ) \u2022 \u2022 \u2022 M-3 M-2 M-1 M0 M1 M2 M3 \u2022 \u2022 \u2022",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "7-gram model",
+                "sec_num": null
+            },
+            {
+                "text": "This model considers the preceding four morphemes M -4 , M -3 , M -2 , M -1 as well as the subsequent four morphemes M 1 , M 2 , M 3 , M 4 as the contextual clue.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "9-gram model",
+                "sec_num": null
+            },
+            {
+                "text": "( Left Context ) ( Current Position ) ( Right Context ) \u2022 \u2022 \u2022 M-4 \u2022 \u2022 \u2022 M-1 M0 M1 \u2022 \u2022 \u2022 M4 \u2022 \u2022 \u2022",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "9-gram model",
+                "sec_num": null
+            },
+            {
+                "text": "For both 7-gram and 9-gram models, we consider the following three modifications to those models:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "9-gram model",
+                "sec_num": null
+            },
+            {
+                "text": "\u2022 with all features \u2022 with lexical items and parts-of-speech tags (without the character types) of M {(-4),-3,3,(4)} \u2022 with only the lexical items of M {(-4),-3,3,(4)}",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "9-gram model",
+                "sec_num": null
+            },
+            {
+                "text": "In our experiments, the number of features is 13,200 for 5-gram model and 15,071 for 9-gram model. The number of feature functions is 31,344 for 5-gram model and 35,311 for 9-gram model.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "9-gram model",
+                "sec_num": null
+            },
+            {
+                "text": "The major disadvantage of the 5/7/9-gram models is that in the training phase it does not take into account whether or not the preceding/subsequent morphemes constitute one named entity together with the morpheme at the current position. Considering this disadvantage, we examine another model, namely, variable length model, which incorporates variable length contextual information. In the training phase, this model considers which of the preceding/subsequent morphemes constitute one named entity together with the morpheme at the current position (Sassano and Utsuro, 2000) . It also considers several morphemes in the left/right contexts of the named entity. Here we restrict this model to explicitly considering the cases of named entities of the length up to three morphemes and only implicitly considering those longer than three morphemes. We also restrict it to considering two morphemes in both left and right contexts of the named entity.",
+                "cite_spans": [
+                    {
+                        "start": 552,
+                        "end": 578,
+                        "text": "(Sassano and Utsuro, 2000)",
+                        "ref_id": "BIBREF5"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training a variable length (5\u223c9-gram) model, testing with 9-gram model",
+                "sec_num": null
+            },
+            {
+                "text": "( Left Context ) (Named Entity) ( Right Context ) \u2022 \u2022 \u2022 M L -2 M L -1 M N E 1 \u2022 \u2022 \u2022 M N E i \u2022 \u2022 \u2022 M N E m(\u22643) M R 1 M R 2 \u2022 \u2022 \u2022 \u2191 (Current Position)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training a variable length (5\u223c9-gram) model, testing with 9-gram model",
+                "sec_num": null
+            },
+            {
+                "text": "1. In the cases where the current named entity consists of up to three morphemes, all the constituent morphemes are regarded as within the current named entity. The following is an example of this case, where the current named entity consists of three morphemes, and the current position is at the middle of those constituent morphemes as below:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training a variable length (5\u223c9-gram) model, testing with 9-gram model",
+                "sec_num": null
+            },
+            {
+                "text": "( Left Context ) (Named Entity) ( Right Context ) \u2022 \u2022 \u2022 M L -2 M L -1 M N E 1 M N E 2 M N E 3 M R 1 M R 2 \u2022 \u2022 \u2022 \u2191 (1) (Current Position)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training a variable length (5\u223c9-gram) model, testing with 9-gram model",
+                "sec_num": null
+            },
+            {
+                "text": "2. In the cases where the current named entity consists of more than three morphemes, only the three constituent morphemes are regarded as within the current named entity and the rest are treated as if they were outside the named entity. For example, suppose that the current named entity consists of four morphemes:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training a variable length (5\u223c9-gram) model, testing with 9-gram model",
+                "sec_num": null
+            },
+            {
+                "text": "( Left Context ) (Named Entity) ( Right Context ) \u2022 \u2022 \u2022 M L -2 M L -1 M N E 1 M N E 2 M N E 3 M N E 4 M R 1 M R 2 \u2022 \u2022 \u2022 \u2191 (Current Position)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training a variable length (5\u223c9-gram) model, testing with 9-gram model",
+                "sec_num": null
+            },
+            {
+                "text": "In this case, the fourth constituent morpheme M N E 4 is treated as if it were in the right context of the current named entity as below:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training a variable length (5\u223c9-gram) model, testing with 9-gram model",
+                "sec_num": null
+            },
+            {
+                "text": "( Left Context ) (Named Entity) ( Right Context ) \u2022 \u2022 \u2022 M L -2 M L -1 M N E 1 M N E 2 M N E 3 M N E 4 M R 1 \u2022 \u2022 \u2022 \u2191 (Current Position)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training a variable length (5\u223c9-gram) model, testing with 9-gram model",
+                "sec_num": null
+            },
+            {
+                "text": "In the testing phase, we apply this model considering the preceding four morphemes as well as the subsequent four morphemes at every position, as in the case of 9-gram model3 .",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training a variable length (5\u223c9-gram) model, testing with 9-gram model",
+                "sec_num": null
+            },
+            {
+                "text": "We consider the following three modifications to this model, where we suppose that the morpheme at the current position be M 0 :",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training a variable length (5\u223c9-gram) model, testing with 9-gram model",
+                "sec_num": null
+            },
+            {
+                "text": "\u2022 with all features \u2022 with lexical items and parts-of-speech tags (without the character types) of M {-4,-3,3,4} \u2022 with only the lexical items of M {-4,-3,3,4} ",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training a variable length (5\u223c9-gram) model, testing with 9-gram model",
+                "sec_num": null
+            },
+            {
+                "text": "The following gives the procedure for learning the classifier to combine outputs of named entity chunkers using T rI and T rC.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Procedure",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "1. Train the individual named entity chunkers N Echk i (i = 1, . . . , n) using T rI.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Procedure",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "N Echk i (i = 1, . . . , n) to T rC, respectively, and obtain the list of chunked named entities N EList i (T rC) for each named entity chunker N Echk i . The following gives the procedure for applying the learned classifier to T s.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Apply the individual named entity chunkers",
+                "sec_num": "2."
+            },
+            {
+                "text": "1. Apply the individual named entity chunkers N Echk i (i = 1, . . ., n) to T s, respectively, and obtain the list of chunked named entities N EList i (T s) for each named entity chunker N Echk i .",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Apply the individual named entity chunkers",
+                "sec_num": "2."
+            },
+            {
+                "text": "2. Align the lists N EList i (T s) (i = 1, . . . , n) of chunked named entities according to the positions of the chunked named entities in the text T s, and obtain the event expression T sev of T s.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Apply the individual named entity chunkers",
+                "sec_num": "2."
+            },
+            {
+                "text": "3. Apply N Echk comb to T sev and evaluate its performance.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Apply the individual named entity chunkers",
+                "sec_num": "2."
+            },
+            {
+                "text": "The event expression T rCev of T rC is obtained by aligning the lists N EList i (T rC) (i = 1, . . . , n) of chunked named entities, and is represented as a sequence of segments, where each segment is a set of aligned named entities. Chunked named entities are aligned under the constraint that those which share at least one constituent morpheme have to be aligned into the same segment. Examples of segments, into which named entities chunked by two systems are aligned, are shown in Table 2 . In the first segment SegEv i , given the sequence of the two morphemes, the system No.0 decided to extract two named entities, while the system No.1 chunked the two morphemes into one named entity. In those event expressions, systems indicates the list of the indices of the systems which output the named entity, mlength gives the number of the constituent morphemes, N Etag gives one of the nine named entity types, P OS gives the list of parts-of-speech of the constituent morphemes, and class N E indicates whether the named entity is a correct one compared against the gold standard (\"+\"), or the one over-generated by the systems (\"-\").",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 492,
+                        "end": 493,
+                        "text": "2",
+                        "ref_id": "TABREF2"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Events",
+                "sec_num": "3.3.1"
+            },
+            {
+                "text": "In the second segment SegEv i+1 , only the system No.1 decided to extract a named entity from the sequence of the three morphemes. In this case, the event expression for the system No.0 is the one which indicates that no named entity is extracted by the system No.0.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Events",
+                "sec_num": "3.3.1"
+            },
+            {
+                "text": "In the training phase, each segment SegEv j of event expression constitutes a minimal unit of an event, from which features for learning the classifier are extracted. In the testing phase, the classes of each system's outputs are predicted against each segment SegEv j .",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Events",
+                "sec_num": "3.3.1"
+            },
+            {
+                "text": "In principle, features for learning the classifier for combining outputs of named entity chunkers are represented as a set of pairs of the system indices list p, . . ., q and a feature expression F of the named entity:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Features and Classes",
+                "sec_num": "3.3.2"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "f = systems = p, . . . , q , F \u2022 \u2022 \u2022 systems = p , . . . , q , F",
+                        "eq_num": "(2)"
+                    }
+                ],
+                "section": "Features and Classes",
+                "sec_num": "3.3.2"
+            },
+            {
+                "text": "In the training phase, any possible feature of this form is extracted from each segment SegEv j of event expression. The system indices list p, . . ., q indicates the list of the systems which output the named entity. A feature expression F of the named entity can be any possible subset of the full feature",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Features and Classes",
+                "sec_num": "3.3.2"
+            },
+            {
+                "text": "expression {mlength = \u2022 \u2022 \u2022 , N Etag = \u2022 \u2022 \u2022 , P OS = \u2022 \u2022 \u2022},",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Features and Classes",
+                "sec_num": "3.3.2"
+            },
+            {
+                "text": "or the set indicating that the system outputs no named entity within the segment.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Features and Classes",
+                "sec_num": "3.3.2"
+            },
+            {
+                "text": "F = \uf8f1 \uf8f4 \uf8f4 \uf8f4 \uf8f2 \uf8f4 \uf8f4 \uf8f4 \uf8f3 any subset of mlength= \u2022 \u2022 \u2022 , N Etag = \u2022 \u2022 \u2022 , P OS = \u2022 \u2022 \u2022 classsys = \"no outputs\"",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Features and Classes",
+                "sec_num": "3.3.2"
+            },
+            {
+                "text": "In the training and testing phases, within each segment SegEv j of event expression, a class is assigned to each system, where each class class i sys for the i-th system is represented as a list of the classes of the named entities output by the system:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Features and Classes",
+                "sec_num": "3.3.2"
+            },
+            {
+                "text": "class i sys =",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Features and Classes",
+                "sec_num": "3.3.2"
+            },
+            {
+                "text": "+/-, . . . , +/-\"no output\" (i = 1, . . . , n)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Features and Classes",
+                "sec_num": "3.3.2"
+            },
+            {
+                "text": "We apply a simple decision list learning method to the task of learning a classifier for combining outputs of named entity chunkers4 . A decision list (Yarowsky, 1994 ) is a sorted list of decision rules, each of which decides the value of class given some features f of an event. Each decision rule in a decision list is sorted in descending order with respect to some preference value, and rules with higher preference values are applied first when applying the decision list to some new test data. In this paper, we simply sort the decision list according to the conditional probability P (class i | f ) of the class i of the i-th system's output given a feature f . tle different from that of the 5-gram model. Variable length models have lower performance mainly because of the difference between the training and testing phases with respect to the modeling of context lengths. Especially, the variable length model with \"all\" features of M {-4,-3,3,4} has much lower performance as well as significantly different distribution of correct/over-generated named entities. This is because character types features are so general that many (erroneous) named entities are overgenerated, while sometimes they contribute to finding named entities that are never detected by any of the other models.",
+                "cite_spans": [
+                    {
+                        "start": 151,
+                        "end": 166,
+                        "text": "(Yarowsky, 1994",
+                        "ref_id": "BIBREF12"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Learning Algorithm",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "This section reports the results of combining the output of the 5-gram model with that of 7-gram models, 9-gram models, and the variable length models. As the training data sets T rI and T rC, we evaluate the following two assignments Table 5 shows the peformance in F-measure (\u03b2 = 1) for both assignments (a) and (b). For both (a) and The performance for the assignment (b) is better than that for the assignment (a). This result claims that the training data size should be larger when learning the classifier for combining outputs of two named entity chunkers.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 241,
+                        "end": 242,
+                        "text": "5",
+                        "ref_id": "TABREF4"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Results of Combining System Outputs",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "In the Table 6 , for the best performing result (i.e., 5-gram + variable length (All)) as well as the constituent individual models (5-gram model and variable length model (All)), we classify the system output according to the number of constituent morphemes of each named entity. In the Table 7 , we classify the system output according to the named entity types. The following summarizes several remarkable points of these results: i) the benefit of the system combination is more in the improvement of precision rather than in that of recall. This means that the proposed system combination technique is useful for detecting over-generation of named entity chunkers, ii) the combined outputs of the 5-gram model and the variable length model improve the results of chunking longer named entities quite well compared with shorter named entities. This is the effect of the variable length features of the variable length model. ",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 13,
+                        "end": 14,
+                        "text": "6",
+                        "ref_id": "TABREF5"
+                    },
+                    {
+                        "start": 294,
+                        "end": 295,
+                        "text": "7",
+                        "ref_id": "TABREF6"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Results of Combining System Outputs",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "This paper proposed a method for learning a classifier to combine outputs of more than one Japanese named entity chunkers. Experimental evaluation showed that the proposed method achieved improvement in F-measure over the best known results with an ME model (Uchimoto et al., 2000) , when a complementary model extracted named entities quite differently from the best performing model.",
+                "cite_spans": [
+                    {
+                        "start": 258,
+                        "end": 281,
+                        "text": "(Uchimoto et al., 2000)",
+                        "ref_id": "BIBREF9"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion",
+                "sec_num": "5"
+            },
+            {
+                "text": "Minor modifications from those ofUchimoto et al. (2000) are: i) we used character types of morphemes because they are known to be useful in the Japanese named entity chunking, and ii) the sets of parts-of-speech tags are different.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "As a Japanese morphological analyzer, we used BREAK-FAST(Sassano et al., 1997) with the set of about",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "300 part-ofspeech tags. BREAKFAST achieves 99.6% part-of-speech accuracy against newspaper articles.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "Note that, as opposed to the training phase, the length of preceding/subsequent contexts is fixed in the testing phase of this model. Although this discrepancy between training and testing damages the performance of this single model (sec-",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "tion 4.1), it is more important to note that this model tends to have distribution of correct/over-generated named entities different from that of the 5-gram model. In section 4, we experimentally show that this difference is the key to improving the named entity chunking performance by system combination.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "It is quite straightforward to apply any other supervised learning algorithms to this task.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "For a model X, the overlap rate of the over-generated entities against those included in the output of the 5-gram model is defined as: (# of the intersection of the over-generated entities output by the 5-gram model and those output by the model X)/ (# of the over-generated entities output by the 5-gram model).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            }
+        ],
+        "back_matter": [
+            {
+                "text": "We experimentally evaluate the performance of the proposed system combination method using the IREX workshop's training and test data.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experimental Evaluation",
+                "sec_num": "4"
+            },
+            {
+                "text": "First, Table 3 shows the performance of the individual models described in the section 2.3.2, where trained with the IREX workshop's training data, and tested against the IREX workshop's test data as T s.The 5-gram model performs the best among those individual models.Next, assuming that each of the models other than the 5-gram model is combined with the 5-gram model, Table 4 compares the named entities of their outputs. Recall rate of the correct named entities in the union of their outputs, as well as the overlap rate 5 of the over-generated entities against those included in the output of the 5-gram model are shown.From the Tables 3 and 4 , it is clear that the 7-gram and 9-gram models are quite similar to the 5-gram model both in the performance and in the distribution of correct/over-generated named entities. On the other hand, variable length models have distribution of correct/over-generated named entities a lit-",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 13,
+                        "end": 14,
+                        "text": "3",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 377,
+                        "end": 378,
+                        "text": "4",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 642,
+                        "end": 643,
+                        "text": "3",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 648,
+                        "end": 649,
+                        "text": "4",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Comparison of Outputs of Individual Systems",
+                "sec_num": "4.1"
+            }
+        ],
+        "bib_entries": {
+            "BIBREF0": {
+                "ref_id": "b0",
+                "title": "Exploiting diverse knowledge sources via maximum entropy in named entity recognition",
+                "authors": [
+                    {
+                        "first": "A",
+                        "middle": [],
+                        "last": "Borthwick",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "J",
+                        "middle": [],
+                        "last": "Sterling",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "E",
+                        "middle": [],
+                        "last": "Agichtein",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "R",
+                        "middle": [],
+                        "last": "Grishman",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1998,
+                "venue": "Proc. 6th Workshop on VLC",
+                "volume": "",
+                "issue": "",
+                "pages": "152--160",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "A. Borthwick, J. Sterling, E. Agichtein, and R. Grishman. 1998. Exploiting diverse knowledge sources via max- imum entropy in named entity recognition. In Proc. 6th Workshop on VLC, pages 152-160.",
+                "links": null
+            },
+            "BIBREF1": {
+                "ref_id": "b1",
+                "title": "Classifier combination for improved lexical disambiguation",
+                "authors": [
+                    {
+                        "first": "E",
+                        "middle": [],
+                        "last": "Brill",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "J",
+                        "middle": [],
+                        "last": "Wu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1998,
+                "venue": "Proc. 17th COLING and 36th ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "191--195",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "E. Brill and J. Wu. 1998. Classifier combination for im- proved lexical disambiguation. In Proc. 17th COLING and 36th ACL, pages 191-195.",
+                "links": null
+            },
+            "BIBREF2": {
+                "ref_id": "b2",
+                "title": "Inducing features of random fields",
+                "authors": [
+                    {
+                        "first": "S",
+                        "middle": [],
+                        "last": "Della Pietra",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "V",
+                        "middle": [
+                            "Della"
+                        ],
+                        "last": "Pietra",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "J",
+                        "middle": [],
+                        "last": "Lafferty",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1997,
+                "venue": "IEEE Transactions on Pattern Analysis and Machine Intelligence",
+                "volume": "19",
+                "issue": "4",
+                "pages": "380--393",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "S. Della Pietra, V. Della Pietra, and J. Lafferty. 1997. Inducing features of random fields. IEEE Transac- tions on Pattern Analysis and Machine Intelligence, 19(4):380-393.",
+                "links": null
+            },
+            "BIBREF3": {
+                "ref_id": "b3",
+                "title": "Exploiting diversity in natural language processing: Combining parsers",
+                "authors": [
+                    {
+                        "first": "J",
+                        "middle": [
+                            "C"
+                        ],
+                        "last": "Henderson",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "E",
+                        "middle": [],
+                        "last": "Brill",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1999,
+                "venue": "Proc. 1999 EMNLP and VLC",
+                "volume": "",
+                "issue": "",
+                "pages": "187--194",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "J. C. Henderson and E. Brill. 1999. Exploiting diversity in natural language processing: Combining parsers. In Proc. 1999 EMNLP and VLC, pages 187-194.",
+                "links": null
+            },
+            "BIBREF4": {
+                "ref_id": "b4",
+                "title": "Bagging and boosting a treebank parser",
+                "authors": [
+                    {
+                        "first": "J",
+                        "middle": [
+                            "C"
+                        ],
+                        "last": "Henderson",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "E",
+                        "middle": [],
+                        "last": "Brill",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1999,
+                "venue": "Proceedings of the IREX Workshop",
+                "volume": "",
+                "issue": "",
+                "pages": "34--41",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "J. C. Henderson and E. Brill. 2000. Bagging and boost- ing a treebank parser. In Proc. 1st NAACL, pages 34- 41. IREX Committee, editor. 1999. Proceedings of the IREX Workshop. (in Japanese).",
+                "links": null
+            },
+            "BIBREF5": {
+                "ref_id": "b5",
+                "title": "Named entity chunking techniques in supervised learning for Japanese named entity recognition",
+                "authors": [
+                    {
+                        "first": "M",
+                        "middle": [],
+                        "last": "Sassano",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "T",
+                        "middle": [],
+                        "last": "Utsuro",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2000,
+                "venue": "Proceedings of the 18th COL-ING",
+                "volume": "",
+                "issue": "",
+                "pages": "705--711",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "M. Sassano and T. Utsuro. 2000. Named entity chunking techniques in supervised learning for Japanese named entity recognition. In Proceedings of the 18th COL- ING, pages 705-711.",
+                "links": null
+            },
+            "BIBREF6": {
+                "ref_id": "b6",
+                "title": "Japanese morphological analyzer for NLP applications",
+                "authors": [
+                    {
+                        "first": "M",
+                        "middle": [],
+                        "last": "Sassano",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Y",
+                        "middle": [],
+                        "last": "Saito",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "K",
+                        "middle": [],
+                        "last": "Matsui",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1997,
+                "venue": "Proc. 3rd Annual Meeting of the Association for Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "441--444",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "M. Sassano, Y. Saito, and K. Matsui. 1997. Japanese morphological analyzer for NLP applications. In Proc. 3rd Annual Meeting of the Association for Natural Language Processing, pages 441-444. (in Japanese).",
+                "links": null
+            },
+            "BIBREF7": {
+                "ref_id": "b7",
+                "title": "A decision tree method for finding and classifying names in Japanese texts",
+                "authors": [
+                    {
+                        "first": "S",
+                        "middle": [],
+                        "last": "Sekine",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "R",
+                        "middle": [],
+                        "last": "Grishman",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "H",
+                        "middle": [],
+                        "last": "Shinnou",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1998,
+                "venue": "Proc. 6th Workshop on VLC",
+                "volume": "",
+                "issue": "",
+                "pages": "148--152",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "S. Sekine, R. Grishman, and H. Shinnou. 1998. A deci- sion tree method for finding and classifying names in Japanese texts. In Proc. 6th Workshop on VLC, pages 148-152.",
+                "links": null
+            },
+            "BIBREF8": {
+                "ref_id": "b8",
+                "title": "Noun phrase recognition by system combination",
+                "authors": [
+                    {
+                        "first": "E",
+                        "middle": [
+                            "Tjong"
+                        ],
+                        "last": "Kim",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sang",
+                        "middle": [],
+                        "last": "",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2000,
+                "venue": "Proc. 1st NAACL",
+                "volume": "",
+                "issue": "",
+                "pages": "50--55",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "E. Tjong Kim Sang. 2000. Noun phrase recognition by system combination. In Proc. 1st NAACL, pages 50- 55.",
+                "links": null
+            },
+            "BIBREF9": {
+                "ref_id": "b9",
+                "title": "Named entity extraction based on a maximum entropy model and transformation rules",
+                "authors": [
+                    {
+                        "first": "K",
+                        "middle": [],
+                        "last": "Uchimoto",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Q",
+                        "middle": [],
+                        "last": "Ma",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "M",
+                        "middle": [],
+                        "last": "Murata",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "H",
+                        "middle": [],
+                        "last": "Ozaku",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "H",
+                        "middle": [],
+                        "last": "Isahara",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2000,
+                "venue": "Proc. 38th ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "326--335",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "K. Uchimoto, Q. Ma, M. Murata, H. Ozaku, and H. Isa- hara. 2000. Named entity extraction based on a maxi- mum entropy model and transformation rules. In Proc. 38th ACL, pages 326-335.",
+                "links": null
+            },
+            "BIBREF10": {
+                "ref_id": "b10",
+                "title": "Improving data driven wordclass tagging by system combination",
+                "authors": [
+                    {
+                        "first": "H",
+                        "middle": [],
+                        "last": "Van Halteren",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "J",
+                        "middle": [],
+                        "last": "Zavrel",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "W",
+                        "middle": [],
+                        "last": "Daelemans",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1998,
+                "venue": "Proc. 17th COLING and 36th ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "491--497",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "H. van Halteren, J. Zavrel, and W. Daelemans. 1998. Im- proving data driven wordclass tagging by system com- bination. In Proc. 17th COLING and 36th ACL, pages 491-497.",
+                "links": null
+            },
+            "BIBREF11": {
+                "ref_id": "b11",
+                "title": "Stacked generalization",
+                "authors": [
+                    {
+                        "first": "D",
+                        "middle": [
+                            "H"
+                        ],
+                        "last": "Wolpert",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1992,
+                "venue": "Neural Networks",
+                "volume": "5",
+                "issue": "",
+                "pages": "241--259",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "D. H. Wolpert. 1992. Stacked generalization. Neural Networks, 5:241-259.",
+                "links": null
+            },
+            "BIBREF12": {
+                "ref_id": "b12",
+                "title": "Decision lists for lexical ambiguity resolution: Application to accent restoration in Spanish and French",
+                "authors": [
+                    {
+                        "first": "D",
+                        "middle": [],
+                        "last": "Yarowsky",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1994,
+                "venue": "Proc. 32nd ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "88--95",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "D. Yarowsky. 1994. Decision lists for lexical ambiguity resolution: Application to accent restoration in Span- ish and French. In Proc. 32nd ACL, pages 88-95.",
+                "links": null
+            }
+        },
+        "ref_entries": {
+            "FIGREF0": {
+                "num": null,
+                "text": "temporal noun , classNE =systems = 0 , mlength=1, N Etag =DATE, P OS = temporal noun , classNE =systems = 1 , mlength=2, N Etag =DATE, P OS = temporal noun, temporal noun , systems = 0 , classsys = \"no outputs\" systems = 1 , mlength=3, N Etag = ARTIFACT, P OS = noun,noun,noun , classNE =the lists N EList i (T rC) (i = 1, . . . , n) of chunked named entities according to the positions of the chunked named entities in the text T rC, and obtain the event expression T rCev of T rC. 4. Train the classifier N Echk cmb for combining outputs of individual named entity chunkers using the event expression T rCev.",
+                "uris": null,
+                "fig_num": null,
+                "type_str": "figure"
+            },
+            "FIGREF1": {
+                "num": null,
+                "text": "(a) and (b), where D CRL denotes the IREX workshop's training data: (a) T rI: DCRL -D 200 CRL (200 articles from DCRL) T rC: D 200 CRL (b) T rI = T rC = DCRL We use the IREX workshop's test data for T s. In the assignment (a), T rI and T rC are disjoint, while in the assignment (b), individual named entity chunkers are applied to their own training data, i.e., closed data. The assignment (b) is for the sake of avoiding data sparseness in learning the classifier for combining outputs of two named entity chunkers.",
+                "uris": null,
+                "fig_num": null,
+                "type_str": "figure"
+            },
+            "TABREF0": {
+                "content": "<table><tr><td/><td colspan=\"2\">frequency (%)</td></tr><tr><td>NE Type</td><td>Training</td><td>Test</td></tr><tr><td>ORGANIZATION</td><td colspan=\"2\">3676 (19.7) 361 (23.9)</td></tr><tr><td>PERSON</td><td colspan=\"2\">3840 (20.6) 338 (22.4)</td></tr><tr><td>LOCATION</td><td colspan=\"2\">5463 (29.2) 413 (27.4)</td></tr><tr><td>ARTIFACT</td><td>747 (4.0)</td><td>48 (3.2)</td></tr><tr><td>DATE</td><td colspan=\"2\">3567 (19.1) 260 (17.2)</td></tr><tr><td>TIME</td><td>502 (2.7)</td><td>54 (3.5)</td></tr><tr><td>MONEY</td><td>390 (2.1)</td><td>15 (1.0)</td></tr><tr><td>PERCENT</td><td>492 (2.6)</td><td>21 (1.4)</td></tr><tr><td>Total</td><td>18677</td><td>1510</td></tr></table>",
+                "type_str": "table",
+                "text": "Statistics of NE Types of IREX",
+                "html": null,
+                "num": null
+            },
+            "TABREF1": {
+                "content": "<table><tr><td>The following gives the training and test data sets</td></tr><tr><td>for our framework of learning to combine outputs of</td></tr><tr><td>named entity chunkers.</td></tr><tr><td>1. T rI: training data set for learning individual</td></tr><tr><td>named entity chunkers.</td></tr><tr><td>2. T rC: training data set for learning a classifier</td></tr><tr><td>for combining outputs of individual named en-</td></tr><tr><td>tity chunkers.</td></tr><tr><td>3. T s: test data set for evaluating the classifier for</td></tr><tr><td>combining outputs of individual named entity</td></tr><tr><td>chunkers.</td></tr></table>",
+                "type_str": "table",
+                "text": "",
+                "html": null,
+                "num": null
+            },
+            "TABREF2": {
+                "content": "<table><tr><td>Segment</td><td>Morpheme(POS)</td><td colspan=\"2\">NE Outputs of Individual Systems</td><td>Event Expressions</td></tr><tr><td/><td/><td>System 0</td><td>System 1</td></tr><tr><td/><td>. . .</td><td/><td/></tr><tr><td/><td>rainen</td><td/><td/></tr><tr><td/><td>(\"next year\",</td><td/><td/></tr><tr><td>SegEvi</td><td>temporal noun) 10gatsu</td><td/><td/></tr><tr><td/><td>(\"October\",</td><td/><td/></tr><tr><td/><td>temporal noun)</td><td/><td/></tr></table>",
+                "type_str": "table",
+                "text": "Examples of Event Expressions for Combining Outputs of Multiple Systems",
+                "html": null,
+                "num": null
+            },
+            "TABREF3": {
+                "content": "<table><tr><td/><td colspan=\"4\">Features for M {(-4),-3,3,(4)}</td></tr><tr><td/><td/><td>All</td><td>Lex+POS</td><td>Lex</td></tr><tr><td>7-gram</td><td/><td>80.78</td><td>80.81</td><td>80.71</td></tr><tr><td>9-gram</td><td/><td>80.13</td><td>80.53</td><td>80.53</td></tr><tr><td colspan=\"2\">variable length</td><td>45.12</td><td>77.02</td><td>75.16</td></tr><tr><td>5-gram</td><td/><td/><td>81.16</td></tr><tr><td colspan=\"5\">Table 4: Difference between 5-gram model and</td></tr><tr><td colspan=\"5\">Other Individual Models (Recall of the Union /</td></tr><tr><td colspan=\"5\">Overlap Rate of Over-generated Entities) (%)</td></tr><tr><td/><td colspan=\"4\">Features for M {(-4),-3,3,(4)}</td></tr><tr><td/><td>All</td><td/><td>Lex+POS</td><td>Lex</td></tr><tr><td>7-gram</td><td colspan=\"4\">79.8/85.2 79.8/85.2 79.7/91.2</td></tr><tr><td>9-gram</td><td colspan=\"4\">79.7/84.7 79.7/86.1 79.5/90.7</td></tr><tr><td>variable</td><td/><td/><td/></tr><tr><td>length</td><td colspan=\"4\">82.6/27.3 81.4/63.4 80.4/72.7</td></tr></table>",
+                "type_str": "table",
+                "text": "Performance of Individual Models against T s (F-measure (\u03b2 = 1) (%))",
+                "html": null,
+                "num": null
+            },
+            "TABREF4": {
+                "content": "<table><tr><td/><td/><td/><td>CRL</td></tr><tr><td/><td colspan=\"3\">Features for M {(-4),-3,3,(4)}</td></tr><tr><td/><td>All</td><td>Lex+POS</td><td>Lex</td></tr><tr><td>7-gram</td><td>81.54</td><td>81.53</td><td>80.60</td></tr><tr><td>9-gram</td><td>81.31</td><td>81.26</td><td>80.60</td></tr><tr><td>variable length</td><td>83.43</td><td>81.55</td><td>81.85</td></tr><tr><td colspan=\"3\">(b) T rI = T rC = DCRL</td><td/></tr><tr><td/><td colspan=\"3\">Features for M {(-4),-3,3,(4)}</td></tr><tr><td/><td>All</td><td>Lex+POS</td><td>Lex</td></tr><tr><td>7-gram</td><td>81.97</td><td>81.83</td><td>81.58</td></tr><tr><td>9-gram</td><td>81.53</td><td>81.66</td><td>81.52</td></tr><tr><td>variable length</td><td>84.07</td><td>83.07</td><td>82.50</td></tr><tr><td colspan=\"4\">(b), \"5-gram + variable length (All)\" significantly</td></tr><tr><td colspan=\"4\">outperforms the 5-gram model, which is the best</td></tr><tr><td colspan=\"4\">model among all the individual models without sys-</td></tr><tr><td colspan=\"4\">tem combination. It is remarkable that models which</td></tr><tr><td colspan=\"4\">perform poorly but extract named entities quite dif-</td></tr><tr><td colspan=\"4\">ferent from those of the best performing model can</td></tr><tr><td colspan=\"4\">actually help improve the best model by the pro-</td></tr><tr><td>posed method.</td><td/><td/><td/></tr></table>",
+                "type_str": "table",
+                "text": "Performance of Combining 5-gram model and Other Individual Models (against T s, F-measure (\u03b2 = 1) (%)) (a) T rI = DCRL -D 200 CRL , T rC = D 200",
+                "html": null,
+                "num": null
+            },
+            "TABREF5": {
+                "content": "<table><tr><td/><td/><td colspan=\"3\">n Morphemes to 1 Named Entity</td><td/></tr><tr><td/><td>n \u2265 1</td><td>n = 1</td><td>n = 2</td><td>n = 3</td><td>n \u2265 4</td></tr><tr><td>5-gram</td><td>81.16</td><td>83.60</td><td>86.94</td><td>68.42</td><td>50.59</td></tr><tr><td/><td>78.87/83.60</td><td colspan=\"4\">84.97/82.28 85.90/88.00 63.64/73.98 35.83/86.00</td></tr><tr><td>variable length (All)</td><td>45.12</td><td>53.77</td><td>56.63</td><td>33.74</td><td>16.78</td></tr><tr><td/><td>51.50/40.15</td><td colspan=\"4\">38.69/88.14 71.37/47.93 57.34/23.91 40.00/10.62</td></tr><tr><td>5-gram + variable length (All)</td><td>84.07</td><td>85.06</td><td>88.96</td><td>75.19</td><td>65.96</td></tr><tr><td/><td>81.45/86.86</td><td colspan=\"4\">85.12/84.99 87.42/90.56 69.93/81.30 51.67/91.18</td></tr></table>",
+                "type_str": "table",
+                "text": "Evaluation Results of Combining System Outputs, per # of constituent morphemes (T rI = T rC = D CRL , F-measure (\u03b2 = 1) / Recall / Precision (%))",
+                "html": null,
+                "num": null
+            },
+            "TABREF6": {
+                "content": "<table><tr><td/><td>ORGANI-</td><td>PER-</td><td colspan=\"2\">LOCA-ARTI-</td><td>DATE</td><td>TIME</td><td>MONEY</td><td>PER-</td></tr><tr><td/><td>ZATION</td><td>SON</td><td>TION</td><td>FACT</td><td/><td/><td/><td>CENT</td></tr><tr><td/><td>67.74</td><td>81.82</td><td>77.04</td><td>30.43</td><td>91.49</td><td>93.20</td><td>92.86</td><td>87.18</td></tr><tr><td>5-gram</td><td>(58.45)</td><td colspan=\"5\">(79.88) (71.91) (29.17) (88.85) (88.89)</td><td>(86.67)</td><td>(80.95)</td></tr><tr><td/><td>(80.53)</td><td colspan=\"7\">(83.85) (82.96) (31.82) (94.29) (97.96) (100.00) (94.44)</td></tr><tr><td/><td>35.48</td><td>48.45</td><td>38.47</td><td>5.80</td><td>78.60</td><td>56.90</td><td>60.61</td><td>87.18</td></tr><tr><td>variable length (All)</td><td>(37.40)</td><td colspan=\"5\">(48.52) (32.93) (22.92) (81.92) (61.11)</td><td>(66.67)</td><td>(80.95)</td></tr><tr><td/><td>(33.75)</td><td colspan=\"2\">(48.38) (46.26)</td><td>(3.32)</td><td colspan=\"2\">(75.53) (53.23)</td><td>(55.56)</td><td>(94.44)</td></tr><tr><td>5-gram +</td><td>72.18</td><td>84.15</td><td>79.58</td><td>38.71</td><td>92.86</td><td>93.20</td><td>92.86</td><td>87.18</td></tr><tr><td>variable length (All)</td><td>(62.88)</td><td colspan=\"5\">(81.66) (73.61) (37.50) (90.00) (88.89)</td><td>(86.67)</td><td>(80.95)</td></tr><tr><td/><td>(84.70)</td><td/><td/><td/><td/><td/><td/><td/></tr></table>",
+                "type_str": "table",
+                "text": "Evaluation Results of Combining System Outputs, per NE type (T rI = T rC = D CRL , F-measure (\u03b2 = 1) (Recall, Precision) (%))",
+                "html": null,
+                "num": null
+            }
+        }
+    }
+}

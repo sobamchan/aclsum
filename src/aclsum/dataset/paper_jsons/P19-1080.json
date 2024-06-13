@@ -1,0 +1,2991 @@
+{
+    "paper_id": "P19-1080",
+    "header": {
+        "generated_with": "S2ORC 1.0.0",
+        "date_generated": "2023-06-16T12:36:10.566106Z"
+    },
+    "title": "Constrained Decoding for Neural NLG from Compositional Representations in Task-Oriented Dialogue",
+    "authors": [
+        {
+            "first": "Anusha",
+            "middle": [],
+            "last": "Balakrishnan",
+            "suffix": "",
+            "affiliation": {},
+            "email": "anushabala@fb.com"
+        },
+        {
+            "first": "Jinfeng",
+            "middle": [],
+            "last": "Rao",
+            "suffix": "",
+            "affiliation": {},
+            "email": "raojinfeng@fb.com"
+        },
+        {
+            "first": "Kartikeya",
+            "middle": [],
+            "last": "Upasani",
+            "suffix": "",
+            "affiliation": {},
+            "email": ""
+        },
+        {
+            "first": "Michael",
+            "middle": [],
+            "last": "White",
+            "suffix": "",
+            "affiliation": {},
+            "email": ""
+        },
+        {
+            "first": "Rajen",
+            "middle": [],
+            "last": "Subba",
+            "suffix": "",
+            "affiliation": {},
+            "email": "rasubba@fb.com"
+        }
+    ],
+    "year": "",
+    "venue": null,
+    "identifiers": {},
+    "abstract": "Generating fluent natural language responses from structured semantic representations is a critical step in task-oriented conversational systems. Avenues like the E2E NLG Challenge have encouraged the development of neural approaches, particularly sequence-tosequence (Seq2Seq) models for this problem. The semantic representations used, however, are often underspecified, which places a higher burden on the generation model for sentence planning, and also limits the extent to which generated responses can be controlled in a live system. In this paper, we (1) propose using tree-structured semantic representations, like those used in traditional rule-based NLG systems, for better discourse-level structuring and sentence-level planning; (2) introduce a challenging dataset using this representation for the weather domain; (3) introduce a constrained decoding approach for Seq2Seq models that leverages this representation to improve semantic correctness; and (4) demonstrate promising results on our dataset and the E2E dataset.",
+    "pdf_parse": {
+        "paper_id": "P19-1080",
+        "_pdf_hash": "",
+        "abstract": [
+            {
+                "text": "Generating fluent natural language responses from structured semantic representations is a critical step in task-oriented conversational systems. Avenues like the E2E NLG Challenge have encouraged the development of neural approaches, particularly sequence-tosequence (Seq2Seq) models for this problem. The semantic representations used, however, are often underspecified, which places a higher burden on the generation model for sentence planning, and also limits the extent to which generated responses can be controlled in a live system. In this paper, we (1) propose using tree-structured semantic representations, like those used in traditional rule-based NLG systems, for better discourse-level structuring and sentence-level planning; (2) introduce a challenging dataset using this representation for the weather domain; (3) introduce a constrained decoding approach for Seq2Seq models that leverages this representation to improve semantic correctness; and (4) demonstrate promising results on our dataset and the E2E dataset.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            }
+        ],
+        "body_text": [
+            {
+                "text": "Generating fluent natural language responses from structured semantic representations is a critical step in task-oriented conversational systems. With their end-to-end trainability, neural approaches to natural language generation (NNLG), particularly sequence-to-sequence (Seq2Seq) models, have been promoted with great fanfare in recent years (Wen et al., 2015 (Wen et al., , 2016;; Mei et al., 2016; Kiddon et al., 2016; Du\u0161ek and Jurcicek, 2016) , and avenues like the recent E2E NLG challenge (Du\u0161ek et al., 2018 (Du\u0161ek et al., , 2019) ) have made available large datasets to promote the development of these models. Nevertheless, current NNLG models arguably remain inadequate for most real-world task-oriented dialogue systems, given their inability to (i) reliably perform common sentence planning and discourse structuring operations (Reed et al., 2018) , (ii) generalize to complex inputs (Wiseman et al., 2017) , and (3) avoid generating texts with semantic errors including hallucinated content (Du\u0161ek et al., 2018 (Du\u0161ek et al., , 2019)) . 1In this paper, we explore the extent to which these issues can be addressed by incorporating lessons from pre-neural NLG systems into a neural framework. We begin by arguing in favor of enriching the input to neural generators to include discourse relations -long taken to be central in traditional NLG -and underscore the importance of exerting control over these relations when generating text, particularly when using user models to structure responses. In a closely related work, Reed et al. (2018) , the authors add control tokens (to indicate contrast and sentence structure) to a flat input MR, and show that these can be effectively used to control structure. However, their methods are only able to control the presence or absence of these relations, without more fine-grained control over their structure. We thus go beyond their approach and propose using full tree structures as inputs, and generating treestructured outputs as well. This allows us to define a novel method of constrained decoding for standard sequence-to-sequence models for generation, which helps ensure that the generated text contains all and only the specified content, as in classic approaches to surface realization.",
+                "cite_spans": [
+                    {
+                        "start": 345,
+                        "end": 362,
+                        "text": "(Wen et al., 2015",
+                        "ref_id": "BIBREF43"
+                    },
+                    {
+                        "start": 363,
+                        "end": 384,
+                        "text": "(Wen et al., , 2016;;",
+                        "ref_id": "BIBREF42"
+                    },
+                    {
+                        "start": 385,
+                        "end": 402,
+                        "text": "Mei et al., 2016;",
+                        "ref_id": "BIBREF22"
+                    },
+                    {
+                        "start": 403,
+                        "end": 423,
+                        "text": "Kiddon et al., 2016;",
+                        "ref_id": "BIBREF14"
+                    },
+                    {
+                        "start": 424,
+                        "end": 449,
+                        "text": "Du\u0161ek and Jurcicek, 2016)",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 498,
+                        "end": 517,
+                        "text": "(Du\u0161ek et al., 2018",
+                        "ref_id": "BIBREF7"
+                    },
+                    {
+                        "start": 518,
+                        "end": 542,
+                        "text": "(Du\u0161ek et al., , 2019) )",
+                        "ref_id": "BIBREF8"
+                    },
+                    {
+                        "start": 843,
+                        "end": 862,
+                        "text": "(Reed et al., 2018)",
+                        "ref_id": "BIBREF32"
+                    },
+                    {
+                        "start": 899,
+                        "end": 921,
+                        "text": "(Wiseman et al., 2017)",
+                        "ref_id": "BIBREF47"
+                    },
+                    {
+                        "start": 1007,
+                        "end": 1026,
+                        "text": "(Du\u0161ek et al., 2018",
+                        "ref_id": "BIBREF7"
+                    },
+                    {
+                        "start": 1027,
+                        "end": 1050,
+                        "text": "(Du\u0161ek et al., , 2019))",
+                        "ref_id": "BIBREF8"
+                    },
+                    {
+                        "start": 1538,
+                        "end": 1556,
+                        "text": "Reed et al. (2018)",
+                        "ref_id": "BIBREF32"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "On the E2E dataset, our experiments demonstrate much better control over CONTRAST relations than using Reed et al.'s method, and also show improved diversity and expressiveness over standard baselines. We also release a new dataset of responses in the weather domain, which includes the JUSTIFY, JOIN and CONTRAST rela- tions, and where discourse-level structures come into play. On both E2E and weather datasets, we show that constrained decoding over our enriched inputs results in higher semantic correctness as well as better generalizability and data efficiency. The rest of this paper is organized as follows: Section 2 describes the motivation for using compositional inputs organized around discourse relations. Section 3 explains our data collection approach and dataset. 2 Section 4 shows how to incorporate compositional inputs into NNLG and describes our constrained decoding algorithm. Section 5 presents our experimental setup and results.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "2 Towards More Expressive Meaning Representations",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "In the E2E dataset, meaning representations (MRs) are a flat list of key-value pairs, where each key is a slot name that needs to be mentioned, and the value is the value of that slot (see Table 1 ). In Wen et al. (2015) , MRs have a similar structure, and additionally contain information about the dialog act that needs to be conveyed (REQUEST, INFORM, etc.) . These MRs are sufficient to capture basic semantic information, but fail to capture rhetorical (or discourse) relations, like CONTRAST, that have long been taken to be central to generating coherent discourse in tradi-tional NLG (Mann and Thompson, 1988; Moore and Paris, 1993; Reiter and Dale, 2000; Stent et al., 2002) . The two references in Table 1 illustrate this problem with the expressiveness of such flat MRs. Critical discourse information, like whether two attributes should be contrasted (or whether to justify a recommendation, etc.), is not captured by the MR. This poses a dual challenge: First, since the MR does not specify these discourse relations, crowdworkers creating the dataset in turn have no instructions on when to use them, and must thus use their own judgment in creating a natural-sounding response. While the E2E organizers tout the resulting response variations as a plus, Reed et al. (2018) find that current neural systems are unable to learn to express discourse relations effectively with this dataset, and explore ways of enriching input MRs to do so. Indeed, now that the E2E system outputs have been released, a search through outputs from all participating systems reveals only 43 outputs (0.4% out of 10080) containing contrastive tokens, on a test set containing about 300 contrastive samples. 3Second, going beyond Reed et al., we argue that the controllability of these relations through MRs is desirable in live conversational systems, where external knowledge like user models may inform decisions around contrast, grouping, or justifications. While several studies have shown that controlling such discourse behaviors can be critical to user perceptions of quality and naturalness (Lemon et al., 2004; Carenini and Moore, 2006; Walker et al., 2007; White et al., 2010; Demberg et al., 2011) , flat MRs provide no means to do so. This leaves it to the neural model to learn general trends in the data, such as contrasting a good attribute like a 5-star rating with a typically dispreferred attribute like not being family friendly or serving English food. However, sometimes people are interested in adult-oriented establishments, and some people may even like English food; for users with these preferences, text generated according to general trends will be incoherent. For example, for a user known to be seeking an adult-oriented locale, Ref. 1 in Table 1 would be incoherent, and less preferable than a non-contrastive alternative such as JJ's Pub is a highly-rated restaurant for adults near the Crowne Plaza Hotel.",
+                "cite_spans": [
+                    {
+                        "start": 203,
+                        "end": 220,
+                        "text": "Wen et al. (2015)",
+                        "ref_id": "BIBREF43"
+                    },
+                    {
+                        "start": 337,
+                        "end": 360,
+                        "text": "(REQUEST, INFORM, etc.)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 592,
+                        "end": 617,
+                        "text": "(Mann and Thompson, 1988;",
+                        "ref_id": "BIBREF20"
+                    },
+                    {
+                        "start": 618,
+                        "end": 640,
+                        "text": "Moore and Paris, 1993;",
+                        "ref_id": "BIBREF23"
+                    },
+                    {
+                        "start": 641,
+                        "end": 663,
+                        "text": "Reiter and Dale, 2000;",
+                        "ref_id": "BIBREF34"
+                    },
+                    {
+                        "start": 664,
+                        "end": 683,
+                        "text": "Stent et al., 2002)",
+                        "ref_id": "BIBREF38"
+                    },
+                    {
+                        "start": 1268,
+                        "end": 1286,
+                        "text": "Reed et al. (2018)",
+                        "ref_id": "BIBREF32"
+                    },
+                    {
+                        "start": 2091,
+                        "end": 2111,
+                        "text": "(Lemon et al., 2004;",
+                        "ref_id": "BIBREF18"
+                    },
+                    {
+                        "start": 2112,
+                        "end": 2137,
+                        "text": "Carenini and Moore, 2006;",
+                        "ref_id": "BIBREF1"
+                    },
+                    {
+                        "start": 2138,
+                        "end": 2158,
+                        "text": "Walker et al., 2007;",
+                        "ref_id": "BIBREF41"
+                    },
+                    {
+                        "start": 2159,
+                        "end": 2178,
+                        "text": "White et al., 2010;",
+                        "ref_id": "BIBREF45"
+                    },
+                    {
+                        "start": 2179,
+                        "end": 2200,
+                        "text": "Demberg et al., 2011)",
+                        "ref_id": "BIBREF4"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 195,
+                        "end": 196,
+                        "text": "1",
+                        "ref_id": "TABREF0"
+                    },
+                    {
+                        "start": 714,
+                        "end": 715,
+                        "text": "1",
+                        "ref_id": "TABREF0"
+                    },
+                    {
+                        "start": 2767,
+                        "end": 2768,
+                        "text": "1",
+                        "ref_id": "TABREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Limitations of Flat MRs",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "In order to overcome these challenges, we propose the use of structured meaning representations like those explored widely in (hybrid) rule-based NLG systems (Rambow et al., 2001; Reiter and Dale, 2000; Walker et al., 2007) . Our representation consists of three parts:",
+                "cite_spans": [
+                    {
+                        "start": 158,
+                        "end": 179,
+                        "text": "(Rambow et al., 2001;",
+                        "ref_id": "BIBREF31"
+                    },
+                    {
+                        "start": 180,
+                        "end": 202,
+                        "text": "Reiter and Dale, 2000;",
+                        "ref_id": "BIBREF34"
+                    },
+                    {
+                        "start": 203,
+                        "end": 223,
+                        "text": "Walker et al., 2007)",
+                        "ref_id": "BIBREF41"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Tree-Structured MRs",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "1. Argument can be any entity or slot mentioned in a response, like the name of a restaurant or the date. A meaning representation that uses this formulation can consist of an arbitrary number and combination of discourse relations and dialog acts, resulting in a nested tree-structured MR with much higher expressiveness and specificity. Table 1 , seen earlier, shows an example of an MR structured in this way, as well as the corresponding \"flat\" MR and its reference in the E2E dataset.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 345,
+                        "end": 346,
+                        "text": "1",
+                        "ref_id": "TABREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Tree-Structured MRs",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "In addition to improved expressiveness, this representation results in more atomic definitions of dialog acts and arguments than in flat MRs. For example, consider the example in the weather domain from Table 2 : The response contains multiple dialog acts, a contrast and several instances of ellipsis and grouping (i.e., temperatures are grouped and mentioned separately from wind condition). Additionally, some arguments, like date time, occur multiple times in the response and correspond to different dialog acts, with several different values. A flat MR will struggle to represent 1) the correspondence of arguments to dialog acts; 2) what attributes to group and contrast and 3) semantic equivalence of arguments like date time1 and date time2. On the other hand, our MRs ease discourse-level learning and encourage reuse of arguments across multiple dialog acts.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 209,
+                        "end": 210,
+                        "text": "2",
+                        "ref_id": "TABREF3"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Tree-Structured MRs",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "With this representation in mind, we created an ontology of dialog acts, discourse relations, and arguments, for the weather domain. Our motivation for choosing the weather domain, as explored in (Liang et al., 2009) , is that this domain offers significant complexity for NLG. Weather forecast summaries in particular can be very long, and require reasoning over several disjoint pieces of information. In this work, we focused on collecting a dataset that showcases the complexity of weather summaries over date/time ranges. Our weather dataset is also unique in that it was collected in a conversational setup (see below).",
+                "cite_spans": [
+                    {
+                        "start": 196,
+                        "end": 216,
+                        "text": "(Liang et al., 2009)",
+                        "ref_id": "BIBREF19"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Dataset",
+                "sec_num": "3"
+            },
+            {
+                "text": "We collected our dataset in multiple stages:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Dataset",
+                "sec_num": "3"
+            },
+            {
+                "text": "1. Query collection. We asked crowdworkers to come up with sample queries in the weather domain, like What's the weather like tomorrow? and Do I need an umbrella tonight?",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Dataset",
+                "sec_num": "3"
+            },
+            {
+                "text": "2. Query annotation. We then wrote rules to automatically parse these queries, and extract key pieces of information, like the location, date, and any attributes that the user specifically requested in the question.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Dataset",
+                "sec_num": "3"
+            },
+            {
+                "text": "3. MR generation. Our goal was to create MRs that are sufficiently expressive and straightforward to create automatically in a practical system. In the weather domain, it's conceivable that the NLG system has access to a weather API that provides it with detailed weather forecasts for the range requested by the user. To mimic this setting, we generated artificial weather forecasts for every user query based on the arguments (full argument set in Table 3 ) in the user query. We then created the tree-structured MR by applying a few different types of automatic rules, like adding CONTRAST to weather conditions that are in opposition. We add more details of our response generation method and the specific rules for MR creation in Appendix A and B.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 456,
+                        "end": 457,
+                        "text": "3",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Dataset",
+                "sec_num": "3"
+            },
+            {
+                "text": "4. Response generation and annotation. We presented these tree-structured MRs to trained annotators, and asked them to write responses that expressed the MRs. They were also given the user query and asked to make their responses natural given the query. They were allowed to elide in- [n] , activity [n] , condition [n] , humidity [n] precip amount, precip amount unit, precip chance precip chance summary, precip type, sunrise time, temp, temp high [s] , temp low [s] , temp unit wind speed [n] , wind speed unit, sunset time, task bad arg, bad value, error reason Table 3 : Ontology for the weather domain dataset that we collected. Arguments marked with * are nested arguments (see Table 4 ). [n] indicates arguments that have a corresponding not argument; [s] indicates arguments that have a corresponding summary.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 572,
+                        "end": 573,
+                        "text": "3",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 691,
+                        "end": 692,
+                        "text": "4",
+                        "ref_id": "TABREF5"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Dataset",
+                "sec_num": "3"
+            },
+            {
+                "text": "formation when arguments were repeated across dialog acts, and could choose the most appropriate surface forms for any arguments based on contextual clues (e.g. referring to a date as tomorrow, rather than April 24 th , depending on the user's date). Finally, we asked them to label response spans corresponding to each argument, dialog act, and discourse relation in the MR. 5. Quality evaluation. Finally, we presented a different group of annotators with the annotated responses, and asked them to provide evaluations of fluency, correctness, naturalness, and annotation correctness.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Dataset",
+                "sec_num": "3"
+            },
+            {
+                "text": "Our final dataset has 33,493 examples. Each example comprises a user query, the synthetic user context (datetime and location), the tree-structured MR, the response, and a complete tree-structured annotation of the response. Table 6 contains an example from our dataset; as shown, the response annotation structure closely mirrors that of the MR itself. The MRs and responses in the dataset range from very simple (a single dialog act) to very complex (an MR with a depth and width of 4). A distribution of this complexity is shown in syntactic and semantic complexity. As mentioned before, it has a rich set of referring expressions for dates and date ranges. It also contains user queries on which the written response was based, thus creating the opportunity for studies on improving naturalness or relevance with respect to the user query. These could be useful in particular for learning to express recommendations and justifications, as well as YES and NO dialog acts.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 231,
+                        "end": 232,
+                        "text": "6",
+                        "ref_id": "TABREF7"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Dataset statistics",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "Our final training set contains 25,390 examples, with 11,879 unique MRs. (We consider two MRs to be identical if they have the same delexicalized tree structure -see Section 4.1.) The test set contains 3,121 examples, of which 1.1K (35%) have unique MRs that have never been seen in the training set.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Dataset statistics",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "We also used heuristic techniques to convert the E2E dataset to use tree-structured MRs. We used the output of Juraska et al.'s (2018) tagger to find a character within each slot in the flat MR, and automatically adjusted these to correspond to a token boundary if they didn't already. We then used the Viterbi segmentations from the model released by Wiseman et al. (2018) to get spans corresponding to each argument. Finally, we used the Berkeley neural parser (Kitaev and Klein, 2018) to identify spans coordinated by but, and added CONTRAST relations as parents of the coordinated arguments. We added JOIN based on sentence boundaries. An interesting direction for future research would be ",
+                "cite_spans": [
+                    {
+                        "start": 111,
+                        "end": 134,
+                        "text": "Juraska et al.'s (2018)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 352,
+                        "end": 373,
+                        "text": "Wiseman et al. (2018)",
+                        "ref_id": "BIBREF48"
+                    },
+                    {
+                        "start": 463,
+                        "end": 487,
+                        "text": "(Kitaev and Klein, 2018)",
+                        "ref_id": "BIBREF16"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Enriched E2E Dataset",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "In this work, we use a standard Seq2Seq model with attention (Sutskever et al., 2014; Bahdanau et al., 2014) , implemented in the fairseq-py repository (Gehring et al., 2017) . The encoder and decoder are both Long Short-Term Memory (LSTM) -based (Hochreiter and Schmidhuber, 1997) and the decoder uses beam search for generation. The input to the model is a linearized representation of the tree-structured MR, and the output is a linearized tree-structured representation of the annotated response (see Table 6 ). This means that in addition to predicting tokens for the surface realization of the response, the model must also predict non-terminals (dialog/discourse relations and arguments) to indicate the start or end of each span. One advantage of predicting a tree structure is that the model has supervision on the alignment between the MR and the response. Additionally, this predicted tree structure can be used to help verify the correctness of the predicted response; we leverage this for our constrained decoding approach described next. We also delexicalized tokens in the response that correspond to sparse entities, like names in the E2E dataset and temperatures in the weather dataset (see Appendix D).",
+                "cite_spans": [
+                    {
+                        "start": 61,
+                        "end": 85,
+                        "text": "(Sutskever et al., 2014;",
+                        "ref_id": "BIBREF39"
+                    },
+                    {
+                        "start": 86,
+                        "end": 108,
+                        "text": "Bahdanau et al., 2014)",
+                        "ref_id": "BIBREF0"
+                    },
+                    {
+                        "start": 152,
+                        "end": 174,
+                        "text": "(Gehring et al., 2017)",
+                        "ref_id": "BIBREF10"
+                    },
+                    {
+                        "start": 247,
+                        "end": 281,
+                        "text": "(Hochreiter and Schmidhuber, 1997)",
+                        "ref_id": "BIBREF11"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 511,
+                        "end": 512,
+                        "text": "6",
+                        "ref_id": "TABREF7"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Seq2Seq with Linearized Trees",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "As described above, the output structure predicted by the model forms a tree that should correspond neatly to the input MR, barring some instances of ellipses (as with the date time argument in Table 6 ). 4 Thus, the input MR can be seen as a constraint on the semantic correctness of the prediction; if the predicted structure doesn't match the MR, the prediction is incorrect and can be rejected. Figure 1 illustrates such ideas.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 200,
+                        "end": 201,
+                        "text": "6",
+                        "ref_id": "TABREF7"
+                    },
+                    {
+                        "start": 406,
+                        "end": 407,
+                        "text": "1",
+                        "ref_id": "FIGREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Constrained Decoding",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "Our beam search algorithm works as follows. 5 First, the input tree is scanned to identify groups of two or more nodes that have the same value, so that ellipsis can be enabled by optionally allowing just one node in each group. Then, as the tree structure is incrementally decoded, nonterminals are checked against the input tree for validity. When an opening bracket token (e.g., [name) is generated, it is not accepted if it isn't a child of the current parent node in the input tree, or has already been generated in the current subtree, thereby preventing repetition and hallucination of arguments or acts. When a closing bracket token ] or an end-of-sentence (EOS) token is generated, it is accepted only if all children of the current parent are covered either directly or through ellipsis, thus ensuring that all children of every node are generated. After each timestep of the beam search, the scores of candidates that violate tree constraints are masked so that they do not proceed forward. By removing candidates that violate the constraints early in the beam search, we allow the decoder to explore more hypotheses.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Constrained Decoding",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "Checking these constraints and tracking coverage requires an alignment between the output and input MRs. While the children of JOIN nodes are required to appear in order, child nodes of other discourse relations and dialogue acts can appear in any order, and thus the corresponding input nonterminal is not always uniquely identifiable when an output non-terminal is opened. For this reason, a set of possible alignments is maintained. In particular, when accepting a non-terminal, all possible nodes in the input that it may correspond to are identified and a state is maintained for each possibility. Open states whose constraints are violated are removed from tracking, and a non-terminal is not accepted when no more open states are left. Though in principle the number of open states could grow large, empirically any alignment nondeterminism is quickly resolved.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Constrained Decoding",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "Note that although the algorithm ensures that the output tree structure is compatible with the input structure, it turns out that the model can still occasionally hallucinate content: since the neural model allows all possible token sequences in principle, it sometimes generates word sequences that express a hallucinated slot by simply skipping over the disallowed slot annotation-thereby bypassing the constraints-especially when given an unusual input. These cases are discussed further below.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Constrained Decoding",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "In this section, we first describe our baselines, metrics, and implementation details, followed by experimental results and analyses.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "5"
+            },
+            {
+                "text": "Baselines We consider a few Seq2Seq-based baselines in our experiments (we use the open fairseq implementation (Gehring et al., 2017) for all our experiments). All models use an LSTMbased encoder and decoder, with attention.",
+                "cite_spans": [
+                    {
+                        "start": 111,
+                        "end": 133,
+                        "text": "(Gehring et al., 2017)",
+                        "ref_id": "BIBREF10"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experimental Setup",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "The input is a flat MR (for the E2E dataset, this is equivalent to the original form of the data; for weather, we remove all discourse relations and treat all dialog acts as a single large MR). The output is the raw delexicalized response.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "S2S-FLAT",
+                "sec_num": null
+            },
+            {
+                "text": "S2S-TOKEN Following Reed et al. (2018) , we add three tokens in the beginning of flat input MR (same as S2S-FLAT) to indicate the number of contrasts, joins and number of sentences (dialog acts) to be generated. 6 The output is the raw delexicalized response. S2S-TREE Same architecture as S2S-FLAT, but the input and output for this model are the linearized tree-structured MR and the treestructured response respectively. S2S-CONSTR Our proposed model. It has the same architecture as S2S-TREE, but decoding during beam search is constrained, as described in Section 4.2.",
+                "cite_spans": [
+                    {
+                        "start": 20,
+                        "end": 38,
+                        "text": "Reed et al. (2018)",
+                        "ref_id": "BIBREF32"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "S2S-FLAT",
+                "sec_num": null
+            },
+            {
+                "text": "Data preprocessing In the input MR, all arguments within each dialog act are ordered alphabetically, to ensure a consistent ordering across examples. We also use alignments between the reference and the MR to filter information (arguments or dialog acts/discourse relations) that are not expressed in the reference; however, we ensure that any arguments that occur multiple times in the MR, but are elided in the reference for redundancy, are still preserved in the MR. This ensures that the model doesn't have to learn content selection, while still achieving our primary goal of discourse structure control.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "S2S-FLAT",
+                "sec_num": null
+            },
+            {
+                "text": "The inputs to S2S-FLAT and S2S-TOKEN are prepared by removing all dialog act and discourse information in the linearized MR, and numbering arguments corresponding to the dialog act they belong in. Global order of dialog acts is preserved such that arguments of the first act occur before those arguments in the following acts, but arguments within a dialog act are ordered alphabetically.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "S2S-FLAT",
+                "sec_num": null
+            },
+            {
+                "text": "Metrics We consider automatic and human evaluation metrics for our model. Automatic metrics are evaluated on the raw model predictions (which have delexicalized fields, like temp low):",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "S2S-FLAT",
+                "sec_num": null
+            },
+            {
+                "text": "\u2022 Tree accuracy is a novel metric that we introduce for this problem. It measures whether the tree structure in the prediction matches that of the input MR exactly. We implemented our tree accuracy metric to account for grouping and ellipsis, and will release this implementation along with our dataset.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "S2S-FLAT",
+                "sec_num": null
+            },
+            {
+                "text": "\u2022 BLEU-4 (Papineni et al., 2002) is a wordoverlap metric commonly used for evaluating NLG systems. Due to the limitations of automatic metrics for NLG (Novikova et al., 2017; Reiter, 2018) , we also performed human evaluation studies by asking annotators to evaluate the quality of responses produced by different models. Annotators provided binary ratings on the following dimensions: \u2022 Grammaticality: Measures fluency of the responses. Our evaluation guidelines included considerations for proper subject-verb agreement, word order, repetition, and grammatical completeness. \u2022 Correctness: Measures semantic correctness of the responses. Our guidelines included considerations for sentence structure, contrast, hallucinations (incorrectly included attributes), and missing attributes. We asked annotators to evaluate model predictions against the reference (rather than the MR -see Appendix F).",
+                "cite_spans": [
+                    {
+                        "start": 9,
+                        "end": 32,
+                        "text": "(Papineni et al., 2002)",
+                        "ref_id": "BIBREF27"
+                    },
+                    {
+                        "start": 151,
+                        "end": 174,
+                        "text": "(Novikova et al., 2017;",
+                        "ref_id": "BIBREF26"
+                    },
+                    {
+                        "start": 175,
+                        "end": 188,
+                        "text": "Reiter, 2018)",
+                        "ref_id": "BIBREF33"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "S2S-FLAT",
+                "sec_num": null
+            },
+            {
+                "text": "We trained each of the models described above on the weather dataset and the E2E dataset, and evaluated automatic metrics on the test set. 7 In the E2E test set, each flat MR has multiple references (and therefore multiple compositional MRs). When computing BLEU scores for the token, tree, and constrained models, we generated one hypothesis for each of the compositional MRs for a single flat MR, and chose the hypothesis with the highest score against all references for that flat MR. We then computed corpus BLEU using these hypotheses. While this isn't an entirely fair way to evaluate these models against the E2E systems, it serves as a sanity check to validate that generation models provided with more semantic information about the references can achieve better BLEU scores against them. For both E2E and weather, we also filtered out, from all model computations, any examples where S2S-CONSTR failed to generate a valid response (5.3).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Constrained Decoding Analysis",
+                "sec_num": "5.2"
+            },
+            {
+                "text": "For human evaluation, we show an overall correctness measure Corr measured on the full test sets, as well as Disc, measured on a more challenging subset of the test set that we selected. For the E2E dataset, we chose examples that contained contrasts by identifying references with a but (230 total). For the weather dataset, we chose 400 examples where the MR has at least one CONTRAST or JUSTIFY. We also included test examples with argument type combinations previously unseen in the training set (313 total); we expect these to be challenging for all models, and in particular for the flat model, which has to infer the right discourse relation for new combinations of arguments.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Constrained Decoding Analysis",
+                "sec_num": "5.2"
+            },
+            {
+                "text": "Table 7 shows the results of this experiment. On both the E2E and weather datasets, S2S-CONSTR improves tree accuracy significantly (using Mc-Nemar's chi-squared test) over S2S-TREE. Human evaluation metrics also show that models that are aware of the tree-structured MR (S2S-TREE and S2S-CONSTR) perform significantly better on correctness measures than S2S-TOKEN, which is only aware of the presence or absence of discourse relations, and significantly better than S2S-FLAT, which has no awareness of the structure. The gap is larger on Disc: the flat model gets only 31% of the challenging cases correct on the E2E dataset, while the constrained model's accuracy is more than twice that. A similar gap is evident in the weather dataset. Further, S2S-CONSTR, S2S-TREE, and S2S-TOKEN all show significant improvements in BLEU over the flat baseline. These systems also outperform the E2E baseline TGEN (Du\u0161ek and Jurc\u0131cek, 2016) and the challenge winner SLUG (Juraska et al., 2018) on BLEU (0.6519 and 0.6693 respectively, from Du\u0161ek et al. (2019) ) and diversity metrics (Section 5.4). We note that for the E2E dataset, the BLEU score increases observed with the tree-based models are not statistically significant compared to S2S-TOKEN. We think this may be partly because many discourse patterns are correlated with the flat MR structure in the E2E dataset (e.g. family-friendly and highly rated are frequently CONTRASTed). By contrast, BLEU score increases are statistically significant for all models on our weather dataset. Also, S2S-CONSTR fails to generate any valid candidates for ~1.5% of the weather test examples. In most of these cases, the model stutters, i.e. produces degenerate output like \"will be be be . . . \". We suspect that in these cases, the imposed decoding constraints cause the Seq2Seq decoder to get stuck in a pseudoterminal state.",
+                "cite_spans": [
+                    {
+                        "start": 903,
+                        "end": 929,
+                        "text": "(Du\u0161ek and Jurc\u0131cek, 2016)",
+                        "ref_id": "BIBREF6"
+                    },
+                    {
+                        "start": 960,
+                        "end": 982,
+                        "text": "(Juraska et al., 2018)",
+                        "ref_id": "BIBREF12"
+                    },
+                    {
+                        "start": 1029,
+                        "end": 1048,
+                        "text": "Du\u0161ek et al. (2019)",
+                        "ref_id": "BIBREF8"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 6,
+                        "end": 7,
+                        "text": "7",
+                        "ref_id": "TABREF9"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "5.3"
+            },
+            {
+                "text": "Grammaticality seems to drop slightly for the tree-based models on the weather dataset, but not on the E2E dataset. One hypothesis from this and the correctness numbers is that the flat models generate more generic (and therefore grammatical), but also incorrect, responses, compared to the tree-based models. We also note that there's a noticeable gap in the E2E dataset between tree accuracy and the correctness numbers from human evaluation. We analyzed 35 examples where our tree accuracy metric disagreed with human evaluation, and found 22 (63%) cases where the compositional MR was missing information in the reference, seemingly due to noise in our automatic annotation process (Section 3.2). We also identified 6 cases (17%) of annotator confusion (for example whether between \u00a320-30 implies the same meaning as moderately priced), sometimes caused by noisy references that contained additional information.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "5.3"
+            },
+            {
+                "text": "The remaining examples all contained legitimate model errors, like content hallucination, or a wrong slot being produced despite a correct non-terminal. One future direction to get more reliable metrics would be to improve the automatic annotation process in Section 3.2 to eliminate noise and flag noisy references. Further experimentation is described in Appendix E.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "5.3"
+            },
+            {
+                "text": "We report the diversity metrics used for evaluating E2E challenge submissions in Du\u0161ek et al.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Diversity Metrics",
+                "sec_num": "5.4"
+            },
+            {
+                "text": "(2019) (# unique tokens, # unique trigrams, Shannon token entropy (Manning and Sch\u00fctze, 1999, p.61ff.) , conditional bigram entropy (Manning and Sch\u00fctze, 1999, p.63ff.) ). Table 8 shows these numbers, as compared against a few of the E2E participating systems, TGEN, SLUG, and ADAPT (Elder et al., 2018) . All of the models with enriched semantic representations -S2S-TOKEN, S2S-TREE, and S2S-CONSTR -show higher diversity than neural baselines without diversity considerations. Combined with our improved BLEU scores, this seems to indicate that adding discourse relation information to input MRs can increase diversity, without incurring losses on automatic metrics (as is the case with the diversity-promoting ADAPT system).",
+                "cite_spans": [
+                    {
+                        "start": 66,
+                        "end": 102,
+                        "text": "(Manning and Sch\u00fctze, 1999, p.61ff.)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 132,
+                        "end": 168,
+                        "text": "(Manning and Sch\u00fctze, 1999, p.63ff.)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 283,
+                        "end": 303,
+                        "text": "(Elder et al., 2018)",
+                        "ref_id": "BIBREF9"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 178,
+                        "end": 179,
+                        "text": "8",
+                        "ref_id": "TABREF11"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Diversity Metrics",
+                "sec_num": "5.4"
+            },
+            {
+                "text": "We measured tree accuracy on the full E2E and weather test sets by varying the number of training samples for S2S-TREE and S2S-CONSTR (Figure 2 ). S2S-CONSTR achieves more than 90% tree accuracy with just 2K samples and more than 95% with 5K samples on both datasets, suggesting that constrained decoding can help achieve superior performance with much less data. Meanwhile, we also investigated the extent to which tree-structured MRs could allow models to generalize to compositional semantics (Figure 3 ). 2019) also focuses on exercising more control over input structures through sentence plans; however, their work doesn't touch on discourse relations or constrained decoding. Puduppully et al. (2018) builds a modular end-to-end neural architecture that performs content planning in addition to realization, although they focus on generating text from structured tables, and don't consider discourse structure. Also related is Kiddon et al.'s (2016) neural checklist model, which tracks the coverage of an input list of ingredients when generating recipes.",
+                "cite_spans": [
+                    {
+                        "start": 683,
+                        "end": 707,
+                        "text": "Puduppully et al. (2018)",
+                        "ref_id": "BIBREF30"
+                    },
+                    {
+                        "start": 934,
+                        "end": 956,
+                        "text": "Kiddon et al.'s (2016)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 142,
+                        "end": 143,
+                        "text": "2",
+                        "ref_id": "FIGREF2"
+                    },
+                    {
+                        "start": 504,
+                        "end": 505,
+                        "text": "3",
+                        "ref_id": "FIGREF3"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Data Efficiency and Generalizability",
+                "sec_num": "5.5"
+            },
+            {
+                "text": "Our constrained decoding approach goes beyond covering a simple list by enforcing constraints on ordering and grouping of tree structures, but theirs takes coverage into account during model training. A more direct inspiration for our approach is the way coverage has been traditionally tracked in grammar-based surface realization (Shieber, 1988; Kay, 1996; Carroll et al., 1999; Carroll and Oepen, 2005; Nakanishi et al., 2005; White, 2006; White and Rajkumar, 2009) . Compared to our approach, grammar-based realizers can prevent hallucination entirely, though at the expense of developing an explicit grammar. Constrained decoding in MT (Post and Vilar, 2018, i.a.) has been used to enforce the use of specific words in the output, rather than constraints on tree structures. Also related are neural generators that take Abstract Meaning Representations (AMRs) as input (Konstas et al., 2017, i.a.) rather than flat inputs; these approaches, however, do not generate trees or use constrained decoding.",
+                "cite_spans": [
+                    {
+                        "start": 332,
+                        "end": 347,
+                        "text": "(Shieber, 1988;",
+                        "ref_id": "BIBREF35"
+                    },
+                    {
+                        "start": 348,
+                        "end": 358,
+                        "text": "Kay, 1996;",
+                        "ref_id": "BIBREF13"
+                    },
+                    {
+                        "start": 359,
+                        "end": 380,
+                        "text": "Carroll et al., 1999;",
+                        "ref_id": "BIBREF2"
+                    },
+                    {
+                        "start": 381,
+                        "end": 405,
+                        "text": "Carroll and Oepen, 2005;",
+                        "ref_id": "BIBREF3"
+                    },
+                    {
+                        "start": 406,
+                        "end": 429,
+                        "text": "Nakanishi et al., 2005;",
+                        "ref_id": "BIBREF25"
+                    },
+                    {
+                        "start": 430,
+                        "end": 442,
+                        "text": "White, 2006;",
+                        "ref_id": "BIBREF44"
+                    },
+                    {
+                        "start": 443,
+                        "end": 468,
+                        "text": "White and Rajkumar, 2009)",
+                        "ref_id": "BIBREF46"
+                    },
+                    {
+                        "start": 641,
+                        "end": 669,
+                        "text": "(Post and Vilar, 2018, i.a.)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 874,
+                        "end": 902,
+                        "text": "(Konstas et al., 2017, i.a.)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Data Efficiency and Generalizability",
+                "sec_num": "5.5"
+            },
+            {
+                "text": "We show that using rich tree-structured meaning representations can improve expressiveness and semantic correctness in generation. We also propose a constrained decoding technique that leverages tree-structured MRs to exert precise control over the discourse structure and semantic correctness of the generated text. We release a challenging new dataset for the weather domain and an enriched E2E dataset that include tree-structured MRs. Our experiments show that constrained decoding, together with tree-structured MRs, can greatly improve semantic correctness as well as enhance data efficiency and generalizability.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusions",
+                "sec_num": "7"
+            },
+            {
+                "text": "For every example, we extracted the date range requested by the user, and generated artificial weather forecasts for that date range. We generated forecasts of different granularities (hourly or daily) depending on the date requested by the user. If the date that requested was less than 24 hours after the \"reference\" date in the synthetic user context, we generated hourly forecasts; otherwise, we generated the required number of daily forecasts. To generate forecasts, we selected reasonable mean, standard deviation, min, and max values for temperature and cloud coverage, and used these to sample temperatures for every point in the date range. We also selected random sunrise and sunset times for each day present in the range. We picked values that seemed reasonable, but didn't try too hard to get precise values, since our focus was more on using the forecasts to create complex MRs. After sampling temperatures and cloud coverage amounts for each range, we randomly chose other attributes to include, conditioned on the values of the temperatures and cloud coverage, like precipitation chance, wind speed summary, and other rarer conditions like fog.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "A Weather Forecast Generation",
+                "sec_num": null
+            },
+            {
+                "text": "1. Errors: We added ERROR dialog acts whenever the user query contained a weather request for a date too far in the future. We also chose locations to treat as \"unknown\" randomly, thus adding errors for locations unknown to the system. These ERROR acts are interesting because they capture domain-specific information about the nature and cause of errors, and can potentially be learned across domains. Additionally, including ERROR acts creates scope for interesting responses like \"I'm sorry, I don't know where that is. But right now in [user's default location], it's sunny ...\".",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "B Tree-Structured Weather MR Creation",
+                "sec_num": null
+            },
+            {
+                "text": "We identified dates that had similar weather attributes (precipitation, cloud coverage, etc.) and created INFORM dialog acts that expressed information regarding each date.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Aggregation:",
+                "sec_num": "2."
+            },
+            {
+                "text": "We then grouped these acts together using a JOIN discourse relation.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Aggregation:",
+                "sec_num": "2."
+            },
+            {
+                "text": "We identified attributes that were in opposition (\"cloudy\" vs. \"sunny\") and added a parent CONTRAST discourse relation to any such dialog acts. We also contrasted related attributes wherever possible; e.g. the cloud coverage value \"sunny\" can be contrasted with both \"cloudy\" and the precipitation type \"rain\".",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Contrast:",
+                "sec_num": "3."
+            },
+            {
+                "text": "4. Yes/no questions: Whenever the user query was a boolean one (\"Will it rain tomorrow\"), we added YES or NO dialog acts as appropriate.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Contrast:",
+                "sec_num": "3."
+            },
+            {
+                "text": "5. Justifications/Recommendations: Whenever the user query mentioned an attire or activity (\"Should I wear a raincoat tomorrow?\"), we assumed that the MR should communicate a recommendation as well as a justification for it (\"No, you don't need to wear one tomorrow, it looks like it'll be sunny all day\"). In these cases, we added a RECOMMEND dialog act, and an INFORM dialog act that provides the justification for the recommendation. We added a parent JUSTIFY discourse relation to these acts, treating the recommendation as the nucleus and the INFORM as the satellite of the justification.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Contrast:",
+                "sec_num": "3."
+            },
+            {
+                "text": "As mentioned in 3, we asked annotators to provide evaluations of collected responses, and used these to filter out noisy references and annotations from our final dataset. The ratings were provided on a 1-5 scale and double annotated, and we filtered out 3,404 examples (out of a total 37,162) that had a score less than 3 on any of the four dimensions: fluency, correctness, naturalness, annotation correctness.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "C Dataset Creation Quality",
+                "sec_num": null
+            },
+            {
+                "text": "Infinitely-valued arguments such as names of restaurants, dates, times, and locations such as cities, states are delexicalized (value is replaced by placeholder tokens) in both the input and output of models. This was done following the approach taken by several of the systems in the E2E challenge (Du\u0161ek and Jurc\u0131cek, 2016; Juraska et al., 2018; Du\u0161ek et al., 2019) . The reasoning behind this is that the values of such arguments are often inserted verbatim in the response text, and therefore do not affect the final surface form realization. Replacing these arguments in both the input and output reduces the vocabulary size and prevents sparsity issues. (A copy mechanism, such as the one introduced in Vinyals et al. (2015) , can be used to address this, though we did not explore this approach in this work.) The full list of arguments for which we performed delexicalization is:",
+                "cite_spans": [
+                    {
+                        "start": 299,
+                        "end": 325,
+                        "text": "(Du\u0161ek and Jurc\u0131cek, 2016;",
+                        "ref_id": "BIBREF6"
+                    },
+                    {
+                        "start": 326,
+                        "end": 347,
+                        "text": "Juraska et al., 2018;",
+                        "ref_id": "BIBREF12"
+                    },
+                    {
+                        "start": 348,
+                        "end": 367,
+                        "text": "Du\u0161ek et al., 2019)",
+                        "ref_id": "BIBREF8"
+                    },
+                    {
+                        "start": 709,
+                        "end": 730,
+                        "text": "Vinyals et al. (2015)",
+                        "ref_id": "BIBREF40"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "D Data Preprocessing",
+                "sec_num": null
+            },
+            {
+                "text": "1. Numerical arguments: temperature-related arguments, precipitation chance, day, month, year (for dates).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "D Data Preprocessing",
+                "sec_num": null
+            },
+            {
+                "text": "2. Named entities: restaurant name (E2E), landmark (E2E), city, region, country, weekday (for dates)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "D Data Preprocessing",
+                "sec_num": null
+            },
+            {
+                "text": "We also experimented with a reranked S2S-TREE in which the beam search candidates are reranked for tree accuracy. This yields a tree accuracy of 97.6% and 95.4% on E2E and weather. We trained a Recurrent Neural Network Grammar (RNNG) to tag slots in the prediction of S2S-CONSTR in order to filter out hallucinations. The correctness on filtered test sets rose from 85.89% to 87.44% for E2E, and from 91.82% to 93.84% on weather.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "E Additional Experiments",
+                "sec_num": null
+            },
+            {
+                "text": "When asking annotators to rate the models on correctness, we asked them to rate the response by comparing it against the reference, rather than against the MR. This adds the risk that annotators are confused by noisy references, but we found that it increased annotation speed and agreement rates significantly over evaluating against the MR directly. This is also because our MRs are treestructured and can be hard to read. We performed double-annotation with a resolution round. Automatic rejection: When analyzing evaluation results, we found that it was fairly easy to miss the absence of a contrast or a justification in our weather dataset, especially since our dataset is so large. As a result, annotators were marking several incorrect cases as correct. To address this issue, we automatically marked as incorrect any examples where the MR had a CONTRAST but the response lacked any contrastive tokens, or where the MR has a JUSTIFY but the response lacked any clear markers of a justification. This eliminated noise from 2.8% of all responses.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "F Human Evaluation of Models",
+                "sec_num": null
+            },
+            {
+                "text": "We used the same seq2seq model from the S2S-FLAT baseline for our constrained decoding exper-iments, which used 300-dimensional GloVe word embeddings (Pennington et al., 2014) , a dropout rate of 0.2 (Srivastava et al., 2014) , and hidden dimension of 128 in both the encoder and the decoder. We used the Adam optimizer (Kingma and Ba, 2015) with a learning rate of 0.002 to train the seq2seq model. The learning rate is reduced by a factor of 5 if the validation loss stops decreasing. Beam size is set to 10. and c h i l d r e n c o v e r e d ( s t a t e , s t a t e . p a r e n t ) : # a c c e p t c l o s i n g b r a c e f o r c u r r e n t node and # move s t a t e s up a l e v e l i n t r e e n e w s t a t e = copy ( s t a t e ) n e w s t a t e . p a r e n t = p a r e n t m a p [ s t a t e . p a r e n t ] m i s s i n g c h i l d r e n = c h i l d r e n m a p [ s t a t e . p a r e n t ]s t a t e . c o v e r a g e # i f we ' r e a c c e p t i n g a c l o s i n g node w i t h m i s s i n g c h i l d r e n , # t h e n a l l o f them must be g e t t i n g e l i d e d n e w s t a t e . ",
+                "cite_spans": [
+                    {
+                        "start": 150,
+                        "end": 175,
+                        "text": "(Pennington et al., 2014)",
+                        "ref_id": "BIBREF28"
+                    },
+                    {
+                        "start": 200,
+                        "end": 225,
+                        "text": "(Srivastava et al., 2014)",
+                        "ref_id": "BIBREF37"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "G Model Training Details",
+                "sec_num": null
+            },
+            {
+                "text": "Also see https://ehudreiter.com/2018/11/ 12/hallucination-in-neural-nlg/.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "The datasets and implementations can be found at https://github.com/facebookresearch/ TreeNLG.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "An additional 86 outputs contained these tokens, but were generated by the TR2 template-based system(Smiley et al., 2018). The expected number of contrastive system outputs would",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "be 4,200 if each of the 14 participating systems produced contrastive tokens consistently with the data distribution.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "A top-level JOIN is automatically added when necessary to create a single-rooted structure.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "Pseudocode is given in the supplementary material.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "Reed et al. only report results on controlling CONTRAST using an augmented training set, precluding direct comparison to their results.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "We used the scripts provided at https://github. com/tuetschek/e2e-metrics by the E2E organizers for evaluating both the E2E and the weather models.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            }
+        ],
+        "back_matter": [
+            {
+                "text": "We thank Juraj Juraska for supplying the output of their E2E slot tagger. We also thank Michael Auli, Alex Baevski and Mike Lewis for discussion.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Acknowledgments",
+                "sec_num": null
+            }
+        ],
+        "bib_entries": {
+            "BIBREF0": {
+                "ref_id": "b0",
+                "title": "Neural machine translation by jointly learning to align and translate",
+                "authors": [
+                    {
+                        "first": "Dzmitry",
+                        "middle": [],
+                        "last": "Bahdanau",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kyunghyun",
+                        "middle": [],
+                        "last": "Cho",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yoshua",
+                        "middle": [],
+                        "last": "Bengio",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1409.0473"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Dzmitry Bahdanau, Kyunghyun Cho, and Yoshua Ben- gio. 2014. Neural machine translation by jointly learning to align and translate. arXiv preprint arXiv:1409.0473.",
+                "links": null
+            },
+            "BIBREF1": {
+                "ref_id": "b1",
+                "title": "Generating and evaluating evaluative arguments",
+                "authors": [
+                    {
+                        "first": "Giuseppe",
+                        "middle": [],
+                        "last": "Carenini",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Johanna",
+                        "middle": [
+                            "D"
+                        ],
+                        "last": "Moore",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2006,
+                "venue": "Artificial Intelligence",
+                "volume": "170",
+                "issue": "",
+                "pages": "925--952",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Giuseppe Carenini and Johanna D. Moore. 2006. Gen- erating and evaluating evaluative arguments. Artifi- cial Intelligence, 170:925-952.",
+                "links": null
+            },
+            "BIBREF2": {
+                "ref_id": "b2",
+                "title": "An efficient chart generator for (semi-) lexicalist grammars",
+                "authors": [
+                    {
+                        "first": "John",
+                        "middle": [],
+                        "last": "Carroll",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ann",
+                        "middle": [],
+                        "last": "Copestake",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dan",
+                        "middle": [],
+                        "last": "Flickinger",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Victor",
+                        "middle": [],
+                        "last": "Pozna\u0144ski",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1999,
+                "venue": "Proc. EWNLG-99",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "John Carroll, Ann Copestake, Dan Flickinger, and Vic- tor Pozna\u0144ski. 1999. An efficient chart generator for (semi-) lexicalist grammars. In Proc. EWNLG-99.",
+                "links": null
+            },
+            "BIBREF3": {
+                "ref_id": "b3",
+                "title": "High efficiency realization for a wide-coverage unification grammar",
+                "authors": [
+                    {
+                        "first": "John",
+                        "middle": [],
+                        "last": "Carroll",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Stefan",
+                        "middle": [],
+                        "last": "Oepen",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2005,
+                "venue": "Proc. IJCNLP-05",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "John Carroll and Stefan Oepen. 2005. High efficiency realization for a wide-coverage unification grammar. In Proc. IJCNLP-05.",
+                "links": null
+            },
+            "BIBREF4": {
+                "ref_id": "b4",
+                "title": "A strategy for information presentation in spoken dialog systems",
+                "authors": [
+                    {
+                        "first": "Vera",
+                        "middle": [],
+                        "last": "Demberg",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Andi",
+                        "middle": [],
+                        "last": "Winterboer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Johanna",
+                        "middle": [
+                            "D"
+                        ],
+                        "last": "Moore",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2011,
+                "venue": "Computational Linguistics",
+                "volume": "37",
+                "issue": "3",
+                "pages": "489--539",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Vera Demberg, Andi Winterboer, and Johanna D Moore. 2011. A strategy for information presenta- tion in spoken dialog systems. Computational Lin- guistics, 37(3):489-539.",
+                "links": null
+            },
+            "BIBREF5": {
+                "ref_id": "b5",
+                "title": "Sequence-tosequence generation for spoken dialogue via deep syntax trees and strings",
+                "authors": [
+                    {
+                        "first": "Ond\u0159ej",
+                        "middle": [],
+                        "last": "Du\u0161ek",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Filip",
+                        "middle": [],
+                        "last": "Jurcicek",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of the 54th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "2",
+                "issue": "",
+                "pages": "45--51",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/P16-2008"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Ond\u0159ej Du\u0161ek and Filip Jurcicek. 2016. Sequence-to- sequence generation for spoken dialogue via deep syntax trees and strings. In Proceedings of the 54th Annual Meeting of the Association for Computa- tional Linguistics (Volume 2: Short Papers), pages 45-51. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF6": {
+                "ref_id": "b6",
+                "title": "Sequence-tosequence generation for spoken dialogue via deep syntax trees and strings",
+                "authors": [
+                    {
+                        "first": "Ondrej",
+                        "middle": [],
+                        "last": "Du\u0161ek",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Filip",
+                        "middle": [],
+                        "last": "Jurc\u0131cek",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "The 54th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ondrej Du\u0161ek and Filip Jurc\u0131cek. 2016. Sequence-to- sequence generation for spoken dialogue via deep syntax trees and strings. In The 54th Annual Meet- ing of the Association for Computational Linguis- tics, page 45.",
+                "links": null
+            },
+            "BIBREF7": {
+                "ref_id": "b7",
+                "title": "Findings of the E2E NLG challenge",
+                "authors": [
+                    {
+                        "first": "Ond\u0159ej",
+                        "middle": [],
+                        "last": "Du\u0161ek",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jekaterina",
+                        "middle": [],
+                        "last": "Novikova",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Verena",
+                        "middle": [],
+                        "last": "Rieser",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 11th International Conference on Natural Language Generation",
+                "volume": "",
+                "issue": "",
+                "pages": "322--328",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ond\u0159ej Du\u0161ek, Jekaterina Novikova, and Verena Rieser. 2018. Findings of the E2E NLG challenge. In Pro- ceedings of the 11th International Conference on Natural Language Generation, pages 322-328. As- sociation for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF8": {
+                "ref_id": "b8",
+                "title": "Evaluating the state-of-the-art of end-to-end natural language generation: The E2E NLG Challenge",
+                "authors": [
+                    {
+                        "first": "Ond\u0159ej",
+                        "middle": [],
+                        "last": "Du\u0161ek",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jekaterina",
+                        "middle": [],
+                        "last": "Novikova",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Verena",
+                        "middle": [],
+                        "last": "Rieser",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1901.11528"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Ond\u0159ej Du\u0161ek, Jekaterina Novikova, and Verena Rieser. 2019. Evaluating the state-of-the-art of end-to-end natural language generation: The E2E NLG Chal- lenge. arXiv preprint arXiv:1901.11528.",
+                "links": null
+            },
+            "BIBREF9": {
+                "ref_id": "b9",
+                "title": "E2E NLG challenge submission: Towards controllable generation of diverse natural language",
+                "authors": [
+                    {
+                        "first": "Henry",
+                        "middle": [],
+                        "last": "Elder",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sebastian",
+                        "middle": [],
+                        "last": "Gehrmann",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "O'",
+                        "middle": [],
+                        "last": "Alexander",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Qun",
+                        "middle": [],
+                        "last": "Connor",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 11th International Conference on Natural Language Generation",
+                "volume": "",
+                "issue": "",
+                "pages": "457--462",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Henry Elder, Sebastian Gehrmann, Alexander O'Connor, and Qun Liu. 2018. E2E NLG challenge submission: Towards controllable generation of diverse natural language. In Proceedings of the 11th International Conference on Natural Language Generation, pages 457-462.",
+                "links": null
+            },
+            "BIBREF10": {
+                "ref_id": "b10",
+                "title": "Convolutional Sequence to Sequence Learning",
+                "authors": [
+                    {
+                        "first": "Jonas",
+                        "middle": [],
+                        "last": "Gehring",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Michael",
+                        "middle": [],
+                        "last": "Auli",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "David",
+                        "middle": [],
+                        "last": "Grangier",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Denis",
+                        "middle": [],
+                        "last": "Yarats",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yann",
+                        "middle": [
+                            "N"
+                        ],
+                        "last": "Dauphin",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jonas Gehring, Michael Auli, David Grangier, Denis Yarats, and Yann N Dauphin. 2017. Convolutional Sequence to Sequence Learning. ArXiv e-prints.",
+                "links": null
+            },
+            "BIBREF11": {
+                "ref_id": "b11",
+                "title": "Long short-term memory",
+                "authors": [
+                    {
+                        "first": "Sepp",
+                        "middle": [],
+                        "last": "Hochreiter",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "J\u00fcrgen",
+                        "middle": [],
+                        "last": "Schmidhuber",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1997,
+                "venue": "Neural computation",
+                "volume": "9",
+                "issue": "8",
+                "pages": "1735--1780",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Sepp Hochreiter and J\u00fcrgen Schmidhuber. 1997. Long short-term memory. Neural computation, 9(8):1735-1780.",
+                "links": null
+            },
+            "BIBREF12": {
+                "ref_id": "b12",
+                "title": "A deep ensemble model with slot alignment for sequence-to-sequence natural language generation",
+                "authors": [
+                    {
+                        "first": "Juraj",
+                        "middle": [],
+                        "last": "Juraska",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Panagiotis",
+                        "middle": [],
+                        "last": "Karagiannis",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kevin",
+                        "middle": [
+                            "K"
+                        ],
+                        "last": "Bowden",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Marilyn",
+                        "middle": [
+                            "A"
+                        ],
+                        "last": "Walker",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "NAACL-HLT",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Juraj Juraska, Panagiotis Karagiannis, Kevin K. Bow- den, and Marilyn A. Walker. 2018. A deep ensemble model with slot alignment for sequence-to-sequence natural language generation. In NAACL-HLT.",
+                "links": null
+            },
+            "BIBREF13": {
+                "ref_id": "b13",
+                "title": "Chart generation",
+                "authors": [
+                    {
+                        "first": "Martin",
+                        "middle": [],
+                        "last": "Kay",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1996,
+                "venue": "Proceedings of the 34th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "200--204",
+                "other_ids": {
+                    "DOI": [
+                        "10.3115/981863.981890"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Martin Kay. 1996. Chart generation. In Proceedings of the 34th Annual Meeting of the Association for Computational Linguistics, pages 200-204, Santa Cruz, California, USA. Association for Computa- tional Linguistics.",
+                "links": null
+            },
+            "BIBREF14": {
+                "ref_id": "b14",
+                "title": "Globally coherent text generation with neural checklist models",
+                "authors": [
+                    {
+                        "first": "Chlo\u00e9",
+                        "middle": [],
+                        "last": "Kiddon",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Luke",
+                        "middle": [],
+                        "last": "Zettlemoyer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yejin",
+                        "middle": [],
+                        "last": "Choi",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of the 2016 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "329--339",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/D16-1032"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Chlo\u00e9 Kiddon, Luke Zettlemoyer, and Yejin Choi. 2016. Globally coherent text generation with neu- ral checklist models. In Proceedings of the 2016 Conference on Empirical Methods in Natural Lan- guage Processing, pages 329-339. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF15": {
+                "ref_id": "b15",
+                "title": "Adam: A method for stochastic optimization",
+                "authors": [
+                    {
+                        "first": "P",
+                        "middle": [],
+                        "last": "Diederik",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jimmy",
+                        "middle": [],
+                        "last": "Kingma",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Ba",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Diederik P. Kingma and Jimmy Ba. 2015. Adam: A method for stochastic optimization. CoRR, abs/1412.6980.",
+                "links": null
+            },
+            "BIBREF16": {
+                "ref_id": "b16",
+                "title": "Constituency parsing with a self-attentive encoder",
+                "authors": [
+                    {
+                        "first": "Nikita",
+                        "middle": [],
+                        "last": "Kitaev",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dan",
+                        "middle": [],
+                        "last": "Klein",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 56th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "1",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Nikita Kitaev and Dan Klein. 2018. Constituency parsing with a self-attentive encoder. In Proceed- ings of the 56th Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Pa- pers), Melbourne, Australia. Association for Com- putational Linguistics.",
+                "links": null
+            },
+            "BIBREF17": {
+                "ref_id": "b17",
+                "title": "Neural AMR: Sequence-to-sequence models for parsing and generation",
+                "authors": [
+                    {
+                        "first": "Ioannis",
+                        "middle": [],
+                        "last": "Konstas",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Srinivasan",
+                        "middle": [],
+                        "last": "Iyer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mark",
+                        "middle": [],
+                        "last": "Yatskar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yejin",
+                        "middle": [],
+                        "last": "Choi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Luke",
+                        "middle": [],
+                        "last": "Zettlemoyer",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Proceedings of the 55th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "1",
+                "issue": "",
+                "pages": "146--157",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ioannis Konstas, Srinivasan Iyer, Mark Yatskar, Yejin Choi, and Luke Zettlemoyer. 2017. Neural AMR: Sequence-to-sequence models for parsing and gen- eration. In Proceedings of the 55th Annual Meet- ing of the Association for Computational Linguis- tics (Volume 1: Long Papers), pages 146-157, Van- couver, Canada. Association for Computational Lin- guistics.",
+                "links": null
+            },
+            "BIBREF18": {
+                "ref_id": "b18",
+                "title": "Generating tailored, comparative descriptions in spoken dialogue",
+                "authors": [
+                    {
+                        "first": "Oliver",
+                        "middle": [],
+                        "last": "Lemon",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Johanna",
+                        "middle": [],
+                        "last": "Moore",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mary",
+                        "middle": [
+                            "Ellen"
+                        ],
+                        "last": "Foster",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Michael",
+                        "middle": [],
+                        "last": "White",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2004,
+                "venue": "Proc. of FLAIRS. AAAI",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Oliver Lemon, Johanna Moore, Mary Ellen Foster, and Michael White. 2004. Generating tailored, compar- ative descriptions in spoken dialogue. In Proc. of FLAIRS. AAAI.",
+                "links": null
+            },
+            "BIBREF19": {
+                "ref_id": "b19",
+                "title": "Learning semantic correspondences with less supervision",
+                "authors": [
+                    {
+                        "first": "Percy",
+                        "middle": [],
+                        "last": "Liang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Michael",
+                        "middle": [
+                            "I"
+                        ],
+                        "last": "Jordan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dan",
+                        "middle": [],
+                        "last": "Klein",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "Proceedings of the Joint Conference of the 47th Annual Meeting of the ACL and the 4th International Joint Conference on Natural Language Processing of the AFNLP",
+                "volume": "1",
+                "issue": "",
+                "pages": "91--99",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Percy Liang, Michael I Jordan, and Dan Klein. 2009. Learning semantic correspondences with less super- vision. In Proceedings of the Joint Conference of the 47th Annual Meeting of the ACL and the 4th Interna- tional Joint Conference on Natural Language Pro- cessing of the AFNLP: Volume 1-Volume 1, pages 91-99. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF20": {
+                "ref_id": "b20",
+                "title": "Rhetorical structure theory: Towards a functional theory of text organization",
+                "authors": [
+                    {
+                        "first": "William",
+                        "middle": [
+                            "C"
+                        ],
+                        "last": "Mann",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sandra",
+                        "middle": [
+                            "A"
+                        ],
+                        "last": "Thompson",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1988,
+                "venue": "TEXT",
+                "volume": "8",
+                "issue": "3",
+                "pages": "243--281",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "William C. Mann and Sandra A. Thompson. 1988. Rhetorical structure theory: Towards a functional theory of text organization. TEXT, 8(3):243-281.",
+                "links": null
+            },
+            "BIBREF21": {
+                "ref_id": "b21",
+                "title": "Foundations of Statistical Natural Language Processing",
+                "authors": [
+                    {
+                        "first": "Christopher",
+                        "middle": [
+                            "D"
+                        ],
+                        "last": "Manning",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hinrich",
+                        "middle": [],
+                        "last": "Sch\u00fctze",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1999,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Christopher D. Manning and Hinrich Sch\u00fctze. 1999. Foundations of Statistical Natural Language Pro- cessing. MIT Press, Cambridge, MA, USA.",
+                "links": null
+            },
+            "BIBREF22": {
+                "ref_id": "b22",
+                "title": "What to talk about and how? selective generation using lstms with coarse-to-fine alignment",
+                "authors": [
+                    {
+                        "first": "Hongyuan",
+                        "middle": [],
+                        "last": "Mei",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mohit",
+                        "middle": [],
+                        "last": "Bansal",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "R",
+                        "middle": [
+                            "Matthew"
+                        ],
+                        "last": "Walter",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of the 2016 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies",
+                "volume": "",
+                "issue": "",
+                "pages": "720--730",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/N16-1086"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Hongyuan Mei, Mohit Bansal, and R. Matthew Walter. 2016. What to talk about and how? selective gener- ation using lstms with coarse-to-fine alignment. In Proceedings of the 2016 Conference of the North American Chapter of the Association for Computa- tional Linguistics: Human Language Technologies, pages 720-730. Association for Computational Lin- guistics.",
+                "links": null
+            },
+            "BIBREF23": {
+                "ref_id": "b23",
+                "title": "Planning text for advisory dialogues: Capturing intentional and rhetorical information",
+                "authors": [
+                    {
+                        "first": "Johanna",
+                        "middle": [
+                            "D"
+                        ],
+                        "last": "Moore",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "C\u00e9cile",
+                        "middle": [],
+                        "last": "Paris",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1993,
+                "venue": "Computational Linguistics",
+                "volume": "19",
+                "issue": "",
+                "pages": "651--694",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Johanna D. Moore and C\u00e9cile Paris. 1993. Planning text for advisory dialogues: Capturing intentional and rhetorical information. Computational Linguis- tics, 19:651-694.",
+                "links": null
+            },
+            "BIBREF24": {
+                "ref_id": "b24",
+                "title": "Step-by-step: Separating planning from realization in neural data-to-text generation",
+                "authors": [
+                    {
+                        "first": "Amit",
+                        "middle": [],
+                        "last": "Moryossef",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yoav",
+                        "middle": [],
+                        "last": "Goldberg",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ido",
+                        "middle": [],
+                        "last": "Dagan",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1904.03396"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Amit Moryossef, Yoav Goldberg, and Ido Dagan. 2019. Step-by-step: Separating planning from realization in neural data-to-text generation. arXiv preprint arXiv:1904.03396.",
+                "links": null
+            },
+            "BIBREF25": {
+                "ref_id": "b25",
+                "title": "Probabilistic methods for disambiguation of an HPSG-based chart generator",
+                "authors": [
+                    {
+                        "first": "Hiroko",
+                        "middle": [],
+                        "last": "Nakanishi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yusuke",
+                        "middle": [],
+                        "last": "Miyao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jun'ichi",
+                        "middle": [],
+                        "last": "Tsujii",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2005,
+                "venue": "Proc. IWPT-05",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Hiroko Nakanishi, Yusuke Miyao, and Jun'ichi Tsujii. 2005. Probabilistic methods for disambiguation of an HPSG-based chart generator. In Proc. IWPT-05.",
+                "links": null
+            },
+            "BIBREF26": {
+                "ref_id": "b26",
+                "title": "Why we need new evaluation metrics for NLG",
+                "authors": [
+                    {
+                        "first": "Jekaterina",
+                        "middle": [],
+                        "last": "Novikova",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ondrej",
+                        "middle": [],
+                        "last": "Dusek",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Amanda",
+                        "middle": [
+                            "Cercas"
+                        ],
+                        "last": "Curry",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Verena",
+                        "middle": [],
+                        "last": "Rieser",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "EMNLP",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jekaterina Novikova, Ondrej Dusek, Amanda Cercas Curry, and Verena Rieser. 2017. Why we need new evaluation metrics for NLG. In EMNLP.",
+                "links": null
+            },
+            "BIBREF27": {
+                "ref_id": "b27",
+                "title": "BLEU: a method for automatic evaluation of machine translation",
+                "authors": [
+                    {
+                        "first": "Kishore",
+                        "middle": [],
+                        "last": "Papineni",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Salim",
+                        "middle": [],
+                        "last": "Roukos",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Todd",
+                        "middle": [],
+                        "last": "Ward",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Wei-Jing",
+                        "middle": [],
+                        "last": "Zhu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2002,
+                "venue": "Proc. ACL-02",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Kishore Papineni, Salim Roukos, Todd Ward, and Wei- Jing Zhu. 2002. BLEU: a method for automatic evaluation of machine translation. In Proc. ACL-02.",
+                "links": null
+            },
+            "BIBREF28": {
+                "ref_id": "b28",
+                "title": "Glove: Global vectors for word representation",
+                "authors": [
+                    {
+                        "first": "Jeffrey",
+                        "middle": [],
+                        "last": "Pennington",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Richard",
+                        "middle": [],
+                        "last": "Socher",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [],
+                        "last": "Manning",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "Proceedings of the 2014 conference on empirical methods in natural language processing (EMNLP)",
+                "volume": "",
+                "issue": "",
+                "pages": "1532--1543",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jeffrey Pennington, Richard Socher, and Christopher Manning. 2014. Glove: Global vectors for word representation. In Proceedings of the 2014 confer- ence on empirical methods in natural language pro- cessing (EMNLP), pages 1532-1543.",
+                "links": null
+            },
+            "BIBREF29": {
+                "ref_id": "b29",
+                "title": "Fast lexically constrained decoding with dynamic beam allocation for neural machine translation",
+                "authors": [
+                    {
+                        "first": "Matt",
+                        "middle": [],
+                        "last": "Post",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "David",
+                        "middle": [],
+                        "last": "Vilar",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "NAACL-HLT",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Matt Post and David Vilar. 2018. Fast lexically con- strained decoding with dynamic beam allocation for neural machine translation. In NAACL-HLT.",
+                "links": null
+            },
+            "BIBREF30": {
+                "ref_id": "b30",
+                "title": "Data-to-text generation with content selection and planning",
+                "authors": [
+                    {
+                        "first": "Ratish",
+                        "middle": [],
+                        "last": "Puduppully",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Li",
+                        "middle": [],
+                        "last": "Dong",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mirella",
+                        "middle": [],
+                        "last": "Lapata",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1809.00582"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Ratish Puduppully, Li Dong, and Mirella Lapata. 2018. Data-to-text generation with content selection and planning. arXiv preprint arXiv:1809.00582.",
+                "links": null
+            },
+            "BIBREF31": {
+                "ref_id": "b31",
+                "title": "Natural language generation in dialog systems",
+                "authors": [
+                    {
+                        "first": "Owen",
+                        "middle": [],
+                        "last": "Rambow",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Srinivas",
+                        "middle": [],
+                        "last": "Bangalore",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Marilyn",
+                        "middle": [],
+                        "last": "Walker",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2001,
+                "venue": "Proceedings of the First International Conference on Human Language Technology Research, HLT '01",
+                "volume": "",
+                "issue": "",
+                "pages": "1--4",
+                "other_ids": {
+                    "DOI": [
+                        "10.3115/1072133.1072207"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Owen Rambow, Srinivas Bangalore, and Marilyn Walker. 2001. Natural language generation in dia- log systems. In Proceedings of the First Interna- tional Conference on Human Language Technology Research, HLT '01, pages 1-4, Stroudsburg, PA, USA. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF32": {
+                "ref_id": "b32",
+                "title": "Can neural generators for dialogue learn sentence planning and discourse structuring?",
+                "authors": [
+                    {
+                        "first": "Lena",
+                        "middle": [],
+                        "last": "Reed",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Shereen",
+                        "middle": [],
+                        "last": "Oraby",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Marilyn",
+                        "middle": [],
+                        "last": "Walker",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 11th International Conference on Natural Language Generation",
+                "volume": "",
+                "issue": "",
+                "pages": "284--295",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Lena Reed, Shereen Oraby, and Marilyn Walker. 2018. Can neural generators for dialogue learn sentence planning and discourse structuring? In Proceed- ings of the 11th International Conference on Natural Language Generation, pages 284-295. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF33": {
+                "ref_id": "b33",
+                "title": "A structured review of the validity of BLEU",
+                "authors": [
+                    {
+                        "first": "Ehud",
+                        "middle": [],
+                        "last": "Reiter",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Computational Linguistics",
+                "volume": "44",
+                "issue": "",
+                "pages": "393--401",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ehud Reiter. 2018. A structured review of the validity of BLEU. Computational Linguistics, 44:393-401.",
+                "links": null
+            },
+            "BIBREF34": {
+                "ref_id": "b34",
+                "title": "Building Natural-Language Generation Systems",
+                "authors": [
+                    {
+                        "first": "Ehud",
+                        "middle": [],
+                        "last": "Reiter",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Robert",
+                        "middle": [],
+                        "last": "Dale",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2000,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ehud Reiter and Robert Dale. 2000. Building Natural- Language Generation Systems. Cambridge Univer- sity Press.",
+                "links": null
+            },
+            "BIBREF35": {
+                "ref_id": "b35",
+                "title": "A uniform architecture for parsing and generation",
+                "authors": [
+                    {
+                        "first": "Stuart",
+                        "middle": [],
+                        "last": "Shieber",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1988,
+                "venue": "Proc. COLING-88",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Stuart Shieber. 1988. A uniform architecture for pars- ing and generation. In Proc. COLING-88.",
+                "links": null
+            },
+            "BIBREF36": {
+                "ref_id": "b36",
+                "title": "The E2E NLG challenge: A tale of two systems",
+                "authors": [
+                    {
+                        "first": "Charese",
+                        "middle": [],
+                        "last": "Smiley",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Elnaz",
+                        "middle": [],
+                        "last": "Davoodi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dezhao",
+                        "middle": [],
+                        "last": "Song",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Frank",
+                        "middle": [],
+                        "last": "Schilder",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "INLG",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Charese Smiley, Elnaz Davoodi, Dezhao Song, and Frank Schilder. 2018. The E2E NLG challenge: A tale of two systems. In INLG.",
+                "links": null
+            },
+            "BIBREF37": {
+                "ref_id": "b37",
+                "title": "Dropout: a simple way to prevent neural networks from overfitting",
+                "authors": [
+                    {
+                        "first": "Nitish",
+                        "middle": [],
+                        "last": "Srivastava",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Geoffrey",
+                        "middle": [],
+                        "last": "Hinton",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alex",
+                        "middle": [],
+                        "last": "Krizhevsky",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ilya",
+                        "middle": [],
+                        "last": "Sutskever",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ruslan",
+                        "middle": [],
+                        "last": "Salakhutdinov",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "The Journal of Machine Learning Research",
+                "volume": "15",
+                "issue": "1",
+                "pages": "1929--1958",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Nitish Srivastava, Geoffrey Hinton, Alex Krizhevsky, Ilya Sutskever, and Ruslan Salakhutdinov. 2014. Dropout: a simple way to prevent neural networks from overfitting. The Journal of Machine Learning Research, 15(1):1929-1958.",
+                "links": null
+            },
+            "BIBREF38": {
+                "ref_id": "b38",
+                "title": "User-tailored generation for spoken dialogue: an experiment",
+                "authors": [
+                    {
+                        "first": "Amanda",
+                        "middle": [],
+                        "last": "Stent",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Marilyn",
+                        "middle": [
+                            "A"
+                        ],
+                        "last": "Walker",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Steve",
+                        "middle": [],
+                        "last": "Whittaker",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Preetam",
+                        "middle": [],
+                        "last": "Maloor",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2002,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Amanda Stent, Marilyn A. Walker, Steve Whittaker, and Preetam Maloor. 2002. User-tailored genera- tion for spoken dialogue: an experiment. In INTER- SPEECH.",
+                "links": null
+            },
+            "BIBREF39": {
+                "ref_id": "b39",
+                "title": "Sequence to sequence learning with neural networks",
+                "authors": [
+                    {
+                        "first": "Ilya",
+                        "middle": [],
+                        "last": "Sutskever",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Oriol",
+                        "middle": [],
+                        "last": "Vinyals",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Quoc V",
+                        "middle": [],
+                        "last": "Le",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "Advances in neural information processing systems",
+                "volume": "",
+                "issue": "",
+                "pages": "3104--3112",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ilya Sutskever, Oriol Vinyals, and Quoc V Le. 2014. Sequence to sequence learning with neural net- works. In Advances in neural information process- ing systems, pages 3104-3112.",
+                "links": null
+            },
+            "BIBREF40": {
+                "ref_id": "b40",
+                "title": "Pointer networks",
+                "authors": [
+                    {
+                        "first": "Oriol",
+                        "middle": [],
+                        "last": "Vinyals",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Meire",
+                        "middle": [],
+                        "last": "Fortunato",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Navdeep",
+                        "middle": [],
+                        "last": "Jaitly",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Advances in Neural Information Processing Systems",
+                "volume": "",
+                "issue": "",
+                "pages": "2692--2700",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Oriol Vinyals, Meire Fortunato, and Navdeep Jaitly. 2015. Pointer networks. In Advances in Neural In- formation Processing Systems, pages 2692-2700.",
+                "links": null
+            },
+            "BIBREF41": {
+                "ref_id": "b41",
+                "title": "Individual and domain adaptation in sentence planning for dialogue",
+                "authors": [
+                    {
+                        "first": "Marilyn",
+                        "middle": [],
+                        "last": "Walker",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Amanda",
+                        "middle": [],
+                        "last": "Stent",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Francois",
+                        "middle": [],
+                        "last": "Mairesse",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Rashmi",
+                        "middle": [],
+                        "last": "Prasad",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2007,
+                "venue": "Journal of Artificial Intelligence Research (JAIR)",
+                "volume": "30",
+                "issue": "",
+                "pages": "413--456",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Marilyn Walker, Amanda Stent, Francois Mairesse, and Rashmi Prasad. 2007. Individual and domain adap- tation in sentence planning for dialogue. Journal of Artificial Intelligence Research (JAIR), 30:413-456.",
+                "links": null
+            },
+            "BIBREF42": {
+                "ref_id": "b42",
+                "title": "Multi-domain neural network language generation for spoken dialogue systems",
+                "authors": [
+                    {
+                        "first": "Tsung-Hsien",
+                        "middle": [],
+                        "last": "Wen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Milica",
+                        "middle": [],
+                        "last": "Ga\u0161i\u0107",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nikola",
+                        "middle": [],
+                        "last": "Mrk\u0161i\u0107",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "M",
+                        "middle": [],
+                        "last": "",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Lina",
+                        "middle": [],
+                        "last": "Rojas-Barahona",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Pei-Hao",
+                        "middle": [],
+                        "last": "Su",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "David",
+                        "middle": [],
+                        "last": "Vandyke",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Steve",
+                        "middle": [],
+                        "last": "Young",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of the 2016 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies",
+                "volume": "",
+                "issue": "",
+                "pages": "120--129",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/N16-1015"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Tsung-Hsien Wen, Milica Ga\u0161i\u0107, Nikola Mrk\u0161i\u0107, M. Lina Rojas-Barahona, Pei-Hao Su, David Vandyke, and Steve Young. 2016. Multi-domain neural network language generation for spoken di- alogue systems. In Proceedings of the 2016 Con- ference of the North American Chapter of the Asso- ciation for Computational Linguistics: Human Lan- guage Technologies, pages 120-129. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF43": {
+                "ref_id": "b43",
+                "title": "Semantically conditioned LSTM-based natural language generation for spoken dialogue systems",
+                "authors": [
+                    {
+                        "first": "Tsung-Hsien",
+                        "middle": [],
+                        "last": "Wen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Milica",
+                        "middle": [],
+                        "last": "Gasic",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nikola",
+                        "middle": [],
+                        "last": "Mrk\u0161i\u0107",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Pei-Hao",
+                        "middle": [],
+                        "last": "Su",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "David",
+                        "middle": [],
+                        "last": "Vandyke",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Steve",
+                        "middle": [],
+                        "last": "Young",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Proceedings of the 2015 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "1711--1721",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/D15-1199"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Tsung-Hsien Wen, Milica Gasic, Nikola Mrk\u0161i\u0107, Pei- Hao Su, David Vandyke, and Steve Young. 2015. Semantically conditioned LSTM-based natural lan- guage generation for spoken dialogue systems. In Proceedings of the 2015 Conference on Empirical Methods in Natural Language Processing, pages 1711-1721. Association for Computational Linguis- tics.",
+                "links": null
+            },
+            "BIBREF44": {
+                "ref_id": "b44",
+                "title": "Efficient realization of coordinate structures in combinatory categorial grammar",
+                "authors": [
+                    {
+                        "first": "Michael",
+                        "middle": [],
+                        "last": "White",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2006,
+                "venue": "Research on Language and Computation",
+                "volume": "4",
+                "issue": "1",
+                "pages": "39--75",
+                "other_ids": {
+                    "DOI": [
+                        "10.1007/s11168-006-9010-2"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Michael White. 2006. Efficient realization of coordi- nate structures in combinatory categorial grammar. Research on Language and Computation, 4(1):39- 75.",
+                "links": null
+            },
+            "BIBREF45": {
+                "ref_id": "b45",
+                "title": "Generating tailored, comparative descriptions with contextually appropriate intonation",
+                "authors": [
+                    {
+                        "first": "Michael",
+                        "middle": [],
+                        "last": "White",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "A",
+                        "middle": [
+                            "J"
+                        ],
+                        "last": "Robert",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Johanna",
+                        "middle": [
+                            "D"
+                        ],
+                        "last": "Clark",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Moore",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2010,
+                "venue": "Computational Linguistics",
+                "volume": "36",
+                "issue": "2",
+                "pages": "159--201",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Michael White, Robert A. J. Clark, and Johanna D. Moore. 2010. Generating tailored, comparative de- scriptions with contextually appropriate intonation. Computational Linguistics, 36(2):159-201.",
+                "links": null
+            },
+            "BIBREF46": {
+                "ref_id": "b46",
+                "title": "Perceptron reranking for CCG realization",
+                "authors": [
+                    {
+                        "first": "Michael",
+                        "middle": [],
+                        "last": "White",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Rajakrishnan",
+                        "middle": [],
+                        "last": "Rajkumar",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "Proceedings of the 2009 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "410--419",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Michael White and Rajakrishnan Rajkumar. 2009. Per- ceptron reranking for CCG realization. In Proceed- ings of the 2009 Conference on Empirical Methods in Natural Language Processing, pages 410-419, Singapore. Association for Computational Linguis- tics.",
+                "links": null
+            },
+            "BIBREF47": {
+                "ref_id": "b47",
+                "title": "Challenges in data-to-document generation",
+                "authors": [
+                    {
+                        "first": "Sam",
+                        "middle": [],
+                        "last": "Wiseman",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Stuart",
+                        "middle": [],
+                        "last": "Shieber",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alexander",
+                        "middle": [],
+                        "last": "Rush",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Proceedings of the 2017 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "2253--2263",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/D17-1239"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Sam Wiseman, Stuart Shieber, and Alexander Rush. 2017. Challenges in data-to-document generation. In Proceedings of the 2017 Conference on Empiri- cal Methods in Natural Language Processing, pages 2253-2263. Association for Computational Linguis- tics.",
+                "links": null
+            },
+            "BIBREF48": {
+                "ref_id": "b48",
+                "title": "Learning neural templates for text generation",
+                "authors": [
+                    {
+                        "first": "Sam",
+                        "middle": [],
+                        "last": "Wiseman",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Stuart",
+                        "middle": [
+                            "M"
+                        ],
+                        "last": "Shieber",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alexander",
+                        "middle": [
+                            "M"
+                        ],
+                        "last": "Rush",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "EMNLP",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Sam Wiseman, Stuart M. Shieber, and Alexander M. Rush. 2018. Learning neural templates for text gen- eration. In EMNLP.",
+                "links": null
+            }
+        },
+        "ref_entries": {
+            "FIGREF0": {
+                "num": null,
+                "text": "expecting any snow, but today there's a very likely chance of heavy rain showers, and it'll be partly cloudy [INFORM 1 [LOCATION [CITY Parker] ] [CONDITION NOT snow ] [DATE TIME [DAY 29] [MONTH September] [YEAR 2018] ] ] [INFORM 2 [DATE TIME [DAY 29] [MONTH September] [YEAR 2018] ] [LOCATION [CITY Parker] ] [CONDITION heavy rain showers] [CLOUD COVERAGE partly cloudy] ] ] Annotated Response [CONTRAST [INFORM 1 [LOCATION [CITY Parker ] ] is not expecting any [CONDITION NOT snow] ], but [IN-FORM 2 [DATE TIME [COLLOQUIAL today] ] there's a [PRECIP CHANCE SUMMARY very likely chance] of [CONDITION heavy rain showers] and it'll be [CLOUD COVERAGE partly cloudy ] ] ]",
+                "uris": null,
+                "fig_num": null,
+                "type_str": "figure"
+            },
+            "FIGREF1": {
+                "num": null,
+                "text": "Figure 1: Examples of constraint checking. (1) and (2) are valid outputs. (3) fails to meet tree constraints since the CONTRAST node is not present and the IN-FORM node has illegal children customerrating and pricerange.",
+                "uris": null,
+                "fig_num": "1",
+                "type_str": "figure"
+            },
+            "FIGREF2": {
+                "num": null,
+                "text": "Figure 2: Performance of models on test set for varying number of samples in train set.",
+                "uris": null,
+                "fig_num": "2",
+                "type_str": "figure"
+            },
+            "FIGREF3": {
+                "num": null,
+                "text": "Figure 3: Performance of S2S-TREE models trained on E2E flat data, and flat E2E + full weather dataset, with a fraction of composition E2E.",
+                "uris": null,
+                "fig_num": "3",
+                "type_str": "figure"
+            },
+            "FIGREF4": {
+                "num": null,
+                "text": "d e f b u i l d c o n s t r a i n t s (MR) : # n o d e s i n MR a r e numbered from 0 t o n i n o r d e r o f t h e i r # d i s c o v e r y i n d e p t hf i r s t -s e a r c h . # example , f o r MR: [ JOIN [INFORM [A ] [ B ] ] [INFORM [ B ] [D ] ] ] # i d s : JOIN : 0 , INFORM : 1 , A : 2 , B : 3 , INFORM : 4 , B : 5 , D : 6 f o r node i n MR: p a r e n t m a p [ node . i d ] = node . p a r e n t c h i l d r e n m a p [ node . i d ] = node . c h i l d r e n # map from non-t e r m i n a l t o a l l node i d s o f t h e non-t e r m i n a l # eg : INFORM -> { 1 , 4} i n c a s e o f e x a m p l e MR a b o v e v a l i d n o n t e r m i n a l n o d e s [ node . n o n t e r m i n a l ] . add ( node . i d ) # map from node i d t o n o d e s t h a t c a n c o v e r i t t h r o u g h e l l i p s i s # example , f o r a b o v e MR: { 3 : { 3 , 5 } , 5 : { 3 , 5}} e l l i p s i s o p t i o n s = c o m p u t e e l l i p s i s o p t i o n s (MR) i n i t s t a t e . p a r e n t = -1 # c u r r e n t p a r e n t i n i t s t a t e . c o v e r a g e = {} # t r a c k s node i d s e n c o u n t e r e d t i l l now # t r a c k n o d e s t h a t h a v e b e e n c o v e r e d t h r o u g h e l l i p s i s i n i t s t a t e s . e l i d e d n o d e s = {} s t a t e s = [ i n i t s t a t e ] # l i s t o f open s t a t e s d e f c h i l d r e n c o v e r e d ( s t a t e , node ) : # r e t u r n s t r u e i f a l l n o d e s h a v e c o v e r e d e i t h e r # d i r e c t l y o r t h r o u g h e l l i p s i s m i s s i n g c h i l d r e n = c h i l d r e n m a p [ s t a t e . p a r e n t ]s t a t e . c o v e r a g e f o r m i s s i n g c h i l d i n m i s s i n g c h i l d r e n : i f ( e l l i p s i s o p t i o n s [ m i s s i n g c h i l d ] s t a t e . e l i d e d n o d e s ) i s empty : # n o d e s t h a t h a v e b e e n e l i d e d t h e m s e l v e s # can ' t c o v e r o t h e r n o d e s t h r o u g h e l l i p s i s r e t u r n F a l s e r e t u r n T r u e d e f a c c e p t t o k e n ( s t a t e s , n e x t t o k e n ) : # move s t a t e s one t i m e -s t e p f o r w a r d by a c c e p t i n g n e x t t o k e n # r e t u r n s F a l s e i f n e x t t o k e n c a n n o t be a c c e p t e d by any s t a t e i f n o t n e x t t o k e n . s t a r t s w i t h ( \" [ \" ) o r n e x t t o k e n ! = \" ] \" : # o n l y non-t e r m i n a l t o k e n s n e e d t o be c h e c k e d r e t u r n T r u e u p d a t e d s t a t e s = [ ] f o r s t a t e i n s t a t e s : i f n e x t t o k e n . s t a r t s w i t h ( \" [ \" ) : f o r c a n d i d a t e i n v a l i d n o n t e r m i n a l n o d e s [ n e x t t o k e n ] : i f c a n d i d a t e i n c h i l d r e n m a p [ s t a t e . p a r e n t ] and c a n d i d a t e n o t i n s t a t e . c o v e r a g e : # c r e a t e a new s t a t e f o r e a c h v a l i d c a n d i d a t e n e w s t a t e = copy ( s t a t e ) n e w s t a t e . p a r e n t = c a n d i d a t e n e w s t a t e . c o v e r a g e . add ( c a n d i d a t e ) u p d a t e d s t a t e s . a p p e n d ( n e w s t a t e ) e l i f n e x t t o k e n == \" ] \"",
+                "uris": null,
+                "fig_num": null,
+                "type_str": "figure"
+            },
+            "FIGREF5": {
+                "num": null,
+                "text": "e l i d e d n o d e s . add ( m i s s i n g c h i l d r e n ) u p d a t e d s t a t e s . a p p e n d ( u p d a t e ( n e w s t a t e , n e x t t o k e n ) ) s t a t e s = u p d a t e d s t a t e s r e t u r n l e n ( s t a t e s ) > 0 d e f m a s k s c o r e ( s c o r e , s t a t e s , n e x t t o k e n ) : i f a c c e p t t o k e n ( s t a t e s , n e x t t o k e n ) : r e t u r n s c o r e e l s e : r e t u r n 0",
+                "uris": null,
+                "fig_num": null,
+                "type_str": "figure"
+            },
+            "TABREF0": {
+                "content": "<table><tr><td>Reference 1</td><td>JJ's Pub is not family friendly, but has a</td></tr><tr><td/><td>high customer rating of 5 out of 5. It is a</td></tr><tr><td/><td>restaurant near the Crowne Plaza Hotel.</td></tr><tr><td>Reference 2</td><td>JJ's Pub is not a family friendly restau-</td></tr><tr><td/><td>rant. It has a high customer rating of</td></tr><tr><td/><td>5 out of 5. You can find it near the</td></tr><tr><td/><td>Crowne Plaza Hotel.</td></tr><tr><td>E2E MR</td><td>name[JJ's Pub] rating[5 out of 5]</td></tr><tr><td/><td>familyFriendly[no] eatType[restaurant]</td></tr><tr><td/><td>near[Crowne Plaza Hotel]</td></tr><tr><td/><td>CONTRAST [</td></tr><tr><td/><td>INFORM [ name[JJ's Pub]</td></tr><tr><td/><td>familyFriendly[no] ]</td></tr><tr><td>Our MR for</td><td>INFORM [ rating[5 out of 5] ] ]</td></tr><tr><td>Reference 1</td><td>INFORM [</td></tr><tr><td/><td>eatType[restaurant]</td></tr><tr><td/><td>near[Crowne Plaza Hotel] ]</td></tr></table>",
+                "type_str": "table",
+                "text": "Sample reference responses, their corresponding meaning representation in the E2E dataset, and its MR according to our proposed ontology.",
+                "html": null,
+                "num": null
+            },
+            "TABREF1": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "Some arguments can be complex and contain sub-arguments (e.g. a date time argument has subfields like week day and month). 2. Dialog act is an atomic unit that could correspond linguistically to a single clause. A dialog act can contain one or more arguments that need to be expressed. Examples: IN-",
+                "html": null,
+                "num": null
+            },
+            "TABREF2": {
+                "content": "<table><tr><td>Flat MR</td><td>condition1[sunny] date time1[this weekend] avg high1[60s] low2[43]</td></tr><tr><td/><td>date time2[Sunday evening] chance3[likely] wind summary3[strong]</td></tr><tr><td/><td>date time3[Saturday morning]</td></tr><tr><td/><td>INFORM [ condition[sunny], date time range[ colloquial[this weekend ] ] ]</td></tr><tr><td/><td>CONTRAST [</td></tr><tr><td>Our MR</td><td>INFORM [ avg high[60s] date time[ [colloquial this weekend ] ] ] INFORM [ low[43] date time[ week day[Sunday] colloquial[evening] ] ]</td></tr><tr><td/><td>]</td></tr><tr><td/><td>INFORM [ chance[likely], wind summary[heavy], date time[ week day[Saturday]</td></tr><tr><td/><td>colloquial[morning] ] ]</td></tr></table>",
+                "type_str": "table",
+                "text": "Reference It'll be sunny throughout this weekend. The high will be in the 60s, but expect temperatures to drop as low as 43 degrees by Sunday evening. There's also a chance of strong winds on Saturday morning.",
+                "html": null,
+                "num": null
+            },
+            "TABREF3": {
+                "content": "<table><tr><td>Dialog Acts</td><td>INFORM, RECOMMEND, YES, NO, ERROR</td></tr><tr><td>Discourse Relations</td><td>JOIN, CONTRAST, JUSTIFY</td></tr><tr><td/><td>date time*, date time range*, location*</td></tr><tr><td/><td>attire</td></tr><tr><td>Arguments</td><td/></tr></table>",
+                "type_str": "table",
+                "text": "Sample flat MR with reference compared against our proposed tree-structured MR. Nodes in blue are all children of the root node of the tree.",
+                "html": null,
+                "num": null
+            },
+            "TABREF4": {
+                "content": "<table><tr><td>Argument</td><td>Subfields</td></tr><tr><td>date time</td><td>year, month, day, weekday, colloquial</td></tr><tr><td>date time range</td><td>start year, start month, start day, start weekday end year, end month, end day, end weekday, colloquial</td></tr><tr><td>location</td><td>city, region, country, colloquial</td></tr></table>",
+                "type_str": "table",
+                "text": "The vocabulary size is 1485, and the max/average/min lengths of responses are 151/40.6/8. The dataset also poses several challenges in addition to",
+                "html": null,
+                "num": null
+            },
+            "TABREF5": {
+                "content": "<table><tr><td>Frequency</td><td>0</td><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td></tr><tr><td># Dialog Acts</td><td>0</td><td>6469</td><td>12077</td><td>9801</td><td>4095</td><td>685</td></tr><tr><td># Discourse Rels</td><td>18137</td><td>12494</td><td>2393</td><td>103</td><td>1</td><td>0</td></tr></table>",
+                "type_str": "table",
+                "text": "Defined subfields for nested arguments.",
+                "html": null,
+                "num": null
+            },
+            "TABREF6": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "Frequency distribution of number of dialog acts and discourse relations in the weather dataset.",
+                "html": null,
+                "num": null
+            },
+            "TABREF7": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "Example response, MR, and other metadata from our dataset to extend Wiseman et al.'s methods to induce tree structures directly. In the final dataset we obtained (~51K examples), ~24K examples (47%) contain JOIN, while 2237 (4.3%) contain CONTRAST.",
+                "html": null,
+                "num": null
+            },
+            "TABREF9": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "Automatic and human evaluated metrics on E2E and Weather datasets. All metrics other than BLEU are percentages. Corr and Disc are the % of examples for which the model prediction was judged by humans as semantically correct; Disc is measured on a challenging subset of Corr.",
+                "html": null,
+                "num": null
+            },
+            "TABREF10": {
+                "content": "<table><tr><td>Model</td><td>Unique</td><td>Unique</td><td>Shannon</td><td>Cond.</td></tr><tr><td/><td>tokens</td><td>trigrams</td><td>entropy</td><td>entropy</td></tr><tr><td/><td/><td/><td/><td>bigrams</td></tr><tr><td>TGEN</td><td>83</td><td>597</td><td>5.41</td><td>1.32</td></tr><tr><td>SLUG</td><td>74</td><td>507</td><td>5.35</td><td>1.13</td></tr><tr><td>ADAPT</td><td>455</td><td>3567</td><td>6.18</td><td>2.09</td></tr><tr><td>S2S-TOKEN</td><td>137</td><td>1147</td><td>5.86</td><td>1.71</td></tr><tr><td>S2S-TREE</td><td>134</td><td>1030</td><td>5.85</td><td>1.65</td></tr><tr><td colspan=\"2\">S2S-CONSTR 134</td><td>1128</td><td>5.86</td><td>1.71</td></tr></table>",
+                "type_str": "table",
+                "text": "We first split the complete E2E training set into flat and compositional examples (26896 vs. 24530), where flat examples don't contain any discourse relations. Next, we trained a model on the full weather dataset and flat E2E data, gradually added more compositional E2E samples to the training set, and checked the model's accuracy on a test set",
+                "html": null,
+                "num": null
+            },
+            "TABREF11": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "E2E dataset diversity metrics. Rows in gray correspond to metrics that we cite fromDu\u0161ek et al. (2019).",
+                "html": null,
+                "num": null
+            }
+        }
+    }
+}

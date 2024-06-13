@@ -1,0 +1,2666 @@
+{
+    "paper_id": "D12-1061",
+    "header": {
+        "generated_with": "S2ORC 1.0.0",
+        "date_generated": "2023-06-16T12:02:33.271426Z"
+    },
+    "title": "Learning Lexicon Models from Search Logs for Query Expansion",
+    "authors": [
+        {
+            "first": "Jianfeng",
+            "middle": [],
+            "last": "Gao",
+            "suffix": "",
+            "affiliation": {},
+            "email": "jfgao@microsoft.com"
+        },
+        {
+            "first": "Shasha",
+            "middle": [],
+            "last": "Xie",
+            "suffix": "",
+            "affiliation": {},
+            "email": "sxie@ets.org"
+        },
+        {
+            "first": "Alnur",
+            "middle": [],
+            "last": "Ali",
+            "suffix": "",
+            "affiliation": {},
+            "email": "alnurali@microsoft.com"
+        }
+    ],
+    "year": "",
+    "venue": null,
+    "identifiers": {},
+    "abstract": "This paper explores log-based query expansion (QE) models for Web search. Three lexicon models are proposed to bridge the lexical gap between Web documents and user queries. These models are trained on pairs of user queries and titles of clicked documents. Evaluations on a real world data set show that the lexicon models, integrated into a ranker-based QE system, not only significantly improve the document retrieval performance but also outperform two state-of-the-art log-based QE methods.",
+    "pdf_parse": {
+        "paper_id": "D12-1061",
+        "_pdf_hash": "",
+        "abstract": [
+            {
+                "text": "This paper explores log-based query expansion (QE) models for Web search. Three lexicon models are proposed to bridge the lexical gap between Web documents and user queries. These models are trained on pairs of user queries and titles of clicked documents. Evaluations on a real world data set show that the lexicon models, integrated into a ranker-based QE system, not only significantly improve the document retrieval performance but also outperform two state-of-the-art log-based QE methods.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            }
+        ],
+        "body_text": [
+            {
+                "text": "Term mismatch is a fundamental problem in Web search, where queries and documents are composed using different vocabularies and language styles. Query expansion (QE) is an effective strategy to address the problem. It expands a query issued by a user with additional related terms, called expansion terms, so that more relevant documents can be retrieved.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "In this paper we explore the use of clickthrough data and translation models for QE. We select expansion terms for a query according to how likely it is that the expansion terms occur in the title of a document that is relevant to the query. Assuming that a query is parallel to the titles of documents clicked for that query (Gao et al. 2010a) , three lexicon models are trained on query-title pairs extracted from clickthrough data. The first is a word model that learns the translation probability between single words. The second model uses lexi-calized triplets to incorporate word dependencies for translation. The third is a bilingual topic model, which represents a query as a distribution of hidden topics and learns the translation between a query and a title term at the semantic level. We will show that the word model provides a rich set of expansion candidates while the triplet and topic models can effectively select good expansion terms, and that a ranker-based QE system which incorporates all three of these models not only significantly improves Web search result but outperforms other log-based QE methods that are stateof-the-art.",
+                "cite_spans": [
+                    {
+                        "start": 326,
+                        "end": 344,
+                        "text": "(Gao et al. 2010a)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "There is growing interest in applying user logs to improve QE. A recent survey is due to Baeze-Yates and Ribeiro-Neto (2011) . Below, we briefly discuss two log-based QE methods that are closest to ours and are re-implemented in this study for comparison. Both systems use the same type of log data that we used to train the lexicon models. The term correlation model of Cui et al. (2002; 2003) is to our knowledge the first to explore querydocument relations for direct extraction of expansion terms for Web search. The method outperforms traditional QE methods that do not use log data e.g. the local analysis model of Xu and Croft (1996) . In addition, as pointed out by Cui et al. (2003) there are three important advantages that make log-based QE a promising technology to improve the performance of commercial search engines. First, unlike traditional QE methods that are based on relevance feedback, log-based QE derives expansion terms from search logs, allowing term correlations to be pre-computed offline. Compared to methods that are based on thesauri either compiled manually (Prager et al. 2001) or derived au-tomatically from document collections (Jing and Croft 1994) , the log-based method is superior in that it explicitly captures the correlation between query terms and document terms, and thus can bridge the lexical gap between them more effectively. Second, since search logs retrain querydocument pairs clicked by millions of users, the term correlations reflect the preference of the majority of users. Third, the term correlations evolve along with the accumulation of user logs, thus can reflect updated user interests at a specific time.",
+                "cite_spans": [
+                    {
+                        "start": 105,
+                        "end": 124,
+                        "text": "Ribeiro-Neto (2011)",
+                        "ref_id": "BIBREF1"
+                    },
+                    {
+                        "start": 371,
+                        "end": 388,
+                        "text": "Cui et al. (2002;",
+                        "ref_id": "BIBREF11"
+                    },
+                    {
+                        "start": 389,
+                        "end": 394,
+                        "text": "2003)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 621,
+                        "end": 640,
+                        "text": "Xu and Croft (1996)",
+                        "ref_id": "BIBREF40"
+                    },
+                    {
+                        "start": 674,
+                        "end": 691,
+                        "text": "Cui et al. (2003)",
+                        "ref_id": "BIBREF12"
+                    },
+                    {
+                        "start": 1089,
+                        "end": 1109,
+                        "text": "(Prager et al. 2001)",
+                        "ref_id": "BIBREF34"
+                    },
+                    {
+                        "start": 1162,
+                        "end": 1183,
+                        "text": "(Jing and Croft 1994)",
+                        "ref_id": "BIBREF24"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "However, as pointed out by Riezler et al. (2008) , Cui et al.'s correlation-based method suffers low precision of QE partly because the correlation model does not explicitly capture context information and is susceptible to noise. Riezler et al. developed a QE system by retraining a standard phrase-based statistical machine translation (SMT) system using query-snippet pairs extracted from clickthrough data (Riezler et al. 2008; Riezler and Liu 2010) . The SMT-based system can produce cleaner, more relevant expansion terms because rich context information useful for filtering noisy expansions is captured by combining language model and phrase translation model in its decoder. Furthermore, in the SMT system all component models are properly smoothed using sophisticated techniques to avoid sparse data problems while the correlation model relies on pure counts of term frequencies. However, the SMT system is used as a black box in their experiments. So the relative contribution of different SMT components is not verified empirically. In this study we break this black box in order to build a better, simpler QE system. We will show that the proposed lexicon models outperform significantly the term correlation model, and that a simpler QE system that incorporates the lexicon models can beat the sophisticated, black-box SMT system.",
+                "cite_spans": [
+                    {
+                        "start": 27,
+                        "end": 48,
+                        "text": "Riezler et al. (2008)",
+                        "ref_id": "BIBREF37"
+                    },
+                    {
+                        "start": 410,
+                        "end": 431,
+                        "text": "(Riezler et al. 2008;",
+                        "ref_id": "BIBREF37"
+                    },
+                    {
+                        "start": 432,
+                        "end": 453,
+                        "text": "Riezler and Liu 2010)",
+                        "ref_id": "BIBREF38"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "We view search queries and Web documents as two different languages, and cast QE as a means to bridge the language gap by translating queries to documents, represented by their titles. In this section, we will describe three translation models that are based on terms, triplets, and topics, respectively, and the way these models are learned from query-title pairs extracted from clickthrough data.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Lexicon Models",
+                "sec_num": "2"
+            },
+            {
+                "text": "The word model takes the form of IBM Model 1 (Brown et al. 1993; Berger and Lafferty 1999) . Let be a query, be an expansion term candidate, the translation probability from to is defined as",
+                "cite_spans": [
+                    {
+                        "start": 45,
+                        "end": 64,
+                        "text": "(Brown et al. 1993;",
+                        "ref_id": "BIBREF8"
+                    },
+                    {
+                        "start": 65,
+                        "end": 90,
+                        "text": "Berger and Lafferty 1999)",
+                        "ref_id": "BIBREF5"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Word Model",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "| \u2211 ( | ) ( | ) (1)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Word Model",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "where | is the unsmoothed unigram probability of word in query . The word translation probabilities | are estimated on the querytitle pairs derived from the clickthrough data by assuming that the title terms are likely to be the desired expansions of the paired query. Our training method follows the standard procedure of training statistical word alignment models proposed by Brown et al. (1993) . Formally, we optimize the model parameters by maximizing the probability of generating document titles from queries over the entire training corpus:",
+                "cite_spans": [
+                    {
+                        "start": 378,
+                        "end": 397,
+                        "text": "Brown et al. (1993)",
+                        "ref_id": "BIBREF8"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Word Model",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "\u220f |",
+                        "eq_num": "(2)"
+                    }
+                ],
+                "section": "Word Model",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "where both the titles and the paired queries are viewed as bag of words. The translation probability | takes the form of IBM Model 1 as",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Word Model",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "| \u220f \u2211 ( | )",
+                        "eq_num": "(3)"
+                    }
+                ],
+                "section": "Word Model",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "where is a constant, is the length of , and is the length of . To find the optimal word translation probabilities of IBM Model 1, we used the EM algorithm, where the number of iterations is determined empirically on held-out data.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Word Model",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "The word model is context independent. The triplet model, which is originally proposed for SMT (Hasan et al. 2008) , is intended to capture inter-term dependencies for selecting expansion terms. The model is based on lexicalized triplets ( ) which can be understood as two query terms triggering one expansion term. The translation probability of given for the triplet model is parameterized as",
+                "cite_spans": [
+                    {
+                        "start": 95,
+                        "end": 114,
+                        "text": "(Hasan et al. 2008)",
+                        "ref_id": "BIBREF20"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Triplet Model",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "| \u2211 \u2211 ( | ) (4)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Triplet Model",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "where Z is a normalization factor based on the corresponding query length, i.e., , and",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Triplet Model",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "( |",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Triplet Model",
+                "sec_num": "2.2"
+            },
+            {
+                "text": ") is the probability of translating into given another query word . Since can be any word in that is not necessary to be adjacent to , the triple model is able to combine local (i.e. word and phrase level) and global (i.e. query level) contextual information useful for word translation.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Triplet Model",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "Similar to the case of word model, we used the EM algorithm to estimate the translation probabilities | on the query-title pairs. Since the number of all possible triplets ( ) is large and as a consequence the model training could suffer the data sparseness problem, in our experiments count-based cutoff is applied to prune the model to a manageable size.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Triplet Model",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "The BLTM was originally proposed for Web document ranking by Gao et al. (2011) . The idea underlying the model is that a search query and its relevant Web documents share a common distribution of (hidden) topics, but use different (probably overlapping) vocabularies to express these topics. Intuitively, BLTM-based QE works as follows. First, a query is represented as a vector of topics. Then, all the candidate expansion terms, which are selected from document, are ranked by how likely it is that these document terms are selected to best describe those topics. In a sense, BLTM is similar to the word model and the triplet model since they all map a query to a document word. BLTM differs in that the mapping is performed at the topic level (via a language independent semantic representation) rather than at the word level. In our experiments BLTM is found to often select a different set of expansion terms and is complementary to the word model and the triplet model.",
+                "cite_spans": [
+                    {
+                        "start": 61,
+                        "end": 78,
+                        "text": "Gao et al. (2011)",
+                        "ref_id": "BIBREF15"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Bilingual Topic Model (BLTM)",
+                "sec_num": "2.3"
+            },
+            {
+                "text": "Formally, BLTM-based QE assumes the following story of generating from :",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Bilingual Topic Model (BLTM)",
+                "sec_num": "2.3"
+            },
+            {
+                "text": "1. First, for each topic , a pair of different word distributions are selected from a Dirichlet prior with concentration parameter \u03b2, where is a topic-specific query term distribution, and a topic-specific document term distribution. Assuming there are topics, we have two sets of distributions and . 2. Given , a topic distribution is drawn from a Dirichlet prior with concentration parameter . 3. Then a document term (i.e., expansion term candidate) is generated by first selecting a topic according to the topic distribution , and then drawing a word from . By summing over all possible topics, we end up with the following model form",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Bilingual Topic Model (BLTM)",
+                "sec_num": "2.3"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "| \u2211 | |",
+                        "eq_num": "(5)"
+                    }
+                ],
+                "section": "Bilingual Topic Model (BLTM)",
+                "sec_num": "2.3"
+            },
+            {
+                "text": "The BLTM training follows the method described in Gao et al. (2011) . We used the EM algorithm to estimate the parameters ( of BLTM by maximizing the joint log-likelihood of the querytitle pairs and the parameters. In training, we also constrain that the paired query and title have similar fractions of tokens assigned to each topic. The constraint is enforced on expectation using posterior regularization (Ganchev et al. 2010) .",
+                "cite_spans": [
+                    {
+                        "start": 50,
+                        "end": 67,
+                        "text": "Gao et al. (2011)",
+                        "ref_id": "BIBREF15"
+                    },
+                    {
+                        "start": 408,
+                        "end": 429,
+                        "text": "(Ganchev et al. 2010)",
+                        "ref_id": "BIBREF14"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Bilingual Topic Model (BLTM)",
+                "sec_num": "2.3"
+            },
+            {
+                "text": "This section describes a ranker-based QE system in which the three lexicon models described above are incorporated. The system expands an input query in two distinct stages, candidate generation and ranking, as illustrated by an example in Figure 1 . In candidate generation, an input query is first tokenized into a sequence of terms. For each term that is not a stop word, we consult a word model described in Section 2.1 to identify the best altered words according to their word translation probabilities from . Then, we form a list of expansion candidates, each of which contains all the original words in except for the word that is substituted by one of its altered words. So, for a query with terms, there are at most candidates.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 247,
+                        "end": 248,
+                        "text": "1",
+                        "ref_id": "FIGREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "A Ranker-Based QE System",
+                "sec_num": "3"
+            },
+            {
+                "text": "In the second stage, all the expansion candidates are ranked using a ranker that is based on the Markov Random Field (MRF) model in which the three lexicon models are incorporated as features. Expansion terms of a query are taken from those terms in the -best ( in our experiments) expansion candidates of the query that have not been seen in the original query string.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "A Ranker-Based QE System",
+                "sec_num": "3"
+            },
+            {
+                "text": "In the remainder of this section we will describe in turn the MRF-based ranker, the ranking features, and the way the ranker parameters are estimated.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "A Ranker-Based QE System",
+                "sec_num": "3"
+            },
+            {
+                "text": "The ranker is based on the MRF model that models the joint distribution of over a set of expansion term random variables and a query random variable . It is constructed from a graph consisting of a query node and nodes for each expansion term. Nodes in the graph represent random variables and edges define the independence semantics between the variables. An MRF satisfies the Markov property (Bishop 2006) , which states that a node is independent of all of its non-neighboring nodes given observed values of its neighbors, defined by the clique configurations of . The joint distribution over the random variables in is defined as",
+                "cite_spans": [
+                    {
+                        "start": 394,
+                        "end": 407,
+                        "text": "(Bishop 2006)",
+                        "ref_id": "BIBREF6"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "MRF-Based Ranker",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "\u220f (6)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "MRF-Based Ranker",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "where is the set of cliques in , and each is a non-negative potential function defined over a clique configuration c that measures the compatibility of the configuration, is a set of parameters that are used within the potential function, and normalizes the distribution. For ranking expansion candidates, we can drop the expensive computation of since it is independent of E, and simply rank each expansion candidate by its unnormalized joint probability with under the MRF. It is common to define MRF potential functions of the exponential form as",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "MRF-Based Ranker",
+                "sec_num": "3.1"
+            },
+            {
+                "text": ", where is a real-valued feature function over clique values and is the weight of the feature function. Then, we can compute the posterior | as",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "MRF-Based Ranker",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "| (7) \u21d2 \u2211 \u2211",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "MRF-Based Ranker",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "which is essentially a weighted linear combination of a set of features. Therefore, to instantiate the MRF model, one needs to define a graph structure and a set of potential functions. In this paper, the graphical model representation we propose for QE is a fully connected graph shown in Figure 2 , where all expansion terms and the original query are assumed dependent with each other. In what follows, we will define six types of cliques that we are interested in defining features (i.e., potential functions) over.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 297,
+                        "end": 298,
+                        "text": "2",
+                        "ref_id": "FIGREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "MRF-Based Ranker",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "The cliques and features are inspired by the component models used in SMT systems. The cliques defined in for MRF can be grouped into two categories. The first includes three types of cliques involving both the query node and one or more expansion terms. The potential functions defined over these cliques attempt to abstract the idea behind the query to title translation models. The other three types, belonging to the second category, involve only expansion terms. Their potential func- tions attempt to abstract the idea behind the target language models. The first type of cliques involves a single expansion term and the query node. The potentials functions for these cliques are defined as (6) where the three feature functions of the form are defined as the log probabilities of translating to according to the word, triplet and topic models defined in Equations ( 1), ( 4) and ( 5), respectively.",
+                "cite_spans": [
+                    {
+                        "start": 697,
+                        "end": 700,
+                        "text": "(6)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Features",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "| | |",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Features",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "The second type of cliques contains the query node and two expansion terms, and , which appear in consecutive order in the expansion. The potential functions over these cliques are defined as (7) where the feature is defined as the log probability of generating an expansion bigram given",
+                "cite_spans": [
+                    {
+                        "start": 192,
+                        "end": 195,
+                        "text": "(7)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Features",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "Unlike the language models used for document ranking (e.g., Zhai and Lafferty 2001), we cannot compute the bigram probability by simply counting the relative frequency of in because the query is usually very short and the bigram is unlikely to occur. Thus, we approximate the bigram probability by assuming that the words in are independent with each other. We thus have",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "| |",
+                "sec_num": null
+            },
+            {
+                "text": "| | \u220f | \u220f",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "| |",
+                "sec_num": null
+            },
+            {
+                "text": "where | is the translation probability computed using a variant of the triplet model described in Section 2.2. The model variation differs from the one of Equation ( 4) in two respects. First, it models the translation in a different direction i.e., from expansion to query. Second, we add a constraint to the triplets such that (",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "| |",
+                "sec_num": null
+            },
+            {
+                "text": ") must be an ordered, contiguous bigram. The model variation is also trained using EM on query-title pairs. and | are assigned respectively by the unigram and bigram language models, estimated from the collection of document titles of the clickthrough data, and is the unigram probability of the query term, estimated from the collection of queries of the clickthrough data.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "| |",
+                "sec_num": null
+            },
+            {
+                "text": "The third type of cliques contains the query node and two expansion terms, and , which occur unordered within the expansion. The potential functions over these cliques are defined as (8) where the feature is defined as the log probability of generating a pair of expansion terms given",
+                "cite_spans": [
+                    {
+                        "start": 183,
+                        "end": 186,
+                        "text": "(8)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "| |",
+                "sec_num": null
+            },
+            {
+                "text": "| | .",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "| |",
+                "sec_num": null
+            },
+            {
+                "text": "Unlike | defined in Equation ( 7), this class of features captures long-span term dependency in the expansion candidate. Similar to the computation of | in Equation ( 7), we approximate | as",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "| |",
+                "sec_num": null
+            },
+            {
+                "text": "| | \u220f | \u220f",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "| |",
+                "sec_num": null
+            },
+            {
+                "text": "where | is the translation probability computed using the triplet model described in Section 2.2, but in the expansion-to-query direction.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "| |",
+                "sec_num": null
+            },
+            {
+                "text": "is assigned by a unigram language model estimated from the collection of document titles of the clickthrough data.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "| |",
+                "sec_num": null
+            },
+            {
+                "text": "| is assigned by a cooccurrence model, estimated as",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "| |",
+                "sec_num": null
+            },
+            {
+                "text": "| \u2211",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "| |",
+                "sec_num": null
+            },
+            {
+                "text": "where is the number of times that the two terms occur in the same title in clickthrough data.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "| |",
+                "sec_num": null
+            },
+            {
+                "text": "We now turn to the other three types of cliques that do not contain the query node. The fourth type of cliques contains only one expansion term. The potential functions are defined as (9) where is the unigram probability computed using a unigram language model trained on the collection of document titles.",
+                "cite_spans": [
+                    {
+                        "start": 184,
+                        "end": 187,
+                        "text": "(9)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "| |",
+                "sec_num": null
+            },
+            {
+                "text": "The fifth type of cliques contains a pair of terms appearing in consecutive order in the expansion. The potential functions are defined as | is the assigned by a co-occurrence model trained on the collection of document titles.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "| |",
+                "sec_num": null
+            },
+            {
+                "text": "The MRF model uses 8 classes of features defined on 6 types of cliques, as in Equations ( 6) to (11). Following previous work (e.g., Metzler and Croft 2005; Bendersky et al. 2010) , we assume that all features within the same feature class are weighted by the same tied parameter . Thus, the number of free parameters of the MRF model is significantly reduced. This not only makes the model training easier but also improves the robustness of the model. After tying the parameters and using the exponential potential function form, the MRFbased ranker can be parameterized as",
+                "cite_spans": [
+                    {
+                        "start": 133,
+                        "end": 156,
+                        "text": "Metzler and Croft 2005;",
+                        "ref_id": "BIBREF30"
+                    },
+                    {
+                        "start": 157,
+                        "end": 179,
+                        "text": "Bendersky et al. 2010)",
+                        "ref_id": "BIBREF4"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Parameter Estimation",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "| \u21d2 \u2211 (12) \u2211 \u2211 \u2211 \u2211 \u2211 \u2211 \u2211 \u2211 \u2211",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Parameter Estimation",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "where there are in total 8 's to be estimated. Although the MRF is by nature a generative model, it is not always appropriate to train the parameters using conventional likelihood based approaches due to the metric divergence problem (Morgan et al. 2004 ): i.e., the maximum likelihood estimate is unlikely to be the one that optimizes the evaluation metric. In this study the effectiveness of a QE method is evaluated by first issuing a set of queries which are expanded using the method to a search engine and then measuring the Web search performance. Better QE methods are supposed to lead to better Web search results using the correspondingly expanded query set.",
+                "cite_spans": [
+                    {
+                        "start": 234,
+                        "end": 253,
+                        "text": "(Morgan et al. 2004",
+                        "ref_id": "BIBREF32"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Parameter Estimation",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "For this reason, the parameters of the MRFbased ranker are optimized directly for Web search. In our experiments, the objective in training is Normalized Discounted Cumulative Gain (NDCG, Jarvelin and Kekalainen 2000) , which is widely used as quality measure for Web search. Formally, we view parameter training as a multidimensional optimization problem, with each feature class as one dimension. Since NDCG is not differentiable, we tried in our experiments numerical algorithms that do not require the computation of gradient. Among the best performers was the Powell Search algorithm (Press et al., 1992) . It first constructs a set of virtual directions that are conjugate (i.e., independent with each other), then it uses line search times ( in our case), each on one virtual direction, to find the optimum. Line search is a one-dimensional optimization algorithm. Our implementation follows the one described in Gao et al. (2005) , which is used to optimize averaged precision.",
+                "cite_spans": [
+                    {
+                        "start": 188,
+                        "end": 217,
+                        "text": "Jarvelin and Kekalainen 2000)",
+                        "ref_id": "BIBREF22"
+                    },
+                    {
+                        "start": 589,
+                        "end": 609,
+                        "text": "(Press et al., 1992)",
+                        "ref_id": "BIBREF35"
+                    },
+                    {
+                        "start": 920,
+                        "end": 937,
+                        "text": "Gao et al. (2005)",
+                        "ref_id": "BIBREF19"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Parameter Estimation",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "We evaluate the performance of a QE method by first issuing a set of queries which are expanded using the method to a search engine and then measuring the Web search performance. Better QE methods are supposed to lead to better Web search results using the correspondingly expanded query set.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "4"
+            },
+            {
+                "text": "Due to the characteristics of our QE methods, we cannot conduct experiments on standard test collections such as the TREC data because they do not contain related user logs we need. Therefore, following previous studies of log-based QE (e.g., Cui et al. 2003; Riezler et al. 2008) , we use the proprietary datasets that have been developed for building a commercial search engine, and demonstrate the effectiveness of our methods by comparing them against previous state-of-the-art logbased QE methods.",
+                "cite_spans": [
+                    {
+                        "start": 243,
+                        "end": 259,
+                        "text": "Cui et al. 2003;",
+                        "ref_id": "BIBREF12"
+                    },
+                    {
+                        "start": 260,
+                        "end": 280,
+                        "text": "Riezler et al. 2008)",
+                        "ref_id": "BIBREF37"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "4"
+            },
+            {
+                "text": "The relevance judgment set consists of 4,000 multi-term English queries. On average, each query is associated with 197 Web documents (URLs). Each query-URL pair has a relevance label. The label is human generated and is on a 5-level relevance scale, 0 to 4, with 4 meaning document D is the most relevant to query Q and 0 meaning D is not relevant to Q.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "4"
+            },
+            {
+                "text": "The relevance judgment set is constructed as follows. First, the queries are sampled from a year of search engine logs. Adult, spam, and bot queries are all removed. Queries are \"de-duped\" so that only unique queries remain. To reflect a natural query distribution, we do not try to control the quality of these queries. For example, in our query sets, there are roughly 20% misspelled queries, 20% navigational queries, and 10% transactional queries. Second, for each query, we collect Web documents to be judged by issuing the query to several popular search engines (e.g., Google, Bing) and fetching retrieval results from each. Finally, the query-document pairs are judged by a group of well-trained assessors. In this study all the queries are preprocessed as follows. The text is whitespace tokenized and lowercased, numbers are retained, and no stemming/inflection treatment is performed. We split the judgment set into two nonoverlapping datasets, namely training and test sets, respectively. Each dataset contains 2,000 queries.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "4"
+            },
+            {
+                "text": "The query-title pairs used for model training are extracted from one year of query log files using a procedure similar to Gao et al. (2009) . In our experiments we used a randomly sampled subset of 20,692,219 pairs that do not overlap the queries and documents in the test set.",
+                "cite_spans": [
+                    {
+                        "start": 122,
+                        "end": 139,
+                        "text": "Gao et al. (2009)",
+                        "ref_id": "BIBREF18"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "4"
+            },
+            {
+                "text": "Our Web document collection consists of approximately 2.5 billion Web pages. In the retrieval experiments we use the index based on the content fields (i.e., body and title text) of each Web page.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "4"
+            },
+            {
+                "text": "The Web search performance is evaluated by mean NDCG. We report NDCG scores at truncation levels of 1, 3, and 10. We also perform a significance test using the paired t-test. Differences are considered statistically significant when pvalue is less than 0.05.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "4"
+            },
+            {
+                "text": "Table 1 shows the main document ranking results using different QE systems, developed and evaluated using the datasets described above.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 6,
+                        "end": 7,
+                        "text": "1",
+                        "ref_id": "TABREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Comparing Systems",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "NoQE (Row 1) is the baseline retrieval system that uses the raw input queries and the BM25 document ranking model. Rows 2 to 4 are different QE systems. Their results are obtained by first expanding a query, then using BM25 to rank the documents with respect to the expanded query.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Comparing Systems",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "TC (Row 2) is our implementation of the correlation-based QE system (Cui et al. 2002; 2003) . It takes the following steps to expand an input query :",
+                "cite_spans": [
+                    {
+                        "start": 68,
+                        "end": 85,
+                        "text": "(Cui et al. 2002;",
+                        "ref_id": "BIBREF11"
+                    },
+                    {
+                        "start": 86,
+                        "end": 91,
+                        "text": "2003)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Comparing Systems",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "# QE methods NDCG@1 NDCG@3 NDCG@10 1 13). Refer to Equation ( 12) for the names of other feature classes.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Comparing Systems",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "1. Extract all query terms (eliminating stopwords) from . 2. Find all documents that have clicks on a query that contains one or more of these query terms. 3. For each title term in these documents, calculate its evidence of being selected as an expansion term according to the whole query via a scoring function | . 4. Select n title terms with the highest score (where the value of n is optimized on training data) and formulate the expanded query by adding these terms into . 5. Use the expanded query to rank documents. The scoring function is based on the term correlation model, and is defined as",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Comparing Systems",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "| (\u220f | ) (13) | \u2211 | |",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Comparing Systems",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "where is the set of documents clicked for the queries containing the term and is collected from search logs,",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Comparing Systems",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "| is a normalized tf-idf weight of the document term in , and | is the relative occurrence of among all the documents clicked for the queries containing . Table 1 shows that TC leads to significant improvement over NoQE in NDCG@10, but not in NDCG@1 and NDCG@3 (Row 2 vs. Row 1). The result is not entirely consistent with what reported in Cui et al. (2003) . A possible reason is that Cui et al. performed the evaluation using documents and search logs collected from the Encarta website, which is much cleaner and more homogenous than the data sets we used. The result suggests that although QE improves the recall of relevant documents, it is also likely to introduce noise that hurts the precision of document retrieval.",
+                "cite_spans": [
+                    {
+                        "start": 340,
+                        "end": 357,
+                        "text": "Cui et al. (2003)",
+                        "ref_id": "BIBREF12"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 161,
+                        "end": 162,
+                        "text": "1",
+                        "ref_id": "TABREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Comparing Systems",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "SMT (Row 3) is a SMT-based QE system. Following Riezler et al. (2008) , the system is an implementation of a phrase-based SMT system with a standard set of features for translation model and language model, combined under a log linear model framework (Koehn et al. 2003) . Different from Riezler et al.'s system where the translation model is trained on query-snippet pairs and the language model on queries, in our implementation the trans-lation model is trained on query-title pairs and the language model on titles. To apply the system to QE, expansion terms of a query are taken from those terms in the 10-best translations of the query that have not been seen in the original query string. We see that SMT significantly outperforms TC in NDCG at all levels. The result confirms the conclusion of Riezler et al., demonstrating that context information is crucial for improving retrieval precision by filtering noisy expansions.",
+                "cite_spans": [
+                    {
+                        "start": 48,
+                        "end": 69,
+                        "text": "Riezler et al. (2008)",
+                        "ref_id": "BIBREF37"
+                    },
+                    {
+                        "start": 251,
+                        "end": 270,
+                        "text": "(Koehn et al. 2003)",
+                        "ref_id": "BIBREF26"
+                    },
+                    {
+                        "start": 802,
+                        "end": 817,
+                        "text": "Riezler et al.,",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Comparing Systems",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "Both TC and SMT, considered as state-of-theart QE methods, have been frequently used for comparison in related studies. Thus, we also used them as baselines in our experiments.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Comparing Systems",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "MRF (Row 4) is the ranker-based QE system described in Section 3, which uses a MRF-based ranker to incorporate all 8 classes of features derived from a variety of lexicon translation models and language models as in Equation ( 12). Results show that the ranker-based QE system significantly outperforms both NoQE and the two state-of-theart QE methods. The fact that MRF beats SMT with a statistically significant margin although the former is a much simpler system indicates that text translation and QE are different tasks and some SMT components, designed for the task of regular text translation, are not as effective in selecting expansion terms. We will explore this in more detail in the next section.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Comparing Systems",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "The experiments presented in this section investigate in detail the effectiveness of different models, e.g., the lexicon models and the language models described in Sections 2 and 3, in ranking expansion candidates for QE. The results are summarized in Rows 5 to 11 in Table 1 , where a number of different versions of the ranker-based QE system are compared. These versions, labeled as MRF f , use the same candidate generator, and differ in the feature classes (which are specified by the subscript f) incorporated in the MRF-based ranker. In what follows, we focus our discussion on the results of the three lexicon models.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 275,
+                        "end": 276,
+                        "text": "1",
+                        "ref_id": "TABREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Comparing Models",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "MRF wm (Row 7) uses the word translation model described in Section 2.1. Both the word model and term correlation model used in MRF tm (Row 6) are context independent. They differ mainly in the training methods. For the sake of comparison, in our experiment the word model is EM-trained with the correlation model as initial point. Rezler et al. (2008) hypothesize that statistical translation model is superior to correlation model because the EM training captures the hidden alignment information when mapping document terms to query terms, leading to a better smoothed probability distribution. Our result (Row 7 vs. Row 6) verifies the hypothesis. Notice that MRF tc outperforms TC in NDCG@1 (Row 6 vs. Row 2) mainly because in the former the expansion candidates are generated by a word translation model and are less noisy.",
+                "cite_spans": [
+                    {
+                        "start": 332,
+                        "end": 352,
+                        "text": "Rezler et al. (2008)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Comparing Models",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "It is encouraging to observe that the rankers using the triplet model features achieve the QE performance either in par with or better than that of SMT (Rows 8, 10 and 11 vs. Row 3), although the latter is a much more sophisticated system. The result suggests that not all SMT components are useful for QE. For example, language models are indispensable for translation but are less effective than word models for QE (Row 5 vs. Rows 6 and 7). We also observe that the triplet model not only outperforms significantly the word model due to the use of contextual information (Row 8 vs. Row 7), but also seems to subsume the latter in that combining the features derived from both models in the ranker leads to little improvement over the ranker that uses only the triplet model features (Row 10 vs. Row 8).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Comparing Models",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "The bilingual topic model underperforms the word model and the triplet model (Row 9 vs. Rows 7 and 8). However, we found that the bilingual topic model often selects a different set of expansion terms and is complementary to the other two lexicon models. As a result, unlike the case of combining the word model and triplet model features, incorporating the bilingual topic model features in the ranker leads to some visible improvement in NDCG at all positions (Row 11 vs. Row 10).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Comparing Models",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "To better understand empirically how the MRFbased QE system achieves the improvement, we analyzed the expansions generated by our system in detail and obtained several interesting findings. First, as expected, in comparison with the word model, the triplet translation model is more effective in benefitting long queries, e.g., notably queries containing questions and queries containing song lyrics. Second, unlike the two lexicon models, the bilingual topic model tends to generate expansions that are more likely to relate to an entire query rather than individual query terms. Third, the features involving the order of the expansion terms benefitted queries containing named entities.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Comparing Models",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "In comparison with log-based methods studied in this paper, the QE methods based on automatic relevance feedback have been studied much more extensively in the information retrieval (IR) community, and have been proved useful for improving IR performance on benchmark datasets such as TREC (e.g., Rocchio 1971; Xu and Croft 1996; Lavrenko 2001; Zhai and Lafferty 2001) . However, these methods cannot be applied directly to a commercial Web search engine because the relevant documents are not always available and generating pseudo-relevant documents requires multiphase retrieval, which is prohibitively expensive. Although automatic relevance feedback is not the focus of this study, our method shares a lot of similarities with some of them. For example, similar to the way the parameters of our QE ranker are estimated, Cao et al. (2008) propose a method of selecting expansion terms to directly optimize average precision. The MRF model has been previously used for QE, in the form of relevance feedback and pseudo-relevance feedback (Metzler et al. 2007; Lang et al. 2010) . While their MRF models use the features derived from IR systems such as Indri, we use the SMT-inspired features.",
+                "cite_spans": [
+                    {
+                        "start": 297,
+                        "end": 310,
+                        "text": "Rocchio 1971;",
+                        "ref_id": "BIBREF36"
+                    },
+                    {
+                        "start": 311,
+                        "end": 329,
+                        "text": "Xu and Croft 1996;",
+                        "ref_id": "BIBREF40"
+                    },
+                    {
+                        "start": 330,
+                        "end": 344,
+                        "text": "Lavrenko 2001;",
+                        "ref_id": "BIBREF28"
+                    },
+                    {
+                        "start": 345,
+                        "end": 368,
+                        "text": "Zhai and Lafferty 2001)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 825,
+                        "end": 842,
+                        "text": "Cao et al. (2008)",
+                        "ref_id": "BIBREF9"
+                    },
+                    {
+                        "start": 1040,
+                        "end": 1061,
+                        "text": "(Metzler et al. 2007;",
+                        "ref_id": "BIBREF31"
+                    },
+                    {
+                        "start": 1062,
+                        "end": 1079,
+                        "text": "Lang et al. 2010)",
+                        "ref_id": "BIBREF27"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "5"
+            },
+            {
+                "text": "Using statistical translation models for IR is not new (e.g., Berger and Lafferty 1999; Jin et al. 2002; Xue et al. 2008) . The effectiveness of the statistical translation-based approach to Web search has been demonstrated empirically in recent studies where word-based and phrase-based translation models are trained on large amounts of clickthrough data (e.g., Gao et al. 2010a; 2011) . Our work extends these studies and constructs QE-oriented translation models that capture more flexible dependencies.",
+                "cite_spans": [
+                    {
+                        "start": 62,
+                        "end": 87,
+                        "text": "Berger and Lafferty 1999;",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 88,
+                        "end": 104,
+                        "text": "Jin et al. 2002;",
+                        "ref_id": "BIBREF23"
+                    },
+                    {
+                        "start": 105,
+                        "end": 121,
+                        "text": "Xue et al. 2008)",
+                        "ref_id": "BIBREF41"
+                    },
+                    {
+                        "start": 364,
+                        "end": 381,
+                        "text": "Gao et al. 2010a;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 382,
+                        "end": 387,
+                        "text": "2011)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "5"
+            },
+            {
+                "text": "In addition to QE, search logs have also been used for other Web search tasks, such as document ranking (Joachims 2002; Agichtein et al. 2006) , search query processing and spelling correction (Huang et al. 2010; Gao et al. 2010b ) image retrieval (Craswell and Szummer 2007) , and user query clustering (Baeza-Yates and Tiberi 2007; Wen et al. 2002) .",
+                "cite_spans": [
+                    {
+                        "start": 104,
+                        "end": 119,
+                        "text": "(Joachims 2002;",
+                        "ref_id": "BIBREF25"
+                    },
+                    {
+                        "start": 120,
+                        "end": 142,
+                        "text": "Agichtein et al. 2006)",
+                        "ref_id": "BIBREF0"
+                    },
+                    {
+                        "start": 193,
+                        "end": 212,
+                        "text": "(Huang et al. 2010;",
+                        "ref_id": "BIBREF21"
+                    },
+                    {
+                        "start": 213,
+                        "end": 229,
+                        "text": "Gao et al. 2010b",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 248,
+                        "end": 275,
+                        "text": "(Craswell and Szummer 2007)",
+                        "ref_id": "BIBREF10"
+                    },
+                    {
+                        "start": 334,
+                        "end": 350,
+                        "text": "Wen et al. 2002)",
+                        "ref_id": "BIBREF39"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "5"
+            },
+            {
+                "text": "In this paper we extend the previous log-based QE methods in two directions. First, we formulate QE as the problem of translating a source language of queries into a target language of documents, represented as titles. This allows us to adapt the established techniques developed for SMT to QE. Specially, we propose three lexicon models based on terms, lexicalized triplets, and topics, respectively. These models are trained on pairs of user queries and the titles of clicked documents using EM. Second, we present a ranker-based QE system, the heart of which is a MRF-based ranker in which the lexicon models are incorporated as features. We perform experiments on the Web search task using a real world data set. Results show that the proposed system outperforms significantly other stateof-the-art QE systems.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusions",
+                "sec_num": "6"
+            },
+            {
+                "text": "This study is part of a bigger, ongoing project, aiming to develop a real-time QE system for Web search, where simplicity is the key to the success. Thus, what we learned from this study is particularly encouraging. We demonstrate that with large amounts of clickthrough data for model training, simple lexicon models can achieve state-of-the-art QE performance, and that the MRF-based ranker provides a simple and flexible framework to incorporate a variety of features capturing different types of term dependencies in such an effective way that the Web search performance can be directly optimized.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusions",
+                "sec_num": "6"
+            }
+        ],
+        "back_matter": [],
+        "bib_entries": {
+            "BIBREF0": {
+                "ref_id": "b0",
+                "title": "Improving web search ranking by incorporating user behavior information",
+                "authors": [
+                    {
+                        "first": "E",
+                        "middle": [],
+                        "last": "Agichtein",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "E",
+                        "middle": [],
+                        "last": "Brill",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "S",
+                        "middle": [],
+                        "last": "Dumais",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2006,
+                "venue": "SIGIR",
+                "volume": "",
+                "issue": "",
+                "pages": "19--26",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Agichtein, E., Brill, E., and Dumais, S. 2006. Im- proving web search ranking by incorporating us- er behavior information. In SIGIR, pp. 19-26.",
+                "links": null
+            },
+            "BIBREF1": {
+                "ref_id": "b1",
+                "title": "Modern Information Retrieval",
+                "authors": [
+                    {
+                        "first": "R",
+                        "middle": [],
+                        "last": "Baeze-Yates",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "B",
+                        "middle": [],
+                        "last": "Ribeiro-Neto",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2011,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Baeze-Yates, R., and Ribeiro-Neto, B. 2011. Mod- ern Information Retrieval. Addison-Wesley.",
+                "links": null
+            },
+            "BIBREF2": {
+                "ref_id": "b2",
+                "title": "Extracting semantic relations from query logs",
+                "authors": [
+                    {
+                        "first": "R",
+                        "middle": [],
+                        "last": "Baeza-Yates",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "A",
+                        "middle": [],
+                        "last": "Tiberi",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2007,
+                "venue": "SIGKDD",
+                "volume": "",
+                "issue": "",
+                "pages": "76--85",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Baeza-Yates, R. and Tiberi, A. 2007. Extracting semantic relations from query logs. In SIGKDD, pp. 76-85.",
+                "links": null
+            },
+            "BIBREF3": {
+                "ref_id": "b3",
+                "title": "Query expansion using term relationships in language models for information retrieval",
+                "authors": [
+                    {
+                        "first": "J",
+                        "middle": [],
+                        "last": "Bai",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "D",
+                        "middle": [],
+                        "last": "Song",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "P",
+                        "middle": [],
+                        "last": "Bruza",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "J-Y",
+                        "middle": [],
+                        "last": "Nie",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "G",
+                        "middle": [],
+                        "last": "Cao",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2005,
+                "venue": "CIKM",
+                "volume": "",
+                "issue": "",
+                "pages": "688--695",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Bai, J., Song, D., Bruza, P., Nie, J-Y., and Cao, G. 2005. Query expansion using term relationships in language models for information retrieval. In CIKM, pp. 688-695.",
+                "links": null
+            },
+            "BIBREF4": {
+                "ref_id": "b4",
+                "title": "Learning concept importance using a weighted dependence model",
+                "authors": [
+                    {
+                        "first": "M",
+                        "middle": [],
+                        "last": "Bendersky",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "D",
+                        "middle": [],
+                        "last": "Metzler",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "B",
+                        "middle": [],
+                        "last": "Croft",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2010,
+                "venue": "WSDM",
+                "volume": "",
+                "issue": "",
+                "pages": "31--40",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Bendersky, M., Metzler, D., and Croft, B. 2010. Learning concept importance using a weighted dependence model. In WSDM, pp. 31-40.",
+                "links": null
+            },
+            "BIBREF5": {
+                "ref_id": "b5",
+                "title": "Information retrieval as statistical translation",
+                "authors": [
+                    {
+                        "first": "A",
+                        "middle": [],
+                        "last": "Berger",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "J",
+                        "middle": [],
+                        "last": "Lafferty",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1999,
+                "venue": "SIGIR",
+                "volume": "",
+                "issue": "",
+                "pages": "222--229",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Berger, A., and Lafferty, J. 1999. Information re- trieval as statistical translation. In SIGIR, pp. 222-229.",
+                "links": null
+            },
+            "BIBREF6": {
+                "ref_id": "b6",
+                "title": "Patten recognition and machine learning",
+                "authors": [
+                    {
+                        "first": "C",
+                        "middle": [
+                            "M"
+                        ],
+                        "last": "Bishop",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2006,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Bishop, C. M. 2006. Patten recognition and ma- chine learning. Springer.",
+                "links": null
+            },
+            "BIBREF7": {
+                "ref_id": "b7",
+                "title": "Latent Dirichlet allocation",
+                "authors": [
+                    {
+                        "first": "D",
+                        "middle": [
+                            "M"
+                        ],
+                        "last": "Blei",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "A",
+                        "middle": [
+                            "Y"
+                        ],
+                        "last": "Ng",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "M",
+                        "middle": [
+                            "J"
+                        ],
+                        "last": "Jordan",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2003,
+                "venue": "Journal of Machine Learning Research",
+                "volume": "3",
+                "issue": "",
+                "pages": "993--1022",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Blei, D. M., Ng, A. Y., and Jordan, M. J. 2003. Latent Dirichlet allocation. Journal of Machine Learning Research, 3: 993-1022.",
+                "links": null
+            },
+            "BIBREF8": {
+                "ref_id": "b8",
+                "title": "The mathematics of statistical machine translation: parameter estimation",
+                "authors": [
+                    {
+                        "first": "P",
+                        "middle": [
+                            "F"
+                        ],
+                        "last": "Brown",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "S",
+                        "middle": [
+                            "A"
+                        ],
+                        "last": "Della Pietra",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "V",
+                        "middle": [
+                            "J"
+                        ],
+                        "last": "Della Pietra",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "R",
+                        "middle": [
+                            "L"
+                        ],
+                        "last": "Mercer",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1993,
+                "venue": "Computational Linguistics",
+                "volume": "19",
+                "issue": "2",
+                "pages": "263--311",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Brown, P. F., Della Pietra, S. A., Della Pietra, V. J., and Mercer, R. L. 1993. The mathematics of sta- tistical machine translation: parameter estimation. Computational Linguistics, 19(2): 263-311.",
+                "links": null
+            },
+            "BIBREF9": {
+                "ref_id": "b9",
+                "title": "Selecting good expansion terms for pseudorelevance feedback",
+                "authors": [
+                    {
+                        "first": "G",
+                        "middle": [],
+                        "last": "Cao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "J-Y",
+                        "middle": [],
+                        "last": "Nie",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "J",
+                        "middle": [],
+                        "last": "Gao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "S",
+                        "middle": [],
+                        "last": "Robertson",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2008,
+                "venue": "SIGIR",
+                "volume": "",
+                "issue": "",
+                "pages": "289--305",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Cao, G., Nie, J-Y., Gao, J., and Robertson, S. 2008. Selecting good expansion terms for pseudo- relevance feedback. In SIGIR, pp. 289-305.",
+                "links": null
+            },
+            "BIBREF10": {
+                "ref_id": "b10",
+                "title": "Random walk on the click graph",
+                "authors": [
+                    {
+                        "first": "N",
+                        "middle": [],
+                        "last": "Craswell",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "M",
+                        "middle": [],
+                        "last": "Szummer",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2007,
+                "venue": "SIGIR",
+                "volume": "",
+                "issue": "",
+                "pages": "239--246",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Craswell, N. and Szummer, M. 2007. Random walk on the click graph. In SIGIR. pp. 239-246.",
+                "links": null
+            },
+            "BIBREF11": {
+                "ref_id": "b11",
+                "title": "Probabilistic query expansion using query logs",
+                "authors": [
+                    {
+                        "first": "H",
+                        "middle": [],
+                        "last": "Cui",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "J-R",
+                        "middle": [],
+                        "last": "Wen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "J-Y",
+                        "middle": [],
+                        "last": "Nie",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "W-Y",
+                        "middle": [],
+                        "last": "Ma",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2002,
+                "venue": "WWW",
+                "volume": "",
+                "issue": "",
+                "pages": "325--332",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Cui, H., Wen, J-R., Nie, J-Y. and Ma, W-Y. 2002. Probabilistic query expansion using query logs. In WWW, pp. 325-332.",
+                "links": null
+            },
+            "BIBREF12": {
+                "ref_id": "b12",
+                "title": "Query expansion by mining user log",
+                "authors": [
+                    {
+                        "first": "H",
+                        "middle": [],
+                        "last": "Cui",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "J-R",
+                        "middle": [],
+                        "last": "Wen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "J-Y",
+                        "middle": [],
+                        "last": "Nie",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "W-Y",
+                        "middle": [],
+                        "last": "Ma",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2003,
+                "venue": "IEEE Trans on Knowledge and Data Engineering",
+                "volume": "15",
+                "issue": "4",
+                "pages": "1--11",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Cui, H., Wen, J-R., Nie, J-Y. and Ma, W-Y. 2003. Query expansion by mining user log. IEEE Trans on Knowledge and Data Engineering. Vol. 15, No. 4. pp. 1-11.",
+                "links": null
+            },
+            "BIBREF13": {
+                "ref_id": "b13",
+                "title": "Maximum likelihood from incomplete data via the EM algorithm",
+                "authors": [
+                    {
+                        "first": "A",
+                        "middle": [],
+                        "last": "Dempster",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "N",
+                        "middle": [],
+                        "last": "Laird",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "D",
+                        "middle": [],
+                        "last": "Rubin",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1977,
+                "venue": "Journal of the Royal Statistical Society",
+                "volume": "39",
+                "issue": "",
+                "pages": "1--38",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Dempster, A., Laird, N., and Rubin, D. 1977. Max- imum likelihood from incomplete data via the EM algorithm. Journal of the Royal Statistical Society, 39: 1-38.",
+                "links": null
+            },
+            "BIBREF14": {
+                "ref_id": "b14",
+                "title": "Posterior regularization for structured latent variable models",
+                "authors": [
+                    {
+                        "first": "K",
+                        "middle": [],
+                        "last": "Ganchev",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "J",
+                        "middle": [],
+                        "last": "Graca",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "J",
+                        "middle": [],
+                        "last": "Gillenwater",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "B",
+                        "middle": [],
+                        "last": "Taskar",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2010,
+                "venue": "Journal of Machine Learning Research",
+                "volume": "11",
+                "issue": "",
+                "pages": "2001--2049",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ganchev, K., Graca, J., Gillenwater, J., and Taskar, B. 2010. Posterior regularization for structured latent variable models. Journal of Machine Learning Research, 11 (2010): 2001-2049.",
+                "links": null
+            },
+            "BIBREF15": {
+                "ref_id": "b15",
+                "title": "Clickthrough-based latent semantic models for web search",
+                "authors": [
+                    {
+                        "first": "J",
+                        "middle": [],
+                        "last": "Gao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "K",
+                        "middle": [],
+                        "last": "Toutanova",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "W-T",
+                        "middle": [],
+                        "last": "Yih",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2011,
+                "venue": "SIGIR",
+                "volume": "",
+                "issue": "",
+                "pages": "675--684",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Gao, J., Toutanova, K., Yih., W-T. 2011. Click- through-based latent semantic models for web search. In SIGIR, pp. 675-684.",
+                "links": null
+            },
+            "BIBREF16": {
+                "ref_id": "b16",
+                "title": "Clickthroughbased translation models for web search: from word models to phrase models",
+                "authors": [
+                    {
+                        "first": "J",
+                        "middle": [],
+                        "last": "Gao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "X",
+                        "middle": [],
+                        "last": "He",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "J-Y",
+                        "middle": [],
+                        "last": "Nie",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2010,
+                "venue": "CIKM",
+                "volume": "",
+                "issue": "",
+                "pages": "1139--1148",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Gao, J., He, X., and Nie, J-Y. 2010a. Clickthrough- based translation models for web search: from word models to phrase models. In CIKM, pp. 1139-1148.",
+                "links": null
+            },
+            "BIBREF17": {
+                "ref_id": "b17",
+                "title": "A large scale ranker-based system for query spelling correction",
+                "authors": [
+                    {
+                        "first": "J",
+                        "middle": [],
+                        "last": "Gao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "X",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "D",
+                        "middle": [],
+                        "last": "Micol",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "C",
+                        "middle": [],
+                        "last": "Quirk",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "X",
+                        "middle": [],
+                        "last": "Sun",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2010,
+                "venue": "COLING",
+                "volume": "",
+                "issue": "",
+                "pages": "358--366",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Gao, J., Li, X., Micol, D., Quirk, C., and Sun, X. 2010b. A large scale ranker-based system for query spelling correction. In COLING, pp. 358- 366.",
+                "links": null
+            },
+            "BIBREF18": {
+                "ref_id": "b18",
+                "title": "Smoothing clickthrough data for web search ranking",
+                "authors": [
+                    {
+                        "first": "J",
+                        "middle": [],
+                        "last": "Gao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "W",
+                        "middle": [],
+                        "last": "Yuan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "X",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "K",
+                        "middle": [],
+                        "last": "Deng",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "J-Y",
+                        "middle": [],
+                        "last": "Nie",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "SIGIR",
+                "volume": "",
+                "issue": "",
+                "pages": "355--362",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Gao, J., Yuan, W., Li, X., Deng, K., and Nie, J-Y. 2009. Smoothing clickthrough data for web search ranking. In SIGIR, pp. 355-362.",
+                "links": null
+            },
+            "BIBREF19": {
+                "ref_id": "b19",
+                "title": "Linear discriminant model for information retrieval",
+                "authors": [
+                    {
+                        "first": "J",
+                        "middle": [],
+                        "last": "Gao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "H",
+                        "middle": [],
+                        "last": "Qi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "X",
+                        "middle": [],
+                        "last": "Xia",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "J-Y",
+                        "middle": [],
+                        "last": "Nie",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2005,
+                "venue": "SIGIR",
+                "volume": "",
+                "issue": "",
+                "pages": "290--297",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Gao, J., Qi, H., Xia, X., and Nie, J-Y. 2005. Linear discriminant model for information retrieval. In SIGIR, pp. 290-297.",
+                "links": null
+            },
+            "BIBREF20": {
+                "ref_id": "b20",
+                "title": "Triplet lexicon models for statistical machine translation",
+                "authors": [
+                    {
+                        "first": "S",
+                        "middle": [],
+                        "last": "Hasan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "J",
+                        "middle": [],
+                        "last": "Ganitkevitch",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "H",
+                        "middle": [],
+                        "last": "Ney",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "J",
+                        "middle": [],
+                        "last": "Andres-Fnerre",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2008,
+                "venue": "EMNLP",
+                "volume": "",
+                "issue": "",
+                "pages": "372--381",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Hasan, S., Ganitkevitch, J., Ney, H., and Andres- Fnerre, J. 2008. Triplet lexicon models for statis- tical machine translation. In EMNLP, pp. 372- 381.",
+                "links": null
+            },
+            "BIBREF21": {
+                "ref_id": "b21",
+                "title": "Exploring web scale language models for search query processing",
+                "authors": [
+                    {
+                        "first": "J",
+                        "middle": [],
+                        "last": "Huang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "J",
+                        "middle": [],
+                        "last": "Gao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "J",
+                        "middle": [],
+                        "last": "Miao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "X",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "K",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "F",
+                        "middle": [],
+                        "last": "Behr",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2010,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "451--460",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Huang, J., Gao, J., Miao, J., Li, X., Wang, K., and Behr, F. 2010. Exploring web scale language models for search query processing. In WWW, pp. 451-460.",
+                "links": null
+            },
+            "BIBREF22": {
+                "ref_id": "b22",
+                "title": "IR evaluation methods for retrieving highly relevant documents",
+                "authors": [
+                    {
+                        "first": "K",
+                        "middle": [],
+                        "last": "Jarvelin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "J",
+                        "middle": [],
+                        "last": "Kekalainen",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2000,
+                "venue": "SIGIR",
+                "volume": "",
+                "issue": "",
+                "pages": "41--48",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jarvelin, K. and Kekalainen, J. 2000. IR evaluation methods for retrieving highly relevant docu- ments. In SIGIR, pp. 41-48",
+                "links": null
+            },
+            "BIBREF23": {
+                "ref_id": "b23",
+                "title": "Title language model for information retrieval",
+                "authors": [
+                    {
+                        "first": "R",
+                        "middle": [],
+                        "last": "Jin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "A",
+                        "middle": [
+                            "G"
+                        ],
+                        "last": "Hauptmann",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "C",
+                        "middle": [],
+                        "last": "Zhai",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2002,
+                "venue": "SIGIR",
+                "volume": "",
+                "issue": "",
+                "pages": "42--48",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jin, R., Hauptmann, A. G., and Zhai, C. 2002. Title language model for information retrieval. In SIGIR, pp. 42-48.",
+                "links": null
+            },
+            "BIBREF24": {
+                "ref_id": "b24",
+                "title": "An association thesaurus for information retrieval",
+                "authors": [
+                    {
+                        "first": "Y",
+                        "middle": [],
+                        "last": "Jing",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "B",
+                        "middle": [],
+                        "last": "Croft",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1994,
+                "venue": "RIAO",
+                "volume": "",
+                "issue": "",
+                "pages": "146--160",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jing, Y., and Croft., B. 1994. An association thesaurus for information retrieval. In RIAO, pp. 146-160.",
+                "links": null
+            },
+            "BIBREF25": {
+                "ref_id": "b25",
+                "title": "Optimizing search engines using clickthrough data",
+                "authors": [
+                    {
+                        "first": "T",
+                        "middle": [],
+                        "last": "Joachims",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2002,
+                "venue": "SIGKDD",
+                "volume": "",
+                "issue": "",
+                "pages": "133--142",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Joachims, T. 2002. Optimizing search engines us- ing clickthrough data. In SIGKDD, pp. 133-142.",
+                "links": null
+            },
+            "BIBREF26": {
+                "ref_id": "b26",
+                "title": "Statistical phrase-based translation",
+                "authors": [
+                    {
+                        "first": "P",
+                        "middle": [],
+                        "last": "Koehn",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "F",
+                        "middle": [],
+                        "last": "Och",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "D",
+                        "middle": [],
+                        "last": "Marcu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2003,
+                "venue": "HLT/NAACL",
+                "volume": "",
+                "issue": "",
+                "pages": "127--133",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Koehn, P., Och, F., and Marcu, D. 2003. Statistical phrase-based translation. In HLT/NAACL, pp. 127-133.",
+                "links": null
+            },
+            "BIBREF27": {
+                "ref_id": "b27",
+                "title": "Improving latent concept expansion using markov random fields",
+                "authors": [
+                    {
+                        "first": "H",
+                        "middle": [],
+                        "last": "Lang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "D",
+                        "middle": [],
+                        "last": "Metzler",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "B",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "J-T",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2010,
+                "venue": "CIKM",
+                "volume": "",
+                "issue": "",
+                "pages": "249--258",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Lang, H., Metzler, D., Wang, B., and Li, J-T. 2010. Improving latent concept expansion using markov random fields. In CIKM, pp. 249-258.",
+                "links": null
+            },
+            "BIBREF28": {
+                "ref_id": "b28",
+                "title": "Relevance-based language models",
+                "authors": [
+                    {
+                        "first": "V",
+                        "middle": [],
+                        "last": "Lavrenko",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "B",
+                        "middle": [],
+                        "last": "Croft",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2001,
+                "venue": "SIGIR",
+                "volume": "",
+                "issue": "",
+                "pages": "120--128",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Lavrenko, V., and Croft, B. 2001. Relevance-based language models. In SIGIR, pp. 120-128.",
+                "links": null
+            },
+            "BIBREF29": {
+                "ref_id": "b29",
+                "title": "An improved markov random field model for supporting verbose queries",
+                "authors": [
+                    {
+                        "first": "M",
+                        "middle": [],
+                        "last": "Lease",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "SIGIR",
+                "volume": "",
+                "issue": "",
+                "pages": "476--483",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Lease, M. 2009. An improved markov random field model for supporting verbose queries. In SIGIR, pp. 476-483",
+                "links": null
+            },
+            "BIBREF30": {
+                "ref_id": "b30",
+                "title": "A markov random field model for term dependencies",
+                "authors": [
+                    {
+                        "first": "D",
+                        "middle": [],
+                        "last": "Metzler",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "B",
+                        "middle": [],
+                        "last": "Croft",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2005,
+                "venue": "SIGIR",
+                "volume": "",
+                "issue": "",
+                "pages": "472--479",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Metzler, D., and Croft, B. 2005. A markov random field model for term dependencies. In SIGIR, pp. 472-479.",
+                "links": null
+            },
+            "BIBREF31": {
+                "ref_id": "b31",
+                "title": "Latent concept expansion using markov random fields",
+                "authors": [
+                    {
+                        "first": "D",
+                        "middle": [],
+                        "last": "Metzler",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "B",
+                        "middle": [],
+                        "last": "Croft",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2007,
+                "venue": "SIGIR",
+                "volume": "",
+                "issue": "",
+                "pages": "311--318",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Metzler, D., and Croft, B. 2007. Latent concept expansion using markov random fields. In SIGIR, pp. 311-318.",
+                "links": null
+            },
+            "BIBREF32": {
+                "ref_id": "b32",
+                "title": "Direct maximization of average precision by hill-climbing with a comparison to a maximum entropy approach",
+                "authors": [
+                    {
+                        "first": "W",
+                        "middle": [],
+                        "last": "Morgan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "W",
+                        "middle": [],
+                        "last": "Greiff",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "J",
+                        "middle": [],
+                        "last": "Henderson",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2004,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Morgan, W., Greiff, W., and Henderson, J. 2004. Direct maximization of average precision by hill-climbing with a comparison to a maximum entropy approach. Technical report. MITRE.",
+                "links": null
+            },
+            "BIBREF33": {
+                "ref_id": "b33",
+                "title": "Statistical machine translation: from single-word models to alignment templates",
+                "authors": [
+                    {
+                        "first": "F",
+                        "middle": [],
+                        "last": "Och",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2002,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Och, F. 2002. Statistical machine translation: from single-word models to alignment templates. PhD thesis, RWTH Aachen.",
+                "links": null
+            },
+            "BIBREF34": {
+                "ref_id": "b34",
+                "title": "Use of Wordnet hypernyms for answering what is questions",
+                "authors": [
+                    {
+                        "first": "J",
+                        "middle": [],
+                        "last": "Prager",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "J",
+                        "middle": [],
+                        "last": "Chu-Carroll",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "K",
+                        "middle": [],
+                        "last": "Czuba",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2001,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Prager, J., Chu-Carroll, J., and Czuba, K. 2001. Use of Wordnet hypernyms for answering what is questions. In TREC 10.",
+                "links": null
+            },
+            "BIBREF35": {
+                "ref_id": "b35",
+                "title": "Numerical Recipes in C",
+                "authors": [
+                    {
+                        "first": "W",
+                        "middle": [
+                            "H"
+                        ],
+                        "last": "Press",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "S",
+                        "middle": [
+                            "A"
+                        ],
+                        "last": "Teukolsky",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "W",
+                        "middle": [
+                            "T"
+                        ],
+                        "last": "Vetterling",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "B",
+                        "middle": [
+                            "P"
+                        ],
+                        "last": "Flannery",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1992,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Press, W. H., Teukolsky, S. A., Vetterling, W. T., and Flannery, B. P. 1992. Numerical Recipes in C. Cambridge Univ. Press.",
+                "links": null
+            },
+            "BIBREF36": {
+                "ref_id": "b36",
+                "title": "Relevance feedback in information retrieval",
+                "authors": [
+                    {
+                        "first": "J",
+                        "middle": [],
+                        "last": "Rocchio",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1971,
+                "venue": "The SMART retrieval system: experiments in automatic document processing",
+                "volume": "",
+                "issue": "",
+                "pages": "313--323",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Rocchio, J. 1971. Relevance feedback in infor- mation retrieval. In The SMART retrieval system: experiments in automatic document processing, pp. 313-323, Prentice-Hall Inc.",
+                "links": null
+            },
+            "BIBREF37": {
+                "ref_id": "b37",
+                "title": "Translating queries into snippets for improving query expansion",
+                "authors": [
+                    {
+                        "first": "S",
+                        "middle": [],
+                        "last": "Riezler",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Y",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "A",
+                        "middle": [],
+                        "last": "Vasserman",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2008,
+                "venue": "COLING 2008",
+                "volume": "",
+                "issue": "",
+                "pages": "737--744",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Riezler, S., Liu, Y. and Vasserman, A. 2008. Translating queries into snippets for improving query expansion. In COLING 2008. 737-744.",
+                "links": null
+            },
+            "BIBREF38": {
+                "ref_id": "b38",
+                "title": "Query rewriting using monolingual statistical machine translation",
+                "authors": [
+                    {
+                        "first": "S",
+                        "middle": [],
+                        "last": "Riezler",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Y",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2010,
+                "venue": "Computational Linguistics",
+                "volume": "36",
+                "issue": "3",
+                "pages": "569--582",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Riezler, S., and Liu, Y. 2010. Query rewriting us- ing monolingual statistical machine translation. Computational Linguistics, 36(3): 569-582.",
+                "links": null
+            },
+            "BIBREF39": {
+                "ref_id": "b39",
+                "title": "Query clustering using user logs",
+                "authors": [
+                    {
+                        "first": "J",
+                        "middle": [],
+                        "last": "Wen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "J-Y",
+                        "middle": [],
+                        "last": "Nie",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "H",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2002,
+                "venue": "ACM TOIS",
+                "volume": "20",
+                "issue": "1",
+                "pages": "59--81",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Wen, J., Nie, J-Y., and Zhang, H. 2002. Query clustering using user logs. ACM TOIS, 20(1): 59- 81.",
+                "links": null
+            },
+            "BIBREF40": {
+                "ref_id": "b40",
+                "title": "Query expansion using local and global document analysis",
+                "authors": [
+                    {
+                        "first": "J",
+                        "middle": [],
+                        "last": "Xu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "B",
+                        "middle": [],
+                        "last": "Croft",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1996,
+                "venue": "SIGIR",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Xu, J., and Croft, B. 1996. Query expansion using local and global document analysis. In SIGIR.",
+                "links": null
+            },
+            "BIBREF41": {
+                "ref_id": "b41",
+                "title": "Retrieval models for Question and answer archives",
+                "authors": [
+                    {
+                        "first": "X",
+                        "middle": [],
+                        "last": "Xue",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "J",
+                        "middle": [],
+                        "last": "Jeon",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "W",
+                        "middle": [
+                            "B"
+                        ],
+                        "last": "Croft",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2008,
+                "venue": "SIGIR",
+                "volume": "",
+                "issue": "",
+                "pages": "475--482",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Xue, X., Jeon, J., Croft, W. B. 2008. Retrieval models for Question and answer archives. In SIGIR, pp. 475-482.",
+                "links": null
+            },
+            "BIBREF42": {
+                "ref_id": "b42",
+                "title": "Model-based feedback in the kl-divergence retrieval model",
+                "authors": [
+                    {
+                        "first": "C",
+                        "middle": [],
+                        "last": "Zhai",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "J",
+                        "middle": [],
+                        "last": "Lafferty",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2001,
+                "venue": "CIKM",
+                "volume": "",
+                "issue": "",
+                "pages": "403--410",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Zhai, C., and Lafferty, J. 2001a. Model-based feedback in the kl-divergence retrieval model. In CIKM, pp. 403-410.",
+                "links": null
+            },
+            "BIBREF43": {
+                "ref_id": "b43",
+                "title": "A study of smoothing methods for language models applied to ad hoc information retrieval",
+                "authors": [
+                    {
+                        "first": "C",
+                        "middle": [],
+                        "last": "Zhai",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "J",
+                        "middle": [],
+                        "last": "Lafferty",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2001,
+                "venue": "SIGIR",
+                "volume": "",
+                "issue": "",
+                "pages": "334--342",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Zhai, C., and Lafferty, J. 2001b. A study of smoothing methods for language models applied to ad hoc information retrieval. In SIGIR, pp. 334-342.",
+                "links": null
+            }
+        },
+        "ref_entries": {
+            "FIGREF0": {
+                "num": null,
+                "text": "Figure 1. An example of an original query, its expansion candidates and the expanded query generated by the ranker-based QE system.",
+                "uris": null,
+                "fig_num": "1",
+                "type_str": "figure"
+            },
+            "FIGREF1": {
+                "num": null,
+                "text": "Figure 2: The structure of the Markov random field for representing the term dependency among the query and the expansion terms .",
+                "uris": null,
+                "fig_num": "2",
+                "type_str": "figure"
+            },
+            "FIGREF2": {
+                "num": null,
+                "text": "probability computed using a bigram language model trained on the collection of document titles.The sixth type of cliques contains a pair of terms appearing unordered within the expansion. The potential functions are defined as (11) | where",
+                "uris": null,
+                "fig_num": null,
+                "type_str": "figure"
+            },
+            "TABREF1": {
+                "content": "<table><tr><td>NoQE</td><td>34.70</td><td>36.50</td><td>41.54</td></tr><tr><td>2 TC</td><td>33.78</td><td>36.57</td><td>42.33 \u03b1</td></tr><tr><td>3 SMT</td><td>34.79 \u03b2</td><td>36.98 \u03b1\u03b2</td><td>42.84 \u03b1\u03b2</td></tr><tr><td>4 MRF</td><td>36.10 \u03b1\u03b2\u03b3</td><td>38.06 \u03b1\u03b2\u03b3</td><td>43.71 \u03b1\u03b2\u03b3</td></tr><tr><td colspan=\"2\">33.31 34.50 \u03b2 34.73 \u03b2 35.13 \u03b1\u03b2 34.34 \u03b2 35.21 \u03b1\u03b2\u03b3 11 MRF wm+tm+bltm 35.84 \u03b1\u03b2\u03b3 5 MRF um+bm+cm 6 MRF tc 7 MRF wm 8 MRF tm 9 MRF bltm 10 MRF wm+tm</td><td>36.12 36.59 36.62 37.46 \u03b1\u03b2\u03b3 36.19 37.46 \u03b1\u03b2\u03b3 37.70 \u03b1\u03b2\u03b3</td><td>42.26 \u03b1 42.33 \u03b1 42.73 \u03b1\u03b2 42.82 \u03b1\u03b2 41.98 \u03b1 42.83 \u03b1\u03b2 43.14 \u03b1\u03b2\u03b3</td></tr></table>",
+                "type_str": "table",
+                "text": "Ranking results using BM25 with different query expansion systems. The superscripts and indicate statistically significant improvements over NoQE, TC, and SMT, respectively. Rows 5 to 11 are different versions of MRF in Row 5, They use the same candidate generator but use in the ranker different feature classes, as specified by the subscript. tc specifies the feature class defined as the scoring function in Equation (",
+                "html": null,
+                "num": null
+            }
+        }
+    }
+}

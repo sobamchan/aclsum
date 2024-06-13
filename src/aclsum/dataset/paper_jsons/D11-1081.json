@@ -1,0 +1,2158 @@
+{
+    "paper_id": "D11-1081",
+    "header": {
+        "generated_with": "S2ORC 1.0.0",
+        "date_generated": "2023-06-16T11:58:31.045093Z"
+    },
+    "title": "Fast Generation of Translation Forest for Large-Scale SMT Discriminative Training",
+    "authors": [
+        {
+            "first": "Xinyan",
+            "middle": [],
+            "last": "Xiao",
+            "suffix": "",
+            "affiliation": {},
+            "email": "xiaoxinyan@ict.ac.cn"
+        },
+        {
+            "first": "Yang",
+            "middle": [],
+            "last": "Liu",
+            "suffix": "",
+            "affiliation": {},
+            "email": "yliu@ict.ac.cn"
+        },
+        {
+            "first": "Qun",
+            "middle": [],
+            "last": "Liu",
+            "suffix": "",
+            "affiliation": {},
+            "email": "liuqun@ict.ac.cn"
+        },
+        {
+            "first": "Shouxun",
+            "middle": [],
+            "last": "Lin",
+            "suffix": "",
+            "affiliation": {},
+            "email": "sxlin@ict.ac.cn"
+        }
+    ],
+    "year": "",
+    "venue": null,
+    "identifiers": {},
+    "abstract": "Although discriminative training guarantees to improve statistical machine translation by incorporating a large amount of overlapping features, it is hard to scale up to large data due to decoding complexity. We propose a new algorithm to generate translation forest of training data in linear time with the help of word alignment. Our algorithm also alleviates the oracle selection problem by ensuring that a forest always contains derivations that exactly yield the reference translation. With millions of features trained on 519K sentences in 0.03 second per sentence, our system achieves significant improvement by 0.84 BLEU over the baseline system on the NIST Chinese-English test sets.",
+    "pdf_parse": {
+        "paper_id": "D11-1081",
+        "_pdf_hash": "",
+        "abstract": [
+            {
+                "text": "Although discriminative training guarantees to improve statistical machine translation by incorporating a large amount of overlapping features, it is hard to scale up to large data due to decoding complexity. We propose a new algorithm to generate translation forest of training data in linear time with the help of word alignment. Our algorithm also alleviates the oracle selection problem by ensuring that a forest always contains derivations that exactly yield the reference translation. With millions of features trained on 519K sentences in 0.03 second per sentence, our system achieves significant improvement by 0.84 BLEU over the baseline system on the NIST Chinese-English test sets.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            }
+        ],
+        "body_text": [
+            {
+                "text": "Discriminative model (Och and Ney, 2002) can easily incorporate non-independent and overlapping features, and has been dominating the research field of statistical machine translation (SMT) in the last decade. Recent work have shown that SMT benefits a lot from exploiting large amount of features (Liang et al., 2006; Tillmann and Zhang, 2006; Watanabe et al., 2007; Blunsom et al., 2008; Chiang et al., 2009) . However, the training of the large number of features was always restricted in fairly small data sets. Some systems limit the number of training examples, while others use short sentences to maintain efficiency.",
+                "cite_spans": [
+                    {
+                        "start": 21,
+                        "end": 40,
+                        "text": "(Och and Ney, 2002)",
+                        "ref_id": "BIBREF18"
+                    },
+                    {
+                        "start": 298,
+                        "end": 318,
+                        "text": "(Liang et al., 2006;",
+                        "ref_id": "BIBREF16"
+                    },
+                    {
+                        "start": 319,
+                        "end": 344,
+                        "text": "Tillmann and Zhang, 2006;",
+                        "ref_id": "BIBREF27"
+                    },
+                    {
+                        "start": 345,
+                        "end": 367,
+                        "text": "Watanabe et al., 2007;",
+                        "ref_id": "BIBREF28"
+                    },
+                    {
+                        "start": 368,
+                        "end": 389,
+                        "text": "Blunsom et al., 2008;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 390,
+                        "end": 410,
+                        "text": "Chiang et al., 2009)",
+                        "ref_id": "BIBREF5"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Overfitting problem often comes when training many features on a small data (Watanabe et al., 2007; Chiang et al., 2009) . Obviously, using much more data can alleviate such problem. Furthermore, large data also enables us to globally train millions of sparse lexical features which offer accurate clues for SMT. Despite these advantages, to the best of our knowledge, no previous discriminative training paradigms scale up to use a large amount of training data. The main obstacle comes from the complexity of packed forests or n-best lists generation which requires to search through all possible translations of each training example, which is computationally prohibitive in practice for SMT.",
+                "cite_spans": [
+                    {
+                        "start": 76,
+                        "end": 99,
+                        "text": "(Watanabe et al., 2007;",
+                        "ref_id": "BIBREF28"
+                    },
+                    {
+                        "start": 100,
+                        "end": 120,
+                        "text": "Chiang et al., 2009)",
+                        "ref_id": "BIBREF5"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "To make normalization efficient, contrastive estimation (Smith and Eisner, 2005; Poon et al., 2009) introduce neighborhood for unsupervised log-linear model, and has presented positive results in various tasks. Motivated by these work, we use a translation forest (Section 3) which contains both \"reference\" derivations that potentially yield the reference translation and also neighboring \"non-reference\" derivations that fail to produce the reference translation.1 However, the complexity of generating this translation forest is up to O(n 6 ), because we still need biparsing to create the reference derivations.",
+                "cite_spans": [
+                    {
+                        "start": 56,
+                        "end": 80,
+                        "text": "(Smith and Eisner, 2005;",
+                        "ref_id": "BIBREF24"
+                    },
+                    {
+                        "start": 81,
+                        "end": 99,
+                        "text": "Poon et al., 2009)",
+                        "ref_id": "BIBREF22"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Consequently, we propose a method to fast generate a subset of the forest. The key idea (Section 4) is to initialize a reference derivation tree with maximum score by the help of word alignment, and then traverse the tree to generate the subset forest in linear time. Besides the efficiency improvement, such a forest allows us to train the model without resort- r 1 X \u21d2 \u27e8X 1 bei X 2 , X 1 was X 2 \u27e9 e 2 r 2 X \u21d2 \u27e8qiangshou bei X 1 , the gunman was X 1 \u27e9 e 3 r 3 X \u21d2 \u27e8jingfang X 1 , X 1 by the police\u27e9 e 4 r 4 X \u21d2 \u27e8jingfang X 1 , police X 1 \u27e9 e 5 r 5 X \u21d2 \u27e8qiangshou, the gunman\u27e9 e 6 r 6 X \u21d2 \u27e8jibi, shot dead\u27e9 Figure 1 : A translation forest which is the running example throughout this paper. The reference translation is \"the gunman was killed by the police\".",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 615,
+                        "end": 616,
+                        "text": "1",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "(1) Solid hyperedges denote a \"reference\" derivation tree t 1 which exactly yields the reference translation. ( 2) Replacing e 3 in t 1 with e 4 results a competing non-reference derivation t 2 , which fails to swap the order of X 3,4 . ( 3) Removing e 1 and e 5 in t 1 and adding e 2 leads to another reference derivation t 3 . Generally, this is done by deleting a node X 0,1 .",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "ing to constructing the oracle reference (Liang et al., 2006; Watanabe et al., 2007; Chiang et al., 2009) , which is non-trivial for SMT and needs to be determined experimentally. Given such forests, we globally learn a log-linear model using stochastic gradient descend (Section 5). Overall, both the generation of forests and the training algorithm are scalable, enabling us to train millions of features on large-scale data.",
+                "cite_spans": [
+                    {
+                        "start": 41,
+                        "end": 61,
+                        "text": "(Liang et al., 2006;",
+                        "ref_id": "BIBREF16"
+                    },
+                    {
+                        "start": 62,
+                        "end": 84,
+                        "text": "Watanabe et al., 2007;",
+                        "ref_id": "BIBREF28"
+                    },
+                    {
+                        "start": 85,
+                        "end": 105,
+                        "text": "Chiang et al., 2009)",
+                        "ref_id": "BIBREF5"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "To show the effect of our framework, we globally train millions of word level context features motivated by word sense disambiguation (Chan et al., 2007) together with the features used in traditional SMT system (Section 6). Training on 519K sentence pairs in 0.03 seconds per sentence, we achieve significantly improvement over the traditional pipeline by 0.84 BLEU.",
+                "cite_spans": [
+                    {
+                        "start": 134,
+                        "end": 153,
+                        "text": "(Chan et al., 2007)",
+                        "ref_id": "BIBREF4"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "We work on synchronous context free grammar (SCFG) (Chiang, 2007) based translation. The elementary structures in an SCFG are rewrite rules of the form: X \u21d2 \u27e8\u03b3, \u03b1\u27e9 where \u03b3 and \u03b1 are strings of terminals and nonterminals. We call \u03b3 and \u03b1 as the source side and the target side of rule respectively. Here a rule means a phrase translation (Koehn et al., 2003) or a translation pair that contains nonterminals.",
+                "cite_spans": [
+                    {
+                        "start": 51,
+                        "end": 65,
+                        "text": "(Chiang, 2007)",
+                        "ref_id": "BIBREF6"
+                    },
+                    {
+                        "start": 337,
+                        "end": 357,
+                        "text": "(Koehn et al., 2003)",
+                        "ref_id": "BIBREF12"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Synchronous Context Free Grammar",
+                "sec_num": "2"
+            },
+            {
+                "text": "We call a sequence of translation steps as a derivation. In context of SCFG, a derivation is a se-quence of SCFG rules {r i }. Translation forest (Mi et al., 2008; Li and Eisner, 2009 ) is a compact representation of all the derivations for a given sentence under an SCFG (see Figure 1 ). A tree t in the forest corresponds to a derivation. In our paper, tree means the same as derivation.",
+                "cite_spans": [
+                    {
+                        "start": 146,
+                        "end": 163,
+                        "text": "(Mi et al., 2008;",
+                        "ref_id": "BIBREF17"
+                    },
+                    {
+                        "start": 164,
+                        "end": 183,
+                        "text": "Li and Eisner, 2009",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 284,
+                        "end": 285,
+                        "text": "1",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Synchronous Context Free Grammar",
+                "sec_num": "2"
+            },
+            {
+                "text": "More formally, a forest is a pair \u27e8V, E\u27e9, where V is the set of nodes, E is the set of hyperedge. For a given source sentence f = f n 1 , Each node v \u2208 V is in the form X i,j , which denotes the recognition of nonterminal X spanning the substring from the i through j (that is f i+1 ...f j ). Each hyperedge e \u2208 E connects a set of antecedent to a single consequent node and corresponds to an SCFG rule r(e).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Synchronous Context Free Grammar",
+                "sec_num": "2"
+            },
+            {
+                "text": "We use a translation forest that contains both \"reference\" derivations that potentially yield the reference translation and also some neighboring \"nonreference\" derivations that fail to produce the reference translation. Therefore, our forest only represents some of the derivations for a sentence given an SCFG rule table. The motivation of using such a forest is efficiency. However, since this space contains both \"good\" and \"bad\" translations, it still provides evidences for discriminative training.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Our Translation Forest",
+                "sec_num": "3"
+            },
+            {
+                "text": "First see the example in Figure 1 . The derivation tree t 1 represented by solid hyperedges is a reference derivation. We can construct a non-reference derivation by making small change to t 1 . By replacing the e 3 of t 1 with e 4 , we obtain a non-reference deriva-tion tree t 2 . Considering the rules in each derivation, the difference between t 1 and t 2 lies in r 3 and r 4 . Although r 3 has a same source side with r 4 , it produces a different translation. While r 3 provides a swapping translation, r 4 generates a monotone translation. Thus, the derivation t 2 fails to move the subject \"police\" to the behind of verb \"shot dead\", resulting a wrong translation \"the gunman was police shot dead\". Given such derivations, we hope that the discriminative model is capable to explain why should use a reordering rule in this context.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 32,
+                        "end": 33,
+                        "text": "1",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Our Translation Forest",
+                "sec_num": "3"
+            },
+            {
+                "text": "Generally, our forest contains all the reference derivations RT for a sentence given a rule table, and some neighboring non-reference derivations N T , which can be defined from RT .",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Our Translation Forest",
+                "sec_num": "3"
+            },
+            {
+                "text": "More formally, we call two hyperedges e 1 and e2 are competing hyperedges, if their corresponding rules r(e 1 ) = \u27e8\u03b3 1 , \u03b1 1 \u27e9 and r(e 2 ) = \u27e8\u03b3 2 , \u03b1 2 \u27e9 :",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Our Translation Forest",
+                "sec_num": "3"
+            },
+            {
+                "text": "\u03b3 1 = \u03b3 2 \u2227 \u03b1 1 \u0338 = \u03b1 2 (1)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Our Translation Forest",
+                "sec_num": "3"
+            },
+            {
+                "text": "This means they give different translations for a same source side. We use C(e) to represent the set of competing hyperedges of e. Two derivations t 1 = \u27e8V 1 , E 1 \u27e9 and t 2 = \u27e8V 2 , E 2 \u27e9 are competing derivations if there exists e 1 \u2208 E 1 and e 2 \u2208 E 2 : 2",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Our Translation Forest",
+                "sec_num": "3"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "V 1 = V 2 \u2227 E 1 -e 1 = E 2 -e 2 \u2227 e 2 \u2208 C(e 1 )",
+                        "eq_num": "(2)"
+                    }
+                ],
+                "section": "Our Translation Forest",
+                "sec_num": "3"
+            },
+            {
+                "text": "In other words, derivations t 1 and t 2 only differ in e 1 and e 2 , and these two hyperedges are competing hyperedges. We use C(t) to represent the set of competing derivations of tree t, and C(t,e) to represent the set of competing derivations of t if the competition occurs in hyperedge e in t.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Our Translation Forest",
+                "sec_num": "3"
+            },
+            {
+                "text": "Given a rule table, the set of reference derivations RT for a sentence is determined. Then, the set of non-reference derivations N T can be defined from RT :",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Our Translation Forest",
+                "sec_num": "3"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "\u222a t\u2208RT C(t)",
+                        "eq_num": "(3)"
+                    }
+                ],
+                "section": "Our Translation Forest",
+                "sec_num": "3"
+            },
+            {
+                "text": "Overall, our forest is the compact representation of RT and N T . ",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Our Translation Forest",
+                "sec_num": "3"
+            },
+            {
+                "text": "It is still slow to calculate the entire forest defined in Section 3, therefore we use a greedy decoding for fast generating a subset of the forest. Starting form a reference derivation, we try to slightly change the derivation into a new reference derivation. During this process, we collect the competing derivations of reference derivations. We describe the details of local operators for changing a derivation in section 4.1, and then introduce the creation of initial reference derivation with max score in Section 4.2. For example, given derivation t 1 , we delete the node X 0,1 and the related hyperedge e 1 and e 5 . Fixing the other nodes and edges, we try to add a new edge e 2 to create a new reference translation. In this case, if rule r 2 really exists in our rule table, we get a new reference derivation t 3 . After constructing t 3 , we first collect the new tree and C(t 3 , e 2 ). Then, we will move to t 3 , if the score of t 3 is higher than t 2 . Notably, if r 2 does not exist in the rule table, we fail to create a new reference derivation. In such case, we keep the origin derivation unchanged.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Fast Generation",
+                "sec_num": "4"
+            },
+            {
+                "text": "Algorithm 1 shows the process of generation.3 The input is a reference derivation t, and the output is a new derivation and the generated derivations. The list used for storing forest is initialized with the input tree (line 2). We visit the nodes in t in postorder (line 3). For each node v, we first append the competing derivations C(t,e) to list, where e is incoming edge of v (lines 4-5). Then, we apply operators on the child nodes of v from left to right (lines 6-13). The operators returns a reference derivation t n (line 7). If it is new (line 8), we collect both the t n (line 9), and also the competing derivations C(t n , e \u2032 ) of the new derivation on those edges e \u2032 which only occur in the new derivation (lines 10-11). Finally, if the new derivation has a larger score, we will replace the origin derivation with new one (lines 12-13).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Fast Generation",
+                "sec_num": "4"
+            },
+            {
+                "text": "Although there is a two-level loop for visiting nodes (line 3 and 6), each node is visited only one time in the inner loops. Thus, the complexity is linear with the number of nodes #node. Considering that the number of source word (also leaf node here) is less than the total number of nodes and is more than \u2308(#node + 1)/2\u2309, the time complexity of the process is also linear with the number of source word.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Fast Generation",
+                "sec_num": "4"
+            },
+            {
+                "text": "The function OPERATE in Algorithm 1 uses two operators to change a node: lexicalize and generalize. Figure 2 shows the effects of the two operators. The lexicalize operator works on nonterminal nodes. It moves away a nonterminal node and attaches the children of current node to its parent. In Figure 2 (b), the node X 0,1 is deleted, requiring a more lexicalized rule to be applied to the parent node X 0,4 (one more terminal in the source side). We constrain the lexicalize operator to apply on pre-terminal nodes whose children are all terminal nodes. In contrast, the generalize operator works on terminal nodes and inserts a nonterminal node between current node and its parent node. This operator generalizes over the continuous terminal sibling nodes left to the current node (including the current node). Generalizing the node bei in Figure 2 (b) results Figure 2(c) . A new node X 0,2 is inserted as the parent of node qiangshou and node bei.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 107,
+                        "end": 108,
+                        "text": "2",
+                        "ref_id": "FIGREF1"
+                    },
+                    {
+                        "start": 301,
+                        "end": 302,
+                        "text": "2",
+                        "ref_id": "FIGREF1"
+                    },
+                    {
+                        "start": 849,
+                        "end": 850,
+                        "text": "2",
+                        "ref_id": "FIGREF1"
+                    },
+                    {
+                        "start": 870,
+                        "end": 874,
+                        "text": "2(c)",
+                        "ref_id": "FIGREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Lexicalize and Generalize",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "Notably, there are two steps when apply an operator. Suppose we want to lexicalize the node X 0,1 in t 1 of Figure 1 , we first delete the node X 0,1 and related edge e 1 and e 5 , then we try to add the new edge e 2 . Since rule table is fixed, the second step is a process of decoding. Therefore, sometimes we may fail to create a new reference derivation (like r 2 may not exist in the rule table). In such case, we keep the origin derivation unchanged.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 115,
+                        "end": 116,
+                        "text": "1",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Lexicalize and Generalize",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "The changes made by the two operators are local. Considering the change of rules, the lexicalize operator deletes two rules and adds one new rule, while the generalize operator deletes one rule and adds two new rules. Such local changes provide us with a way to incrementally calculate the scores of new derivations. We use this method motivated by Gibbs Sampler (Blunsom et al., 2009) which has been used for efficiently learning rules. The different lies in that we use the operator for decoding where the rule table is fixing.",
+                "cite_spans": [
+                    {
+                        "start": 363,
+                        "end": 385,
+                        "text": "(Blunsom et al., 2009)",
+                        "ref_id": "BIBREF2"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Lexicalize and Generalize",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "The generation starts from an initial reference derivation with max score. This requires bi-parsing (Dyer, 2010) over the source sentence f and the reference translation e. In practice, we may face three problems.",
+                "cite_spans": [
+                    {
+                        "start": 100,
+                        "end": 112,
+                        "text": "(Dyer, 2010)",
+                        "ref_id": "BIBREF10"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Initialize a Reference Derivation",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "First is efficiency problem. Exhaustive search over the space under SCFG requires O(|f | 3 |e| 3 ).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Initialize a Reference Derivation",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "To parse quickly, we only visit the tight consistent (Zhang et al., 2008) bi-spans with the help of word alignment a. Only visiting tight consistent spans greatly speeds up bi-parsing. Besides efficiency, adoption of this constraint receives support from the fact that heuristic SCFG rule extraction only extracts tight consistent initial phrases (Chiang, 2007) .",
+                "cite_spans": [
+                    {
+                        "start": 53,
+                        "end": 73,
+                        "text": "(Zhang et al., 2008)",
+                        "ref_id": "BIBREF29"
+                    },
+                    {
+                        "start": 347,
+                        "end": 361,
+                        "text": "(Chiang, 2007)",
+                        "ref_id": "BIBREF6"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Initialize a Reference Derivation",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "Second is degenerate problem. If we only use the features as traditional SCFG systems, the biparsing may end with a derivation consists of some giant rules or rules with rare source/target sides, which is called degenerate solution (DeNero et al., 2006) . That is because the translation rules with rare source/target sides always receive a very high translation probability. We add a prior score log(#rule) for each rule, where #rule is the number of occurrence of a rule, to reward frequent reusable rules and derivations with more rules.",
+                "cite_spans": [
+                    {
+                        "start": 232,
+                        "end": 253,
+                        "text": "(DeNero et al., 2006)",
+                        "ref_id": "BIBREF9"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Initialize a Reference Derivation",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "Finally, we may fail to create reference derivations due to the limitation in rule extraction. We create minimum trees for (f , e, a) using shift-reduce (Zhang et al., 2008) . Some minimum rules in the trees may be illegal according to the definition of Chiang (2007) . We also add these rules to the rule table, so as to make sure every sentence is reachable given the rule table. A source sentence is reachable given a rule table if reference derivations exists. We refer these rules as added rules. However, this may introduce rules with more than two variables and increase the complexity of bi-parsing. To tackle this problem, we initialize the chart with minimum parallel tree from the Zhang et al. (2008) algorithm, ensuring that the bi-parsing has at least one path to create a reference derivation. Then we only need to consider the traditional rules during bi-parsing.",
+                "cite_spans": [
+                    {
+                        "start": 153,
+                        "end": 173,
+                        "text": "(Zhang et al., 2008)",
+                        "ref_id": "BIBREF29"
+                    },
+                    {
+                        "start": 254,
+                        "end": 267,
+                        "text": "Chiang (2007)",
+                        "ref_id": "BIBREF6"
+                    },
+                    {
+                        "start": 692,
+                        "end": 711,
+                        "text": "Zhang et al. (2008)",
+                        "ref_id": "BIBREF29"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Initialize a Reference Derivation",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "We use the forest to train a log-linear model with a latent variable as describe in Blunsom et al.(2008) . The probability p(e|f ) is the sum over all possible derivations:",
+                "cite_spans": [
+                    {
+                        "start": 84,
+                        "end": 104,
+                        "text": "Blunsom et al.(2008)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training",
+                "sec_num": "5"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "p(e|f ) = \u2211 t\u2208\u25b3(e,f ) p(t, e|f )",
+                        "eq_num": "(4)"
+                    }
+                ],
+                "section": "Training",
+                "sec_num": "5"
+            },
+            {
+                "text": "where \u25b3(e, f ) is the set of all possible derivations that translate f into e and t is one such derivation. 4",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training",
+                "sec_num": "5"
+            },
+            {
+                "text": "4 Although the derivation is typically represent as d, we denotes it by t since our paper use tree to represent derivation. for n = 1 to N do 5:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training",
+                "sec_num": "5"
+            },
+            {
+                "text": "t n \u2190 INITIAL(f n , e n , a n ) 6: i \u2190 0 7:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training",
+                "sec_num": "5"
+            },
+            {
+                "text": "for m = 0 to M do 8:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training",
+                "sec_num": "5"
+            },
+            {
+                "text": "for n = 0 to N do 9:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training",
+                "sec_num": "5"
+            },
+            {
+                "text": "\u03b7 \u2190 LEARNRATE(i) 10: (\u2206L(w i , t n ), t n ) \u2190GENERATE(t n ) 11: w i \u2190 w i + \u03b7 \u00d7 \u2206L(w i , t n ) 12: i \u2190 i + 1 13: return \u2211 M N i=1 w i M N",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training",
+                "sec_num": "5"
+            },
+            {
+                "text": "This model defines the conditional probability of a derivation t and the corresponding translation e given a source sentence f as:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training",
+                "sec_num": "5"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "p(t, e|f ) = exp \u2211 i \u03bb i h i (t, e, f ) Z(f )",
+                        "eq_num": "(5)"
+                    }
+                ],
+                "section": "Training",
+                "sec_num": "5"
+            },
+            {
+                "text": "where the partition function is",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training",
+                "sec_num": "5"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "Z(f ) = \u2211 e \u2211 t\u2208\u25b3(e,f ) exp \u2211 i \u03bb i h i (t, e, f )",
+                        "eq_num": "(6)"
+                    }
+                ],
+                "section": "Training",
+                "sec_num": "5"
+            },
+            {
+                "text": "The partition function is approximated by our forest, which is labeled as Z(f ), and the derivations that produce reference translation is approximated by reference derivations in Z(f ).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training",
+                "sec_num": "5"
+            },
+            {
+                "text": "We estimate the parameters in log-linear model using maximum a posteriori (MAP) estimator. It maximizes the likelihood of the bilingual corpus S = {f n , e n } N n=1 , penalized using a gaussian prior (L2 norm) with the probability density function p 0 (\u03bb i ) \u221d exp(-\u03bb 2 i /2\u03c3 2 ). We set \u03c3 2 to 1.0 in our experiments. This results in the following gradient:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training",
+                "sec_num": "5"
+            },
+            {
+                "text": "\u2202L \u2202\u03bb i = E p(t|e,f ) [h i ] -E p(e|f ) [h i ] - \u03bb i \u03c3 2 (7)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training",
+                "sec_num": "5"
+            },
+            {
+                "text": "We use an online learning algorithm to train the parameters. We implement stochastic gradient descent (SGD) recommended by Bottou. 5 The dynamic learning rate we use is N (i+i 0 ) , where N is the number of training example, i is the training iteration, and i 0 is a constant number used to get a initial learning rate, which is determined by calibration.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training",
+                "sec_num": "5"
+            },
+            {
+                "text": "Algorithm 2 shows the entire process. We first create an initial reference derivation for every training examples using bi-parsing (lines 4-5), and then online learn the parameters using SGD (lines 6-12). We use the GENERATE function to calculate the gradient. In practice, instead of storing all the derivations in a list, we traverse the tree twice. The first time is calculating the partition function, and the second time calculates the gradient normalized by partition function. During training, we also change the derivations (line 10). When training is finished after M epochs, the algorithm returns an averaged weight vector (Collins, 2002) to avoid overfitting (line 13). We use a development set to select total epoch m, which is set as M = 5 in our experiments.",
+                "cite_spans": [
+                    {
+                        "start": 633,
+                        "end": 648,
+                        "text": "(Collins, 2002)",
+                        "ref_id": "BIBREF8"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training",
+                "sec_num": "5"
+            },
+            {
+                "text": "Our method is able to train a large number of features on large data. We use a set of word context features motivated by word sense disambiguation (Chan et al., 2007) to test scalability. A word level context feature is a triple (f, e, f +1 ), which counts the number of time that f is aligned to e and f +1 occurs to the right of f . Triple (f, e, f -1 ) is similar except that f -1 locates to the left of f . We retain word alignment information in the extracted rules to exploit such features. To demonstrate the importance of scaling up the size of training data and the effect of our method, we compare three types of training configurations which differ in the size of features and data.",
+                "cite_spans": [
+                    {
+                        "start": 147,
+                        "end": 166,
+                        "text": "(Chan et al., 2007)",
+                        "ref_id": "BIBREF4"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "6"
+            },
+            {
+                "text": "MERT. We use MERT (Och, 2003) to training 8 features on a small data. The 8 features is the same as Chiang (2007) including 4 rule scores (direct and reverse translation scores; direct and reverse lexical translation scores); 1 target side language model score; 3 penalties for word counts, extracted rules and glue rule. Actually, traditional pipeline often uses such configuration.",
+                "cite_spans": [
+                    {
+                        "start": 18,
+                        "end": 29,
+                        "text": "(Och, 2003)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 100,
+                        "end": 113,
+                        "text": "Chiang (2007)",
+                        "ref_id": "BIBREF6"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "6"
+            },
+            {
+                "text": "Perceptron. We also learn thousands of context word features together with the 8 traditional features on a small data using perceptron. Following (Chiang et al., 2009) coder to generate n-best lists for training. The complexity of CKY decoding limits the training data into a small size. We fix the 8 traditional feature weights as MERT to get a comparable results as MERT.",
+                "cite_spans": [
+                    {
+                        "start": 146,
+                        "end": 167,
+                        "text": "(Chiang et al., 2009)",
+                        "ref_id": "BIBREF5"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "6"
+            },
+            {
+                "text": "Our Method. Finally, we use our method to train millions of features on large data. The use of large data promises us to use full vocabulary of training data for the context word features, which results millions of fully lexicalized context features. During decoding, when a context feature does not exit, we simply ignore it. The weights of 8 traditional features are fixed the same as MERT also. We fix these weights because the translation feature weights fluctuate intensely during online learning. The main reason may come from the degeneration solution mentioned in Section 4.2, where rare rules with very high translation probability are selected as the reference derivations. Another reason could be the fact that translation features are dense intensify the fluctuation. We leave learning without fixing the 8 feature weights to future work.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "6"
+            },
+            {
+                "text": "We focus on the Chinese-to-English translation task in this paper. The bilingual corpus we use contains 519, 359 sentence pairs, with an average length of 16.5 in source side and 20.3 in target side, where 186, 810 sentence pairs (36%) are reachable (without added rules in Section 4.2). The monolingual data includes the Xinhua portion of the GIGAWORD corpus, which contains 238M English words. We use the NIST evaluation sets of 2002 (MT02) as our development set, and sets of MT03/MT04/MT05 as test sets. Table 2 shows the statistics of all bilingual corpus.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 514,
+                        "end": 515,
+                        "text": "2",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Data",
+                "sec_num": "6.1"
+            },
+            {
+                "text": "We use GIZA++ (Och and Ney, 2003) Table 2 : Effect of our method comparing with MERT and perceptron in terms of BLEU. We also compare our fast generation method with different data (only reachable or full data). #Data is the size of data for training the feature weights. * means significantly (Koehn, 2004) better than MERT (p < 0.01).",
+                "cite_spans": [
+                    {
+                        "start": 14,
+                        "end": 33,
+                        "text": "(Och and Ney, 2003)",
+                        "ref_id": "BIBREF19"
+                    },
+                    {
+                        "start": 294,
+                        "end": 307,
+                        "text": "(Koehn, 2004)",
+                        "ref_id": "BIBREF13"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 40,
+                        "end": 41,
+                        "text": "2",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Data",
+                "sec_num": "6.1"
+            },
+            {
+                "text": "word alignment in both directions, and grow-diagfinal-and (Koehn et al., 2003) to generate symmetric word alignment. We extract SCFG rules as described in Chiang (2007) and also added rules (Section 4.2). Our algorithm runs on the entire training data, which requires to load all the rules into the memory. To fit within memory, we cut off those composed rules which only happen once in the training data. Here a composed rule is a rule that can be produced by any other extracted rules. A 4-grams language model is trained by the SRILM toolkit (Stolcke, 2002) . Case-insensitive NIST BLEU4 (Papineni et al., 2002) is used to measure translation performance.",
+                "cite_spans": [
+                    {
+                        "start": 58,
+                        "end": 78,
+                        "text": "(Koehn et al., 2003)",
+                        "ref_id": "BIBREF12"
+                    },
+                    {
+                        "start": 155,
+                        "end": 168,
+                        "text": "Chiang (2007)",
+                        "ref_id": "BIBREF6"
+                    },
+                    {
+                        "start": 545,
+                        "end": 560,
+                        "text": "(Stolcke, 2002)",
+                        "ref_id": "BIBREF26"
+                    },
+                    {
+                        "start": 591,
+                        "end": 614,
+                        "text": "(Papineni et al., 2002)",
+                        "ref_id": "BIBREF21"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Data",
+                "sec_num": "6.1"
+            },
+            {
+                "text": "The training data comes from a subset of the LDC data including LDC2002E18, LDC2003E07, LDC2003E14, Hansards portion of LDC2004T07, LDC2004T08 and LDC2005T06. Since the rule table of the entire data is too large to be loaded to the memory (even drop one-count rules), we remove many sentence pairs to create a much smaller data yet having a comparable performance with the entire data. The intuition lies in that if most of the source words of a sentence need to be translated by the added rules, then the word alignment may be highly crossed and the sentence may be useless. We create minimum rules from a sentence pair, and count the number of source words in those minimum rules that are added rules. For example, suppose the result minimum rules of a sentence contain r 3 which is an added rule, then we count 1 time for the sentence. If the number of such source word is more than 10% of the total number, we will drop the sentence pair.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Data",
+                "sec_num": "6.1"
+            },
+            {
+                "text": "We compare the performances of MERT setting on three bilingual data: the entire data that contains 42.3M Chinese and 48.2M English words; 519K data that contains 8.6M Chinese and 10.6M English words; FBIS (LDC2003E14) parts that contains 6.9M Chinese and 9.1M English words. They produce 33.11/32.32/30.47 BLEU tested on MT05 respectively. The performance of 519K data is comparable with that of entire data, and much higher than that of FBIS data.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Data",
+                "sec_num": "6.1"
+            },
+            {
+                "text": "Table 3 shows the performance of the three different training configurations. The training of MERT and perceptron run on MT02. For our method, we compare two different training sets: one is trained on all 519K sentence pairs, the other only uses 186K reachable sentences.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 6,
+                        "end": 7,
+                        "text": "3",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Result",
+                "sec_num": "6.2"
+            },
+            {
+                "text": "Although the perceptron system exploits 2.4K features, it fails to produce stable improvements over MERT. The reason may come from overfitting, since the training data for perceptron contains only 878 sentences. However, when use our method to learn the word context feature on the 519K data, we significantly improve the performance by 0.84 points on the entire test sets (ALL). The improvements range from 0.60 to 1.16 points on MT03-05. Because we use the full vocabulary, the number of features increased into 13.9 millions, which is impractical to be trained on the small development set. These results confirm the necessity of exploiting more features and learning the parameters on large data. Meanwhile, such results also demonstrate that we can benefits from the forest generated by our fast method instead of traditional CKY algorithm.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Result",
+                "sec_num": "6.2"
+            },
+            {
+                "text": "Not surprisingly, the improvements are smaller when only use 186K reachable sentences. Sometimes we even fail to gain significant improvement. This verifies our motivation to guarantee all sentence 886 are reachable, so as to use all training data.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Result",
+                "sec_num": "6.2"
+            },
+            {
+                "text": "How about the speed of our framework? Our method learns in 32 mlliseconds/sentence. Figure 3 shows training times (including forest generation and SGD training) versus sentence length. The plot confirms that our training algorithm scales linearly. If we use n-best lists which generated by CKY decoder as MERT, it takes about 3105 milliseconds/sentence for producing 100-best lists. Our method accelerates the speed about 97 times (even though we search twice to calculate the gradient). This shows the efficiency of our method.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 91,
+                        "end": 92,
+                        "text": "3",
+                        "ref_id": "FIGREF3"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Speed",
+                "sec_num": "6.3"
+            },
+            {
+                "text": "The procedure of training includes two steps. (1) Bi-parsing to initialize a reference derivation with max score. (2) Training procedure which generates a set of derivations to calculate the gradient and update parameters.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Speed",
+                "sec_num": "6.3"
+            },
+            {
+                "text": "Step (1) only runs once. The average time of processing a sentence for each step is about 9.5 milliseconds and 30.2 milliseconds respectively.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Speed",
+                "sec_num": "6.3"
+            },
+            {
+                "text": "For simplicity we do not compress the generated derivations into forests, therefore the size of resulting derivations is fairly small, which is about 265.8 for each sentence on average, where 6.1 of them are reference derivations. Furthermore, we use lexicalize operator more often than generalize operator (the ration between them is 1.5 to 1). Lexicalize operator is used more frequently mainly dues to that the reference derivations are initialized with reusable (thus small) rules.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Speed",
+                "sec_num": "6.3"
+            },
+            {
+                "text": "Minimum error rate training (Och, 2003) is perhaps the most popular discriminative training for SMT. However, it fails to scale to large number of features. Researchers have propose many learning algorithms to train many features: perceptron (Shen et al., 2004; Liang et al., 2006) , minimum risk (Smith and Eisner, 2006; Li et al., 2009) , MIRA (Watanabe et al., 2007; Chiang et al., 2009) , gradient descent (Blunsom et al., 2008; Blunsom and Osborne, 2008) . The complexity of n-best lists or packed forests generation hamper these algorithms to scale to a large amount of data.",
+                "cite_spans": [
+                    {
+                        "start": 28,
+                        "end": 39,
+                        "text": "(Och, 2003)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 242,
+                        "end": 261,
+                        "text": "(Shen et al., 2004;",
+                        "ref_id": "BIBREF23"
+                    },
+                    {
+                        "start": 262,
+                        "end": 281,
+                        "text": "Liang et al., 2006)",
+                        "ref_id": "BIBREF16"
+                    },
+                    {
+                        "start": 297,
+                        "end": 321,
+                        "text": "(Smith and Eisner, 2006;",
+                        "ref_id": "BIBREF25"
+                    },
+                    {
+                        "start": 322,
+                        "end": 338,
+                        "text": "Li et al., 2009)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 346,
+                        "end": 369,
+                        "text": "(Watanabe et al., 2007;",
+                        "ref_id": "BIBREF28"
+                    },
+                    {
+                        "start": 370,
+                        "end": 390,
+                        "text": "Chiang et al., 2009)",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 410,
+                        "end": 432,
+                        "text": "(Blunsom et al., 2008;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 433,
+                        "end": 459,
+                        "text": "Blunsom and Osborne, 2008)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "7"
+            },
+            {
+                "text": "For efficiency, we only use neighboring derivations for training. Such motivation is same as contrastive estimation (Smith and Eisner, 2005; Poon et al., 2009) . The difference lies in that the previous work actually care about their latent variables (pos tags, segmentation, dependency trees, etc), while we are only interested in their marginal distribution. Furthermore, we focus on how to fast generate translation forest for training.",
+                "cite_spans": [
+                    {
+                        "start": 116,
+                        "end": 140,
+                        "text": "(Smith and Eisner, 2005;",
+                        "ref_id": "BIBREF24"
+                    },
+                    {
+                        "start": 141,
+                        "end": 159,
+                        "text": "Poon et al., 2009)",
+                        "ref_id": "BIBREF22"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "7"
+            },
+            {
+                "text": "The local operators lexicalize/generalize are use for greedy decoding. The idea is related to \"pegging\" algorithm (Brown et al., 1993) and greedy decoding (Germann et al., 2001) . Such types of local operators are also used in Gibbs sampler for synchronous grammar induction (Blunsom et al., 2009; Cohn and Blunsom, 2009) .",
+                "cite_spans": [
+                    {
+                        "start": 114,
+                        "end": 134,
+                        "text": "(Brown et al., 1993)",
+                        "ref_id": "BIBREF3"
+                    },
+                    {
+                        "start": 155,
+                        "end": 177,
+                        "text": "(Germann et al., 2001)",
+                        "ref_id": "BIBREF11"
+                    },
+                    {
+                        "start": 275,
+                        "end": 297,
+                        "text": "(Blunsom et al., 2009;",
+                        "ref_id": "BIBREF2"
+                    },
+                    {
+                        "start": 298,
+                        "end": 321,
+                        "text": "Cohn and Blunsom, 2009)",
+                        "ref_id": "BIBREF7"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "7"
+            },
+            {
+                "text": "We have presented a fast generation algorithm for translation forest which contains both reference derivations and neighboring non-reference derivations for large-scale SMT discriminative training. We have achieved significantly improvement of 0.84 BLEU by incorporate 13.9M feature trained on 519K data in 0.03 second per sentence.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion and Future Work",
+                "sec_num": "8"
+            },
+            {
+                "text": "In this paper, we define the forest based on competing derivations which only differ in one rule. There may be better classes of forest that can produce a better performance. It's interesting to modify the definition of forest, and use more local operators to increase the size of forest. Furthermore, since the generation of forests is quite general, it's straight to apply our forest on other learning algorithms. Finally, we hope to exploit more features such as reordering features and syntactic features so as to further improve the performance.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion and Future Work",
+                "sec_num": "8"
+            },
+            {
+                "text": "Exactly, there are no reference derivations, since derivation is a latent variable in SMT. We call them reference derivation just for convenience.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "The definition of derivation tree is similar to forest, except that the tree contains exactly one tree while forest contains exponentially trees. In tree, the hyperedge degrades to edge.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "For simplicity, we list all the trees, and do not compress them into a forest in practice. It is straight to extent the algorithm to get a compact forest for those generated derivations. Actually, instead of storing the derivations, we call the generate function twice to calculate gradient of log-linear model.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "http://leon.bottou.org/projects/sgd",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            }
+        ],
+        "back_matter": [
+            {
+                "text": "We would like to thank Yifan He, Xianhua Li, Daqi Zheng, and the anonymous reviewers for their insightful comments. The authors were supported by National Natural Science Foundation of China Contracts 60736014, 60873167, and 60903138.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Acknowledgement",
+                "sec_num": null
+            }
+        ],
+        "bib_entries": {
+            "BIBREF0": {
+                "ref_id": "b0",
+                "title": "Probabilistic inference for machine translation",
+                "authors": [
+                    {
+                        "first": "Phil",
+                        "middle": [],
+                        "last": "Blunsom",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Miles",
+                        "middle": [],
+                        "last": "Osborne",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2008,
+                "venue": "Proc. of EMNLP",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Phil Blunsom and Miles Osborne. 2008. Probabilistic inference for machine translation. In Proc. of EMNLP 2008.",
+                "links": null
+            },
+            "BIBREF1": {
+                "ref_id": "b1",
+                "title": "A discriminative latent variable model for statistical machine translation",
+                "authors": [
+                    {
+                        "first": "Phil",
+                        "middle": [],
+                        "last": "Blunsom",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Trevor",
+                        "middle": [],
+                        "last": "Cohn",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Miles",
+                        "middle": [],
+                        "last": "Osborne",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2008,
+                "venue": "Proc. of ACL-08",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Phil Blunsom, Trevor Cohn, and Miles Osborne. 2008. A discriminative latent variable model for statistical machine translation. In Proc. of ACL-08.",
+                "links": null
+            },
+            "BIBREF2": {
+                "ref_id": "b2",
+                "title": "A gibbs sampler for phrasal synchronous grammar induction",
+                "authors": [
+                    {
+                        "first": "Phil",
+                        "middle": [],
+                        "last": "Blunsom",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Trevor",
+                        "middle": [],
+                        "last": "Cohn",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chris",
+                        "middle": [],
+                        "last": "Dyer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Miles",
+                        "middle": [],
+                        "last": "Osborne",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "Proc. of ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Phil Blunsom, Trevor Cohn, Chris Dyer, and Miles Os- borne. 2009. A gibbs sampler for phrasal synchronous grammar induction. In Proc. of ACL 2009.",
+                "links": null
+            },
+            "BIBREF3": {
+                "ref_id": "b3",
+                "title": "The mathematics of statistical machine translation",
+                "authors": [
+                    {
+                        "first": "F",
+                        "middle": [],
+                        "last": "Peter",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Brown",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "J",
+                        "middle": [],
+                        "last": "Vincent",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Stephen",
+                        "middle": [
+                            "A"
+                        ],
+                        "last": "Della Pietra",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Robert",
+                        "middle": [
+                            "L"
+                        ],
+                        "last": "Della Pietra",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Mercer",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1993,
+                "venue": "Computational Linguistics",
+                "volume": "19",
+                "issue": "",
+                "pages": "263--311",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Peter F. Brown, Vincent J.Della Pietra, Stephen A. Della Pietra, and Robert. L. Mercer. 1993. The mathemat- ics of statistical machine translation. Computational Linguistics, 19:263-311.",
+                "links": null
+            },
+            "BIBREF4": {
+                "ref_id": "b4",
+                "title": "Word sense disambiguation improves statistical machine translation",
+                "authors": [
+                    {
+                        "first": "Yee",
+                        "middle": [],
+                        "last": "Seng",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chan",
+                        "middle": [],
+                        "last": "",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hwee Tou",
+                        "middle": [],
+                        "last": "Ng",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "David",
+                        "middle": [],
+                        "last": "Chiang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2007,
+                "venue": "Proc. of ACL 2007",
+                "volume": "",
+                "issue": "",
+                "pages": "33--40",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Yee Seng Chan, Hwee Tou Ng, and David Chiang. 2007. Word sense disambiguation improves statistical ma- chine translation. In Proc. of ACL 2007, pages 33-40.",
+                "links": null
+            },
+            "BIBREF5": {
+                "ref_id": "b5",
+                "title": "001 new features for statistical machine translation",
+                "authors": [
+                    {
+                        "first": "David",
+                        "middle": [],
+                        "last": "Chiang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kevin",
+                        "middle": [],
+                        "last": "Knight",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Wei",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "Proc. of NAACL",
+                "volume": "11",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "David Chiang, Kevin Knight, and Wei Wang. 2009. 11,001 new features for statistical machine translation. In Proc. of NAACL 2009.",
+                "links": null
+            },
+            "BIBREF6": {
+                "ref_id": "b6",
+                "title": "Hierarchical phrase-based translation",
+                "authors": [
+                    {
+                        "first": "David",
+                        "middle": [],
+                        "last": "Chiang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2007,
+                "venue": "Computational Linguistics",
+                "volume": "33",
+                "issue": "2",
+                "pages": "201--228",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "David Chiang. 2007. Hierarchical phrase-based transla- tion. Computational Linguistics, 33(2):201-228.",
+                "links": null
+            },
+            "BIBREF7": {
+                "ref_id": "b7",
+                "title": "A Bayesian model of syntax-directed tree to string grammar induction",
+                "authors": [
+                    {
+                        "first": "Trevor",
+                        "middle": [],
+                        "last": "Cohn",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Phil",
+                        "middle": [],
+                        "last": "Blunsom",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "Proc. of EMNLP",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Trevor Cohn and Phil Blunsom. 2009. A Bayesian model of syntax-directed tree to string grammar induction. In Proc. of EMNLP 2009.",
+                "links": null
+            },
+            "BIBREF8": {
+                "ref_id": "b8",
+                "title": "Discriminative training methods for hidden markov models: Theory and experiments with perceptron algorithms",
+                "authors": [
+                    {
+                        "first": "Michael",
+                        "middle": [],
+                        "last": "Collins",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2002,
+                "venue": "Proc. of EMNLP",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Michael Collins. 2002. Discriminative training methods for hidden markov models: Theory and experiments with perceptron algorithms. In Proc. of EMNLP 2002.",
+                "links": null
+            },
+            "BIBREF9": {
+                "ref_id": "b9",
+                "title": "Why generative phrase models underperform surface heuristics",
+                "authors": [
+                    {
+                        "first": "John",
+                        "middle": [],
+                        "last": "Denero",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dan",
+                        "middle": [],
+                        "last": "Gillick",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "James",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dan",
+                        "middle": [],
+                        "last": "Klein",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2006,
+                "venue": "Proc. of the HLT-NAACL 2006 Workshop on SMT",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "John DeNero, Dan Gillick, James Zhang, and Dan Klein. 2006. Why generative phrase models underperform surface heuristics. In Proc. of the HLT-NAACL 2006 Workshop on SMT.",
+                "links": null
+            },
+            "BIBREF10": {
+                "ref_id": "b10",
+                "title": "Two monolingual parses are better than one (synchronous parse)",
+                "authors": [
+                    {
+                        "first": "Chris",
+                        "middle": [],
+                        "last": "Dyer",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2010,
+                "venue": "Proc. of NAACL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Chris Dyer. 2010. Two monolingual parses are better than one (synchronous parse). In Proc. of NAACL 2010.",
+                "links": null
+            },
+            "BIBREF11": {
+                "ref_id": "b11",
+                "title": "Fast decoding and optimal decoding for machine translation",
+                "authors": [
+                    {
+                        "first": "Ulrich",
+                        "middle": [],
+                        "last": "Germann",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Michael",
+                        "middle": [],
+                        "last": "Jahr",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kevin",
+                        "middle": [],
+                        "last": "Knight",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Daniel",
+                        "middle": [],
+                        "last": "Marcu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kenji",
+                        "middle": [],
+                        "last": "Yamada",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2001,
+                "venue": "Proc. of ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ulrich Germann, Michael Jahr, Kevin Knight, Daniel Marcu, and Kenji Yamada. 2001. Fast decoding and optimal decoding for machine translation. In Proc. of ACL 2001.",
+                "links": null
+            },
+            "BIBREF12": {
+                "ref_id": "b12",
+                "title": "Statistical phrase-based translation",
+                "authors": [
+                    {
+                        "first": "Philipp",
+                        "middle": [],
+                        "last": "Koehn",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Franz",
+                        "middle": [],
+                        "last": "",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Josef",
+                        "middle": [],
+                        "last": "Och",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Daniel",
+                        "middle": [],
+                        "last": "Marcu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2003,
+                "venue": "Proc. of HLT-NAACL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Philipp Koehn, Franz Josef Och, and Daniel Marcu. 2003. Statistical phrase-based translation. In Proc. of HLT-NAACL 2003.",
+                "links": null
+            },
+            "BIBREF13": {
+                "ref_id": "b13",
+                "title": "Statistical significance tests for machine translation evaluation",
+                "authors": [
+                    {
+                        "first": "Philipp",
+                        "middle": [],
+                        "last": "Koehn",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2004,
+                "venue": "Proc. of EMNLP",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Philipp Koehn. 2004. Statistical significance tests for machine translation evaluation. In Proc. of EMNLP 2004.",
+                "links": null
+            },
+            "BIBREF14": {
+                "ref_id": "b14",
+                "title": "First-and second-order expectation semirings with applications to minimumrisk training on translation forests",
+                "authors": [
+                    {
+                        "first": "Zhifei",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jason",
+                        "middle": [],
+                        "last": "Eisner",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "Proc. of EMNLP",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Zhifei Li and Jason Eisner. 2009. First-and second-order expectation semirings with applications to minimum- risk training on translation forests. In Proc. of EMNLP 2009.",
+                "links": null
+            },
+            "BIBREF15": {
+                "ref_id": "b15",
+                "title": "Variational decoding for statistical machine translation",
+                "authors": [
+                    {
+                        "first": "Zhifei",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jason",
+                        "middle": [],
+                        "last": "Eisner",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sanjeev",
+                        "middle": [],
+                        "last": "Khudanpur",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "Proc. of ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Zhifei Li, Jason Eisner, and Sanjeev Khudanpur. 2009. Variational decoding for statistical machine transla- tion. In Proc. of ACL 2009.",
+                "links": null
+            },
+            "BIBREF16": {
+                "ref_id": "b16",
+                "title": "An end-to-end discriminative approach to machine translation",
+                "authors": [
+                    {
+                        "first": "Percy",
+                        "middle": [],
+                        "last": "Liang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alexandre",
+                        "middle": [],
+                        "last": "Bouchard-C\u00f4t\u00e9",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dan",
+                        "middle": [],
+                        "last": "Klein",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ben",
+                        "middle": [],
+                        "last": "Taskar",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2006,
+                "venue": "Proc. of ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Percy Liang, Alexandre Bouchard-C\u00f4t\u00e9, Dan Klein, and Ben Taskar. 2006. An end-to-end discriminative ap- proach to machine translation. In Proc. of ACL 2006.",
+                "links": null
+            },
+            "BIBREF17": {
+                "ref_id": "b17",
+                "title": "Forestbased translation",
+                "authors": [
+                    {
+                        "first": "Haitao",
+                        "middle": [],
+                        "last": "Mi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Liang",
+                        "middle": [],
+                        "last": "Huang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Qun",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2008,
+                "venue": "Proc. of ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Haitao Mi, Liang Huang, and Qun Liu. 2008. Forest- based translation. In Proc. of ACL 2008.",
+                "links": null
+            },
+            "BIBREF18": {
+                "ref_id": "b18",
+                "title": "Discriminative training and maximum entropy models for statistical machine translation",
+                "authors": [
+                    {
+                        "first": "Franz",
+                        "middle": [
+                            "J"
+                        ],
+                        "last": "Och",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hermann",
+                        "middle": [],
+                        "last": "Ney",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2002,
+                "venue": "Proc. of ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Franz J. Och and Hermann Ney. 2002. Discriminative training and maximum entropy models for statistical machine translation. In Proc. of ACL 2002.",
+                "links": null
+            },
+            "BIBREF19": {
+                "ref_id": "b19",
+                "title": "A systematic comparison of various statistical alignment models",
+                "authors": [
+                    {
+                        "first": "Josef",
+                        "middle": [],
+                        "last": "Franz",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hermann",
+                        "middle": [],
+                        "last": "Och",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Ney",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2003,
+                "venue": "Computational Linguistics",
+                "volume": "29",
+                "issue": "1",
+                "pages": "19--51",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Franz Josef Och and Hermann Ney. 2003. A system- atic comparison of various statistical alignment mod- els. Computational Linguistics, 29(1):19-51.",
+                "links": null
+            },
+            "BIBREF20": {
+                "ref_id": "b20",
+                "title": "Minimum error rate training in statistical machine translation",
+                "authors": [
+                    {
+                        "first": "Josef",
+                        "middle": [],
+                        "last": "Franz",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Och",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2003,
+                "venue": "Proc. of ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Franz Josef Och. 2003. Minimum error rate training in statistical machine translation. In Proc. of ACL 2003.",
+                "links": null
+            },
+            "BIBREF21": {
+                "ref_id": "b21",
+                "title": "Bleu: a method for automatic evaluation of machine translation",
+                "authors": [
+                    {
+                        "first": "Kishore",
+                        "middle": [],
+                        "last": "Papineni",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Salim",
+                        "middle": [],
+                        "last": "Roukos",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Todd",
+                        "middle": [],
+                        "last": "Ward",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Wei-Jing",
+                        "middle": [],
+                        "last": "Zhu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2002,
+                "venue": "Proc. of ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Kishore Papineni, Salim Roukos, Todd Ward, and Wei- Jing Zhu. 2002. Bleu: a method for automatic evalua- tion of machine translation. In Proc. of ACL 2002.",
+                "links": null
+            },
+            "BIBREF22": {
+                "ref_id": "b22",
+                "title": "Unsupervised morphological segmentation with log-linear models",
+                "authors": [
+                    {
+                        "first": "Hoifung",
+                        "middle": [],
+                        "last": "Poon",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Colin",
+                        "middle": [],
+                        "last": "Cherry",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kristina",
+                        "middle": [],
+                        "last": "Toutanova",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "Proc. of NAACL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Hoifung Poon, Colin Cherry, and Kristina Toutanova. 2009. Unsupervised morphological segmentation with log-linear models. In Proc. of NAACL 2009.",
+                "links": null
+            },
+            "BIBREF23": {
+                "ref_id": "b23",
+                "title": "Discriminative reranking for machine translation",
+                "authors": [
+                    {
+                        "first": "Libin",
+                        "middle": [],
+                        "last": "Shen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Anoop",
+                        "middle": [],
+                        "last": "Sarkar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Franz",
+                        "middle": [
+                            "Josef"
+                        ],
+                        "last": "Och",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2004,
+                "venue": "Proc. of NAACL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Libin Shen, Anoop Sarkar, and Franz Josef Och. 2004. Discriminative reranking for machine translation. In Proc. of NAACL 2004.",
+                "links": null
+            },
+            "BIBREF24": {
+                "ref_id": "b24",
+                "title": "Contrastive estimation: Training log-linear models on unlabeled data",
+                "authors": [
+                    {
+                        "first": "Noah",
+                        "middle": [
+                            "A"
+                        ],
+                        "last": "Smith",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jason",
+                        "middle": [],
+                        "last": "Eisner",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2005,
+                "venue": "Proc. of ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Noah A. Smith and Jason Eisner. 2005. Contrastive esti- mation: Training log-linear models on unlabeled data. In Proc. of ACL 2005.",
+                "links": null
+            },
+            "BIBREF25": {
+                "ref_id": "b25",
+                "title": "Minimum risk annealing for training log-linear models",
+                "authors": [
+                    {
+                        "first": "David",
+                        "middle": [
+                            "A"
+                        ],
+                        "last": "Smith",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jason",
+                        "middle": [],
+                        "last": "Eisner",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2006,
+                "venue": "Proc. of COLING/ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "David A. Smith and Jason Eisner. 2006. Minimum risk annealing for training log-linear models. In Proc. of COLING/ACL 2006.",
+                "links": null
+            },
+            "BIBREF26": {
+                "ref_id": "b26",
+                "title": "Srilm -an extensible language modeling toolkit",
+                "authors": [
+                    {
+                        "first": "Andreas",
+                        "middle": [],
+                        "last": "Stolcke",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2002,
+                "venue": "Proc. of ICSLP",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Andreas Stolcke. 2002. Srilm -an extensible language modeling toolkit. In Proc. of ICSLP 2002.",
+                "links": null
+            },
+            "BIBREF27": {
+                "ref_id": "b27",
+                "title": "A discriminative global training algorithm for statistical mt",
+                "authors": [
+                    {
+                        "first": "Christoph",
+                        "middle": [],
+                        "last": "Tillmann",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tong",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2006,
+                "venue": "Proc. of ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Christoph Tillmann and Tong Zhang. 2006. A discrim- inative global training algorithm for statistical mt. In Proc. of ACL 2006.",
+                "links": null
+            },
+            "BIBREF28": {
+                "ref_id": "b28",
+                "title": "Online large-margin training for statistical machine translation",
+                "authors": [
+                    {
+                        "first": "Taro",
+                        "middle": [],
+                        "last": "Watanabe",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jun",
+                        "middle": [],
+                        "last": "Suzuki",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hajime",
+                        "middle": [],
+                        "last": "Tsukada",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hideki",
+                        "middle": [],
+                        "last": "Isozaki",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2007,
+                "venue": "Proc. of EMNLP-CoNLL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Taro Watanabe, Jun Suzuki, Hajime Tsukada, and Hideki Isozaki. 2007. Online large-margin training for statis- tical machine translation. In Proc. of EMNLP-CoNLL 2007.",
+                "links": null
+            },
+            "BIBREF29": {
+                "ref_id": "b29",
+                "title": "Extracting synchronous grammar rules from word-level alignments in linear time",
+                "authors": [
+                    {
+                        "first": "Hao",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Daniel",
+                        "middle": [],
+                        "last": "Gildea",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "David",
+                        "middle": [],
+                        "last": "Chiang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2008,
+                "venue": "Proc. of Coling",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Hao Zhang, Daniel Gildea, and David Chiang. 2008. Ex- tracting synchronous grammar rules from word-level alignments in linear time. In Proc. of Coling 2008.",
+                "links": null
+            }
+        },
+        "ref_entries": {
+            "FIGREF1": {
+                "num": null,
+                "text": "Figure 2: Lexicalize and generalize operators over t 1 (part) in Figure 1. Although here only shows the nodes, we also need to change relative edges actually. (1) Applying lexicalize operator on the non-terminal node X 0,1 in (a) results a new derivation shown in (b). (2) When visiting bei in (b), the generalize operator changes the derivation into (c).",
+                "uris": null,
+                "fig_num": "2",
+                "type_str": "figure"
+            },
+            "FIGREF2": {
+                "num": null,
+                "text": "S = {f n , e n , a n }",
+                "uris": null,
+                "fig_num": null,
+                "type_str": "figure"
+            },
+            "FIGREF3": {
+                "num": null,
+                "text": "Figure 3: Plot of training times (including forest generation and SGD training) versus sentence length. We randomly select 1000 sentence from the 519K data for plotting.",
+                "uris": null,
+                "fig_num": "3",
+                "type_str": "figure"
+            },
+            "TABREF1": {
+                "content": "<table><tr><td/><td colspan=\"4\">TRAIN RTRAIN DEV TEST</td></tr><tr><td colspan=\"3\">#Sent. 519,359 186,810</td><td colspan=\"2\">878 3,789</td></tr><tr><td>#Word</td><td>8.6M</td><td colspan=\"3\">1.3M 23K 105K</td></tr><tr><td>Avg. Len.</td><td>16.5</td><td colspan=\"2\">7.3 26.4</td><td>28.0</td></tr><tr><td>Lon. Len.</td><td>99</td><td>95</td><td>77</td><td>116</td></tr></table>",
+                "type_str": "table",
+                "text": ", we only use 100 most frequent words for word context feature. This setting use CKY de-Corpus statistics of Chinese side, where Sent., Avg., Lon., and Len. are short for sentence, longest, average, and length respectively. RTRAIN denotes the reachable (given rule table without added rules) subset of TRAIN data.",
+                "html": null,
+                "num": null
+            }
+        }
+    }
+}

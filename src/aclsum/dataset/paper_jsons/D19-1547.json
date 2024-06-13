@@ -1,0 +1,2861 @@
+{
+    "paper_id": "D19-1547",
+    "header": {
+        "generated_with": "S2ORC 1.0.0",
+        "date_generated": "2023-06-16T12:25:18.336124Z"
+    },
+    "title": "Model-based Interactive Semantic Parsing: A Unified Framework and A Text-to-SQL Case Study",
+    "authors": [
+        {
+            "first": "Ziyu",
+            "middle": [],
+            "last": "Yao",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "The Ohio State University",
+                "location": {}
+            },
+            "email": ""
+        },
+        {
+            "first": "Yu",
+            "middle": [],
+            "last": "Su",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "The Ohio State University",
+                "location": {}
+            },
+            "email": ""
+        },
+        {
+            "first": "Huan",
+            "middle": [],
+            "last": "Sun",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "The Ohio State University",
+                "location": {}
+            },
+            "email": ""
+        },
+        {
+            "first": "Wen-Tau",
+            "middle": [],
+            "last": "Yih",
+            "suffix": "",
+            "affiliation": {},
+            "email": ""
+        }
+    ],
+    "year": "",
+    "venue": null,
+    "identifiers": {},
+    "abstract": "As a promising paradigm, interactive semantic parsing has shown to improve both semantic parsing accuracy and user confidence in the results. In this paper, we propose a new, unified formulation of the interactive semantic parsing problem, where the goal is to design a modelbased intelligent agent. The agent maintains its own state as the current predicted semantic parse, decides whether and where human intervention is needed, and generates a clarification question in natural language. A key part of the agent is a world model: it takes a percept (either an initial question or subsequent feedback from the user) and transitions to a new state. We then propose a simple yet remarkably effective instantiation of our framework, demonstrated on two text-to-SQL datasets (WikiSQL and Spider) with different state-of-the-art base semantic parsers. Compared to an existing interactive semantic parsing approach that treats the base parser as a black box, our approach solicits less user feedback but yields higher run-time accuracy. 1",
+    "pdf_parse": {
+        "paper_id": "D19-1547",
+        "_pdf_hash": "",
+        "abstract": [
+            {
+                "text": "As a promising paradigm, interactive semantic parsing has shown to improve both semantic parsing accuracy and user confidence in the results. In this paper, we propose a new, unified formulation of the interactive semantic parsing problem, where the goal is to design a modelbased intelligent agent. The agent maintains its own state as the current predicted semantic parse, decides whether and where human intervention is needed, and generates a clarification question in natural language. A key part of the agent is a world model: it takes a percept (either an initial question or subsequent feedback from the user) and transitions to a new state. We then propose a simple yet remarkably effective instantiation of our framework, demonstrated on two text-to-SQL datasets (WikiSQL and Spider) with different state-of-the-art base semantic parsers. Compared to an existing interactive semantic parsing approach that treats the base parser as a black box, our approach solicits less user feedback but yields higher run-time accuracy. 1",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            }
+        ],
+        "body_text": [
+            {
+                "text": "Natural language interfaces that allow users to query data and invoke services without programming have been identified as a key application of semantic parsing (Berant et al., 2013; Thomason et al., 2015; Dong and Lapata, 2016; Zhong et al., 2017; Campagna et al., 2017; Su et al., 2017) . However, existing semantic parsing technologies often fall short when deployed in practice, facing several challenges: (1) user utterances can be inherently ambiguous or vague, making it difficult to get the correct result in one shot, (2) the accuracy of state-of-the-art semantic parsers are still not high enough for real use, and (3) it is hard for users to validate the semantic parsing results, especially with mainstream neural network models that are known for the lack of interpretability.",
+                "cite_spans": [
+                    {
+                        "start": 161,
+                        "end": 182,
+                        "text": "(Berant et al., 2013;",
+                        "ref_id": "BIBREF1"
+                    },
+                    {
+                        "start": 183,
+                        "end": 205,
+                        "text": "Thomason et al., 2015;",
+                        "ref_id": "BIBREF31"
+                    },
+                    {
+                        "start": 206,
+                        "end": 228,
+                        "text": "Dong and Lapata, 2016;",
+                        "ref_id": "BIBREF7"
+                    },
+                    {
+                        "start": 229,
+                        "end": 248,
+                        "text": "Zhong et al., 2017;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 249,
+                        "end": 271,
+                        "text": "Campagna et al., 2017;",
+                        "ref_id": "BIBREF4"
+                    },
+                    {
+                        "start": 272,
+                        "end": 288,
+                        "text": "Su et al., 2017)",
+                        "ref_id": "BIBREF29"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "In response to these challenges, interactive semantic parsing has been proposed recently as a practical solution, which includes human users in the loop to resolve utterance ambiguity, boost system accuracy, and improve user confidence via human-machine collaboration (Li and Jagadish, 2014; He et al., 2016; Chaurasia and Mooney, 2017; Su et al., 2018; Gur et al., 2018; Yao et al., 2019) . For example, Gur et al. (2018) built the DialSQL system to detect errors in a generated SQL query and request user selection on alternative options via dialogues. Similarly, Chaurasia and Mooney (2017) and Yao et al. (2019) enabled semantic parsers to ask users clarification questions while generating an If-Then program. Su et al. (2018) showed that users overwhelmingly preferred an interactive system over the noninteractive counterpart for natural language interfaces to web APIs. While these recent studies successfully demonstrated the value of interactive semantic parsing in practice, they are often bound to a certain type of formal language or dataset, and the designs are thus ad-hoc and not easily generalizable. For example, DialSQL only applies to SQL queries on the WikiSQL dataset (Zhong et al., 2017) , and it is non-trivial to extend it to other formal languages (e.g., \u03bb-calculus) or even just to more complex SQL queries beyond the templates used to construct the dataset.",
+                "cite_spans": [
+                    {
+                        "start": 268,
+                        "end": 291,
+                        "text": "(Li and Jagadish, 2014;",
+                        "ref_id": "BIBREF22"
+                    },
+                    {
+                        "start": 292,
+                        "end": 308,
+                        "text": "He et al., 2016;",
+                        "ref_id": "BIBREF15"
+                    },
+                    {
+                        "start": 309,
+                        "end": 336,
+                        "text": "Chaurasia and Mooney, 2017;",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 337,
+                        "end": 353,
+                        "text": "Su et al., 2018;",
+                        "ref_id": "BIBREF30"
+                    },
+                    {
+                        "start": 354,
+                        "end": 371,
+                        "text": "Gur et al., 2018;",
+                        "ref_id": "BIBREF13"
+                    },
+                    {
+                        "start": 372,
+                        "end": 389,
+                        "text": "Yao et al., 2019)",
+                        "ref_id": "BIBREF37"
+                    },
+                    {
+                        "start": 405,
+                        "end": 422,
+                        "text": "Gur et al. (2018)",
+                        "ref_id": "BIBREF13"
+                    },
+                    {
+                        "start": 598,
+                        "end": 615,
+                        "text": "Yao et al. (2019)",
+                        "ref_id": "BIBREF37"
+                    },
+                    {
+                        "start": 715,
+                        "end": 731,
+                        "text": "Su et al. (2018)",
+                        "ref_id": "BIBREF30"
+                    },
+                    {
+                        "start": 1190,
+                        "end": 1210,
+                        "text": "(Zhong et al., 2017)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Aiming to develop a general principle for building interactive semantic parsing systems, in this work we propose model-based interactive semantic parsing (MISP) , where the goal is to design a model-based intelligent agent (Russell and Norvig, 2009 ) that can interact with users to complete a semantic parsing task. Taking an utterance (e.g., a natural language question) as input, the agent forms the semantic parse (e.g., a SQL query) in steps, potentially soliciting user feedback in some steps to correct parsing errors. As illustrated in Figure 1 , a MISP agent maintains its state as the current semantic parse and, via an error detector, decides whether and where human intervention is needed (the action). This action is performed by a question generator (the actuator), which generates and presents to the user a humanunderstandable question. A core component of the agent is a world model (Ha and Schmidhuber, 2018 ) (hence model-based), which incorporates user feedback from the environment and transitions to a new agent state (e.g., an updated semantic parse). This process repeats until a terminal state is reached. Such a design endows a MISP agent with three crucial properties of interactive semantic parsing: (1) being introspective of the reasoning process and knowing when it may need human supervision, (2) being able to solicit user feedback in a human-friendly way, and (3) being able to incorporate user feedback (through state transitions controlled by the world model).",
+                "cite_spans": [
+                    {
+                        "start": 154,
+                        "end": 160,
+                        "text": "(MISP)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 223,
+                        "end": 248,
+                        "text": "(Russell and Norvig, 2009",
+                        "ref_id": "BIBREF26"
+                    },
+                    {
+                        "start": 900,
+                        "end": 925,
+                        "text": "(Ha and Schmidhuber, 2018",
+                        "ref_id": "BIBREF14"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 551,
+                        "end": 552,
+                        "text": "1",
+                        "ref_id": "FIGREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "The MISP framework provides several advantages for designing an interactive semantic parser compared to the existing ad-hoc studies. For instance, the whole problem is conceptually reduced to building three key components (i.e., the world model, the error detector, and the actuator), and can be handled and improved separately. While each component may need to be tailored to the specific task, the general framework remains unchanged. In addition, the formulation of a modelbased intelligent agent can facilitate the application of other machine learning techniques like reinforcement learning.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "To better demonstrate the advantages of the MISP framework, we propose a simple yet re-markably effective instantiation for the text-to-SQL task. We show the effectiveness of the framework based on three base semantic parsers (SQLNet, SQLova and SyntaxSQLNet) and two datasets (WikiSQL and Spider). We empirically verified that with a small amount of targeted, testtime user feedback, interactive semantic parsers improve the accuracy by 10% to 15% absolute. Compared to an existing interactive semantic parsing system, DialSQL (Gur et al., 2018) , our approach, despite its much simpler yet more general system design, achieves better parsing accuracy by asking only half as many questions.",
+                "cite_spans": [
+                    {
+                        "start": 528,
+                        "end": 546,
+                        "text": "(Gur et al., 2018)",
+                        "ref_id": "BIBREF13"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Semantic Parsing. Mapping natural language utterances to their formal semantic representations, semantic parsing has a wide range of applications, including question answering (Berant et al., 2013; Dong and Lapata, 2016; Finegan-Dollak et al., 2018) , robot navigation (Artzi and Zettlemoyer, 2013; Thomason et al., 2015) and Web API calling (Quirk et al., 2015; Su et al., 2018) . The target application in this work is text-to-SQL, which has been popularized by the WikiSQL dataset (Zhong et al., 2017) . One of the top-performing models on WikiSQL is SQLNet (Xu et al., 2017) , which leverages the pre-defined SQL grammar sketches on WikiSQL and solves the SQL generation problem via \"slot filling.\" By augmenting SQLNet with a table-aware BERT encoder (Devlin et al., 2019) and by revising the value prediction in WHERE clauses, SQLova (Hwang et al., 2019) advances further the state of the art. Contrast to WikiSQL, the recently released Spider dataset (Yu et al., 2018c) focuses on complex SQL queries containing multiple keywords (e.g., GROUP BY) and may join multiple tables. To handle such complexity, Yu et al. (2018b) proposed SyntaxSQLNet, a syntax tree network with modular decoders, which generates a SQL query by recursively calling a module following the SQL syntax. However, because of the more realistic and challenging setting in Spider, it only achieves 20% in accuracy.",
+                "cite_spans": [
+                    {
+                        "start": 176,
+                        "end": 197,
+                        "text": "(Berant et al., 2013;",
+                        "ref_id": "BIBREF1"
+                    },
+                    {
+                        "start": 198,
+                        "end": 220,
+                        "text": "Dong and Lapata, 2016;",
+                        "ref_id": "BIBREF7"
+                    },
+                    {
+                        "start": 221,
+                        "end": 249,
+                        "text": "Finegan-Dollak et al., 2018)",
+                        "ref_id": "BIBREF9"
+                    },
+                    {
+                        "start": 269,
+                        "end": 298,
+                        "text": "(Artzi and Zettlemoyer, 2013;",
+                        "ref_id": "BIBREF0"
+                    },
+                    {
+                        "start": 299,
+                        "end": 321,
+                        "text": "Thomason et al., 2015)",
+                        "ref_id": "BIBREF31"
+                    },
+                    {
+                        "start": 342,
+                        "end": 362,
+                        "text": "(Quirk et al., 2015;",
+                        "ref_id": "BIBREF25"
+                    },
+                    {
+                        "start": 363,
+                        "end": 379,
+                        "text": "Su et al., 2018)",
+                        "ref_id": "BIBREF30"
+                    },
+                    {
+                        "start": 484,
+                        "end": 504,
+                        "text": "(Zhong et al., 2017)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 561,
+                        "end": 578,
+                        "text": "(Xu et al., 2017)",
+                        "ref_id": "BIBREF36"
+                    },
+                    {
+                        "start": 756,
+                        "end": 777,
+                        "text": "(Devlin et al., 2019)",
+                        "ref_id": "BIBREF6"
+                    },
+                    {
+                        "start": 840,
+                        "end": 860,
+                        "text": "(Hwang et al., 2019)",
+                        "ref_id": "BIBREF17"
+                    },
+                    {
+                        "start": 958,
+                        "end": 976,
+                        "text": "(Yu et al., 2018c)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 1111,
+                        "end": 1128,
+                        "text": "Yu et al. (2018b)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Background & Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "We experiment our MISP framework with the aforementioned three semantic parsers on both WikiSQL and Spider. The design of MISP allows naturally integrating them as the base parser. For example, when SQLNet fills a sequence of slots to produce a SQL query, a \"state\" in MISP corresponds to a partially generated SQL query and it transitions as SQLNet fills the next slot.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Background & Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "Interactive Semantic Parsing. To enhance parsing accuracy and user confidence in practical applications, interactive semantic parsing has emerged as a promising solution (Li and Jagadish, 2014; He et al., 2016; Chaurasia and Mooney, 2017; Su et al., 2018; Gur et al., 2018; Yao et al., 2019) . Despite their effectiveness, existing solutions are somewhat ad-hoc and bound to a specific formal language and dataset. For example, DialSQL (Gur et al., 2018) is curated for Wik-iSQL, where SQL queries all follow the same and given grammar sketch. Similarly, (Yao et al., 2019) relies on a pre-defined two-level hierarchy among components in an If-Then program and cannot generalize to formal languages with a deeper structure. In contrast, MISP aims for a general design principle by explicitly identifying and decoupling important components, such as error detector, question generator and world model. It also attempts to integrate and leverage a strong base semantic parser, and transforms it to a natural interactive semantic parsing system, which substantially reduces the engineering cost.",
+                "cite_spans": [
+                    {
+                        "start": 170,
+                        "end": 193,
+                        "text": "(Li and Jagadish, 2014;",
+                        "ref_id": "BIBREF22"
+                    },
+                    {
+                        "start": 194,
+                        "end": 210,
+                        "text": "He et al., 2016;",
+                        "ref_id": "BIBREF15"
+                    },
+                    {
+                        "start": 211,
+                        "end": 238,
+                        "text": "Chaurasia and Mooney, 2017;",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 239,
+                        "end": 255,
+                        "text": "Su et al., 2018;",
+                        "ref_id": "BIBREF30"
+                    },
+                    {
+                        "start": 256,
+                        "end": 273,
+                        "text": "Gur et al., 2018;",
+                        "ref_id": "BIBREF13"
+                    },
+                    {
+                        "start": 274,
+                        "end": 291,
+                        "text": "Yao et al., 2019)",
+                        "ref_id": "BIBREF37"
+                    },
+                    {
+                        "start": 436,
+                        "end": 454,
+                        "text": "(Gur et al., 2018)",
+                        "ref_id": "BIBREF13"
+                    },
+                    {
+                        "start": 555,
+                        "end": 573,
+                        "text": "(Yao et al., 2019)",
+                        "ref_id": "BIBREF37"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Background & Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "We now discuss the MISP framework (Figure 1 ) in more detail. Specifically, we highlight the function of each major building block and the relationships among them, and leave the description of a concrete embodiment to Section 4.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 42,
+                        "end": 43,
+                        "text": "1",
+                        "ref_id": "FIGREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Model-based Interactive Semantic Parsing",
+                "sec_num": "3"
+            },
+            {
+                "text": "Environment. The environment consists of a user with a certain intent, which corresponds to a semantic parse that the user expects the agent to produce. Based on this intent, the user gives an initial natural language utterance u 0 to start a semantic parsing session and responds to any clarification question from the agent with feedback u t at interaction turn t.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model-based Interactive Semantic Parsing",
+                "sec_num": "3"
+            },
+            {
+                "text": "Agent State. The agent state s is an agent's internal interpretation of the environment based on all the available information. A straightforward design of the agent state is as the currently predicted semantic parse. It can also be endowed with meta information of the parsing process such as prediction probability or uncertainty to facilitate error detection.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model-based Interactive Semantic Parsing",
+                "sec_num": "3"
+            },
+            {
+                "text": "A key component of a MISP agent is its world model (Ha and Schmidhuber, 2018) , which compresses the historical percepts throughout the interaction and predicts the future based on the agent's knowledge of the world. More specifically, it models the transition of the agent state, p(s t+1 |s t , u t ), where u t is the user feedback at step t and s t+1 is the new state. The transition can be deterministic or stochastic.",
+                "cite_spans": [
+                    {
+                        "start": 51,
+                        "end": 77,
+                        "text": "(Ha and Schmidhuber, 2018)",
+                        "ref_id": "BIBREF14"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "World Model.",
+                "sec_num": null
+            },
+            {
+                "text": "Error Detector. A MISP agent introspects its state and decides whether and where human intervention is needed. The error detector serves this role. Given the current state s t (optionally the entire interaction history) and a set of terminal states, it decides on an action a t : If the agent is at a terminal state, it terminates the session, executes the semantic parse, and returns the execution results to the user; otherwise, it determines a span in the current semantic parse that is likely erroneous and passes it, along with necessary context information needed to make sense of the error span, to the actuator.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "World Model.",
+                "sec_num": null
+            },
+            {
+                "text": "Actuator. An actuator has a user-facing interface and realizes an agent's actions in a user-friendly way. In practice, it can be a natural language generator (NLG) (He et al., 2016; Gur et al., 2018; Yao et al., 2019) or an intuitive graphical user interface (Su et al., 2018; Berant et al., 2019) , or the two combined.",
+                "cite_spans": [
+                    {
+                        "start": 164,
+                        "end": 181,
+                        "text": "(He et al., 2016;",
+                        "ref_id": "BIBREF15"
+                    },
+                    {
+                        "start": 182,
+                        "end": 199,
+                        "text": "Gur et al., 2018;",
+                        "ref_id": "BIBREF13"
+                    },
+                    {
+                        "start": 200,
+                        "end": 217,
+                        "text": "Yao et al., 2019)",
+                        "ref_id": "BIBREF37"
+                    },
+                    {
+                        "start": 259,
+                        "end": 276,
+                        "text": "(Su et al., 2018;",
+                        "ref_id": "BIBREF30"
+                    },
+                    {
+                        "start": 277,
+                        "end": 297,
+                        "text": "Berant et al., 2019)",
+                        "ref_id": "BIBREF2"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "World Model.",
+                "sec_num": null
+            },
+            {
+                "text": "Under the MISP framework, we design an interactive semantic parsing system (Figure 2 ), named MISP-SQL, for the task of text-to-SQL translation. MISP-SQL assumes a base text-to-SQL parser and leverages it to design the world model and the error detector. The world model is essentially a wrapper that takes the user input and changes the behavior of the base semantic parser (e.g., by changing the probability distribution or removing certain prediction paths). The error detector makes decisions based on the uncertainty of the predictions: if the parser is uncertain about a prediction, it is more likely to be an error. The actuator is a template-based natural language question generator developed for the general SQL language. Figure 2 shows an example of the MISP-SQL agent.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 83,
+                        "end": 84,
+                        "text": "2",
+                        "ref_id": "FIGREF1"
+                    },
+                    {
+                        "start": 739,
+                        "end": 740,
+                        "text": "2",
+                        "ref_id": "FIGREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "MISP-SQL: An Instantiation of MISP for Text-to-SQL",
+                "sec_num": "4"
+            },
+            {
+                "text": "For ease of discussion, we assume the base parser generates the SQL query by predicting a sequence of SQL components, 2 as in many state-of-theart systems (Xu et al., 2017; Wang et al., 2018; Yu et al., 2018a; Hwang et al., 2019) 2 . What constitutes a SQL component is often defined differently in different semantic parsers, but typically dictated by the SQL syntax. To support introspection and error detection, each prediction is associated with its uncertainty, which is discussed next.",
+                "cite_spans": [
+                    {
+                        "start": 155,
+                        "end": 172,
+                        "text": "(Xu et al., 2017;",
+                        "ref_id": "BIBREF36"
+                    },
+                    {
+                        "start": 173,
+                        "end": 191,
+                        "text": "Wang et al., 2018;",
+                        "ref_id": "BIBREF32"
+                    },
+                    {
+                        "start": 192,
+                        "end": 209,
+                        "text": "Yu et al., 2018a;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 210,
+                        "end": 229,
+                        "text": "Hwang et al., 2019)",
+                        "ref_id": "BIBREF17"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 230,
+                        "end": 231,
+                        "text": "2",
+                        "ref_id": "FIGREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Agent State",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "The error detector in MISP-SQL is introspective and greedy. It is introspective because it examines the uncertainty of the predictions as opposed to the predictions themselves. On the other hand, it is greedy because its decisions are solely based on the last prediction o t instead of the entire state s t .",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Error Detector",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "We experiment with two uncertainty measures, based on the probability of o t estimated by the base semantic parser, as well as its standard deviation under Bayesian dropout (Gal and Ghahramani, 2016) , respectively.",
+                "cite_spans": [
+                    {
+                        "start": 173,
+                        "end": 199,
+                        "text": "(Gal and Ghahramani, 2016)",
+                        "ref_id": "BIBREF10"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Error Detector",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "Probability-based Uncertainty. Intuitively if the base semantic parser gives a low probability to the top prediction at a step, it is likely uncertain about the prediction. Specifically, we say a prediction o t needs user clarification if its probability is lower than a threshold p * , i.e.,",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Error Detector",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "p(o t ) < p * .",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Error Detector",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "This strategy is shown to be strong in detecting misclassified and out-of-distribution examples (Hendrycks and Gimpel, 2017) .",
+                "cite_spans": [
+                    {
+                        "start": 96,
+                        "end": 124,
+                        "text": "(Hendrycks and Gimpel, 2017)",
+                        "ref_id": "BIBREF16"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Error Detector",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "Dropout-based Uncertainty. Dropout (Srivastava et al., 2014) has been used as a Bayesian approximation for estimating model uncertainty (Gal and Ghahramani, 2016) in several tasks (Dong et al., 2018; Siddhant and Lipton, 2018; Xiao and Wang, 2019) . Different from its standard application to prevent models from overfitting in training time, we use it at test time to measure model uncertainty, similar to (Dong et al., 2018) . The intuition is that if the probability on a prediction varies dramatically (as measured by the 2 In practice this assumption may not be necessary as long as there is a reasonable way to chunk the semantic parse to calculate uncertainty and formulate clarification questions. (Step 2). This partial parse is examined by the error detector (Step 3), who determines that the prediction is incorrect (because the uncertainty is high) and triggers the actuator to ask the user a clarification question (Step 4). The user feedback is then incorporated into the world model (Step 5) to update the agent state. If the prediction was correct, Step 2 would be repeated to continue the parsing.",
+                "cite_spans": [
+                    {
+                        "start": 136,
+                        "end": 162,
+                        "text": "(Gal and Ghahramani, 2016)",
+                        "ref_id": "BIBREF10"
+                    },
+                    {
+                        "start": 180,
+                        "end": 199,
+                        "text": "(Dong et al., 2018;",
+                        "ref_id": "BIBREF8"
+                    },
+                    {
+                        "start": 200,
+                        "end": 226,
+                        "text": "Siddhant and Lipton, 2018;",
+                        "ref_id": "BIBREF27"
+                    },
+                    {
+                        "start": 227,
+                        "end": 247,
+                        "text": "Xiao and Wang, 2019)",
+                        "ref_id": "BIBREF34"
+                    },
+                    {
+                        "start": 407,
+                        "end": 426,
+                        "text": "(Dong et al., 2018)",
+                        "ref_id": "BIBREF8"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Error Detector",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "standard deviation) across different perturbations under dropout, the model is likely uncertain about it. Specifically, the uncertainty on prediction o t is calculated as:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Error Detector",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "STDDEV{p(o t |W i )} N i=1 ,",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Error Detector",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "where W i is the parameters of the base semantic parser under the i-th dropout perturbation, and the uncertainty score is the standard deviation of the prediction probabilities over N random passes. We say o t needs user clarification if its uncertainty score is greater than a threshold s * .",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Error Detector",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "Terminal State. The only terminal state is when the base semantic parser indicates end of parsing.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Error Detector",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "The MISP-SQL agent performs its action (e.g., validating the column \"place\") via asking users binary questions, hence the actuator is a natural language generator (NLG). Although there has been work on describing a SQL query with an NL statement (Koutrika et al., 2010; Ngonga Ngomo et al., 2013; Iyer et al., 2016; Xu et al., 2018) , few work studies generating questions about a certain SQL component in a systematic way.",
+                "cite_spans": [
+                    {
+                        "start": 246,
+                        "end": 269,
+                        "text": "(Koutrika et al., 2010;",
+                        "ref_id": "BIBREF20"
+                    },
+                    {
+                        "start": 270,
+                        "end": 296,
+                        "text": "Ngonga Ngomo et al., 2013;",
+                        "ref_id": "BIBREF23"
+                    },
+                    {
+                        "start": 297,
+                        "end": 315,
+                        "text": "Iyer et al., 2016;",
+                        "ref_id": "BIBREF19"
+                    },
+                    {
+                        "start": 316,
+                        "end": 332,
+                        "text": "Xu et al., 2018)",
+                        "ref_id": "BIBREF35"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Actuator: An NL Generator",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "Inspired by (Koutrika et al., 2010; Wang et al., 2015) , we define a rule-based NLG, which consists of a seed lexicon and a grammar for deriving questions. SQL queries on WikiSQL (Zhong et al., 2017) .",
+                "cite_spans": [
+                    {
+                        "start": 12,
+                        "end": 35,
+                        "text": "(Koutrika et al., 2010;",
+                        "ref_id": "BIBREF20"
+                    },
+                    {
+                        "start": 36,
+                        "end": 54,
+                        "text": "Wang et al., 2015)",
+                        "ref_id": "BIBREF33"
+                    },
+                    {
+                        "start": 179,
+                        "end": 199,
+                        "text": "(Zhong et al., 2017)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Actuator: An NL Generator",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "The seed lexicon defines NL descriptions for basic SQL elements in the form of \"n \u2192 t[p]\", where n is an NL phrase, t is a pre-defined syntactic category and p is either an aggregator (e.g., avg) or an operator (e.g., >). For example, \"is greater than \u2192 OP[>]\" specifies a phrase \"is greater than\" to describe the operator \">\". In MISP-SQL, we consider four syntactic categories: AGG for aggregators, OP for operators, COL for columns and Q for generated questions. However, it can be extended with more lexicon entries and grammar rules to accommodate more complex SQL in Spider (Yu et al., 2018c) , which we show in Appendix A.",
+                "cite_spans": [
+                    {
+                        "start": 580,
+                        "end": 598,
+                        "text": "(Yu et al., 2018c)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Actuator: An NL Generator",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "The grammar defines rules to derive questions. Each column is described by itself (i.e., the column name). Rules associated with each Q-typed item \"Q[v Clause]\" constructs an NL question asking about v in Clause. The Clause is the necessary context to formulate meaningful questions. Figure 3 shows a derivation example. Note that, both the lexicon and the grammar in our system are domain-agnostic in the sense that it is not specific to any database. Therefore, it can be reused for new domains in the future. Databasespecific rules, such as naming each column with a more canonical phrase (rather than the column name), are also possible.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 291,
+                        "end": 292,
+                        "text": "3",
+                        "ref_id": "FIGREF2"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Actuator: An NL Generator",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "The agent incorporates user feedback and updates its state with a world model. Different from Di-alSQL which trains an additional neural network, the MISP-SQL agent directly employs the base semantic parser to transition states, which saves additional training efforts.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "World Model",
+                "sec_num": "4.4"
+            },
+            {
+                "text": "As introduced in Section 4.3, the agent raises a binary question to the user about a predicted SQL component o t . Therefore, the received user feed- back either confirms the prediction or negates it. In the former case, the state is updated by proceeding to the next decoding step, i.e., s t+1 ={o 1 , ..., o t , o t+1 }, where o t+1 is the predicted next component and s t+1 shows the updated partial parse. In the latter case, the user feedback is incorporated to constrain the search space of the base parser (i.e., forbidding the parser from making the same wrong prediction), based on which the parser refreshes its prediction and forms a new state s t+1 ={o 1 , ..., o t-1 , o t+1 }, where o t+1 is a predicted alternative to replace o t . To avoid being trapped in a large search space, for each SQL component, we consider a maximum number of K alternatives (in addition to the original prediction) to solicit user feedback on.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "World Model",
+                "sec_num": "4.4"
+            },
+            {
+                "text": "We apply our approach to the task of mapping natural language questions to SQL queries. In this section, we first describe the basic setup, including the datasets and the base semantic parsers, followed by the system results on both simulated and real users.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "5"
+            },
+            {
+                "text": "We evaluate our proposed MISP-SQL agent on WikiSQL (Zhong et al., 2017) We experiment MISP-SQL with two base semantic parsers: SQLNet (Xu et al., 2017) and SQLova (Hwang et al., 2019) . Unlike in Dial-SQL's evaluation (Gur et al., 2018) , we do not choose Seq2SQL (Zhong et al., 2017) as a base parser but SQLova instead, because it achieves similar performance as SQLNet while SQLova is currently the best open-sourced model on Wik-iSQL, which can give us a more comprehensive evaluation. For each of the two base semantic parsers, we test our agent with two kinds of error detectors, based on prediction probability and Bayesian dropout, respectively (Section 4.2). We tune the threshold p * within 0.5 \u223c 0.95 and s * within 0.01 \u223c 0.2. Particularly for uncertaintybased detection measured by Bayesian dropout, the number of passes N is set to 10, with a dropout rate 0.1. The dropout layers are applied at the same positions as when each semantic parser is trained. When the agent interacts with users, the maximum number of alternative options (in addition to the original prediction) per component, K, is set to 3. If the user negates all the K + 1 predicted candidates, the agent will keep the original prediction, as in (Gur et al., 2018) .",
+                "cite_spans": [
+                    {
+                        "start": 51,
+                        "end": 71,
+                        "text": "(Zhong et al., 2017)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 134,
+                        "end": 151,
+                        "text": "(Xu et al., 2017)",
+                        "ref_id": "BIBREF36"
+                    },
+                    {
+                        "start": 163,
+                        "end": 183,
+                        "text": "(Hwang et al., 2019)",
+                        "ref_id": "BIBREF17"
+                    },
+                    {
+                        "start": 218,
+                        "end": 236,
+                        "text": "(Gur et al., 2018)",
+                        "ref_id": "BIBREF13"
+                    },
+                    {
+                        "start": 1227,
+                        "end": 1245,
+                        "text": "(Gur et al., 2018)",
+                        "ref_id": "BIBREF13"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experimental Setup",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "In simulation evaluation, each agent interacts with a simulated user, who gives a yes/no answer based on the ground-truth SQL query. If the agent fails to correct its predictions in three consecutive interaction turns, the user will leave the interaction early and the agent has to finish the remaining generation without further help from the user.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Simulation Evaluation",
+                "sec_num": "5.2"
+            },
+            {
+                "text": "Overall Comparison. We first compare MISP-SQL with the two base semantic parsers without interactions in Table 2 . For SQLNet, we also compare our system with the reported performance of DialSQL (Gur et al., 2018, Table 4 ). However, since DialSQL is not open-sourced and it is not easy to reproduce it, we are unable to adapt it to SQLova for more comparisons. Following (Xu et al., 2017; Hwang et al., 2019) , we evaluate the SQL query match accuracy (\"Acc qm \", after converting the query into its canonical form) and the execution accuracy (\"Acc ex \") of each agent. \"Avg. #q\" denotes the average number of questions per query. For any base parser, MISP-SQL improves their performance by interacting with users. Particularly for SQLNet, MISP-SQL outperforms the DialSQL system with only half the number of questions (1.104 vs. 2.4), and has a much simpler design without the need of training an extra model (besides training the base parser, which DialSQL needs to do as well). Our agent can even boost the strong performance of SQLova from 85% to 94% in execution accuracy, with merely 0.773 questions per query.",
+                "cite_spans": [
+                    {
+                        "start": 195,
+                        "end": 221,
+                        "text": "(Gur et al., 2018, Table 4",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 372,
+                        "end": 389,
+                        "text": "(Xu et al., 2017;",
+                        "ref_id": "BIBREF36"
+                    },
+                    {
+                        "start": 390,
+                        "end": 409,
+                        "text": "Hwang et al., 2019)",
+                        "ref_id": "BIBREF17"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 111,
+                        "end": 112,
+                        "text": "2",
+                        "ref_id": "TABREF2"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Simulation Evaluation",
+                "sec_num": "5.2"
+            },
+            {
+                "text": "We also present an \"upper-bounded\" accuracy of our agent, when it does not adopt any error detector and asks questions about every component with at most 10 (\"MISP-SQL Unlimit10 \") or 3 (\"MISP-SQL Unlimit3 \") alternatives. Interestingly, even for the weaker SQLNet parser, most true predictions have already been contained within the top 10 options (giving 0.932 query match accuracy). When equipped with the stronger SQLova parser, the agent has a potential to boost the execution accuracy to around 100% by considering only the top 3 options of every prediction. The complete results can be found in Appendix B.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Simulation Evaluation",
+                "sec_num": "5.2"
+            },
+            {
+                "text": "Error Detector Comparison. We then compare the probability-based and dropout-based error detectors in Figure 4 , where each marker indicates the agent's accuracy and the average number of questions it needs under a certain error detection threshold. Consistently for both SQLNet and SQLova, the probability-based error detector can achieve the same accuracy with a lower number of questions than the dropout-based detector. It is also observed that this difference is greater in terms of query match accuracy, around 0.15 \u223c 0.25 for SQLNet and 0.1 \u223c 0.15 for SQLova. A more direct comparison of various settings under the same average number of questions can be found in Appendix C.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 109,
+                        "end": 110,
+                        "text": "4",
+                        "ref_id": "FIGREF3"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Simulation Evaluation",
+                "sec_num": "5.2"
+            },
+            {
+                "text": "To better understand how each kind of error detectors works, we investigate the portion of questions that each detector spends on right predictions (denoted as \"Q r \"). An ideal system should ask fewer questions on right predictions while identify more truly incorrect predictions to fix the mistakes. We present the question distributions of the various systems in Table 3 . One important conclusion drawn from this table is that probability-based error detection is much more effective on identifying incorrect predictions. Consider the system using probability threshold 0.5 for error detection (i.e., \"p * =0.5\") and the one using dropout-based error detector with a threshold 0.2 (i.e., \"s * =0.2\") on SQLNet. When both systems ask around the same number of questions during the interaction, the former spends only 16.9% of unnecessary questions on correct predictions (Q r ), while the latter asks twice amount of them (32.1%). Similar situations are also observed for SQLova. It is also notable that, when the probability threshold is lower (which results in a fewer total number of questions), the portion of questions on right actions drops significantly (e.g., from 23.0% to 16.9% when the threshold changes from 0.8 to 0.5 on SQLNet). However, this portion remains almost unchanged for dropout-based error detection. Table 3 : Portion of interaction questions on right predictions (Q r %) for each agent setting on WikiSQL Dev set (smaller is better). \"p * /s * =X\" denotes our agent with probability/dropout-based error detection (threshold at X).",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 372,
+                        "end": 373,
+                        "text": "3",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 1334,
+                        "end": 1335,
+                        "text": "3",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Simulation Evaluation",
+                "sec_num": "5.2"
+            },
+            {
+                "text": "A remarkable characteristic of MISP-SQL is its generalizability, as it makes the best use of the base semantic parser and requires no extra model training. To verify it, we further experiment MISP-SQL on the more complex text-to-SQL dataset \"Spider\" (Yu et al., 2018c) . The dataset consists of 10,181 questions on multi-domain databases, where SQL queries can contain complex keywords such as GROUP BY or join several tables. We extend the NLG lexicon and grammar (Section 4.3) to accommodate this complexity, with details shown in Appendix A. We adopt SyntaxSQLNet (Yu et al., 2018b) as the base parser. 3 In our experiments, we follow the same database split as in (Yu et al., 2018c) and report the Exact Matching accuracy (\"Acc em \") on Dev set. 4 Other experimental setups remain the same as when evaluating MISP-SQL on WikiSQL. Table 4 shows the results.",
+                "cite_spans": [
+                    {
+                        "start": 250,
+                        "end": 268,
+                        "text": "(Yu et al., 2018c)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 567,
+                        "end": 585,
+                        "text": "(Yu et al., 2018b)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 668,
+                        "end": 686,
+                        "text": "(Yu et al., 2018c)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 840,
+                        "end": 841,
+                        "text": "4",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Extend to Complex SQL Generation",
+                "sec_num": "5.3"
+            },
+            {
+                "text": "We first observe that, via interactions with simulated users, MISP-SQL improves SyntaxSQL-Net by 10% accuracy with reasonably 3 questions per query. However, we also realize that, unlike on WikiSQL, in this setting, the probabilitybased error detector requires more questions than the Bayesian uncertainty-based detector. This can be explained by the inferior performance of the base SyntaxSQLNet parser (merely 20% accuracy without interaction). In fact, the portion of questions that the probability-based detector spends on right predictions (Q r ) is still half of that the dropout-based detector asks (12.8% vs. 24.8%). However, it wastes around 60% of questions on unsolvable wrong predictions. This typically hap- pens when the base parser is not strong enough, i.e., cannot rank the true option close to the top, or when there are unsolved wrong precedent predictions (e.g., in \"WHERE col op val\", when col is wrong, whatever op/val following it is wrong). This issue can be alleviated when more advanced base parsers are adopted in the future.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Extend to Complex SQL Generation",
+                "sec_num": "5.3"
+            },
+            {
+                "text": "We further conduct human user study to evaluate the MISP-SQL agent. Our evaluation setting largely follows Gur et al. (2018) . For each base semantic parser, we randomly sample 100 examples from the corresponding dataset (either WikiSQL Test set or Spider Dev set) and ask three human evaluators, who are graduate students with only rudimentary knowledge of SQL based on our survey, to work on each example and then report the averaged results. We present to the evaluators the initial natural language question and allow them to view the table headers to better understand the question intent. On Spider, we also show the name of the database tables. We select error detectors based on the simulation results: For SQLNet and SQLova, we equip the agent with a probabilitybased error detector (threshold at 0.95); for Syn-taxSQLNet, we choose a Bayesian uncertaintybased error detector (threshold at 0.03). As in the simulation evaluation, we cannot directly compare with DialSQL in human evaluation because the code is not yet publicly available.",
+                "cite_spans": [
+                    {
+                        "start": 107,
+                        "end": 124,
+                        "text": "Gur et al. (2018)",
+                        "ref_id": "BIBREF13"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Human Evaluation",
+                "sec_num": "5.4"
+            },
+            {
+                "text": "Table 5 shows the results. In all settings, MISP-SQL improves the base parser's performance, demonstrating the benefit of involving human interaction. However, we also notice that the gain is not as large as in simulation, especially on SQLova. Through interviews with the human evaluators, we found that the major reason is that they sometimes had difficulties understanding the true intent of some test questions that are ambigu- ous, vague, or contain entities they are not familiar with. We believe this reflects a general challenge of setting up human evaluation for semantic parsing that is close to the real application setting, and thus set forth the following discussion.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 6,
+                        "end": 7,
+                        "text": "5",
+                        "ref_id": "TABREF6"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Human Evaluation",
+                "sec_num": "5.4"
+            },
+            {
+                "text": "Most human evaluation studies for (interactive) semantic parsers so far (Chaurasia and Mooney, 2017; Gur et al., 2018; Su et al., 2018; Yao et al., 2019) use pre-existing test questions (e.g., from datasets like WikiSQL). However, this introduces an undesired discrepancy, that is, human evaluators may not necessarily be able to understand the true intent of the given questions in an faithful way, especially when the question is ambiguous, vague, or containing unfamiliar entities. This discrepancy is clearly manifested in our human evaluation with SQLova (Table 5 ). When the base parser is strong, many of the remaining incorrectly parsed questions are challenging not only for the base parser but also for human evaluators. We manually examined the situations where evaluators made a different choice than the simulator and found that 80% of such choices happened when the initial question is ambiguous or the gold SQL annotation is wrong. For example, for the question \"name the city for kanji\u017ea\" it is unlikely for human evaluators to know that \"kanji\u017ea\" is an \"Urban Settlement\" without looking at the table content or knowing the specific background knowledge beforehand. This issue has also been reported as the main limitation to further improve SQLova (Hwang et al., 2019) , which could in principle be resolved by human interactions if the users have a clear and consistent intent in mind. To verify this, we conduct an additional experiment with SQLova where human evaluators can view the table content as well as the gold SQL query before starting the interaction to better understand the true intent (denoted as \"w/ full info\" in Table 5 ). As expected, the MISP-SQL agent performs much better (close to simulation) when users know what they are asking. It further confirms that a non-negligible part of the accuracy gap between simulation and human evaluation is due to human evaluators not fully understanding the question intent and giving false feedback.",
+                "cite_spans": [
+                    {
+                        "start": 72,
+                        "end": 100,
+                        "text": "(Chaurasia and Mooney, 2017;",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 101,
+                        "end": 118,
+                        "text": "Gur et al., 2018;",
+                        "ref_id": "BIBREF13"
+                    },
+                    {
+                        "start": 119,
+                        "end": 135,
+                        "text": "Su et al., 2018;",
+                        "ref_id": "BIBREF30"
+                    },
+                    {
+                        "start": 136,
+                        "end": 153,
+                        "text": "Yao et al., 2019)",
+                        "ref_id": "BIBREF37"
+                    },
+                    {
+                        "start": 1266,
+                        "end": 1286,
+                        "text": "(Hwang et al., 2019)",
+                        "ref_id": "BIBREF17"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 567,
+                        "end": 568,
+                        "text": "5",
+                        "ref_id": "TABREF6"
+                    },
+                    {
+                        "start": 1654,
+                        "end": 1655,
+                        "text": "5",
+                        "ref_id": "TABREF6"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Discussion on Future Human Evaluation",
+                "sec_num": "5.5"
+            },
+            {
+                "text": "To alleviate this discrepancy, a common practice is to show human evaluators the schema of the underlying database, as Gur et al. (2018) and we did (Section 5.4), but it is still insufficient, especially for entity-related issues (e.g., \"kanji\u017ea\"). On the other hand, while exposing human evaluators to table content helps resolve the entity-related issues, it is likely to introduce undesired biases in favor of the system under test (i.e., \"overexposure\"), since human evaluators may then be able to give more informative feedback than real users.",
+                "cite_spans": [
+                    {
+                        "start": 119,
+                        "end": 136,
+                        "text": "Gur et al. (2018)",
+                        "ref_id": "BIBREF13"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Discussion on Future Human Evaluation",
+                "sec_num": "5.5"
+            },
+            {
+                "text": "To further reduce the discrepancy between human evaluation and real use cases, one possible solution is to ask human evaluators to come up with questions from scratch (instead of using preexisting test questions), which guarantees intent understanding. While this solution may still require exposure of table content to evaluators (such that they can have some sense of each table attribute), overexposure can be mitigated by showing them only part (e.g., just a few rows) of the table content, similar to the annotation strategy by Zhong et al. (2017) . Furthermore, the reduced controllability on the complexity of the evaluatorcomposed questions can be compensated by conducting human evaluation in a larger scale. We plan to explore this setting in future work.",
+                "cite_spans": [
+                    {
+                        "start": 533,
+                        "end": 552,
+                        "text": "Zhong et al. (2017)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Discussion on Future Human Evaluation",
+                "sec_num": "5.5"
+            },
+            {
+                "text": "This work proposes a new and unified framework for the interactive semantic parsing task, named MISP, and instantiates it successfully on the textto-SQL task. We outline several future directions to further improve MISP-SQL and develop MISP systems for other semantic parsing tasks:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion and Future Work",
+                "sec_num": "6"
+            },
+            {
+                "text": "Improving Agent Components. The flexibility of MISP allows improving on each agent compo-nent separately. Take the error detector for example. One can augment the probability-based error detector in MISP-SQL with probability calibration, which has been shown useful in aligning model confidence with its reliability (Guo et al., 2017) . One can also use learning-based approaches, such as a reinforced decision policy (Yao et al., 2019) , to increase the rate of identifying wrong and solvable predictions.",
+                "cite_spans": [
+                    {
+                        "start": 316,
+                        "end": 334,
+                        "text": "(Guo et al., 2017)",
+                        "ref_id": "BIBREF11"
+                    },
+                    {
+                        "start": 418,
+                        "end": 436,
+                        "text": "(Yao et al., 2019)",
+                        "ref_id": "BIBREF37"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion and Future Work",
+                "sec_num": "6"
+            },
+            {
+                "text": "Lifelong Learning for Semantic Parsing. Learning from user feedback is a promising solution for lifelong semantic parser improvement (Iyer et al., 2017; Padmakumar et al., 2017; Labutov et al., 2018) . However, this may lead to a non-stationary environment (e.g., changing state transition) from the perspective of the agent, making its training (e.g., error detector learning) unstable. In the context of dialog systems, Padmakumar et al. (2017) suggests that this effect can be mitigated by jointly updating the dialog policy and the semantic parser batchwisely. We leave exploring this aspect in our task to future work.",
+                "cite_spans": [
+                    {
+                        "start": 133,
+                        "end": 152,
+                        "text": "(Iyer et al., 2017;",
+                        "ref_id": "BIBREF18"
+                    },
+                    {
+                        "start": 153,
+                        "end": 177,
+                        "text": "Padmakumar et al., 2017;",
+                        "ref_id": "BIBREF24"
+                    },
+                    {
+                        "start": 178,
+                        "end": 199,
+                        "text": "Labutov et al., 2018)",
+                        "ref_id": "BIBREF21"
+                    },
+                    {
+                        "start": 422,
+                        "end": 446,
+                        "text": "Padmakumar et al. (2017)",
+                        "ref_id": "BIBREF24"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion and Future Work",
+                "sec_num": "6"
+            },
+            {
+                "text": "Scaling Up. It is important for MISP agents to scale to larger backend data sources (e.g., knowledge bases like Freebase or Wikidata). To this end, one can improve MISP from at least three aspects:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion and Future Work",
+                "sec_num": "6"
+            },
+            {
+                "text": "(1) using more intelligent interaction designs (e.g., free-form text as user feedback) to speed up the hypothesis space searching globally, (2) strengthening the world model to nail down a smaller set of plausible hypotheses based on both the initial question and user feedback, and (3) training the agent to learn to improve the parsing accuracy while minimizing the number of required human interventions over time.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion and Future Work",
+                "sec_num": "6"
+            },
+            {
+                "text": "We chose SyntaxSQLNet because it was the best model by the paper submission time. In principle, our framework can also be applied to more sophisticated parsers such as(Bogin et al., 2019;Guo et al., 2019).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "4 We do not report results on Spider test set since it is not publicly available.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            }
+        ],
+        "back_matter": [
+            {
+                "text": "This research was sponsored in part by the Army Research Office under cooperative agreements W911NF-17-1-0412, NSF Grant IIS1815674, Fujitsu gift grant, and Ohio Supercomputer Center (Center, 1987). The views and conclusions contained herein are those of the authors and should not be interpreted as representing the official policies, either expressed or implied, of the Army Research Office or the U.S. Government. The U.S. Government is authorized to reproduce and distribute reprints for Government purposes notwithstanding any copyright notice herein.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Acknowledgments",
+                "sec_num": null
+            }
+        ],
+        "bib_entries": {
+            "BIBREF0": {
+                "ref_id": "b0",
+                "title": "Weakly supervised learning of semantic parsers for mapping instructions to actions",
+                "authors": [
+                    {
+                        "first": "Yoav",
+                        "middle": [],
+                        "last": "Artzi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Luke",
+                        "middle": [],
+                        "last": "Zettlemoyer",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "Transactions of the Association for Computational Linguistics",
+                "volume": "1",
+                "issue": "",
+                "pages": "49--62",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Yoav Artzi and Luke Zettlemoyer. 2013. Weakly su- pervised learning of semantic parsers for mapping instructions to actions. Transactions of the Associa- tion for Computational Linguistics, 1:49-62.",
+                "links": null
+            },
+            "BIBREF1": {
+                "ref_id": "b1",
+                "title": "Semantic parsing on freebase from question-answer pairs",
+                "authors": [
+                    {
+                        "first": "Jonathan",
+                        "middle": [],
+                        "last": "Berant",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Andrew",
+                        "middle": [],
+                        "last": "Chou",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Roy",
+                        "middle": [],
+                        "last": "Frostig",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Percy",
+                        "middle": [],
+                        "last": "Liang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "Proceedings of the 2013 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "1533--1544",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jonathan Berant, Andrew Chou, Roy Frostig, and Percy Liang. 2013. Semantic parsing on freebase from question-answer pairs. In Proceedings of the 2013 Conference on Empirical Methods in Natural Lan- guage Processing, pages 1533-1544.",
+                "links": null
+            },
+            "BIBREF2": {
+                "ref_id": "b2",
+                "title": "Explaining queries over web tables to non-experts",
+                "authors": [
+                    {
+                        "first": "Jonathan",
+                        "middle": [],
+                        "last": "Berant",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Daniel",
+                        "middle": [],
+                        "last": "Deutch",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Amir",
+                        "middle": [],
+                        "last": "Globerson",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tova",
+                        "middle": [],
+                        "last": "Milo",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tomer",
+                        "middle": [],
+                        "last": "Wolfson",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 35th IEEE International Conference on Data Engineering (ICDE)",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jonathan Berant, Daniel Deutch, Amir Globerson, Tova Milo, and Tomer Wolfson. 2019. Explaining queries over web tables to non-experts. In Proceed- ings of the 35th IEEE International Conference on Data Engineering (ICDE).",
+                "links": null
+            },
+            "BIBREF3": {
+                "ref_id": "b3",
+                "title": "Representing schema structure with graph neural networks for text-to-SQL parsing",
+                "authors": [
+                    {
+                        "first": "Ben",
+                        "middle": [],
+                        "last": "Bogin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Matt",
+                        "middle": [],
+                        "last": "Gardner",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jonathan",
+                        "middle": [],
+                        "last": "Berant",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "4560--4565",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ben Bogin, Matt Gardner, and Jonathan Berant. 2019. Representing schema structure with graph neural networks for text-to-SQL parsing. In Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics, pages 4560-4565.",
+                "links": null
+            },
+            "BIBREF4": {
+                "ref_id": "b4",
+                "title": "Almond: The architecture of an open, crowdsourced, privacy-preserving, programmable virtual assistant",
+                "authors": [
+                    {
+                        "first": "Giovanni",
+                        "middle": [],
+                        "last": "Campagna",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Rakesh",
+                        "middle": [],
+                        "last": "Ramesh",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Silei",
+                        "middle": [],
+                        "last": "Xu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Michael",
+                        "middle": [],
+                        "last": "Fischer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Monica",
+                        "middle": [
+                            "S"
+                        ],
+                        "last": "Lam",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1987,
+                "venue": "Proceedings of the 26th International Conference on World Wide Web",
+                "volume": "",
+                "issue": "",
+                "pages": "341--350",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Giovanni Campagna, Rakesh Ramesh, Silei Xu, Michael Fischer, and Monica S Lam. 2017. Al- mond: The architecture of an open, crowdsourced, privacy-preserving, programmable virtual assistant. In Proceedings of the 26th International Conference on World Wide Web, pages 341-350. International World Wide Web Conferences Steering Committee. Ohio Supercomputer Center. 1987. Ohio su- percomputer center. http://osc.edu/ark: /19495/f5s1ph73.",
+                "links": null
+            },
+            "BIBREF5": {
+                "ref_id": "b5",
+                "title": "Dialog for language to code",
+                "authors": [
+                    {
+                        "first": "Shobhit",
+                        "middle": [],
+                        "last": "Chaurasia",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Raymond",
+                        "middle": [
+                            "J"
+                        ],
+                        "last": "Mooney",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Proceedings of the Eighth International Joint Conference on Natural Language Processing",
+                "volume": "2",
+                "issue": "",
+                "pages": "175--180",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Shobhit Chaurasia and Raymond J Mooney. 2017. Di- alog for language to code. In Proceedings of the Eighth International Joint Conference on Natural Language Processing (Volume 2: Short Papers), pages 175-180.",
+                "links": null
+            },
+            "BIBREF6": {
+                "ref_id": "b6",
+                "title": "BERT: Pre-training of deep bidirectional transformers for language understanding",
+                "authors": [
+                    {
+                        "first": "Jacob",
+                        "middle": [],
+                        "last": "Devlin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ming-Wei",
+                        "middle": [],
+                        "last": "Chang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kenton",
+                        "middle": [],
+                        "last": "Lee",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kristina",
+                        "middle": [],
+                        "last": "Toutanova",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies",
+                "volume": "1",
+                "issue": "",
+                "pages": "4171--4186",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jacob Devlin, Ming-Wei Chang, Kenton Lee, and Kristina Toutanova. 2019. BERT: Pre-training of deep bidirectional transformers for language under- standing. In Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Tech- nologies, Volume 1 (Long and Short Papers), pages 4171-4186.",
+                "links": null
+            },
+            "BIBREF7": {
+                "ref_id": "b7",
+                "title": "Language to logical form with neural attention",
+                "authors": [
+                    {
+                        "first": "Li",
+                        "middle": [],
+                        "last": "Dong",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mirella",
+                        "middle": [],
+                        "last": "Lapata",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of the 54th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "1",
+                "issue": "",
+                "pages": "33--43",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Li Dong and Mirella Lapata. 2016. Language to logi- cal form with neural attention. In Proceedings of the 54th Annual Meeting of the Association for Compu- tational Linguistics (Volume 1: Long Papers), vol- ume 1, pages 33-43.",
+                "links": null
+            },
+            "BIBREF8": {
+                "ref_id": "b8",
+                "title": "Confidence modeling for neural semantic parsing",
+                "authors": [
+                    {
+                        "first": "Li",
+                        "middle": [],
+                        "last": "Dong",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chris",
+                        "middle": [],
+                        "last": "Quirk",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mirella",
+                        "middle": [],
+                        "last": "Lapata",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 56th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "1",
+                "issue": "",
+                "pages": "743--753",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Li Dong, Chris Quirk, and Mirella Lapata. 2018. Con- fidence modeling for neural semantic parsing. In Proceedings of the 56th Annual Meeting of the As- sociation for Computational Linguistics (Volume 1: Long Papers), volume 1, pages 743-753.",
+                "links": null
+            },
+            "BIBREF9": {
+                "ref_id": "b9",
+                "title": "Improving text-to-SQL evaluation methodology",
+                "authors": [
+                    {
+                        "first": "Catherine",
+                        "middle": [],
+                        "last": "Finegan-Dollak",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jonathan",
+                        "middle": [
+                            "K"
+                        ],
+                        "last": "Kummerfeld",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Li",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Karthik",
+                        "middle": [],
+                        "last": "Ramanathan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sesh",
+                        "middle": [],
+                        "last": "Sadasivam",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Rui",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dragomir",
+                        "middle": [],
+                        "last": "Radev",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 56th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "1",
+                "issue": "",
+                "pages": "351--360",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Catherine Finegan-Dollak, Jonathan K Kummerfeld, Li Zhang, Karthik Ramanathan, Sesh Sadasivam, Rui Zhang, and Dragomir Radev. 2018. Improving text-to-SQL evaluation methodology. In Proceed- ings of the 56th Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Pa- pers), pages 351-360.",
+                "links": null
+            },
+            "BIBREF10": {
+                "ref_id": "b10",
+                "title": "Dropout as a Bayesian approximation: Representing model uncertainty in deep learning",
+                "authors": [
+                    {
+                        "first": "Yarin",
+                        "middle": [],
+                        "last": "Gal",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zoubin",
+                        "middle": [],
+                        "last": "Ghahramani",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "In international conference on machine learning",
+                "volume": "",
+                "issue": "",
+                "pages": "1050--1059",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Yarin Gal and Zoubin Ghahramani. 2016. Dropout as a Bayesian approximation: Representing model un- certainty in deep learning. In international confer- ence on machine learning, pages 1050-1059.",
+                "links": null
+            },
+            "BIBREF11": {
+                "ref_id": "b11",
+                "title": "On calibration of modern neural networks",
+                "authors": [
+                    {
+                        "first": "Chuan",
+                        "middle": [],
+                        "last": "Guo",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Geoff",
+                        "middle": [],
+                        "last": "Pleiss",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yu",
+                        "middle": [],
+                        "last": "Sun",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kilian",
+                        "middle": [
+                            "Q"
+                        ],
+                        "last": "Weinberger",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Proceedings of the 34th International Conference on Machine Learning",
+                "volume": "70",
+                "issue": "",
+                "pages": "1321--1330",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Chuan Guo, Geoff Pleiss, Yu Sun, and Kilian Q Wein- berger. 2017. On calibration of modern neural net- works. In Proceedings of the 34th International Conference on Machine Learning-Volume 70, pages 1321-1330. JMLR. org.",
+                "links": null
+            },
+            "BIBREF12": {
+                "ref_id": "b12",
+                "title": "Towards complex text-to-SQL in crossdomain database with intermediate representation",
+                "authors": [
+                    {
+                        "first": "Jiaqi",
+                        "middle": [],
+                        "last": "Guo",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zecheng",
+                        "middle": [],
+                        "last": "Zhan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yan",
+                        "middle": [],
+                        "last": "Gao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yan",
+                        "middle": [],
+                        "last": "Xiao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jian-Guang",
+                        "middle": [],
+                        "last": "Lou",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ting",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dongmei",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "4524--4535",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jiaqi Guo, Zecheng Zhan, Yan Gao, Yan Xiao, Jian-Guang Lou, Ting Liu, and Dongmei Zhang. 2019. Towards complex text-to-SQL in cross- domain database with intermediate representation. In Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics, pages 4524-4535.",
+                "links": null
+            },
+            "BIBREF13": {
+                "ref_id": "b13",
+                "title": "DialSQL: Dialogue based structured query generation",
+                "authors": [
+                    {
+                        "first": "Izzeddin",
+                        "middle": [],
+                        "last": "Gur",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Semih",
+                        "middle": [],
+                        "last": "Yavuz",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yu",
+                        "middle": [],
+                        "last": "Su",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xifeng",
+                        "middle": [],
+                        "last": "Yan",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 56th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "1",
+                "issue": "",
+                "pages": "1339--1349",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Izzeddin Gur, Semih Yavuz, Yu Su, and Xifeng Yan. 2018. DialSQL: Dialogue based structured query generation. In Proceedings of the 56th Annual Meet- ing of the Association for Computational Linguistics (Volume 1: Long Papers), pages 1339-1349.",
+                "links": null
+            },
+            "BIBREF14": {
+                "ref_id": "b14",
+                "title": "World models",
+                "authors": [
+                    {
+                        "first": "David",
+                        "middle": [],
+                        "last": "Ha",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "J\u00fcrgen",
+                        "middle": [],
+                        "last": "Schmidhuber",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1803.10122"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "David Ha and J\u00fcrgen Schmidhuber. 2018. World mod- els. ArXiv preprint arXiv:1803.10122.",
+                "links": null
+            },
+            "BIBREF15": {
+                "ref_id": "b15",
+                "title": "Human-in-the-loop parsing",
+                "authors": [
+                    {
+                        "first": "Luheng",
+                        "middle": [],
+                        "last": "He",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Julian",
+                        "middle": [],
+                        "last": "Michael",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mike",
+                        "middle": [],
+                        "last": "Lewis",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Luke",
+                        "middle": [],
+                        "last": "Zettlemoyer",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of the 2016 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "2337--2342",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Luheng He, Julian Michael, Mike Lewis, and Luke Zettlemoyer. 2016. Human-in-the-loop parsing. In Proceedings of the 2016 Conference on Empirical Methods in Natural Language Processing, pages 2337-2342.",
+                "links": null
+            },
+            "BIBREF16": {
+                "ref_id": "b16",
+                "title": "A baseline for detecting misclassified and out-of-distribution examples in neural networks",
+                "authors": [
+                    {
+                        "first": "Dan",
+                        "middle": [],
+                        "last": "Hendrycks",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kevin",
+                        "middle": [],
+                        "last": "Gimpel",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Proceedings of International Conference on Learning Representations",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Dan Hendrycks and Kevin Gimpel. 2017. A baseline for detecting misclassified and out-of-distribution examples in neural networks. In Proceedings of International Conference on Learning Representa- tions.",
+                "links": null
+            },
+            "BIBREF17": {
+                "ref_id": "b17",
+                "title": "A comprehensive exploration on WikiSQL with table-aware word contextualization",
+                "authors": [
+                    {
+                        "first": "Wonseok",
+                        "middle": [],
+                        "last": "Hwang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jinyeung",
+                        "middle": [],
+                        "last": "Yim",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Seunghyun",
+                        "middle": [],
+                        "last": "Park",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Minjoon",
+                        "middle": [],
+                        "last": "Seo",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1902.01069"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Wonseok Hwang, Jinyeung Yim, Seunghyun Park, and Minjoon Seo. 2019. A comprehensive exploration on WikiSQL with table-aware word contextualiza- tion. ArXiv preprint arXiv:1902.01069.",
+                "links": null
+            },
+            "BIBREF18": {
+                "ref_id": "b18",
+                "title": "Learning a neural semantic parser from user feedback",
+                "authors": [
+                    {
+                        "first": "Srinivasan",
+                        "middle": [],
+                        "last": "Iyer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ioannis",
+                        "middle": [],
+                        "last": "Konstas",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alvin",
+                        "middle": [],
+                        "last": "Cheung",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jayant",
+                        "middle": [],
+                        "last": "Krishnamurthy",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Luke",
+                        "middle": [],
+                        "last": "Zettlemoyer",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Proceedings of the 55th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "963--973",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Srinivasan Iyer, Ioannis Konstas, Alvin Cheung, Jayant Krishnamurthy, and Luke Zettlemoyer. 2017. Learning a neural semantic parser from user feed- back. In Proceedings of the 55th Annual Meeting of the Association for Computational Linguistics (Vol- ume 1: Long Papers), pages 963-973.",
+                "links": null
+            },
+            "BIBREF19": {
+                "ref_id": "b19",
+                "title": "Summarizing source code using a neural attention model",
+                "authors": [
+                    {
+                        "first": "Srinivasan",
+                        "middle": [],
+                        "last": "Iyer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ioannis",
+                        "middle": [],
+                        "last": "Konstas",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alvin",
+                        "middle": [],
+                        "last": "Cheung",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Luke",
+                        "middle": [],
+                        "last": "Zettlemoyer",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of the 54th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "1",
+                "issue": "",
+                "pages": "2073--2083",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Srinivasan Iyer, Ioannis Konstas, Alvin Cheung, and Luke Zettlemoyer. 2016. Summarizing source code using a neural attention model. In Proceedings of the 54th Annual Meeting of the Association for Com- putational Linguistics (Volume 1: Long Papers), volume 1, pages 2073-2083.",
+                "links": null
+            },
+            "BIBREF20": {
+                "ref_id": "b20",
+                "title": "Explaining structured queries in natural language",
+                "authors": [
+                    {
+                        "first": "Georgia",
+                        "middle": [],
+                        "last": "Koutrika",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alkis",
+                        "middle": [],
+                        "last": "Simitsis",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yannis",
+                        "middle": [
+                            "E"
+                        ],
+                        "last": "Ioannidis",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2010,
+                "venue": "2010 IEEE 26th International Conference on Data Engineering (ICDE 2010)",
+                "volume": "",
+                "issue": "",
+                "pages": "333--344",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Georgia Koutrika, Alkis Simitsis, and Yannis E Ioan- nidis. 2010. Explaining structured queries in natural language. In 2010 IEEE 26th International Confer- ence on Data Engineering (ICDE 2010), pages 333- 344. IEEE.",
+                "links": null
+            },
+            "BIBREF21": {
+                "ref_id": "b21",
+                "title": "Learning to learn semantic parsers from natural language supervision",
+                "authors": [
+                    {
+                        "first": "Igor",
+                        "middle": [],
+                        "last": "Labutov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Bishan",
+                        "middle": [],
+                        "last": "Yang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tom",
+                        "middle": [],
+                        "last": "Mitchell",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "1676--1690",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Igor Labutov, Bishan Yang, and Tom Mitchell. 2018. Learning to learn semantic parsers from natural lan- guage supervision. In Proceedings of the 2018 Con- ference on Empirical Methods in Natural Language Processing, pages 1676-1690.",
+                "links": null
+            },
+            "BIBREF22": {
+                "ref_id": "b22",
+                "title": "Constructing an interactive natural language interface for relational databases",
+                "authors": [
+                    {
+                        "first": "Fei",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Jagadish",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "Proceedings of the VLDB Endowment",
+                "volume": "8",
+                "issue": "",
+                "pages": "73--84",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Fei Li and HV Jagadish. 2014. Constructing an in- teractive natural language interface for relational databases. Proceedings of the VLDB Endowment, 8(1):73-84.",
+                "links": null
+            },
+            "BIBREF23": {
+                "ref_id": "b23",
+                "title": "Sorry, I don't speak SPARQL: translating SPARQL queries into natural language",
+                "authors": [
+                    {
+                        "first": "Axel-Cyrille Ngonga",
+                        "middle": [],
+                        "last": "Ngomo",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Lorenz",
+                        "middle": [],
+                        "last": "B\u00fchmann",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christina",
+                        "middle": [],
+                        "last": "Unger",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jens",
+                        "middle": [],
+                        "last": "Lehmann",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Daniel",
+                        "middle": [],
+                        "last": "Gerber",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "Proceedings of the 22nd international conference on World Wide Web",
+                "volume": "",
+                "issue": "",
+                "pages": "977--988",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Axel-Cyrille Ngonga Ngomo, Lorenz B\u00fchmann, Christina Unger, Jens Lehmann, and Daniel Ger- ber. 2013. Sorry, I don't speak SPARQL: translating SPARQL queries into natural language. In Proceed- ings of the 22nd international conference on World Wide Web, pages 977-988. ACM.",
+                "links": null
+            },
+            "BIBREF24": {
+                "ref_id": "b24",
+                "title": "Integrated learning of dialog strategies and semantic parsing",
+                "authors": [
+                    {
+                        "first": "Aishwarya",
+                        "middle": [],
+                        "last": "Padmakumar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jesse",
+                        "middle": [],
+                        "last": "Thomason",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Raymond",
+                        "middle": [
+                            "J"
+                        ],
+                        "last": "Mooney",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Proceedings of the 15th Conference of the European Chapter",
+                "volume": "1",
+                "issue": "",
+                "pages": "547--557",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Aishwarya Padmakumar, Jesse Thomason, and Ray- mond J Mooney. 2017. Integrated learning of dialog strategies and semantic parsing. In Proceedings of the 15th Conference of the European Chapter of the Association for Computational Linguistics: Volume 1, Long Papers, pages 547-557.",
+                "links": null
+            },
+            "BIBREF25": {
+                "ref_id": "b25",
+                "title": "Language to code: Learning semantic parsers for If-This-Then-That recipes",
+                "authors": [
+                    {
+                        "first": "Chris",
+                        "middle": [],
+                        "last": "Quirk",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Raymond",
+                        "middle": [],
+                        "last": "Mooney",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Michel",
+                        "middle": [],
+                        "last": "Galley",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Proceedings of the 53rd Annual Meeting of the Association for Computational Linguistics and the 7th International Joint Conference on Natural Language Processing",
+                "volume": "1",
+                "issue": "",
+                "pages": "878--888",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Chris Quirk, Raymond Mooney, and Michel Galley. 2015. Language to code: Learning semantic parsers for If-This-Then-That recipes. In Proceedings of the 53rd Annual Meeting of the Association for Compu- tational Linguistics and the 7th International Joint Conference on Natural Language Processing (Vol- ume 1: Long Papers), volume 1, pages 878-888.",
+                "links": null
+            },
+            "BIBREF26": {
+                "ref_id": "b26",
+                "title": "Artificial intelligence: A modern approach",
+                "authors": [
+                    {
+                        "first": "Stuart",
+                        "middle": [],
+                        "last": "Russell",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Peter",
+                        "middle": [],
+                        "last": "Norvig",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Stuart Russell and Peter Norvig. 2009. Artificial intel- ligence: A modern approach.",
+                "links": null
+            },
+            "BIBREF27": {
+                "ref_id": "b27",
+                "title": "Deep Bayesian active learning for natural language processing: Results of a large-scale empirical study",
+                "authors": [
+                    {
+                        "first": "Aditya",
+                        "middle": [],
+                        "last": "Siddhant",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zachary",
+                        "middle": [
+                            "C"
+                        ],
+                        "last": "Lipton",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "2904--2909",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Aditya Siddhant and Zachary C Lipton. 2018. Deep Bayesian active learning for natural language pro- cessing: Results of a large-scale empirical study. In Proceedings of the 2018 Conference on Empiri- cal Methods in Natural Language Processing, pages 2904-2909.",
+                "links": null
+            },
+            "BIBREF28": {
+                "ref_id": "b28",
+                "title": "Dropout: a simple way to prevent neural networks from overfitting",
+                "authors": [
+                    {
+                        "first": "Nitish",
+                        "middle": [],
+                        "last": "Srivastava",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Geoffrey",
+                        "middle": [],
+                        "last": "Hinton",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alex",
+                        "middle": [],
+                        "last": "Krizhevsky",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ilya",
+                        "middle": [],
+                        "last": "Sutskever",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ruslan",
+                        "middle": [],
+                        "last": "Salakhutdinov",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "The Journal of Machine Learning Research",
+                "volume": "15",
+                "issue": "1",
+                "pages": "1929--1958",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Nitish Srivastava, Geoffrey Hinton, Alex Krizhevsky, Ilya Sutskever, and Ruslan Salakhutdinov. 2014. Dropout: a simple way to prevent neural networks from overfitting. The Journal of Machine Learning Research, 15(1):1929-1958.",
+                "links": null
+            },
+            "BIBREF29": {
+                "ref_id": "b29",
+                "title": "Building natural language interfaces to Web APIs",
+                "authors": [
+                    {
+                        "first": "Yu",
+                        "middle": [],
+                        "last": "Su",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ahmed",
+                        "middle": [],
+                        "last": "Hassan Awadallah",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Madian",
+                        "middle": [],
+                        "last": "Khabsa",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Patrick",
+                        "middle": [],
+                        "last": "Pantel",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Proceedings of the 2017 ACM on Conference on Information and Knowledge Management",
+                "volume": "",
+                "issue": "",
+                "pages": "177--186",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Yu Su, Ahmed Hassan Awadallah, Madian Khabsa, Patrick Pantel, Michael Gamon, and Mark Encar- nacion. 2017. Building natural language interfaces to Web APIs. In Proceedings of the 2017 ACM on Conference on Information and Knowledge Man- agement, pages 177-186. ACM.",
+                "links": null
+            },
+            "BIBREF30": {
+                "ref_id": "b30",
+                "title": "Natural language interfaces with fine-grained user interaction: A case study on web APIs",
+                "authors": [
+                    {
+                        "first": "Yu",
+                        "middle": [],
+                        "last": "Su",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ahmed",
+                        "middle": [],
+                        "last": "Hassan Awadallah",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Miaosen",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ryen",
+                        "middle": [
+                            "W"
+                        ],
+                        "last": "White",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the International ACM SIGIR Conference on Research and Development in Information Retrieval",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Yu Su, Ahmed Hassan Awadallah, Miaosen Wang, and Ryen W White. 2018. Natural language interfaces with fine-grained user interaction: A case study on web APIs. In Proceedings of the International ACM SIGIR Conference on Research and Development in Information Retrieval.",
+                "links": null
+            },
+            "BIBREF31": {
+                "ref_id": "b31",
+                "title": "Learning to interpret natural language commands through human-robot dialog",
+                "authors": [
+                    {
+                        "first": "Jesse",
+                        "middle": [],
+                        "last": "Thomason",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Shiqi",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Raymond",
+                        "middle": [
+                            "J"
+                        ],
+                        "last": "Mooney",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Peter",
+                        "middle": [],
+                        "last": "Stone",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Twenty-Fourth International Joint Conference on Artificial Intelligence",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jesse Thomason, Shiqi Zhang, Raymond J Mooney, and Peter Stone. 2015. Learning to interpret nat- ural language commands through human-robot dia- log. In Twenty-Fourth International Joint Confer- ence on Artificial Intelligence.",
+                "links": null
+            },
+            "BIBREF32": {
+                "ref_id": "b32",
+                "title": "Pointing out SQL queries from text",
+                "authors": [
+                    {
+                        "first": "Chenglong",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Marc",
+                        "middle": [],
+                        "last": "Brockschmidt",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Rishabh",
+                        "middle": [],
+                        "last": "Singh",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Chenglong Wang, Marc Brockschmidt, and Rishabh Singh. 2018. Pointing out SQL queries from text.",
+                "links": null
+            },
+            "BIBREF33": {
+                "ref_id": "b33",
+                "title": "Building a semantic parser overnight",
+                "authors": [
+                    {
+                        "first": "Yushi",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jonathan",
+                        "middle": [],
+                        "last": "Berant",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Percy",
+                        "middle": [],
+                        "last": "Liang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Proceedings of the 53rd Annual Meeting of the Association for Computational Linguistics and the 7th International Joint Conference on Natural Language Processing",
+                "volume": "1",
+                "issue": "",
+                "pages": "1332--1342",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Yushi Wang, Jonathan Berant, and Percy Liang. 2015. Building a semantic parser overnight. In Proceed- ings of the 53rd Annual Meeting of the Association for Computational Linguistics and the 7th Interna- tional Joint Conference on Natural Language Pro- cessing (Volume 1: Long Papers), volume 1, pages 1332-1342.",
+                "links": null
+            },
+            "BIBREF34": {
+                "ref_id": "b34",
+                "title": "Quantifying uncertainties in natural language processing tasks",
+                "authors": [
+                    {
+                        "first": "Yijun",
+                        "middle": [],
+                        "last": "Xiao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "William",
+                        "middle": [],
+                        "last": "Yang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Wang",
+                        "middle": [],
+                        "last": "",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the AAAI Conference on Artificial Intelligence",
+                "volume": "33",
+                "issue": "",
+                "pages": "7322--7329",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Yijun Xiao and William Yang Wang. 2019. Quanti- fying uncertainties in natural language processing tasks. In Proceedings of the AAAI Conference on Artificial Intelligence, volume 33, pages 7322-7329.",
+                "links": null
+            },
+            "BIBREF35": {
+                "ref_id": "b35",
+                "title": "SQL-to-text generation with graph-to-sequence model",
+                "authors": [
+                    {
+                        "first": "Kun",
+                        "middle": [],
+                        "last": "Xu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Lingfei",
+                        "middle": [],
+                        "last": "Wu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zhiguo",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "931--936",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Kun Xu, Lingfei Wu, Zhiguo Wang, Yansong Feng, and Vadim Sheinin. 2018. SQL-to-text generation with graph-to-sequence model. In Proceedings of the 2018 Conference on Empirical Methods in Nat- ural Language Processing, pages 931-936.",
+                "links": null
+            },
+            "BIBREF36": {
+                "ref_id": "b36",
+                "title": "SQL-Net: Generating structured queries from natural language without reinforcement learning",
+                "authors": [
+                    {
+                        "first": "Xiaojun",
+                        "middle": [],
+                        "last": "Xu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chang",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dawn",
+                        "middle": [],
+                        "last": "Song",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1711.04436"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Xiaojun Xu, Chang Liu, and Dawn Song. 2017. SQL- Net: Generating structured queries from natural language without reinforcement learning. ArXiv preprint arXiv:1711.04436.",
+                "links": null
+            },
+            "BIBREF37": {
+                "ref_id": "b37",
+                "title": "Interactive semantic parsing for ifthen recipes via hierarchical reinforcement learning",
+                "authors": [
+                    {
+                        "first": "Ziyu",
+                        "middle": [],
+                        "last": "Yao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xiujun",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jianfeng",
+                        "middle": [],
+                        "last": "Gao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Brian",
+                        "middle": [],
+                        "last": "Sadler",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Huan",
+                        "middle": [],
+                        "last": "Sun",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the AAAI Conference on Artificial Intelligence",
+                "volume": "33",
+                "issue": "",
+                "pages": "2547--2554",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ziyu Yao, Xiujun Li, Jianfeng Gao, Brian Sadler, and Huan Sun. 2019. Interactive semantic parsing for if- then recipes via hierarchical reinforcement learning. In Proceedings of the AAAI Conference on Artificial Intelligence, volume 33, pages 2547-2554.",
+                "links": null
+            },
+            "BIBREF38": {
+                "ref_id": "b38",
+                "title": "TypeSQL: Knowledgebased type-aware neural text-to-SQL generation",
+                "authors": [
+                    {
+                        "first": "Tao",
+                        "middle": [],
+                        "last": "Yu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zifan",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zilin",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Rui",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dragomir",
+                        "middle": [],
+                        "last": "Radev",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 2018 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies",
+                "volume": "2",
+                "issue": "",
+                "pages": "588--594",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Tao Yu, Zifan Li, Zilin Zhang, Rui Zhang, and Dragomir Radev. 2018a. TypeSQL: Knowledge- based type-aware neural text-to-SQL generation. In Proceedings of the 2018 Conference of the North American Chapter of the Association for Computa- tional Linguistics: Human Language Technologies, Volume 2 (Short Papers), pages 588-594.",
+                "links": null
+            },
+            "BIBREF39": {
+                "ref_id": "b39",
+                "title": "SyntaxSQLNet: Syntax tree networks for complex and cross-domain text-to-SQL task",
+                "authors": [
+                    {
+                        "first": "Tao",
+                        "middle": [],
+                        "last": "Yu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Michihiro",
+                        "middle": [],
+                        "last": "Yasunaga",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kai",
+                        "middle": [],
+                        "last": "Yang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Rui",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dongxu",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zifan",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dragomir",
+                        "middle": [],
+                        "last": "Radev",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "1653--1663",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Tao Yu, Michihiro Yasunaga, Kai Yang, Rui Zhang, Dongxu Wang, Zifan Li, and Dragomir Radev. 2018b. SyntaxSQLNet: Syntax tree networks for complex and cross-domain text-to-SQL task. In Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing, pages 1653-1663.",
+                "links": null
+            },
+            "BIBREF40": {
+                "ref_id": "b40",
+                "title": "Spider: A large-scale human-labeled dataset for complex and cross-domain semantic parsing and text-to-SQL task",
+                "authors": [
+                    {
+                        "first": "Tao",
+                        "middle": [],
+                        "last": "Yu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Rui",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kai",
+                        "middle": [],
+                        "last": "Yang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Michihiro",
+                        "middle": [],
+                        "last": "Yasunaga",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dongxu",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zifan",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "James",
+                        "middle": [],
+                        "last": "Ma",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Irene",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Qingning",
+                        "middle": [],
+                        "last": "Yao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Shanelle",
+                        "middle": [],
+                        "last": "Roman",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "3911--3921",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Tao Yu, Rui Zhang, Kai Yang, Michihiro Yasunaga, Dongxu Wang, Zifan Li, James Ma, Irene Li, Qingn- ing Yao, Shanelle Roman, et al. 2018c. Spider: A large-scale human-labeled dataset for complex and cross-domain semantic parsing and text-to-SQL task. In Proceedings of the 2018 Conference on Em- pirical Methods in Natural Language Processing, pages 3911-3921.",
+                "links": null
+            }
+        },
+        "ref_entries": {
+            "FIGREF0": {
+                "num": null,
+                "text": "Figure 1: Model-based Interactive Semantic Parsing (MISP) framework.",
+                "uris": null,
+                "fig_num": "1",
+                "type_str": "figure"
+            },
+            "FIGREF1": {
+                "num": null,
+                "text": "Figure 2: MISP-SQL Agent. The base semantic parser incrementally parses the user question (Step 1) into a SQL query by first selecting a column from the table(Step 2). This partial parse is examined by the error detector (Step 3), who determines that the prediction is incorrect (because the uncertainty is high) and triggers the actuator to ask the user a clarification question (Step 4). The user feedback is then incorporated into the world model (Step 5) to update the agent state. If the prediction was correct, Step 2 would be repeated to continue the parsing.",
+                "uris": null,
+                "fig_num": "2",
+                "type_str": "figure"
+            },
+            "FIGREF2": {
+                "num": null,
+                "text": "Figure 3: Deriving an NL question about the aggregator max in the clause \"SELECT max(age)\" from the rooted Q-typed item .",
+                "uris": null,
+                "fig_num": "3",
+                "type_str": "figure"
+            },
+            "FIGREF3": {
+                "num": null,
+                "text": "Figure 4: Comparison of probability-and dropoutbased error detection.",
+                "uris": null,
+                "fig_num": "4",
+                "type_str": "figure"
+            },
+            "TABREF0": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": ". Agent state s t is thus defined as a partial SQL query, i.e., s t ={o 1 , o 2 , ..., o t }, where o t is the predicted SQL component at time step t, such as SELECT place in Figure",
+                "html": null,
+                "num": null
+            },
+            "TABREF1": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "Table 1 shows rules covering [Lexicon] is greater than|equals to|is less than \u2192 OP[>|=|<] sum of values in|average value in|number of|minimum value in|maximum value in \u2192 AGG[sum|avg|count|min|max] [Grammar] \"col\" \u2192 COL[col] Does the system need to return information about COL[col] ? \u2192 Q[col SELECT agg? col] Does the system need to return AGG[agg] COL[col] ? \u2192 Q[agg SELECT agg col] Does the system need to return a value after any mathematical calculations on COL[col] ? \u2192 Q[agg=None SELECT col] Does the system need to consider any conditions about COL[col] ? \u2192 Q[col WHERE col op val] The system considers the following condition: COL[col] OP[op] a value. Is this condition correct? \u2192 Q[op WHERE col op val] The system considers the following condition: COL[col] OP[op] val. Is this condition correct? \u2192 Q[val WHERE col op val] Domain-general lexicon and grammar for NL generation in MISP-SQL (illustrated for WikiSQL; a more comprehensive grammar for Spider can be found in Appendix A).",
+                "html": null,
+                "num": null
+            },
+            "TABREF2": {
+                "content": "<table><tr><td/><td/><td>SQLNet</td><td/><td/><td>SQLova</td><td/></tr><tr><td>System</td><td colspan=\"6\">Accqm Accex Avg. #q Accqm Accex Avg. #q</td></tr><tr><td>no interaction</td><td>0.615</td><td>0.681</td><td>N/A</td><td>0.797</td><td>0.853</td><td>N/A</td></tr><tr><td>DialSQL</td><td>0.690</td><td>N/A</td><td>2.4</td><td>N/A</td><td>N/A</td><td>N/A</td></tr><tr><td>MISP-SQL Unlimit10</td><td>0.932</td><td>0.948</td><td>7.445</td><td>0.985</td><td>0.991</td><td>6.591</td></tr><tr><td>MISP-SQL Unlimit3</td><td>0.870</td><td>0.900</td><td>7.052</td><td>0.955</td><td>0.974</td><td>6.515</td></tr><tr><td>MISP-SQL p  *  =0.95 MISP-SQL p  *  =0.8</td><td>0.782 0.729</td><td>0.824 0.779</td><td>1.713 1.104</td><td>0.912 0.880</td><td>0.939 0.914</td><td>0.773 0.488</td></tr><tr><td colspan=\"3\">SQL query , distributed across 24,241 tables from</td><td/><td/><td/><td/></tr><tr><td colspan=\"3\">Wikipedia. Our experiments follow the same data</td><td/><td/><td/><td/></tr><tr><td>split as in (Zhong et al., 2017).</td><td/><td/><td/><td/><td/><td/></tr></table>",
+                "type_str": "table",
+                "text": ", which contains 80,654 hand-annotated pairs of NL question, Simulation evaluation of MISP-SQL (based on SQLNet or SQLova) on WikiSQL Test set. \"MISP-SQL p * =X \" denotes our agent with probability-based error detection (threshold at X). \"MISP-SQL UnlimitK \" denotes a variant that asks questions for every component, with up to K + 1 questions per component.",
+                "html": null,
+                "num": null
+            },
+            "TABREF6": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "Human evaluation on 100 random examples for MISP-SQL agents based on SQLNet, SQLova and SyntaxSQLNet, respectively.",
+                "html": null,
+                "num": null
+            }
+        }
+    }
+}

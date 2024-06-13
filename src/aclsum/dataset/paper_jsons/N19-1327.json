@@ -1,0 +1,2772 @@
+{
+    "paper_id": "N19-1327",
+    "header": {
+        "generated_with": "S2ORC 1.0.0",
+        "date_generated": "2023-06-16T12:27:52.675750Z"
+    },
+    "title": "Learning Relational Representations by Analogy using Hierarchical Siamese Networks",
+    "authors": [
+        {
+            "first": "Gaetano",
+            "middle": [],
+            "last": "Rossiello",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "University of Bari",
+                "location": {
+                    "country": "Italy"
+                }
+            },
+            "email": "gaetano.rossiello@uniba.it"
+        },
+        {
+            "first": "Alfio",
+            "middle": [],
+            "last": "Gliozzo",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "IBM Research AI",
+                "location": {
+                    "settlement": "Yorktown Heights",
+                    "region": "NY, US"
+                }
+            },
+            "email": "gliozzo@us.ibm.com"
+        },
+        {
+            "first": "Robert",
+            "middle": [],
+            "last": "Farrell",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "IBM Research AI",
+                "location": {
+                    "settlement": "Yorktown Heights",
+                    "region": "NY, US"
+                }
+            },
+            "email": ""
+        },
+        {
+            "first": "Nicolas",
+            "middle": [],
+            "last": "Fauceglia",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "IBM Research AI",
+                "location": {
+                    "settlement": "Yorktown Heights",
+                    "region": "NY, US"
+                }
+            },
+            "email": "nicolas.fauceglia@ibm.com"
+        },
+        {
+            "first": "Michael",
+            "middle": [],
+            "last": "Glass",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "IBM Research AI",
+                "location": {
+                    "settlement": "Yorktown Heights",
+                    "region": "NY, US"
+                }
+            },
+            "email": "mrglass@us.ibm.com"
+        }
+    ],
+    "year": "",
+    "venue": null,
+    "identifiers": {},
+    "abstract": "We address relation extraction as an analogy problem by proposing a novel approach to learn representations of relations expressed by their textual mentions. In our assumption, if two pairs of entities belong to the same relation, then those two pairs are analogous. Following this idea, we collect a large set of analogous pairs by matching triples in knowledge bases with web-scale corpora through distant supervision. We leverage this dataset to train a hierarchical siamese network in order to learn entity-entity embeddings which encode relational information through the different linguistic paraphrasing expressing the same relation. We evaluate our model in a one-shot learning task by showing a promising generalization capability in order to classify unseen relation types, which makes this approach suitable to perform automatic knowledge base population with minimal supervision. Moreover, the model can be used to generate pretrained embeddings which provide a valuable signal when integrated into an existing neuralbased model by outperforming the state-ofthe-art methods on a downstream relation extraction task.",
+    "pdf_parse": {
+        "paper_id": "N19-1327",
+        "_pdf_hash": "",
+        "abstract": [
+            {
+                "text": "We address relation extraction as an analogy problem by proposing a novel approach to learn representations of relations expressed by their textual mentions. In our assumption, if two pairs of entities belong to the same relation, then those two pairs are analogous. Following this idea, we collect a large set of analogous pairs by matching triples in knowledge bases with web-scale corpora through distant supervision. We leverage this dataset to train a hierarchical siamese network in order to learn entity-entity embeddings which encode relational information through the different linguistic paraphrasing expressing the same relation. We evaluate our model in a one-shot learning task by showing a promising generalization capability in order to classify unseen relation types, which makes this approach suitable to perform automatic knowledge base population with minimal supervision. Moreover, the model can be used to generate pretrained embeddings which provide a valuable signal when integrated into an existing neuralbased model by outperforming the state-ofthe-art methods on a downstream relation extraction task.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            }
+        ],
+        "body_text": [
+            {
+                "text": "The task of identifying semantic relationships between entities in unstructured textual corpora, namely Relation Extraction (RE), is often a prerequisite for many other natural language understanding tasks, e.g. automatic knowledge base population, question answering, etc. RE is commonly addressed as a classification task (Bunescu et al., 2005) , where a model is trained to classify relation mentions in text among a predefined set of relation types. For instance, given the sentence \"Robert Plant is the singer of the band Led Zeppelin\", an effective RE system might extract the triple memberOf(ROBERT PLANT, LED ZEP-PELIN), where memberOf is a relation label expressed by the linguistic context \"is the singer of the band\".",
+                "cite_spans": [
+                    {
+                        "start": 324,
+                        "end": 346,
+                        "text": "(Bunescu et al., 2005)",
+                        "ref_id": "BIBREF4"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Since a given relation can be expressed using different textual patterns surrounding entities, the state-of-the-art RE models which follow this approach need a considerable amount of examples for each relation to reach satisfactory performance. Distant supervision (Mintz et al., 2009) instead uses training examples from a knowledge base, guaranteeing a large amount of (popular) relation examples without human intervention, which can be used effectively by neural networks (Lin et al., 2016; Glass et al., 2018) . However, even with this technique, approaching RE as a classification task presents several limitations:",
+                "cite_spans": [
+                    {
+                        "start": 265,
+                        "end": 285,
+                        "text": "(Mintz et al., 2009)",
+                        "ref_id": "BIBREF24"
+                    },
+                    {
+                        "start": 476,
+                        "end": 494,
+                        "text": "(Lin et al., 2016;",
+                        "ref_id": "BIBREF20"
+                    },
+                    {
+                        "start": 495,
+                        "end": 514,
+                        "text": "Glass et al., 2018)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "(1) distant supervision models are not accurate in extracting relations with a long-tailed distribution, because they typically have a small set of instances in knowledge bases; (2) in most domains, relation types are very specific and only a few examples of each relation are available; (3) these models cannot be applied to recognize new relation types not observed during training.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "In this paper, we address RE from a different perspective by reducing it to an analogy problem.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Our assumption states that if two pairs of entities, (A, B) and (C, D), have at least one relation in common r, then those two pairs are analogous. Viceversa, solving proportional analogies, such as A : B = C : D, consists of identifying the implicit relations shared between two pairs of entities. For example, ROME:ITALY=PARIS:FRANCE is a valid analogy because capitalOf is a relation in common.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Based on this idea, we propose an end-to-end neural model able to measure the degree of analogical similarity between two entity pairs, instead of predicting a confidence score for each relation type. An entity pair is represented through its mentions in a textual corpus, sequences of sentences where entities in the pair co-occur. If a mention represents a specific relation type, then this relationship is expressed by the linguistic context surrounding the two entities. E.g., \"Rome is the capital of Italy\" or \"The capital of France is Paris\" referring to the example above. Thus, given two analogous entity pairs represented by their textual mentions sets as input, the model is trained to minimize the difference between the representations of relations having the same linguistic patterns. In other words, the model learns the different paraphrases expressing the same relation. In our research hypothesis, a model trained in such way is able to recognize analogies between unseen entity pairs belonging to new unseen relation types by: (1) generalizing over the sequence of words in the mentions; (2) projecting the sequence of words in the mentions into a vector space representing relational semantics. This approach poses several research questions: (RQ1) How to collect and organize a dataset for training? (RQ2) What kinds of models are effective for this task? (RQ3) How should the model be evaluated?",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Knowledge bases, such as Wikidata or DBpedia, consist of large relational data sources organized in the form of triples, predicate(SUBJECT, OBJECT).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "We exploit this information to build a reliable set of analogous facts used as ground truth. Then, we adopt distant supervision to retrieve relation mentions in web-scale textual corpora by matching the subject-object entities which co-occur in the same sentences (Riedel et al., 2010; ElSahar et al., 2018; Glass and Gliozzo, 2018a) . Through this technique we can train our model on millions of analogy examples without human supervision.",
+                "cite_spans": [
+                    {
+                        "start": 264,
+                        "end": 285,
+                        "text": "(Riedel et al., 2010;",
+                        "ref_id": "BIBREF28"
+                    },
+                    {
+                        "start": 286,
+                        "end": 307,
+                        "text": "ElSahar et al., 2018;",
+                        "ref_id": "BIBREF6"
+                    },
+                    {
+                        "start": 308,
+                        "end": 333,
+                        "text": "Glass and Gliozzo, 2018a)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Since our goal is to train a model able to compute the relational similarity given two sets of textual mentions, we use siamese networks to learn discriminative features between those two instances (Hadsell et al., 2006) . This kind of neural network has been used in both computer vision (Koch et al., 2015) and natural language processing (Mueller and Thyagarajan, 2016; Neculoiu et al., 2016) in order to map two similar instances close in a feature space. However, in our setting each instance consists of a set of mentions, therefore it is inherently a multi-instance learning task 1 . We propose a hierarchical siamese network 1 Due to the weak supervision, the whole set of mentions with an attention mechanism at both word level (Yang et al., 2016) and at the set level (Ilse et al., 2018) in order to select the textual mention which better describes the relation. To the best of our knowledge, this is the first application of a siamese network by pairing sets of instances, so it can be considered a novelty of this work.",
+                "cite_spans": [
+                    {
+                        "start": 198,
+                        "end": 220,
+                        "text": "(Hadsell et al., 2006)",
+                        "ref_id": "BIBREF12"
+                    },
+                    {
+                        "start": 289,
+                        "end": 308,
+                        "text": "(Koch et al., 2015)",
+                        "ref_id": "BIBREF16"
+                    },
+                    {
+                        "start": 341,
+                        "end": 372,
+                        "text": "(Mueller and Thyagarajan, 2016;",
+                        "ref_id": "BIBREF25"
+                    },
+                    {
+                        "start": 373,
+                        "end": 395,
+                        "text": "Neculoiu et al., 2016)",
+                        "ref_id": "BIBREF26"
+                    },
+                    {
+                        "start": 737,
+                        "end": 756,
+                        "text": "(Yang et al., 2016)",
+                        "ref_id": "BIBREF39"
+                    },
+                    {
+                        "start": 778,
+                        "end": 797,
+                        "text": "(Ilse et al., 2018)",
+                        "ref_id": "BIBREF14"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "We evaluate the generalization capability of our model in recognizing unseen relation types through an one-shot relational classification task introduced in this paper. We train the parameters of the model on a subset of most frequent relations of one of three different distantly supervised datasets used in our experiments. Then, we evaluate it on the long-tailed relations of each dataset. During the test phase, only a single example for each unseen relation is provided. This example is not used to update the parameters of the model as in a classification task, but rather to produce the vector representation of the relation itself. Entity pairs having mention sets close to this representation are more likely to be analogous. The experiments show promising results of our approach on this task, compared with the recent deep models commonly used for encoding textual representations (Conneau et al., 2017) . However, when the number of the unseen relation types increases, the performance of our model become far from the results obtained in the one-shot image classification (Koch et al., 2015) , opening an interesting challenge for future work.",
+                "cite_spans": [
+                    {
+                        "start": 892,
+                        "end": 914,
+                        "text": "(Conneau et al., 2017)",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 1085,
+                        "end": 1104,
+                        "text": "(Koch et al., 2015)",
+                        "ref_id": "BIBREF16"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Finally, our model shows a transfer capability in other tasks through the use of its pre-trained vectors. Indeed, a branch of the hierarchical siamese network can be used to generate entity-entity representations given sets of mentions as input, that we call analogy embeddings. In our experiments, we integrate those representations into an existing end-to-end model based on convolutional networks (Glass and Gliozzo, 2018b) , outperfoming the state-of-the-art systems on two shared datasets commonly used for distantly supervised relation extraction.",
+                "cite_spans": [
+                    {
+                        "start": 400,
+                        "end": 426,
+                        "text": "(Glass and Gliozzo, 2018b)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Relation Extraction Several approaches have been proposed in the literature to address the problem of extracting relations from text with minimal supervision.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "The bootstrapping method (Agichtein and Grais labeled, but each individual mention in the set is unlabeled. vano, 2000) collects the textual patterns between a few example pairs of entities iteratively, and uses them to retrieve other pairs of entities from a corpus. This method is limited by the semantic drift issue since wrong patterns might be collected. OpenIE (Mausam et al., 2012) is an unsupervised method for extracting triples from text, where the relations are linguistic phrases. The lack of a canonical form for the extracted relations makes this approach not suitable to populate knowledge bases with a fixed schema.",
+                "cite_spans": [
+                    {
+                        "start": 108,
+                        "end": 119,
+                        "text": "vano, 2000)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 367,
+                        "end": 388,
+                        "text": "(Mausam et al., 2012)",
+                        "ref_id": "BIBREF22"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "Universal schema (Riedel et al., 2013) addresses RE by combining the OpenIE and knowledge base relations through a matrix factorization technique typically adopted in the collaborative filtering approach of recommendation systems. The column-less (Toutanova et al., 2015) and row-less (Verga and McCallum, 2016) extensions of this method can handle unseen entity pairs and textual relations when combined (Verga et al., 2017) .",
+                "cite_spans": [
+                    {
+                        "start": 17,
+                        "end": 38,
+                        "text": "(Riedel et al., 2013)",
+                        "ref_id": "BIBREF29"
+                    },
+                    {
+                        "start": 247,
+                        "end": 271,
+                        "text": "(Toutanova et al., 2015)",
+                        "ref_id": "BIBREF32"
+                    },
+                    {
+                        "start": 285,
+                        "end": 311,
+                        "text": "(Verga and McCallum, 2016)",
+                        "ref_id": "BIBREF34"
+                    },
+                    {
+                        "start": 405,
+                        "end": 425,
+                        "text": "(Verga et al., 2017)",
+                        "ref_id": "BIBREF35"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "The one-shot RE has been addressed by (Yuan et al., 2017) , who adopt a siamese network to extract fine-grained relations which typically have few training examples. This model has two main limitations. Firstly, it works only by pairing two single mentions and is not able to handle a whole set of mentions referring to a relation instance. Our hierarchical siamese network overcomes this issue by using an attention mechanism at both word and mention level. Moreover, their one-shot evaluation mainly focuses on extracting the same relation types seen during training. Instead, the goal of our one-shot task is to evaluate the transfer capability in extracting unseen relation types across domains using a single pre-trained model.",
+                "cite_spans": [
+                    {
+                        "start": 38,
+                        "end": 57,
+                        "text": "(Yuan et al., 2017)",
+                        "ref_id": "BIBREF40"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "Recently, (Levy et al., 2017) propose to reduce RE slot-filling to a question answering problem. The main idea is to build a set of question-answer pairs for the relations in knowledge bases and train a reading comprehension model using this dataset. This approach shows promising zero-shot capability in extracting unseen relation types. However, the schema querification phase requires a crowdsourcing effort. Our method uses distant supervision, so it does not need any kind of manual annotations.",
+                "cite_spans": [
+                    {
+                        "start": 10,
+                        "end": 29,
+                        "text": "(Levy et al., 2017)",
+                        "ref_id": "BIBREF19"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "The analogy problem, from a computational linguistic perspective, was originally addressed by (Turney, 2006) who investigate several similarity measures for solving word analogy questions in the Scholastic Aptitude Test dataset. The authors provide an interesting argument regarding the different types of similarities, attributional and relational, and their use in solving word analogies. Attributional similarity, typical of the word vector space models, is useful for synonym detection, word sense disambiguation and so on. Instead, relational similarity is suitable for understanding analogies between two pairs of words. Our neural-based analogy approach is inspired by this finding.",
+                "cite_spans": [
+                    {
+                        "start": 94,
+                        "end": 108,
+                        "text": "(Turney, 2006)",
+                        "ref_id": "BIBREF33"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Word Analogy",
+                "sec_num": null
+            },
+            {
+                "text": "Recently, word analogies, namely the proportional analogy between two word pairs such as a : b = c : d, have been used by (Mikolov et al., 2013; Pennington et al., 2014) to show the capability of word embeddings to discover linguistic regularities in word contexts using vector offsets (e.g. king -man + woman = queen). The works in (Gladkova et al., 2016; Vylomova et al., 2016) explore the use of word vectors to model the semantic relations. The proportional analogy is also adopted by (Liu et al., 2017) as analogical inference in order to learn multi-relational embeddings which are evaluated on knowledge base completion benchmarks.",
+                "cite_spans": [
+                    {
+                        "start": 122,
+                        "end": 144,
+                        "text": "(Mikolov et al., 2013;",
+                        "ref_id": "BIBREF23"
+                    },
+                    {
+                        "start": 145,
+                        "end": 169,
+                        "text": "Pennington et al., 2014)",
+                        "ref_id": "BIBREF27"
+                    },
+                    {
+                        "start": 333,
+                        "end": 356,
+                        "text": "(Gladkova et al., 2016;",
+                        "ref_id": "BIBREF8"
+                    },
+                    {
+                        "start": 357,
+                        "end": 379,
+                        "text": "Vylomova et al., 2016)",
+                        "ref_id": "BIBREF37"
+                    },
+                    {
+                        "start": 489,
+                        "end": 507,
+                        "text": "(Liu et al., 2017)",
+                        "ref_id": "BIBREF21"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Word Analogy",
+                "sec_num": null
+            },
+            {
+                "text": "However, in order to apply word embedding models to proportional analogy, the model must have seen the words during training. This approach is unsuitable for computing the analogy between out-of-vocabulary words. Our approach overcomes this limitation, since it works by considering the contexts where the entities occur.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Word Analogy",
+                "sec_num": null
+            },
+            {
+                "text": "Given two pairs of entities, (A, B) and (C, D), their semantic relations can be expressed by their mentions in text, (A, B) = {S i } and (C, D) = {S j }. Specifically, {S i } and {S j } are the sets of sentences where (A, B) and (C, D) co-occur in the same set. Two pairs of entities are analogous, A : B = C : D, iff their mentions sets, or part of them, express the same relation r. Knowledge bases, such as Wikidata, contain millions of trusted facts in form of triples, r(A, B), namely pairs of entities in known relationships. We leverage these relational data sources as ground truth in order to collect a set of proportional analogy statements. Then, we build a dataset through the distant supervision technique by retrieving the mentions sets from web-scale corpora.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Learning Relations by Analogy",
+                "sec_num": "3"
+            },
+            {
+                "text": "Our idea is to train a neural network to solve the analogy problem between any two entity pairs in this dataset, as long as they are described by the textual contexts where they co-occur. In other words, this task is reduced to a binary classification of determining whether the relational similarity between the representations of two sets of mentions exceeds a threshold. The network is trained by feeding two sets of mentions related to two different pairs, and it is optimized to return a positive label if the two entity pairs are analogous, namely they share at least one relation, or a negative label otherwise.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Learning Relations by Analogy",
+                "sec_num": "3"
+            },
+            {
+                "text": "Figure 1 provides an example of this process. For the relation memberOf, the entity pairs (ROBERT PLANT, LED ZEPPELIN) and (DAVID GILMOUR , PINK FLOYD) are sampled. The two entity pairs are converted into their respectively mentions sets gathered from a textual corpus, such as Wikipedia. Since these two entity pairs are analogous, the network is optimized to learn the representations of the two textual contexts to be close into the feature space. In fact, the first sentences of both pairs represent the concept of membership of a band, even if they are expressed using different words. Based on our assumption, the aim is to learn how to encode the relational representations through the different paraphrases of the same relation. However, the model also needs negative examples during the training phase. We randomly select an entity pair from a different relation for each positive example, such as (ROBERT PLANT, LED ZEPPELIN) and (PARIS, FRANCE). Since we cast the problem as a binary classification task, we create a balanced dataset of positive and negative examples.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 7,
+                        "end": 8,
+                        "text": "1",
+                        "ref_id": "FIGREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Learning Relations by Analogy",
+                "sec_num": "3"
+            },
+            {
+                "text": "Siamese neural networks (Bromley et al., 1993) are well suited to this task because they are specifically designed to compute the similarity between two instances. A siamese network has symmetric twin sub-networks which share the same parameters, but are joined by an energy function at the head. Weight sharing forces the two similar instances to be mapped to very close locations in feature space because both of the sub-networks are optimized using the same function. In computer vision, siamese architectures based on convolutional neural networks (Hadsell et al., 2006; Koch et al., 2015; Vinyals et al., 2016) have shown promising performance in learning highly discriminative features by pairing images that belong to the same class. Likewise, our hypothesis is that a siamese network trained by matching two distinct mentions sets that share the same relation is able to learn how to map patterns of words across the sentences containing the two pairs of entities so as to capture the semantics of the relation. For instance, given the example in Figure 1 an effective siamese network should determine that the patterns for \"is the lead singer\" and \"was the guitarist\" express the same relation, memberOf.",
+                "cite_spans": [
+                    {
+                        "start": 24,
+                        "end": 46,
+                        "text": "(Bromley et al., 1993)",
+                        "ref_id": "BIBREF3"
+                    },
+                    {
+                        "start": 552,
+                        "end": 574,
+                        "text": "(Hadsell et al., 2006;",
+                        "ref_id": "BIBREF12"
+                    },
+                    {
+                        "start": 575,
+                        "end": 593,
+                        "text": "Koch et al., 2015;",
+                        "ref_id": "BIBREF16"
+                    },
+                    {
+                        "start": 594,
+                        "end": 615,
+                        "text": "Vinyals et al., 2016)",
+                        "ref_id": "BIBREF36"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 1062,
+                        "end": 1063,
+                        "text": "1",
+                        "ref_id": "FIGREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Learning Relations by Analogy",
+                "sec_num": "3"
+            },
+            {
+                "text": "To train a siamese network based on our approach, we have to face the following challenges:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Learning Relations by Analogy",
+                "sec_num": "3"
+            },
+            {
+                "text": "(1) the language may be highly variable and the same relation expressed in a multitude of different ways; (2) the mentions set of an entity pair consists of several sentences, each of which might express different relations, hence this is a multiinstance learning problem; (3) distant supervision could provide a wrong labeling, namely sentences which do not express any specific relations. ",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Learning Relations by Analogy",
+                "sec_num": "3"
+            },
+            {
+                "text": "To face these challenges, we propose a Hierarchical Siamese Network (HSN) architecture as shown in Figure 2 . In the following paragraphs, we describe the details of each component.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 106,
+                        "end": 107,
+                        "text": "2",
+                        "ref_id": "FIGREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Hierarchical Siamese Network",
+                "sec_num": "4"
+            },
+            {
+                "text": "The HSN takes as input two entity pairs represented by their mentions sets. Since the twin sub-networks of the HSN are the same, we focus only on one of these. Given a triple r(A, B) from a knowledge base, the relation r can be expressed through the set of sentences in a textual corpus where the the two entities co-occur: r(A, B) = {S 1 , S 2 , . . . , S n }, with S i = {w i1 , w i2 , . . . , w ik }, where w ij represents the j-th word in the sentences S i , \u2200i \u2208 1 \u2264 i \u2264 n and \u2200j \u2208 1 \u2264 i \u2264 k. The purpose of a subnetwork is to learn a low-rank vector representation r A,B for the relation r expressed by the pair (A, B). This is done by hierarchically composing the word and sentence representations.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Input Representation",
+                "sec_num": null
+            },
+            {
+                "text": "Given a sentence S i = {w i1 , w i2 , . . . , w ik }, we map each one-hot word representation of w ij into its word embedding x ij = Ew ij , where E d,|V | is a matrix of real-valued vectors of size d, and V is a (fixed) vocabulary. Word embeddings are designed to encode syntactic and semantic features of words and can be randomly initialized or pre-trained on large corpora. We use pre-trained GloVe (Pennington et al., 2014) embeddings for our purposes. We encode the whole sentence S i into a low-rank representation by composing its constituent word embeddings. An effective way to perform such an encoding is using recurrent neural networks (RNN) which are able to compose word embeddings by taking into account their positions in the sentence conditioned on the previous words. For our model, this capability is critical in order to detect sequences of words which express a particular relation, such as \"is the capital of\". We use a bidirectional GRU (Bahdanau et al., 2014) to gather the information from both directions for words. Formally, given",
+                "cite_spans": [
+                    {
+                        "start": 403,
+                        "end": 428,
+                        "text": "(Pennington et al., 2014)",
+                        "ref_id": "BIBREF27"
+                    },
+                    {
+                        "start": 960,
+                        "end": 983,
+                        "text": "(Bahdanau et al., 2014)",
+                        "ref_id": "BIBREF1"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Gated Recurrent Unit for Sentence Encoder",
+                "sec_num": null
+            },
+            {
+                "text": "-\u2192 h ij = ---\u2192 GRU (x ij ) and \u2190 - h ij = \u2190 --- GRU (x ij ), the hidden state h ij = [ -\u2192 h ij , \u2190 - h ij ]",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Gated Recurrent Unit for Sentence Encoder",
+                "sec_num": null
+            },
+            {
+                "text": "is a new dense representation of w ij which encodes also the information of the whole sentence.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Gated Recurrent Unit for Sentence Encoder",
+                "sec_num": null
+            },
+            {
+                "text": "Word Attention with Context Vector However, only certain words in a sentence express the semantics of a relation, therefore we need a strategy to automatically identify them during the training. For example, the words \"singer\" and \"guitarist\" at both sides of Figure 1 are good candidates to express the relation member. We use the attention mechanism with a context vector proposed in (Yang et al., 2016) to reward such words which are important to the meaning of a relation and then aggregate their information in the sentence representation. In detail,",
+                "cite_spans": [
+                    {
+                        "start": 386,
+                        "end": 405,
+                        "text": "(Yang et al., 2016)",
+                        "ref_id": "BIBREF39"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 267,
+                        "end": 268,
+                        "text": "1",
+                        "ref_id": "FIGREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Gated Recurrent Unit for Sentence Encoder",
+                "sec_num": null
+            },
+            {
+                "text": "s i = k \u03b1 ik h ik , where \u03b1 ij = exp(u T ij uw) k exp(u T ik uw)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Gated Recurrent Unit for Sentence Encoder",
+                "sec_num": null
+            },
+            {
+                "text": ", and u ij = tanh(W w h ij + b w ). The vector s i represents the sentence S i and is computed as the weighted sum of the GRU-based word vectors h ij using the normalized attention weights \u03b1 ij . The parameters for the attention mechanism are the weights and biases W w , b w and u w , the context vector, a global fixed vector which, independently from a specific word, represents a kind of query which helps to inform what is the most informative word for each analogy. The context vector u w essentially works like a memory mechanism, as described in (Sukhbaatar et al., 2015; Kumar et al., 2016) .",
+                "cite_spans": [
+                    {
+                        "start": 554,
+                        "end": 579,
+                        "text": "(Sukhbaatar et al., 2015;",
+                        "ref_id": "BIBREF30"
+                    },
+                    {
+                        "start": 580,
+                        "end": 599,
+                        "text": "Kumar et al., 2016)",
+                        "ref_id": "BIBREF17"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Gated Recurrent Unit for Sentence Encoder",
+                "sec_num": null
+            },
+            {
+                "text": "Attention for Multi-instance Relation Representation Once all sentences in the mentions set are encoded, the aim of the last layer of a subnetwork is to produce the vector r A,B which represents the pair (A, B). However, while weak supervision guarantees a large amount of training data without any human intervention, wrongly labeled sentences inevitably occur. For instance, the S2 of the pair on the right side in the Figure 1 does not express the relation member precisely, therefore a wrong bias could propagate during the training phase. This issue is typically addressed through a multi-instance setting, where a model should identify the correct instance(s) from a bag. Recently, end-to-end neural architectures have been proposed to address this multi-instance classification problem (Wang et al., 2018; Feng and Zhou, 2017) by proposing several ways to aggregate the unlabeled instances, such as taking their average. Our goal is to have a model which is able to properly select the most relevant sentences by ascribing different weights to the encoded sentences. For this purpose, we adopt an attention mechanism at the sentence level. It is important to point out that the sentences in the mentions set do not have any temporal relationship, therefore we adapt the standard attention strategies as described in (Ilse et al., 2018) . In detail, r A,B = i \u03b1 i s i is the embedding of the relation r given the pair (A, B), with",
+                "cite_spans": [
+                    {
+                        "start": 793,
+                        "end": 812,
+                        "text": "(Wang et al., 2018;",
+                        "ref_id": "BIBREF38"
+                    },
+                    {
+                        "start": 813,
+                        "end": 833,
+                        "text": "Feng and Zhou, 2017)",
+                        "ref_id": "BIBREF7"
+                    },
+                    {
+                        "start": 1323,
+                        "end": 1342,
+                        "text": "(Ilse et al., 2018)",
+                        "ref_id": "BIBREF14"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 428,
+                        "end": 429,
+                        "text": "1",
+                        "ref_id": "FIGREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Gated Recurrent Unit for Sentence Encoder",
+                "sec_num": null
+            },
+            {
+                "text": "\u03b1 i = exp(u T i us) k exp(u T k us) , u i = tanh(W s s i + b s ),",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Gated Recurrent Unit for Sentence Encoder",
+                "sec_num": null
+            },
+            {
+                "text": "where W s and u s are parameters.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Gated Recurrent Unit for Sentence Encoder",
+                "sec_num": null
+            },
+            {
+                "text": "There are several ways to merge the output of the two sub-networks in order to learn the analogical similarity between them. For instance, (Hadsell et al., 2006) propose a contrastive loss with the aim of decreasing the distance between two instance representations. However, we adopt the strategy proposed in (Koch et al., 2015) , in which the metric distance is induced by a fully-connected layer with a sigmoidal output unit on the absolute difference between the representations output by twin networks. Thus, given r A,B and r C,D the two relation embeddings which encode the whole mentions sets of the two entity pairs, we can compute the degree of analogy between them with p = \u03c3(W r (|r A,B -r C,D |)), where the parameters W r measure the importance of each element of the difference vector, and they are learned in a end-to-end fashion, together with the relation representations. We build a training set by pairing the mentions sets of the entity-entity pairs from a KB, following the idea discussed in the next section. Thus, we can reduce the analogy task to a binary classification problem, so that p = P ((A, B), (C, D); \u0398) is equal to 1 if A : B = C : D, 0 otherwise. We learn \u0398 (all the parameters of HSN) using a gradient-based method which minimizes a cross-entropy loss function with the L2 regularization. ",
+                "cite_spans": [
+                    {
+                        "start": 139,
+                        "end": 161,
+                        "text": "(Hadsell et al., 2006)",
+                        "ref_id": "BIBREF12"
+                    },
+                    {
+                        "start": 310,
+                        "end": 329,
+                        "text": "(Koch et al., 2015)",
+                        "ref_id": "BIBREF16"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Merging Layer and Training Strategy",
+                "sec_num": null
+            },
+            {
+                "text": "Once the analogy model is trained, it has two different capabilities. First, the whole HSN architecture can be used as a binary classifier in order to infer if two entity pairs, expressed by their mentions sets, are analogous. Second, we can use its subnetwork before the merge layer as a feature extractor to generate entity-entity vectors given sets of sentences as input which can be used as pretrained analogy embeddings in other tasks. We evaluate our model on the one-shot relational classification and distantly supervised relation extraction benchmarks.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "5"
+            },
+            {
+                "text": "In the entire experimental protocol we exploit three different datasets (see the supplemental material for details 1 . Aside from the difference in size and KB adopted, it worth noting also the difference in terms of corpus style of these datasets.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 115,
+                        "end": 116,
+                        "text": "1",
+                        "ref_id": "TABREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Datasets",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "For instance, T-REX has well-written textual mentions, because the sentences are extracted from Wikipedia. Conversely, CC-DBP and NYT-FB contain dirtier sentences which mean a high probability of incurring wrong labeling.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Datasets",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "For both benchmarks, we use the same analogy model trained only once on a subset of the relations in T-REX. In detail, we discard all relations having less than 20 entity pairs, collecting 482 relations. We sort the relations by the number of instances, and we took the most frequent 60% of them to train the HSN. We use the remaining 20% of the relations for validation and the least frequent 20% as a corpus to implement one of the three oneshot classification tasks. We iterate this process throughout the training phase by selecting a different buckets at each iteration to prevent overfitting. The training is monitored by computing the binary accuracy over a fixed validation set, consisting of 36,480 analogy examples, built by adopting the same criteria described above. We initialize our word embedding layer with the pre-trained GloVe vectors consisting of 6B tokens with 50 dimensions. The word embedding weights are not updated during training. The number of mentions for each entity pair is fixed to 3, based on their average on T-REX (see Table 1 ).",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 1059,
+                        "end": 1060,
+                        "text": "1",
+                        "ref_id": "TABREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Training and Implementation Details",
+                "sec_num": "5.2"
+            },
+            {
+                "text": "Task Given an unseen entity pair (A t , B t ) and its mentions set A t , B t , the one-shot relation classification task is to categorize this test pair (A t , B t ) into one of N relation types, with the restriction that for each relation type r i , \u2200i \u2208 N , we are given only one entity pair (A i , B i ) together with its mentions set A i , B i as training. We can cast the one-shot classification in terms of a relational similarity as follows:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "One-shot Relational Classification",
+                "sec_num": "5.3"
+            },
+            {
+                "text": "r i = arg max i sim M ( A t , B t , A i , B i ) (1)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "One-shot Relational Classification",
+                "sec_num": "5.3"
+            },
+            {
+                "text": "where sim M is a similarity score, using the method M , which measures the analogy between the train and test entity pairs through their mentions sets. We implemented sim HSN using the HSN trained as described above. The two mentions sets are given as input to the network and their similarity is computed using the sigmoidal output of the last layer.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "One-shot Relational Classification",
+                "sec_num": "5.3"
+            },
+            {
+                "text": "Baselines A method M should be robust in facing the unseen entity pairs used for testing. Training a standard RE model using just one example cannot provide a suitable baseline. Furthermore, since the two new entities that we want to classify might not be present in an existing knowledge graph, we could not apply relational embeddings (Bordes et al., 2013) as well. Thus, the use of the contexts surrounding the two entities in the mentions sets to compute the relational similarity score is needed. In other words, we cast the task of oneshot relational classification to a problem of measuring textual (i.e. mentions) similarity with the aim to prove that our pre-trained siamese model is able to grasp the semantics of relations better than the other pre-trained text representation models.",
+                "cite_spans": [
+                    {
+                        "start": 337,
+                        "end": 358,
+                        "text": "(Bordes et al., 2013)",
+                        "ref_id": "BIBREF2"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "One-shot Relational Classification",
+                "sec_num": "5.3"
+            },
+            {
+                "text": "We implemented five baselines commonly used to encode textual representations. First, we use the pre-trained Word2Vec (Mikolov et al., 2013) and GloVe (Pennington et al., 2014) embeddings. The score is given by the cosine similarity between the bag-of-means for the two entity pairs, averaging the word vectors in the mentions sets. We also adopt Doc2Vec (Le and Mikolov, 2014) to derive entity pair vectors, and comparing them using cosine similarity. For each entity pair, a pseudodocument embedding is created by concatenating its mentions sets. Finally, we compare HSM with the pre-trained Skip-Thought (Kiros et al., 2015) and InferSent (Conneau et al., 2017) sentence encoders, which are the state-of-the-art in computing textual similarity. An entity pair vector is obtained by averaging the embeddings of each sentence in the mentions set.",
+                "cite_spans": [
+                    {
+                        "start": 118,
+                        "end": 140,
+                        "text": "(Mikolov et al., 2013)",
+                        "ref_id": "BIBREF23"
+                    },
+                    {
+                        "start": 151,
+                        "end": 176,
+                        "text": "(Pennington et al., 2014)",
+                        "ref_id": "BIBREF27"
+                    },
+                    {
+                        "start": 607,
+                        "end": 627,
+                        "text": "(Kiros et al., 2015)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 642,
+                        "end": 664,
+                        "text": "(Conneau et al., 2017)",
+                        "ref_id": "BIBREF5"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "One-shot Relational Classification",
+                "sec_num": "5.3"
+            },
+            {
+                "text": "One-shot trials We follow the experimental setup described in (Koch et al., 2015) to create our one-shot benchmark. For each dataset, we select the 20% of less frequent relations sorted by the number of entity pairs, having at least 20 instances. Therefore, we collect three different one-shot test sets of 92, 55 and 11 unseen relation types for T-REX, CC-DBP and NYT-FB, We repeated this operation k times for N from 2 to 10, for each of the three datasets. We choose k equal to 10,000, so that the random baseline converges to 100/N , in order to create an unbiased testbed.",
+                "cite_spans": [
+                    {
+                        "start": 62,
+                        "end": 81,
+                        "text": "(Koch et al., 2015)",
+                        "ref_id": "BIBREF16"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "One-shot Relational Classification",
+                "sec_num": "5.3"
+            },
+            {
+                "text": "The results are reported in Figure 3 . Our model outperforms all the baselines on the test split of T-REX, reaching an accuracy range from 95.87% to 65.33% for N-way one-shot trials. This behavior remains constant also for the other two datasets, showing the solidity of HSN even though it has been trained on a different corpus using relations from an another ontology. This result confirms that our model is able to generalize on the linguistic contexts expressing relations, as well as the capability to learn how to transfer this information to other relations not observed before. The supplemental file reports some one-shot trial examples.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 35,
+                        "end": 36,
+                        "text": "3",
+                        "ref_id": "FIGREF3"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Results and Discussion",
+                "sec_num": null
+            },
+            {
+                "text": "The lower accuracy on CC-DBP and NYT-FB might be caused by the different style of the corpora (Wikipedia vs. Web pages). Indeed, the test set of T-REX is build using the same corpus which HSN is trained on. The Wikipedia abstracts consist of well-written contents, typically the definition of one of the two entities in the pairs. Thus, T-REX can be considered an easier dataset compared with the other two. Surprisingly, the average vectors using Word2Vec and GloVe obtain remarkable performance compared to state-of-the-art sentence encoders. This might be due to the way how these sentence models are trained. For instance, InferSent is trained using a natural language inference dataset, which might be not suitable to learn representations which represent relations in text. Instead, HSN is trained and optimized to learn and encode relational representations. However, this aspect deserves to be dealt with more deeply, as does the comparison of HSN on the shared textual similarity benchmarks; we think this is a clear path for future research.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Results and Discussion",
+                "sec_num": null
+            },
+            {
+                "text": "We also evaluate the ability of the analogy model to provide low-rank representations for entity pairs which are useful for more traditional relation extraction tasks, where a corpus of text has to be processed and relevant relations in a predefined schema have to be recognized. To this aim, we use the sub-network of our HSN before the merge layer, and we feed the mentions set of each entity pair of instances as found in the corpus to generate an analogy embedding as a vector of features. In detail, given a set of mentions referring to an entity pair (A, B) as input, the pre-trained HSN generates an embedding r A,B (see Figure 2 ) which represents the relation between those two entities. Then, we concatenate these embeddings to the penultimate layer of a relation extraction model, PCNN-KI (Glass and Gliozzo, 2018b) , based on a convolutional neural network, which is the state-of-the-art for this benchmark. The final fully-connected layer uses the representation from HSN in combination with its own learned multi-instanced vector representation to predict a confidence score for each relation. During the training of this joint model, PCNN-KI+ANALOGY, we freeze our analogy embeddings in order to avoid the loose the knowledge transfer capability.",
+                "cite_spans": [
+                    {
+                        "start": 800,
+                        "end": 826,
+                        "text": "(Glass and Gliozzo, 2018b)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 635,
+                        "end": 636,
+                        "text": "2",
+                        "ref_id": "FIGREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Transfer Learning in Relation Extraction",
+                "sec_num": "5.4"
+            },
+            {
+                "text": "As for the one-shot setting described before, we use the same pre-trained the HSN on the T-REX and we used it as a feature extractor for entity pairs in both train-test standard splits of NYT-FB, as used in (Zeng et al., 2015; Lin et al., 2016) . Figure 4 reports the results of our evaluation. The model which uses the features generated by HSN largely improve the performances of PCNN-KI, despite the HSN is trained on a different corpus and using a different KB. In the same chart, we also report a compared evaluation for other approaches proposed in the literature for the NYT-FB benchmark: PCNN+ATT (Lin et al., 2016) , CNN+ATT (Zeng et al., 2015) , MIML-RE (Surdeanu et al., 2012) , HOFFMANN (Hoffmann et al., 2011) , MINTZ (Mintz et al., 2009) .",
+                "cite_spans": [
+                    {
+                        "start": 207,
+                        "end": 226,
+                        "text": "(Zeng et al., 2015;",
+                        "ref_id": "BIBREF41"
+                    },
+                    {
+                        "start": 227,
+                        "end": 244,
+                        "text": "Lin et al., 2016)",
+                        "ref_id": "BIBREF20"
+                    },
+                    {
+                        "start": 247,
+                        "end": 255,
+                        "text": "Figure 4",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 605,
+                        "end": 623,
+                        "text": "(Lin et al., 2016)",
+                        "ref_id": "BIBREF20"
+                    },
+                    {
+                        "start": 634,
+                        "end": 653,
+                        "text": "(Zeng et al., 2015)",
+                        "ref_id": "BIBREF41"
+                    },
+                    {
+                        "start": 656,
+                        "end": 687,
+                        "text": "MIML-RE (Surdeanu et al., 2012)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 699,
+                        "end": 722,
+                        "text": "(Hoffmann et al., 2011)",
+                        "ref_id": "BIBREF13"
+                    },
+                    {
+                        "start": 731,
+                        "end": 751,
+                        "text": "(Mintz et al., 2009)",
+                        "ref_id": "BIBREF24"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Transfer Learning in Relation Extraction",
+                "sec_num": "5.4"
+            },
+            {
+                "text": "We run the evaluation also on CC-DBP, a larger dataset for distantly supervised RE, using the same train-test setting adopted in (Glass and Gliozzo, 2018b) . As done for the NYT-FB dataset, we incorporate the analogy embeddings generated by the same HSN trained on the T-REX. The results confirm the improvements obtained by PCNN-KI model if it integrates our pre-trained embeddings (Table 3 ).",
+                "cite_spans": [
+                    {
+                        "start": 129,
+                        "end": 155,
+                        "text": "(Glass and Gliozzo, 2018b)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 390,
+                        "end": 391,
+                        "text": "3",
+                        "ref_id": "TABREF4"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Transfer Learning in Relation Extraction",
+                "sec_num": "5.4"
+            },
+            {
+                "text": "F1 PCNN-KI 0.437 0.468 PCNN-KI+ANALOGY 0.500 0.504 ",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "AUC",
+                "sec_num": null
+            },
+            {
+                "text": "In this paper, we proposed a novel approach to learn representations of relations in text. Alignments between knowledge bases and textual corpora are used as ground truth in order to collect a set of analogies between entity pairs. We designed a hierarchical siamese network trained to recognize those analogies. The experiments showed the two main advantages of our approach. First, the model can generalize on new unseen relation types, obtaining promising results in one-shot learning compared with the state-of-the-art sentence encoders. Second, the model can generate low-rank representations can help existing neuralbased models designed for other tasks. As future work, we plan to continue our investigation by extending the method with other ideas. For instance, the use of positional embeddings, as well as the use of placeholders replacing the entities in the textual mentions are promising future directions. Finally, we plan also to explore the use of analogy embeddings in other tasks, such as question answering and knowledge base population.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion and Future Work",
+                "sec_num": "6"
+            }
+        ],
+        "back_matter": [],
+        "bib_entries": {
+            "BIBREF0": {
+                "ref_id": "b0",
+                "title": "Snowball: extracting relations from large plain-text collections",
+                "authors": [
+                    {
+                        "first": "Eugene",
+                        "middle": [],
+                        "last": "Agichtein",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Luis",
+                        "middle": [],
+                        "last": "Gravano",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2000,
+                "venue": "ACM DL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Eugene Agichtein and Luis Gravano. 2000. Snowball: extracting relations from large plain-text collections. In ACM DL.",
+                "links": null
+            },
+            "BIBREF1": {
+                "ref_id": "b1",
+                "title": "Neural machine translation by jointly learning to align and translate",
+                "authors": [
+                    {
+                        "first": "Dzmitry",
+                        "middle": [],
+                        "last": "Bahdanau",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kyunghyun",
+                        "middle": [],
+                        "last": "Cho",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yoshua",
+                        "middle": [],
+                        "last": "Bengio",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Dzmitry Bahdanau, Kyunghyun Cho, and Yoshua Bengio. 2014. Neural machine translation by jointly learning to align and translate. CoRR, abs/1409.0473.",
+                "links": null
+            },
+            "BIBREF2": {
+                "ref_id": "b2",
+                "title": "Translating embeddings for modeling multirelational data",
+                "authors": [
+                    {
+                        "first": "Antoine",
+                        "middle": [],
+                        "last": "Bordes",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nicolas",
+                        "middle": [],
+                        "last": "Usunier",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alberto",
+                        "middle": [],
+                        "last": "Garc\u00eda-Dur\u00e1n",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jason",
+                        "middle": [],
+                        "last": "Weston",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Oksana",
+                        "middle": [],
+                        "last": "Yakhnenko",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "NIPS",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Antoine Bordes, Nicolas Usunier, Alberto Garc\u00eda- Dur\u00e1n, Jason Weston, and Oksana Yakhnenko. 2013. Translating embeddings for modeling multi- relational data. In NIPS.",
+                "links": null
+            },
+            "BIBREF3": {
+                "ref_id": "b3",
+                "title": "Signature verification using a \"siamese\" time delay neural network",
+                "authors": [
+                    {
+                        "first": "Jane",
+                        "middle": [],
+                        "last": "Bromley",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Isabelle",
+                        "middle": [],
+                        "last": "Guyon",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yann",
+                        "middle": [],
+                        "last": "Lecun",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Eduard",
+                        "middle": [],
+                        "last": "S\u00e4ckinger",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Roopak",
+                        "middle": [],
+                        "last": "Shah",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1993,
+                "venue": "NIPS",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jane Bromley, Isabelle Guyon, Yann LeCun, Eduard S\u00e4ckinger, and Roopak Shah. 1993. Signature ver- ification using a \"siamese\" time delay neural net- work. In NIPS.",
+                "links": null
+            },
+            "BIBREF4": {
+                "ref_id": "b4",
+                "title": "Comparative experiments on learning information extractors for proteins and their interactions",
+                "authors": [
+                    {
+                        "first": "C",
+                        "middle": [],
+                        "last": "Razvan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ruifang",
+                        "middle": [],
+                        "last": "Bunescu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Rohit",
+                        "middle": [
+                            "J"
+                        ],
+                        "last": "Ge",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Edward",
+                        "middle": [
+                            "M"
+                        ],
+                        "last": "Kate",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Raymond",
+                        "middle": [
+                            "J"
+                        ],
+                        "last": "Marcotte",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Arun",
+                        "middle": [
+                            "K"
+                        ],
+                        "last": "Mooney",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yuk",
+                        "middle": [
+                            "Wah"
+                        ],
+                        "last": "Ramani",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Wong",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2005,
+                "venue": "Artificial Intelligence in Medicine",
+                "volume": "33",
+                "issue": "2",
+                "pages": "139--155",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Razvan C. Bunescu, Ruifang Ge, Rohit J. Kate, Ed- ward M. Marcotte, Raymond J. Mooney, Arun K. Ramani, and Yuk Wah Wong. 2005. Comparative experiments on learning information extractors for proteins and their interactions. Artificial Intelligence in Medicine, 33(2):139-155.",
+                "links": null
+            },
+            "BIBREF5": {
+                "ref_id": "b5",
+                "title": "Supervised learning of universal sentence representations from natural language inference data",
+                "authors": [
+                    {
+                        "first": "Alexis",
+                        "middle": [],
+                        "last": "Conneau",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Douwe",
+                        "middle": [],
+                        "last": "Kiela",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Holger",
+                        "middle": [],
+                        "last": "Schwenk",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Lo\u00efc",
+                        "middle": [],
+                        "last": "Barrault",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Antoine",
+                        "middle": [],
+                        "last": "Bordes",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "EMNLP",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Alexis Conneau, Douwe Kiela, Holger Schwenk, Lo\u00efc Barrault, and Antoine Bordes. 2017. Supervised learning of universal sentence representations from natural language inference data. In EMNLP.",
+                "links": null
+            },
+            "BIBREF6": {
+                "ref_id": "b6",
+                "title": "T-rex: A large scale alignment of natural language with knowledge base triples",
+                "authors": [
+                    {
+                        "first": "Hady",
+                        "middle": [],
+                        "last": "Elsahar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Pavlos",
+                        "middle": [],
+                        "last": "Vougiouklis",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Arslen",
+                        "middle": [],
+                        "last": "Remaci",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christophe",
+                        "middle": [],
+                        "last": "Gravier",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jonathon",
+                        "middle": [
+                            "S"
+                        ],
+                        "last": "Hare",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Fr\u00e9d\u00e9rique",
+                        "middle": [],
+                        "last": "Laforest",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Elena",
+                        "middle": [],
+                        "last": "Simperl",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "LREC",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Hady ElSahar, Pavlos Vougiouklis, Arslen Remaci, Christophe Gravier, Jonathon S. Hare, Fr\u00e9d\u00e9rique Laforest, and Elena Simperl. 2018. T-rex: A large scale alignment of natural language with knowledge base triples. In LREC.",
+                "links": null
+            },
+            "BIBREF7": {
+                "ref_id": "b7",
+                "title": "Deep MIML network",
+                "authors": [
+                    {
+                        "first": "Ji",
+                        "middle": [],
+                        "last": "Feng",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zhi-Hua",
+                        "middle": [],
+                        "last": "Zhou",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "AAAI",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ji Feng and Zhi-Hua Zhou. 2017. Deep MIML net- work. In AAAI.",
+                "links": null
+            },
+            "BIBREF8": {
+                "ref_id": "b8",
+                "title": "Analogy-based detection of morphological and semantic relations with word embeddings: what works and what doesn't",
+                "authors": [
+                    {
+                        "first": "Anna",
+                        "middle": [],
+                        "last": "Gladkova",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Aleksandr",
+                        "middle": [],
+                        "last": "Drozd",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Satoshi",
+                        "middle": [],
+                        "last": "Matsuoka",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "SRW@HLT-NAACL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Anna Gladkova, Aleksandr Drozd, and Satoshi Mat- suoka. 2016. Analogy-based detection of morpho- logical and semantic relations with word embed- dings: what works and what doesn't. In SRW@HLT- NAACL.",
+                "links": null
+            },
+            "BIBREF9": {
+                "ref_id": "b9",
+                "title": "2018a. A dataset for web-scale knowledge base population",
+                "authors": [
+                    {
+                        "first": "Michael",
+                        "middle": [],
+                        "last": "Glass",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alfio",
+                        "middle": [],
+                        "last": "Gliozzo",
+                        "suffix": ""
+                    }
+                ],
+                "year": null,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Michael Glass and Alfio Gliozzo. 2018a. A dataset for web-scale knowledge base population. In ESWC.",
+                "links": null
+            },
+            "BIBREF10": {
+                "ref_id": "b10",
+                "title": "Discovering implicit knowledge with unary relations",
+                "authors": [
+                    {
+                        "first": "Michael",
+                        "middle": [],
+                        "last": "Glass",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alfio",
+                        "middle": [],
+                        "last": "Gliozzo",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Michael Glass and Alfio Gliozzo. 2018b. Discovering implicit knowledge with unary relations. In ACL.",
+                "links": null
+            },
+            "BIBREF11": {
+                "ref_id": "b11",
+                "title": "Inducing implicit relations from text using distantly supervised deep nets",
+                "authors": [
+                    {
+                        "first": "Michael",
+                        "middle": [],
+                        "last": "Glass",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alfio",
+                        "middle": [],
+                        "last": "Gliozzo",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "ISWC",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Michael Glass, Alfio Gliozzo, Oktie Hassanzadeh, Nandana Mihindukulasooriya, and Gaetano Rossiello. 2018. Inducing implicit relations from text using distantly supervised deep nets. In ISWC.",
+                "links": null
+            },
+            "BIBREF12": {
+                "ref_id": "b12",
+                "title": "Dimensionality reduction by learning an invariant mapping",
+                "authors": [
+                    {
+                        "first": "Raia",
+                        "middle": [],
+                        "last": "Hadsell",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sumit",
+                        "middle": [],
+                        "last": "Chopra",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yann",
+                        "middle": [],
+                        "last": "Lecun",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2006,
+                "venue": "CVPR",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Raia Hadsell, Sumit Chopra, and Yann LeCun. 2006. Dimensionality reduction by learning an invariant mapping. In CVPR.",
+                "links": null
+            },
+            "BIBREF13": {
+                "ref_id": "b13",
+                "title": "Knowledge-based weak supervision for information extraction of overlapping relations",
+                "authors": [
+                    {
+                        "first": "Raphael",
+                        "middle": [],
+                        "last": "Hoffmann",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Congle",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xiao",
+                        "middle": [],
+                        "last": "Ling",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Luke",
+                        "middle": [],
+                        "last": "Zettlemoyer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Daniel",
+                        "middle": [
+                            "S"
+                        ],
+                        "last": "Weld",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2011,
+                "venue": "HLT",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Raphael Hoffmann, Congle Zhang, Xiao Ling, Luke Zettlemoyer, and Daniel S. Weld. 2011. Knowledge-based weak supervision for information extraction of overlapping relations. In HLT.",
+                "links": null
+            },
+            "BIBREF14": {
+                "ref_id": "b14",
+                "title": "Attention-based deep multiple instance learning",
+                "authors": [
+                    {
+                        "first": "Maximilian",
+                        "middle": [],
+                        "last": "Ilse",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "M",
+                        "middle": [],
+                        "last": "Jakub",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Max",
+                        "middle": [],
+                        "last": "Tomczak",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Welling",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Maximilian Ilse, Jakub M. Tomczak, and Max Welling. 2018. Attention-based deep multiple instance learn- ing. CoRR, abs/1802.04712.",
+                "links": null
+            },
+            "BIBREF15": {
+                "ref_id": "b15",
+                "title": "Raquel Urtasun, Antonio Torralba, and Sanja Fidler. 2015. Skip-thought vectors",
+                "authors": [
+                    {
+                        "first": "Ryan",
+                        "middle": [],
+                        "last": "Kiros",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yukun",
+                        "middle": [],
+                        "last": "Zhu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ruslan",
+                        "middle": [],
+                        "last": "Salakhutdinov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Richard",
+                        "middle": [
+                            "S"
+                        ],
+                        "last": "Zemel",
+                        "suffix": ""
+                    }
+                ],
+                "year": null,
+                "venue": "NIPS",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ryan Kiros, Yukun Zhu, Ruslan Salakhutdinov, Richard S. Zemel, Raquel Urtasun, Antonio Tor- ralba, and Sanja Fidler. 2015. Skip-thought vectors. In NIPS.",
+                "links": null
+            },
+            "BIBREF16": {
+                "ref_id": "b16",
+                "title": "Siamese neural networks for one-shot image recognition",
+                "authors": [
+                    {
+                        "first": "Gregory",
+                        "middle": [],
+                        "last": "Koch",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Richard",
+                        "middle": [],
+                        "last": "Zemel",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ruslan",
+                        "middle": [],
+                        "last": "Salakhutdinov",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "ICML Deep Learning Workshop",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Gregory Koch, Richard Zemel, and Ruslan Salakhut- dinov. 2015. Siamese neural networks for one-shot image recognition. In ICML Deep Learning Work- shop.",
+                "links": null
+            },
+            "BIBREF17": {
+                "ref_id": "b17",
+                "title": "Ask me anything: Dynamic memory networks for natural language processing",
+                "authors": [
+                    {
+                        "first": "Ankit",
+                        "middle": [],
+                        "last": "Kumar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ozan",
+                        "middle": [],
+                        "last": "Irsoy",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Peter",
+                        "middle": [],
+                        "last": "Ondruska",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mohit",
+                        "middle": [],
+                        "last": "Iyyer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "James",
+                        "middle": [],
+                        "last": "Bradbury",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ishaan",
+                        "middle": [],
+                        "last": "Gulrajani",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Victor",
+                        "middle": [],
+                        "last": "Zhong",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Romain",
+                        "middle": [],
+                        "last": "Paulus",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Richard",
+                        "middle": [],
+                        "last": "Socher",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "ICML",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ankit Kumar, Ozan Irsoy, Peter Ondruska, Mohit Iyyer, James Bradbury, Ishaan Gulrajani, Victor Zhong, Romain Paulus, and Richard Socher. 2016. Ask me anything: Dynamic memory networks for natural language processing. In ICML.",
+                "links": null
+            },
+            "BIBREF18": {
+                "ref_id": "b18",
+                "title": "Distributed representations of sentences and documents",
+                "authors": [
+                    {
+                        "first": "V",
+                        "middle": [],
+                        "last": "Quoc",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tomas",
+                        "middle": [],
+                        "last": "Le",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Mikolov",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "ICML",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Quoc V. Le and Tomas Mikolov. 2014. Distributed rep- resentations of sentences and documents. In ICML.",
+                "links": null
+            },
+            "BIBREF19": {
+                "ref_id": "b19",
+                "title": "Zero-shot relation extraction via reading comprehension",
+                "authors": [
+                    {
+                        "first": "Omer",
+                        "middle": [],
+                        "last": "Levy",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Minjoon",
+                        "middle": [],
+                        "last": "Seo",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Eunsol",
+                        "middle": [],
+                        "last": "Choi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Luke",
+                        "middle": [],
+                        "last": "Zettlemoyer",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Omer Levy, Minjoon Seo, Eunsol Choi, and Luke Zettlemoyer. 2017. Zero-shot relation extraction via reading comprehension. In CoNLL.",
+                "links": null
+            },
+            "BIBREF20": {
+                "ref_id": "b20",
+                "title": "Neural relation extraction with selective attention over instances",
+                "authors": [
+                    {
+                        "first": "Yankai",
+                        "middle": [],
+                        "last": "Lin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Shiqi",
+                        "middle": [],
+                        "last": "Shen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zhiyuan",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Huanbo",
+                        "middle": [],
+                        "last": "Luan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Maosong",
+                        "middle": [],
+                        "last": "Sun",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Yankai Lin, Shiqi Shen, Zhiyuan Liu, Huanbo Luan, and Maosong Sun. 2016. Neural relation extraction with selective attention over instances. In ACL.",
+                "links": null
+            },
+            "BIBREF21": {
+                "ref_id": "b21",
+                "title": "Analogical inference for multi-relational embeddings",
+                "authors": [
+                    {
+                        "first": "Hanxiao",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yuexin",
+                        "middle": [],
+                        "last": "Wu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yiming",
+                        "middle": [],
+                        "last": "Yang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "ICML",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Hanxiao Liu, Yuexin Wu, and Yiming Yang. 2017. Analogical inference for multi-relational embed- dings. In ICML.",
+                "links": null
+            },
+            "BIBREF22": {
+                "ref_id": "b22",
+                "title": "Open language learning for information extraction",
+                "authors": [
+                    {
+                        "first": "Michael",
+                        "middle": [],
+                        "last": "Mausam",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Stephen",
+                        "middle": [],
+                        "last": "Schmitz",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Robert",
+                        "middle": [],
+                        "last": "Soderland",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Oren",
+                        "middle": [],
+                        "last": "Bart",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Etzioni",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2012,
+                "venue": "EMNLP-CoNLL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Mausam, Michael Schmitz, Stephen Soderland, Robert Bart, and Oren Etzioni. 2012. Open language learn- ing for information extraction. In EMNLP-CoNLL.",
+                "links": null
+            },
+            "BIBREF23": {
+                "ref_id": "b23",
+                "title": "Distributed representations of words and phrases and their compositionality",
+                "authors": [
+                    {
+                        "first": "Tomas",
+                        "middle": [],
+                        "last": "Mikolov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ilya",
+                        "middle": [],
+                        "last": "Sutskever",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kai",
+                        "middle": [],
+                        "last": "Chen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Greg",
+                        "middle": [
+                            "S"
+                        ],
+                        "last": "Corrado",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jeff",
+                        "middle": [],
+                        "last": "Dean",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "NIPS",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Tomas Mikolov, Ilya Sutskever, Kai Chen, Greg S Cor- rado, and Jeff Dean. 2013. Distributed representa- tions of words and phrases and their compositional- ity. In NIPS.",
+                "links": null
+            },
+            "BIBREF24": {
+                "ref_id": "b24",
+                "title": "Distant supervision for relation extraction without labeled data",
+                "authors": [
+                    {
+                        "first": "Mike",
+                        "middle": [],
+                        "last": "Mintz",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Steven",
+                        "middle": [],
+                        "last": "Bills",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Rion",
+                        "middle": [],
+                        "last": "Snow",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dan",
+                        "middle": [],
+                        "last": "Jurafsky",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Mike Mintz, Steven Bills, Rion Snow, and Dan Juraf- sky. 2009. Distant supervision for relation extrac- tion without labeled data. In ACL.",
+                "links": null
+            },
+            "BIBREF25": {
+                "ref_id": "b25",
+                "title": "Siamese recurrent architectures for learning sentence similarity",
+                "authors": [
+                    {
+                        "first": "Jonas",
+                        "middle": [],
+                        "last": "Mueller",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Aditya",
+                        "middle": [],
+                        "last": "Thyagarajan",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "AAAI",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jonas Mueller and Aditya Thyagarajan. 2016. Siamese recurrent architectures for learning sentence similar- ity. In AAAI.",
+                "links": null
+            },
+            "BIBREF26": {
+                "ref_id": "b26",
+                "title": "Learning text similarity with siamese recurrent networks",
+                "authors": [
+                    {
+                        "first": "Paul",
+                        "middle": [],
+                        "last": "Neculoiu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Maarten",
+                        "middle": [],
+                        "last": "Versteegh",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mihai",
+                        "middle": [],
+                        "last": "Rotaru",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Rep4NLP@ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Paul Neculoiu, Maarten Versteegh, and Mihai Rotaru. 2016. Learning text similarity with siamese recur- rent networks. In Rep4NLP@ACL.",
+                "links": null
+            },
+            "BIBREF27": {
+                "ref_id": "b27",
+                "title": "Glove: Global vectors for word representation",
+                "authors": [
+                    {
+                        "first": "Jeffrey",
+                        "middle": [],
+                        "last": "Pennington",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Richard",
+                        "middle": [],
+                        "last": "Socher",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [
+                            "D"
+                        ],
+                        "last": "Manning",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "EMNLP",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jeffrey Pennington, Richard Socher, and Christo- pher D. Manning. 2014. Glove: Global vectors for word representation. In EMNLP.",
+                "links": null
+            },
+            "BIBREF28": {
+                "ref_id": "b28",
+                "title": "Modeling relations and their mentions without labeled text",
+                "authors": [
+                    {
+                        "first": "Sebastian",
+                        "middle": [],
+                        "last": "Riedel",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Limin",
+                        "middle": [],
+                        "last": "Yao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Andrew",
+                        "middle": [],
+                        "last": "Mccallum",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2010,
+                "venue": "ECML PKDD",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Sebastian Riedel, Limin Yao, and Andrew McCallum. 2010. Modeling relations and their mentions with- out labeled text. In ECML PKDD.",
+                "links": null
+            },
+            "BIBREF29": {
+                "ref_id": "b29",
+                "title": "Relation extraction with matrix factorization and universal schemas",
+                "authors": [
+                    {
+                        "first": "Sebastian",
+                        "middle": [],
+                        "last": "Riedel",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Limin",
+                        "middle": [],
+                        "last": "Yao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Andrew",
+                        "middle": [],
+                        "last": "Mccallum",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Benjamin",
+                        "middle": [
+                            "M"
+                        ],
+                        "last": "Marlin",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "NAACL-HLT",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Sebastian Riedel, Limin Yao, Andrew McCallum, and Benjamin M. Marlin. 2013. Relation extraction with matrix factorization and universal schemas. In NAACL-HLT.",
+                "links": null
+            },
+            "BIBREF30": {
+                "ref_id": "b30",
+                "title": "End-to-end memory networks",
+                "authors": [
+                    {
+                        "first": "Sainbayar",
+                        "middle": [],
+                        "last": "Sukhbaatar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Arthur",
+                        "middle": [],
+                        "last": "Szlam",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jason",
+                        "middle": [],
+                        "last": "Weston",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Rob",
+                        "middle": [],
+                        "last": "Fergus",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "NIPS",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Sainbayar Sukhbaatar, Arthur Szlam, Jason Weston, and Rob Fergus. 2015. End-to-end memory net- works. In NIPS.",
+                "links": null
+            },
+            "BIBREF31": {
+                "ref_id": "b31",
+                "title": "Multiinstance multi-label learning for relation extraction",
+                "authors": [
+                    {
+                        "first": "Mihai",
+                        "middle": [],
+                        "last": "Surdeanu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Julie",
+                        "middle": [],
+                        "last": "Tibshirani",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ramesh",
+                        "middle": [],
+                        "last": "Nallapati",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [
+                            "D"
+                        ],
+                        "last": "Manning",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2012,
+                "venue": "EMNLP-CoNLL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Mihai Surdeanu, Julie Tibshirani, Ramesh Nallap- ati, and Christopher D. Manning. 2012. Multi- instance multi-label learning for relation extraction. In EMNLP-CoNLL.",
+                "links": null
+            },
+            "BIBREF32": {
+                "ref_id": "b32",
+                "title": "Representing text for joint embedding of text and knowledge bases",
+                "authors": [
+                    {
+                        "first": "Kristina",
+                        "middle": [],
+                        "last": "Toutanova",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Danqi",
+                        "middle": [],
+                        "last": "Chen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Patrick",
+                        "middle": [],
+                        "last": "Pantel",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hoifung",
+                        "middle": [],
+                        "last": "Poon",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Pallavi",
+                        "middle": [],
+                        "last": "Choudhury",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Michael",
+                        "middle": [],
+                        "last": "Gamon",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "EMNLP",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Kristina Toutanova, Danqi Chen, Patrick Pantel, Hoi- fung Poon, Pallavi Choudhury, and Michael Gamon. 2015. Representing text for joint embedding of text and knowledge bases. In EMNLP.",
+                "links": null
+            },
+            "BIBREF33": {
+                "ref_id": "b33",
+                "title": "Similarity of semantic relations",
+                "authors": [
+                    {
+                        "first": "D",
+                        "middle": [],
+                        "last": "Peter",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Turney",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2006,
+                "venue": "Computational Linguistics",
+                "volume": "32",
+                "issue": "3",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Peter D. Turney. 2006. Similarity of semantic relations. Computational Linguistics, 32(3).",
+                "links": null
+            },
+            "BIBREF34": {
+                "ref_id": "b34",
+                "title": "Row-less universal schema",
+                "authors": [
+                    {
+                        "first": "Patrick",
+                        "middle": [],
+                        "last": "Verga",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Andrew",
+                        "middle": [],
+                        "last": "Mccallum",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "AKBC@NAACL-HLT",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Patrick Verga and Andrew McCallum. 2016. Row-less universal schema. In AKBC@NAACL-HLT.",
+                "links": null
+            },
+            "BIBREF35": {
+                "ref_id": "b35",
+                "title": "Generalizing to unseen entities and entity pairs with row-less universal schema",
+                "authors": [
+                    {
+                        "first": "Patrick",
+                        "middle": [],
+                        "last": "Verga",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Andrew",
+                        "middle": [],
+                        "last": "Mccallum",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Arvind",
+                        "middle": [],
+                        "last": "Neelakantan",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "EACL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Patrick Verga, Andrew McCallum, and Arvind Nee- lakantan. 2017. Generalizing to unseen entities and entity pairs with row-less universal schema. In EACL.",
+                "links": null
+            },
+            "BIBREF36": {
+                "ref_id": "b36",
+                "title": "Matching networks for one shot learning",
+                "authors": [
+                    {
+                        "first": "Oriol",
+                        "middle": [],
+                        "last": "Vinyals",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Charles",
+                        "middle": [],
+                        "last": "Blundell",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tim",
+                        "middle": [],
+                        "last": "Lillicrap",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Koray",
+                        "middle": [],
+                        "last": "Kavukcuoglu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Daan",
+                        "middle": [],
+                        "last": "Wierstra",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "NIPS",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Oriol Vinyals, Charles Blundell, Tim Lillicrap, Koray Kavukcuoglu, and Daan Wierstra. 2016. Matching networks for one shot learning. In NIPS.",
+                "links": null
+            },
+            "BIBREF37": {
+                "ref_id": "b37",
+                "title": "Take and took, gaggle and goose, book and read: Evaluating the utility of vector differences for lexical relation learning",
+                "authors": [
+                    {
+                        "first": "Ekaterina",
+                        "middle": [],
+                        "last": "Vylomova",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Laura",
+                        "middle": [],
+                        "last": "Rimell",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Trevor",
+                        "middle": [],
+                        "last": "Cohn",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Timothy",
+                        "middle": [],
+                        "last": "Baldwin",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ekaterina Vylomova, Laura Rimell, Trevor Cohn, and Timothy Baldwin. 2016. Take and took, gaggle and goose, book and read: Evaluating the utility of vec- tor differences for lexical relation learning. In ACL.",
+                "links": null
+            },
+            "BIBREF38": {
+                "ref_id": "b38",
+                "title": "Revisiting multiple instance neural networks",
+                "authors": [
+                    {
+                        "first": "Xinggang",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yongluan",
+                        "middle": [],
+                        "last": "Yan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Peng",
+                        "middle": [],
+                        "last": "Tang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xiang",
+                        "middle": [],
+                        "last": "Bai",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Wenyu",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Pattern Recognition",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Xinggang Wang, Yongluan Yan, Peng Tang, Xiang Bai, and Wenyu Liu. 2018. Revisiting multiple instance neural networks. Pattern Recognition, 74.",
+                "links": null
+            },
+            "BIBREF39": {
+                "ref_id": "b39",
+                "title": "Hierarchical attention networks for document classification",
+                "authors": [
+                    {
+                        "first": "Zichao",
+                        "middle": [],
+                        "last": "Yang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Diyi",
+                        "middle": [],
+                        "last": "Yang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chris",
+                        "middle": [],
+                        "last": "Dyer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xiaodong",
+                        "middle": [],
+                        "last": "He",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alexander",
+                        "middle": [
+                            "J"
+                        ],
+                        "last": "Smola",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Eduard",
+                        "middle": [
+                            "H"
+                        ],
+                        "last": "Hovy",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "NAACL-HLT",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Zichao Yang, Diyi Yang, Chris Dyer, Xiaodong He, Alexander J. Smola, and Eduard H. Hovy. 2016. Hi- erarchical attention networks for document classifi- cation. In NAACL-HLT.",
+                "links": null
+            },
+            "BIBREF40": {
+                "ref_id": "b40",
+                "title": "One-shot learning for fine-grained relation extraction via convolutional siamese neural network",
+                "authors": [
+                    {
+                        "first": "Jianbo",
+                        "middle": [],
+                        "last": "Yuan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Han",
+                        "middle": [],
+                        "last": "Guo",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zhiwei",
+                        "middle": [],
+                        "last": "Jin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hongxia",
+                        "middle": [],
+                        "last": "Jin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xianchao",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jiebo",
+                        "middle": [],
+                        "last": "Luo",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jianbo Yuan, Han Guo, Zhiwei Jin, Hongxia Jin, Xian- chao Zhang, and Jiebo Luo. 2017. One-shot learn- ing for fine-grained relation extraction via convolu- tional siamese neural network. In BigData.",
+                "links": null
+            },
+            "BIBREF41": {
+                "ref_id": "b41",
+                "title": "Distant supervision for relation extraction via piecewise convolutional neural networks",
+                "authors": [
+                    {
+                        "first": "Daojian",
+                        "middle": [],
+                        "last": "Zeng",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kang",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yubo",
+                        "middle": [],
+                        "last": "Chen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jun",
+                        "middle": [],
+                        "last": "Zhao",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Daojian Zeng, Kang Liu, Yubo Chen, and Jun Zhao. 2015. Distant supervision for relation extraction via piecewise convolutional neural networks. In EMNLP.",
+                "links": null
+            }
+        },
+        "ref_entries": {
+            "FIGREF0": {
+                "num": null,
+                "text": "Figure 1: Learning relations by analogy through matching the facts from knowledge bases with textual corpora.",
+                "uris": null,
+                "fig_num": "1",
+                "type_str": "figure"
+            },
+            "FIGREF1": {
+                "num": null,
+                "text": "Figure 2: Hierarchical siamese network.",
+                "uris": null,
+                "fig_num": "2",
+                "type_str": "figure"
+            },
+            "FIGREF2": {
+                "num": null,
+                "text": "For the validation and test partitions we randomly select only 20 entity pairs for each relation. This becomes a useful test set for the one-shot validation. To train the HSN, we select a balanced number of positive and negative examples out of the training split based on these rules: (1) for each relation, we randomly extract a set of 20 entity pairs; (2) out of this set, we generated all possibile combinations, 20 2 = 190, as positive pairing examples; (3) for each combination, we create a negative example by randomly selecting an entity pair from another relation. After these steps, we collect a bucket of 109,820 proportional analogy training examples.",
+                "uris": null,
+                "fig_num": null,
+                "type_str": "figure"
+            },
+            "FIGREF3": {
+                "num": null,
+                "text": "Figure 3: One-shot relational classification results for N-way unseen relation types.",
+                "uris": null,
+                "fig_num": "3",
+                "type_str": "figure"
+            },
+            "FIGREF4": {
+                "num": null,
+                "text": "Figure 4: Precision-Recall curves on NYT-FB.",
+                "uris": null,
+                "fig_num": "4",
+                "type_str": "figure"
+            },
+            "TABREF0": {
+                "content": "<table><tr><td/><td>NYT-FB</td><td>CC-DBP</td><td>T-REX</td></tr><tr><td>Knowledge Base</td><td>Freebase</td><td>DBpedia</td><td>Wikidata</td></tr><tr><td>Corpus</td><td>New York Times</td><td>Common Crawl</td><td>Wikipedia</td></tr><tr><td># words</td><td>239,877</td><td>8,445,417</td><td>4,062,498</td></tr><tr><td># entity pairs</td><td>375,846</td><td>6,876,913</td><td>6,413,452</td></tr><tr><td># relations</td><td>57</td><td>298</td><td>685</td></tr><tr><td>avg. mentions</td><td>1.9</td><td>3.8</td><td>3.2</td></tr><tr><td>avg. sent. length</td><td>41</td><td>37</td><td>25</td></tr></table>",
+                "type_str": "table",
+                "text": "Statistics of the distantly supervised datasets.",
+                "html": null,
+                "num": null
+            },
+            "TABREF2": {
+                "content": "<table><tr><td>Relation / Score</td><td>Entity pair / Best mention</td><td>Entity pair / Best mention</td></tr><tr><td>doctoralStudent</td><td>VICTOR WEISSKOPF : MURRAY GELL-MANN</td><td>JOHN BARDEEN : NICK HOLONYAK</td></tr><tr><td colspan=\"2\">0.95 Murray Gell-approvedBy HUNDRED HORSE CHESTNUT : GUINNESS WORLD RECORDS</td><td>NCSA OPEN SOURCE LICENSE : OPEN SOURCE INITIATIVE</td></tr><tr><td>0.83</td><td/><td/></tr><tr><td>architecturalStyle</td><td>ROCKEFELLER CENTER : ART DECO</td><td>ST. MARK BASILICA : BYZANTINE ARCHITECTURE</td></tr><tr><td>0.63</td><td/><td/></tr></table>",
+                "type_str": "table",
+                "text": "Mann, one of the principal discoverers of the quarks, is one of the distinguished pupils of Victor Weisskopf.Professor Nick Holonyak jr. was the first phd student of Nobel Prize winner John Bardeen. Guinness World Records has listed Hundred Horse Chestnut for the record of \"greatest tree girth eve\".NCSA was formally certified as an open-source license during a March 28, 2002 board meeting of the Open Source Initiative. Art Deco mural \"wisdom\" hangs over the entrance to the Rockefeller Center and was designed and sculpted by artist Lee Lawrie.St. Mark's Basilica, the cathedral of Venice, is one of the best known examples of Byzantine architecture.",
+                "html": null,
+                "num": null
+            },
+            "TABREF3": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "Three examples of relational similarity between two pairs of entities computed by our HSN. For each example, we report the unseen relation type, the mentions related to each pair, and the similarity score. We report only the mention having the highest attention weight. The examples show the ability of the analogy model in providing a high score to two mentions which represent the same relation, even if they are expressed using different textual contexts.",
+                "html": null,
+                "num": null
+            },
+            "TABREF4": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "AUC and F1 results on CC-DBP.",
+                "html": null,
+                "num": null
+            }
+        }
+    }
+}

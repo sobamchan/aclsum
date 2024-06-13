@@ -1,0 +1,1882 @@
+{
+    "paper_id": "D14-1036",
+    "header": {
+        "generated_with": "S2ORC 1.0.0",
+        "date_generated": "2023-06-16T12:20:13.629415Z"
+    },
+    "title": "Incremental Semantic Role Labeling with Tree Adjoining Grammar",
+    "authors": [
+        {
+            "first": "Ioannis",
+            "middle": [],
+            "last": "Konstas",
+            "suffix": "",
+            "affiliation": {},
+            "email": "ikonstas@inf.ed.ac.uk"
+        },
+        {
+            "first": "Frank",
+            "middle": [],
+            "last": "Keller",
+            "suffix": "",
+            "affiliation": {},
+            "email": "keller@inf.ed.ac.uk"
+        },
+        {
+            "first": "Vera",
+            "middle": [],
+            "last": "Demberg",
+            "suffix": "",
+            "affiliation": {},
+            "email": ""
+        },
+        {
+            "first": "Mirella",
+            "middle": [],
+            "last": "Lapata",
+            "suffix": "",
+            "affiliation": {},
+            "email": ""
+        }
+    ],
+    "year": "",
+    "venue": null,
+    "identifiers": {},
+    "abstract": "We introduce the task of incremental semantic role labeling (iSRL), in which semantic roles are assigned to incomplete input (sentence prefixes). iSRL is the semantic equivalent of incremental parsing, and is useful for language modeling, sentence completion, machine translation, and psycholinguistic modeling. We propose an iSRL system that combines an incremental TAG parser with a semantically enriched lexicon, a role propagation algorithm, and a cascade of classifiers. Our approach achieves an SRL Fscore of 78.38% on the standard CoNLL 2009 dataset. It substantially outperforms a strong baseline that combines gold-standard syntactic dependencies with heuristic role assignment, as well as a baseline based on Nivre's incremental dependency parser.",
+    "pdf_parse": {
+        "paper_id": "D14-1036",
+        "_pdf_hash": "",
+        "abstract": [
+            {
+                "text": "We introduce the task of incremental semantic role labeling (iSRL), in which semantic roles are assigned to incomplete input (sentence prefixes). iSRL is the semantic equivalent of incremental parsing, and is useful for language modeling, sentence completion, machine translation, and psycholinguistic modeling. We propose an iSRL system that combines an incremental TAG parser with a semantically enriched lexicon, a role propagation algorithm, and a cascade of classifiers. Our approach achieves an SRL Fscore of 78.38% on the standard CoNLL 2009 dataset. It substantially outperforms a strong baseline that combines gold-standard syntactic dependencies with heuristic role assignment, as well as a baseline based on Nivre's incremental dependency parser.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            }
+        ],
+        "body_text": [
+            {
+                "text": "Humans are able to assign semantic roles such as agent, patient, and theme to an incoming sentence before it is complete, i.e., they incrementally build up a partial semantic representation of a sentence prefix. As an example, consider:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "(1)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "The athlete realized [her goals] PATIENT/THEME were out of reach.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "When reaching the noun phrase her goals, the human language processor is faced with a semantic role ambiguity: her goals can either be the PA-TIENT of the verb realize, or it can be the THEME of a subsequent verb that has not been encountered yet. Experimental evidence shows that the human language processor initially prefers the PA-TIENT role, but switches its preference to the theme role when it reaches the subordinate verb were. Such semantic garden paths occur because human language processing occurs word-by-word, and are well attested in the psycholinguistic literature (e.g., Pickering et al., 2000) .",
+                "cite_spans": [
+                    {
+                        "start": 588,
+                        "end": 611,
+                        "text": "Pickering et al., 2000)",
+                        "ref_id": "BIBREF18"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Computational systems for performing semantic role labeling (SRL), on the other hand, proceed non-incrementally. They require the whole sentence (typically together with its complete syntactic structure) as input and assign all semantic roles at once. The reason for this is that most features used by current SRL systems are defined globally, and cannot be computed on sentence prefixes.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "In this paper, we propose incremental SRL (iSRL) as a new computational task that mimics human semantic role assignment. The aim of an iSRL system is to determine semantic roles while the input unfolds: given a sentence prefix and its partial syntactic structure (typically generated by an incremental parser), we need to (a) identify which words in the input participate in the semantic roles as arguments and predicates (the task of role identification), and (b) assign correct semantic labels to these predicate/argument pairs (the task of role labeling). Performing these two tasks incrementally is substantially harder than doing it non-incrementally, as the processor needs to commit to a role assignment on the basis of incomplete syntactic and semantic information. As an example, take (1): on reaching athlete, the processor should assign this word the AGENT role, even though it has not seen the corresponding predicate yet. Similarly, upon reaching realized, the processor can complete the AGENT role, but it should also predict that this verb also has a PATIENT role, even though it has not yet encountered the argument that fills this role. A system that performs SRL in a fully incremental fashion therefore needs to be able to assign incomplete semantic roles, unlike existing full-sentence SRL models.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "The uses of incremental SRL mirror the applications of incremental parsing: iSRL models can be used in language modeling to assign better string probabilities, in sentence completion systems to provide semantically informed completions, in any real time application systems, such as dialog processing, and to incrementalize applications such as machine translation (e.g., in speech-tospeech MT). Crucially, any comprehensive model of human language understanding needs to combine an incremental parser with an incremental semantic processor (Pad\u00f3 et al., 2009; Keller, 2010) .",
+                "cite_spans": [
+                    {
+                        "start": 541,
+                        "end": 560,
+                        "text": "(Pad\u00f3 et al., 2009;",
+                        "ref_id": "BIBREF16"
+                    },
+                    {
+                        "start": 561,
+                        "end": 574,
+                        "text": "Keller, 2010)",
+                        "ref_id": "BIBREF9"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "The present work takes inspiration from the psycholinguistic modeling literature by proposing an iSRL system that is built on top of a cognitively motivated incremental parser, viz., the Psycholinguistically Motivated Tree Adjoining Grammar parser of Demberg et al. (2013) . This parser includes a predictive component, i.e., it predicts syntactic structure for upcoming input during incremental processing. This makes PLTAG particularly suitable for iSRL, allowing it to predict incomplete semantic roles as the input string unfolds. Competing approaches, such as iSRL based on an incremental dependency parser, do not share this advantage, as we will discuss in Section 4.3.",
+                "cite_spans": [
+                    {
+                        "start": 251,
+                        "end": 272,
+                        "text": "Demberg et al. (2013)",
+                        "ref_id": "BIBREF4"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Most SRL systems to date conceptualize semantic role labeling as a supervised learning problem and rely on role-annotated data for model training. Existing models often implement a two-stage architecture in which role identification and role labeling are performed in sequence. Supervised methods deliver reasonably good performance with F-scores in the low eighties on standard test collections for English (M\u00e0rquez et al., 2008; Bj\u00f6rkelund et al., 2009) .",
+                "cite_spans": [
+                    {
+                        "start": 408,
+                        "end": 430,
+                        "text": "(M\u00e0rquez et al., 2008;",
+                        "ref_id": "BIBREF13"
+                    },
+                    {
+                        "start": 431,
+                        "end": 455,
+                        "text": "Bj\u00f6rkelund et al., 2009)",
+                        "ref_id": "BIBREF1"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "Current approaches rely primarily on syntactic features (such as path features) in order to identify and label roles. This has been a mixed blessing as the path from an argument to the predicate can be very informative but is often quite complicated, and depends on the syntactic formalism used. Many paths through the parse tree are likely to occur infrequently (or not at all), resulting in very sparse information for the classifier to learn from. Moreover, as we will discuss in Section 4.4, such path information is not always available when the input is processed incrementally. There is previous SRL work employing Tree Adjoining Grammar, albeit in a non-incremental setting, as a means to reduce the sparsity of syntaxbased features. Liu and Sarkar (2007) extract a rich feature set from TAG derivations and demonstrate that this improves SRL performance.",
+                "cite_spans": [
+                    {
+                        "start": 742,
+                        "end": 763,
+                        "text": "Liu and Sarkar (2007)",
+                        "ref_id": "BIBREF11"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "In contrast to incremental parsing, incremental semantic role labeling is a novel task. Our model builds on an incremental Tree Adjoining Grammar parser (Demberg et al., 2013) which predicts the syntactic structure of upcoming input. This allows us to perform incremental parsing and incremental SRL in tandem, exploiting the predictive component of the parser to assign (potentially incomplete) semantic roles on a word-by-word basis. Similar to work on incremental parsing that evaluates incomplete trees (Sangati and Keller, 2013) , we evaluate the incomplete semantic structures produced by our model.",
+                "cite_spans": [
+                    {
+                        "start": 153,
+                        "end": 175,
+                        "text": "(Demberg et al., 2013)",
+                        "ref_id": "BIBREF4"
+                    },
+                    {
+                        "start": 507,
+                        "end": 533,
+                        "text": "(Sangati and Keller, 2013)",
+                        "ref_id": "BIBREF19"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "3 Psycholinguistically Motivated TAG To derive a TAG parse for a sentence, we start with the elementary tree of the head of the sentence and integrate the elementary trees of the other lexical items of the sentence using two operations: adjunction at an internal node and substitution at a substitution node (the node at which the operation applies is the integration point). Standard TAG derivations are not guaranteed to be incremental, as adjunction can happen anywhere in a sentence, possibly violating left-to-right processing order. PLTAG addresses this limitation by introducing prediction trees, elementary trees without a lexical anchor. These can be used to predict syntactic structure anchored by words that appear later in an incremental derivation. The use of prediction trees ensures that fully connected prefix trees can be built for every prefix of the input sentence.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "Each node in a prediction tree carries markers to indicate that this node was predicted, rather than being anchored by the current sentence prefix. An example is Figure 1d , which contains a prediction tree with marker \"1\". In PLTAG, markers are eliminated through a new operation called verification, which matches them with the nodes of non-predictive elementary trees. An example of a PLTAG derivation is given in Figure 2 . In step 1, a prediction tree is introduced through substitution, which then allows the adjunction of an adverb in step 2.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 169,
+                        "end": 171,
+                        "text": "1d",
+                        "ref_id": "FIGREF0"
+                    },
+                    {
+                        "start": 424,
+                        "end": 425,
+                        "text": "2",
+                        "ref_id": "FIGREF3"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "Step 3 involves the verification of the marker introduced by the prediction tree against the elementary tree for open.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "In order to efficiently parse PLTAG, Demberg et al. (2013) introduce the concept of fringes.",
+                "cite_spans": [
+                    {
+                        "start": 37,
+                        "end": 58,
+                        "text": "Demberg et al. (2013)",
+                        "ref_id": "BIBREF4"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "Fringes capture the fact that in an incremental derivation, a prefix tree can only be combined with an elementary tree at a limited set of nodes. For instance, the prefix tree in Figure 3 has two substitution nodes, for B and C. However, only substitution into B leads to a valid new prefix tree; if we substitute into C, we obtain the tree in Figure 3b , which is not a valid prefix tree (i.e., it represents a non-incremental derivation).",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 186,
+                        "end": 187,
+                        "text": "3",
+                        "ref_id": "FIGREF1"
+                    },
+                    {
+                        "start": 351,
+                        "end": 353,
+                        "text": "3b",
+                        "ref_id": "FIGREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "The parsing algorithm proposed by Demberg et al. (2013) exploits fringes to tabulate intermediate results. It manipulates a chart in which each cell (i, f ) contains all the prefix trees whose first i leaves are the first i words and whose current fringe is f . To extend the prefix trees for i to the prefix trees for i + 1, the algorithm retrieves all current fringes f such that the chart has entries in the cell (i, f ). For each such fringe, it needs to determine the elementary trees in the lexicon that can be combined with f using substitution or adjunction. In spite of the large size of a typical TAG lexicon, this can be done efficiently, as it only requires matching the current fringes. For each match, the parser then computes the new pre- fix trees and its new current fringe f and enters it into cell (i + 1, f ). Demberg et al. (2013) convert the Penn Treebank (Marcus et al., 1993) into TAG format by enriching it with head information and argument/modifier information from Propbank (Palmer et al., 2005) . This makes it possible to decompose the Treebank trees into elementary trees as proposed by Xia et al. (2000) . Prediction trees can be learned from the converted Treebank by calculating the connection path (Mazzei et al., 2007) at each word in a tree. Intuitively, a prediction tree for word w n contains the structure that is necessary to connect w n to the prefix tree w 1 . . . w n-1 , but is not part of any of the elementary trees of w 1 . . . w n-1 . Using this lexicon, a probabilistic model over PLTAG operations can be estimated following Chiang (2000) .",
+                "cite_spans": [
+                    {
+                        "start": 34,
+                        "end": 55,
+                        "text": "Demberg et al. (2013)",
+                        "ref_id": "BIBREF4"
+                    },
+                    {
+                        "start": 830,
+                        "end": 851,
+                        "text": "Demberg et al. (2013)",
+                        "ref_id": "BIBREF4"
+                    },
+                    {
+                        "start": 878,
+                        "end": 899,
+                        "text": "(Marcus et al., 1993)",
+                        "ref_id": "BIBREF12"
+                    },
+                    {
+                        "start": 1002,
+                        "end": 1023,
+                        "text": "(Palmer et al., 2005)",
+                        "ref_id": "BIBREF17"
+                    },
+                    {
+                        "start": 1118,
+                        "end": 1135,
+                        "text": "Xia et al. (2000)",
+                        "ref_id": "BIBREF23"
+                    },
+                    {
+                        "start": 1233,
+                        "end": 1254,
+                        "text": "(Mazzei et al., 2007)",
+                        "ref_id": "BIBREF14"
+                    },
+                    {
+                        "start": 1575,
+                        "end": 1588,
+                        "text": "Chiang (2000)",
+                        "ref_id": "BIBREF3"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "In a typical semantic role labeling scenario, the goal is to first identify words that are predicates in the sentence and then identify and label all the arguments for each predicate. This translates into spotting specific words in a sentence that represent the predicate's arguments, and assigning predefined semantic role labels to them. Note that in this work we focus on verb predicates only. The output of a semantic role labeler is a set of semantic dependency triples l, a, p , with l \u2208 R , and a, p \u2208 w, where R is a set of semantic role labels denoting a specific relationship between a predicate and an argument (e.g., ARG0, ARG1, ARGM in Propbank), w is the list of words in the sentence, l denotes a specific role label, a the argument, and p the predicate. An example is shown in Figure 4 .",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 800,
+                        "end": 801,
+                        "text": "4",
+                        "ref_id": "FIGREF2"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Problem Formulation",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "As discussed in the introduction, standard semantic role labelers make their decisions based on evidence from the whole sentence. In contrast, our aim is to assign semantic roles incrementally, i.e., we want to produce a set of (potentially incomplete) semantic dependency triples for each prefix of the input sentence. Note that not every word is an argument to a predicate, therefore the set of triples will not necessarily change at every input word. Furthermore, the triples themselves may be incomplete, as either the predicate or the argument may not have been observed yet (predicateincomplete or argument-incomplete triples).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Problem Formulation",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "Our iSRL system relies on PLTAG, using a semantically augmented lexicon. We parse an input sentence incrementally, applying a novel incremental role propagation algorithm (IRPA) that creates or updates existing semantic triple candidates whenever an elementary (or prediction) tree containing role information is attached to the existing prefix tree. As soon as a triple is completed we apply a two-stage classification process, that first identifies whether the predicate/argument pair is a good candidate, and then disambiguates role labels in case there is more than one candidate.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Problem Formulation",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "Recall that Propbank is used to construct the PLTAG treebank, in order to distinguish between arguments and modifiers, which result in elementary trees with substitution nodes, and auxiliary trees, i.e., trees with a foot node, respectively (see Figure 1 ). Conveniently, we can use the same information to also enrich the extracted lexicon with the semantic role annotations, following the process described by Sayeed and Demberg (2013) . 1For arguments, annotations are retained on the substitution node in the parental tree, while for modifiers, the role annotation is displayed on the foot node of the auxiliary tree. Note that we display role annotation on traces that are leaf nodes, which enables us to recover long-range dependencies (third and fifth tree in Figure 5a ). Likewise, we annotate prediction trees with semantic roles, which enables our system to predict upcoming incomplete triples.",
+                "cite_spans": [
+                    {
+                        "start": 412,
+                        "end": 437,
+                        "text": "Sayeed and Demberg (2013)",
+                        "ref_id": "BIBREF20"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 253,
+                        "end": 254,
+                        "text": "1",
+                        "ref_id": "FIGREF0"
+                    },
+                    {
+                        "start": 774,
+                        "end": 776,
+                        "text": "5a",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Semantic Role Lexicon",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "Our annotation procedure unavoidably introduces some role ambiguity, especially for frequently occurring trees. This can give rise to two problems when we generate semantic triples incrementally: IRPA tends to create many spurious candidate semantic triples for elementary trees that correspond to high frequency words (e.g., prepositions or modals). Secondly, a semantic triple may be identified correctly but is assigned several role labels. (See the elementary tree for refuse in Figure 5a .) We address these issues by applying classifiers for role label disambiguation at every parsing operation (substitution, adjunction, or verification), as detailed in Section 4.4.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 490,
+                        "end": 492,
+                        "text": "5a",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Semantic Role Lexicon",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "The main idea behind IRPA is to create or update existing semantic triples as soon as there is available role information during parsing. Our algorithm (lines 1-6 in Algorithm 1) is applied after every PLTAG parsing operation, i.e., when an elementary or prediction tree T is adjoined to a particular integration point node \u03c0 ip of the prefix tree of the sentence, via substitution or adjunction (lines 3-4). 2 In case an elementary tree T v verifies a prediction tree T pr (lines 5-6), the same methodology applies, the only difference being that we have to tackle multiple integration point nodes T pr,ip , one for each prediction marker of T pr that matches the corresponding nodes in T v .",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Incremental Role Propagation Algorithm",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "For simplicity of presentation, we will use a concrete example, see Figure 5 . Figure 5a shows the lexicon entries for the words of the sentence",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 75,
+                        "end": 76,
+                        "text": "5",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 86,
+                        "end": 88,
+                        "text": "5a",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Incremental Role Propagation Algorithm",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "Banks refused to open. Naturally, some nodes in the lexicon trees might have multiple candidate role labels. For example, the substitution NP node of the second tree takes two labels, namely A0 and A1. These stem from different role signatures when the same elementary tree occurs in different contexts during training (A1 only on the NP; A0 on the NP and A1 on S). For simplicity's sake, we collapse different signatures, and let a classifier labeller to disambiguate such cases (see Section 4.4).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Incremental Role Propagation Algorithm",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "Algorithm 1 Incremental Role Propagation Alg.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Incremental Role Propagation Algorithm",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "1: procedure IRPA(\u03c0 ip , T , T pr )",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Incremental Role Propagation Algorithm",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "\u03a3 \u2190 \u2205 \u03a3 is a dictionary of (\u03c0 ip , l, a, p ) pairs 3:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "2:",
+                "sec_num": null
+            },
+            {
+                "text": "if parser operation is substitution or adjunction then 4: CREATE-TRIPLES(\u03c0 ip , T )",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "2:",
+                "sec_num": null
+            },
+            {
+                "text": "else if parser operation is verification then 6: CREATE-TRIPLES-VERIF(\u03c0 ip , T , T pr ) return set of triples l, a, p for prefix tree \u03c0 7: procedure CREATE-TRIPLES(\u03c0 ip , T ) 8:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "5:",
+                "sec_num": null
+            },
+            {
+                "text": "if HAS-ROLES(\u03c0 ip ) then 9:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "5:",
+                "sec_num": null
+            },
+            {
+                "text": "UPDATE-TRIPLE(\u03c0 ip , T ) 10:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "5:",
+                "sec_num": null
+            },
+            {
+                "text": "else if HAS-ROLES(T ) then 11:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "5:",
+                "sec_num": null
+            },
+            {
+                "text": "T ip \u2190 substitution or foot node of T Once we process Banks, the prefix tree becomes the lexical entry for this word, see the first column of Figure 5b . Next, we process refused: the parser substitutes the prefix tree into the elementary tree T of refused;3 the integration point \u03c0 ip on the prefix tree is the topmost NP. Since the operation is a substitution (line 3), we create triples between T and \u03c0 ip via CREATE-TRIPLES (lines 7-12). \u03c0 ip does not have any role information (line 8), so we proceed to add a new semantic triple between the role-labeled integration point T ip , i.e., substitution NP node of T , and \u03c0 ip , via ADD-TRIPLE (lines 30-43). First, we create an incomplete semantic triple with all roles from T ip (line 31). Then we set the predicate to the anchor of T to be the word refused, and the argument to be the head word of the prefix tree, Banks (lines 34-35). Note that predicate identification is a trivial task based on part-of-speech information in the elementary tree. 4Then, we add the pair (NP \u2192 {A0,A1},Banks, refused ) to a dictionary (line 43). Storing the integration point along with the semantic triple is essential, to be able to recover incomplete triples in later stages of the algorithm. Finally, we repeat this process for all remaining nodes on T that have roles, in our example the substitution node S (lines 13-14). This outputs an incomplete triple, {A1},nil,refused .",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 149,
+                        "end": 151,
+                        "text": "5b",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "5:",
+                "sec_num": null
+            },
+            {
+                "text": "Next, the parser decides to substitute a prediction tree (third tree in Figure 5a ) into the substitution node S of the prefix tree. Since the integration point is on the prefix tree and has role information (line 8), the corresponding triple should already be present in our dictionary. Upon retrieving it, we set the nil argument to the anchor of the incoming tree. Since it is a prediction tree, we set it to the root of the tree, namely S 2 (phrase labels in triples are denoted by italics), but mark the triple as yet incomplete. This distinction allows us to fill in the correct lexical information once it becomes available, i.e, when the tree gets verified. We also add an incomplete triple for the trace t in the subject position of the prediction tree, as described above. Note that this triple contains multiple roles; this is expected given that prediction trees are unlexicalized and occur in a wide variety of contexts.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 79,
+                        "end": 81,
+                        "text": "5a",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "5:",
+                "sec_num": null
+            },
+            {
+                "text": "When the next verb arrives, the parser successfully verifies it against the embedded prediction tree within the prefix tree (last step of Figure 5b ). Our algorithm first cycles through all nodes that match between the verification tree T v and the prediction tree T pr and will complete or create new triples via CREATE-TRIPLES (lines 18-20). In our example, the second semantic triple gets completed by replacing S 2 with the head of the subtree rooted in S. Normally, this would be the verb open, but in this case the verb is followed by the infinitive marker to, hence we heuristically set it to be the argument of the triple instead, following Carreras and M\u00e0rquez (2005) . For the last triple, we set the predicate to the anchor of T v open, and now are able to remove the excess role labels A0 and A2. This illustrated how the lexicalized verification tree disambiguates the semantic information stored in the prediction tree. Finally, trace t is set to the closest NP head that is below the same phrase subtree, in this case Banks. Note that Banks is part of two triples as shown in the last tree of Figure 5b : it is either an A0 or an A1 for refused and an A1 for open.",
+                "cite_spans": [
+                    {
+                        "start": 649,
+                        "end": 676,
+                        "text": "Carreras and M\u00e0rquez (2005)",
+                        "ref_id": "BIBREF2"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 145,
+                        "end": 147,
+                        "text": "5b",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 1115,
+                        "end": 1117,
+                        "text": "5b",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "5:",
+                "sec_num": null
+            },
+            {
+                "text": "We are able to create incomplete semantic triples after the prediction of the upcoming verb at step 2, as shown in Figure 5b . This is not possible using an incremental dependency parser such as MaltParser (Nivre et al., 2007) that lacks a predictive component. Table 1 illustrates this by comparing the output of IRPA for Figure 5b with the output of a baseline system that maps role labels onto the syntactic dependencies in Figure 4 , generated incrementally by MaltParser (see Section 5.3 for a description of the MaltParser baseline). Malt-Parser has to wait for the verb open before outputting the relevant semantic triples. In contrast, IRPA outputs incomplete triples as soon as the information is available, and later on updates its decision. (MaltParser also incorrectly assigns A0 for the Banks-open pair.)",
+                "cite_spans": [
+                    {
+                        "start": 206,
+                        "end": 226,
+                        "text": "(Nivre et al., 2007)",
+                        "ref_id": "BIBREF15"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 122,
+                        "end": 124,
+                        "text": "5b",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 268,
+                        "end": 269,
+                        "text": "1",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 330,
+                        "end": 332,
+                        "text": "5b",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 434,
+                        "end": 435,
+                        "text": "4",
+                        "ref_id": "FIGREF2"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "5:",
+                "sec_num": null
+            },
+            {
+                "text": "IRPA produces semantic triples for every role annotation present in the lexicon entries, which will often overgenerate role information. Furthermore, some triples have more than one role label attached to them. During verification, we are able to filter out the majority of labels in the corresponding prediction trees; However, most triples are created via substitution and adjunction.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Argument Identification and Role Label Disambiguation",
+                "sec_num": "4.4"
+            },
+            {
+                "text": "In order to address these problems we adhere to the following classification and ranking strategy: after each semantic triple gets completed, we perform a binary classification that evaluates its suitability as a whole, given bilexical and syntactic information. If the triple is identified as a good candidate, then we perform multi-class classification over role labels: we feed the same bilexical and syntactic information to a logistic classifier, and get a ranked list of labels. We then use this list to re-rank the existing ambiguous role labels in the semantic triple, and output the top scoring ones.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Argument Identification and Role Label Disambiguation",
+                "sec_num": "4.4"
+            },
+            {
+                "text": "The identifier is a binary L2-loss support vector classifier, and the role disambiguator an L2regularized logistic regression classifier, both implemented using the efficient LIBLINEAR framework of Fan et al. (2008) . The features used are based on Bj\u00f6rkelund et al. (2009) and Liu and Sarkar (2007) , and are listed in Table 2 .",
+                "cite_spans": [
+                    {
+                        "start": 198,
+                        "end": 215,
+                        "text": "Fan et al. (2008)",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 249,
+                        "end": 273,
+                        "text": "Bj\u00f6rkelund et al. (2009)",
+                        "ref_id": "BIBREF1"
+                    },
+                    {
+                        "start": 278,
+                        "end": 299,
+                        "text": "Liu and Sarkar (2007)",
+                        "ref_id": "BIBREF11"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 326,
+                        "end": 327,
+                        "text": "2",
+                        "ref_id": "TABREF3"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Argument Identification and Role Label Disambiguation",
+                "sec_num": "4.4"
+            },
+            {
+                "text": "The bilexical features are: predicate POS tag, predicate lemma, argument word form, argument POS tag, and position. The latter indicates the position of the argument relative to the predicate, i.e., before, on, or after. The syntactic features are: the predicate and argument elementary trees without the anchors (to avoid sparsity), the category of the integration point node on the prefix tree where the elementary tree of the argument attaches to, an alphabetically ordered set of the categories of the fringe nodes of the prefix tree after attaching the argument tree, and the path of PLTAG operations applied between the argument and the predicate. Note that most of the original features used by Bj\u00f6rkelund et al. (2009) and others are not applicable in our context, as they exploit information that is not accessible incrementally. For example, sibling information to the right of the word is not available. Furthermore, our PLTAG parser does not compute syntactic dependencies, hence these cannot serve as features (and in any case not all dependencies are available incrementally, see fix tree. We also store the series of operations applied by our parser between argument and predicate, in an effort to emulate the effect of recovering longer-range patterns.",
+                "cite_spans": [
+                    {
+                        "start": 702,
+                        "end": 726,
+                        "text": "Bj\u00f6rkelund et al. (2009)",
+                        "ref_id": "BIBREF1"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Argument Identification and Role Label Disambiguation",
+                "sec_num": "4.4"
+            },
+            {
+                "text": "5 Experimental Design",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Argument Identification and Role Label Disambiguation",
+                "sec_num": "4.4"
+            },
+            {
+                "text": "We extracted the semantically-enriched lexicon and trained the PLTAG parser by converting the Wall Street Journal part of Penn Treebank to PLTAG format. We used Propbank to retrieve semantic role annotation, as described in Section 4.2. We trained the PLTAG parser according to Demberg et al. (2013) and evaluated the parser on section 23, on sentences with 40 words or less, given gold POS tags for each word, and achieved a labeled bracket F 1 score of 79.41. In order to train the argument identification and role label disambiguation classifiers, we used the English portion of the CoNLL 2009 Shared Task (Haji\u010d et al., 2009; Surdeanu et al., 2008) . It consists of the Penn Treebank, automatically converted to dependencies following Johansson and Nugues (2007) , accompanied by semantic role label annotation for every argument pair. The latter is converted from Propbank based on Carreras and M\u00e0rquez (2005) . We extracted the bilexical features for the classifiers directly from the gold standard annotation of the training set. The syntactic features were obtained as follows: for every sentence in the training set we applied IRPA using the trained PLTAG parser, with gold standard lexicon entries for each word of the input sentence. This ensures near perfect parsing accuracy. Then for each semantic triple predicted incrementally, we extracted the relevant syntactic information in order to construct training vectors. If the identified predicate-argument pair was in the gold standard then we assigned a positive label for the identification classifier, otherwise we flagged it as negative. For those pairs that are not identified by IRPA but exist in the gold standard (false negatives), we extracted syntactic information from already identified similar triples, as follows: We first look for correctly identified arguments, wrongly attached to a different predicate and re-create the triple with correct predicate/argument information. If no argument is found, we then pick the argument in the list of identified arguments for a correct predicate with the same POS-tag as the gold-standard argument. In the case of the role label disambiguation classifier we just assign the gold label for every correctly identified pair, and ignore the (possibly ambiguous) predicted one. After tuning on the development set, the argument identifier achieved an accuracy of 92.18%, and the role label disambiguation classifier, 82.37%.",
+                "cite_spans": [
+                    {
+                        "start": 278,
+                        "end": 299,
+                        "text": "Demberg et al. (2013)",
+                        "ref_id": "BIBREF4"
+                    },
+                    {
+                        "start": 609,
+                        "end": 629,
+                        "text": "(Haji\u010d et al., 2009;",
+                        "ref_id": "BIBREF6"
+                    },
+                    {
+                        "start": 630,
+                        "end": 652,
+                        "text": "Surdeanu et al., 2008)",
+                        "ref_id": "BIBREF21"
+                    },
+                    {
+                        "start": 739,
+                        "end": 766,
+                        "text": "Johansson and Nugues (2007)",
+                        "ref_id": "BIBREF7"
+                    },
+                    {
+                        "start": 887,
+                        "end": 914,
+                        "text": "Carreras and M\u00e0rquez (2005)",
+                        "ref_id": "BIBREF2"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "PLTAG and Classifier Training",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "The focus of this paper is to build a system that is able to output semantic role labels for predicateargument pairs incrementally, as soon as they become available. In order to properly evaluate such a system, we need to measure its performance incrementally. We propose two different cumulative scores for assessing the (possibly incomplete) semantic triples that have been created so far, as the input is processed from left to right, per word. The first metric is called Unlabeled Prediction Score (UPS) and gets updated for every identified argument or predicate, even if the corresponding semantic triple is incomplete. Note that UPS does not take into account the role label, it only measures predicate and argument identification. In this respect it is analogous to unlabeled dependency accuracy reported in the parsing literature. We ex-pect a model that is able to predict semantic roles to achieve an improved UPS result compared to a system that does not do prediction, as illustrated in Table 1 . Our second score, Combined Incremental SRL Score (CISS), measures the identification of complete semantic role triples (i.e., correct predicate, predicate sense, argument, and role label) per word; by the end of the sentence, CISS coincides with standard combined SRL accuracy, as reported in CoNLL 2009 SRL-only task. This score is analogous to labeled dependency accuracy in parsing.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 1006,
+                        "end": 1007,
+                        "text": "1",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Evaluation",
+                "sec_num": "5.2"
+            },
+            {
+                "text": "Note that conventional SRL systems such as Bj\u00f6rkelund et al. (2009) typically assume gold standard syntactic information. In order to emulate this, we give our parser gold standard lexicon entries for each word in the test set; these contain all possible roles observed in the training set for a given elementary tree (and all possible senses for each predicate). This way the parser achieves a syntactic parsing F 1 score of 94.24, thus ensuring the errors of our system can be attributed to IRPA and the classifiers. Also note that we evaluate on verb predicates only, therefore trivially reducing the task of predicate identification to the simple heuristic of looking for words in the sentence with a verb-related POS tag and excluding auxiliaries and modals. Likewise, predicate sense disambiguation on verbs presumably is trivial, as we observed almost no ambiguity of senses among lexicon entries of the same verb (we adhered to a simple majority baseline, by picking the most frequent sense, given the lexeme of the verb, in the few ambiguous cases). It seems that the syntactic information held in the elementary trees discriminates well among different senses.",
+                "cite_spans": [
+                    {
+                        "start": 43,
+                        "end": 67,
+                        "text": "Bj\u00f6rkelund et al. (2009)",
+                        "ref_id": "BIBREF1"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Evaluation",
+                "sec_num": "5.2"
+            },
+            {
+                "text": "We evaluated three configurations of our system. The first configuration (iSRL) uses all semantic roles for each PLTAG lexicon entry, applies the PLTAG parser, IRPA, and both classifiers to perform identification and disambiguation, as described in Section 4. The second one (Majority-Baseline), solves the problem of argument identification and role disambiguation without the classifiers. For the former we employ a set of heuristics according to Lang and Lapata (2014) , that rely on gold syntactic dependency information, sourced from CoNLL input. For the latter, we choose the most frequent role given the gold standard dependency relation label for the particular argument. Note that dependencies have been produced in view of the whole sentence and not incrementally. ",
+                "cite_spans": [
+                    {
+                        "start": 449,
+                        "end": 471,
+                        "text": "Lang and Lapata (2014)",
+                        "ref_id": "BIBREF10"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "System Comparison",
+                "sec_num": "5.3"
+            },
+            {
+                "text": "Figures 6 and 7 show the results on the incremental SRL task. We plot the F 1 for Unlabeled Prediction Score (UPS) and Combined Incremental SRL Score (CISS) per word, separately for sentences of lengths 10, 20, 30, and 40 words. The task gets harder with increasing sentence length, hence we can only meaningfully compare the average scores for sentence of the same length. (This approach was proposed by Sangati and Keller 2013 for evaluating the performance of incremental parsers.)",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 8,
+                        "end": 9,
+                        "text": "6",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 14,
+                        "end": 15,
+                        "text": "7",
+                        "ref_id": "FIGREF8"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "6"
+            },
+            {
+                "text": "The UPS results in Figure 6 clearly show that our system (iSRL) outperforms both baselines on unlabeled argument and predicate prediction, across all four sentence lengths. Furthermore, we note that the iSRL system achieves a nearconstant performance for all sentence prefixes. Our PLTAG-based prediction/verification architecture allows us to correctly predict incomplete semantic role triples, even at the beginning of the sentence. Both baselines perform worse than the iSRL system in general. Moreover, the Malt-Baseline performs badly on the initial sentence prefixes (up to word 10), presumably as it does not benefit from syntactic prediction, and thus cannot generate incomplete triples early in the sentence, as illustrated in Table 1 . The Majority-Baseline also does not do prediction, but it has access to gold-standard syntactic dependencies, and thus outperforms the Malt-Baseline on initial sentence prefixes. Note that due to prediction, our system tends to over-generate incomplete triples in the beginning of sentences, compared to nonincremental output, which may inflate UPS for the first words. However, this cancels out later in the sentence if triples are correctly completed; failure to do so would decrease UPS. The nearconstant performance of our output illustrates this phenomenon. Finally, the iSRL-Oracle outperforms all other systems, as it benefits from correct role labels and correct PLTAG syntax, thus providing an upper limit on performance.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 26,
+                        "end": 27,
+                        "text": "6",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 742,
+                        "end": 743,
+                        "text": "1",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "6"
+            },
+            {
+                "text": "The CISS results in Figure 7 present a similar picture. Again, the iSRL system outperforms both baselines at all sentence lengths. In addition, it shows particularly strong performance (almost at the level of the iSRL-Oracle) at the beginning of the sentence. This presumably is due to the fact that our system uses prediction and is able to identify correct semantic role triples earlier in the sentence. The baselines also show higher performance early in the sentence, but to a lesser degree.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 27,
+                        "end": 28,
+                        "text": "7",
+                        "ref_id": "FIGREF8"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "6"
+            },
+            {
+                "text": "Table 3 reports traditional combined SRL scores for full sentences over all sentence lengths, as defined for the CoNLL task. Our iSRL system outperforms the Majority-Baseline by almost 15 points, and the Malt-Baseline by 25 points. It remains seven points below the iSRL-Oracle upper limit.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 6,
+                        "end": 7,
+                        "text": "3",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "6"
+            },
+            {
+                "text": "Finally, in order to test the effect of syntactic parsing on our system, we also experimented with a variant of our iSRL system that utilizes all lexicon entries for each word in the test set. This is similar to performing the CoNLL 2009 joint task, which is designed for systems that carry out both syntactic parsing and semantic role labeling. This variant achieved a full sentence F-score of 68.0%, i.e., around 10 points lower than our iSRL system. This drop in score correlates with the difference in syntactic parsing F-score between the two versions of PLTAG parser (94.24 versus 79.41), and is expected given the high ambiguity of the lexicon entries for each word. Note, however, that the full-parsing version of our system still outperforms Malt-Baseline by 15 points. ",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "6"
+            },
+            {
+                "text": "In this paper, we introduced the new task of incremental semantic role labeling and proposed a system that solves this task by combining an incremental TAG parser with a semantically enriched lexicon, a role propagation algorithm, and a cascade of classifiers. This system achieved a fullsentence SRL F-score of 78.38% on the standard CoNLL dataset. Not only is the full-sentence score considerably higher than the Majority-Baseline (which is a strong baseline, as it uses gold-standard syntactic dependencies), but we also observe that our iSRL system performs well incrementally, i.e., it predicts both complete and incomplete semantic role triples correctly early on in the sentence. We attributed this to the fact that our TAG-based architecture makes it possible to predict upcoming syntactic structure together with the corresponding semantic roles.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusions",
+                "sec_num": "7"
+            },
+            {
+                "text": "Contrary toSayeed and Demberg (2013) we put role label annotations for PPs on the preposition rather than their NP child, following of the",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "CoNLL 2005 shared task(Carreras and M\u00e0rquez, 2005).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "Prediction tree T pr in our algorithm is only used during verification, so it set to nil for substitution and adjunction operations.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "PLTAG parsing operations can occur in two ways: An elementary tree can be substituted into the substitution node of the prefix tree, or the prefix tree can be substituted into a node of an elementary tree. The same holds for adjunction.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "Most predicates can be identified as anchors of nonmodifier auxiliary trees. However, there are exceptions to this rule, i.e., modifier auxiliary trees and non-modifier nonauxiliary trees being also verbs in our lexicon, hence the use of the more reliable POS tags.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            }
+        ],
+        "back_matter": [
+            {
+                "text": "EPSRC support through grant EP/I032916/1 \"An integrated model of syntactic and semantic prediction in human language processing\" to FK and ML is gratefully acknowledged.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Acknowledgments",
+                "sec_num": null
+            }
+        ],
+        "bib_entries": {
+            "BIBREF0": {
+                "ref_id": "b0",
+                "title": "Incremental parsing and the evaluation of partial dependency analyses",
+                "authors": [
+                    {
+                        "first": "Niels",
+                        "middle": [],
+                        "last": "Beuck",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Arne",
+                        "middle": [],
+                        "last": "Khn",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Wolfgang",
+                        "middle": [],
+                        "last": "Menzel",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2011,
+                "venue": "Proceedings of the 1st International Conference on Dependency Linguistics. Depling",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Beuck, Niels, Arne Khn, and Wolfgang Menzel. 2011. Incremental parsing and the evaluation of partial dependency analyses. In Proceedings of the 1st International Conference on Depen- dency Linguistics. Depling 2011.",
+                "links": null
+            },
+            "BIBREF1": {
+                "ref_id": "b1",
+                "title": "Multilingual semantic role labeling",
+                "authors": [
+                    {
+                        "first": "Anders",
+                        "middle": [],
+                        "last": "Bj\u00f6rkelund",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Love",
+                        "middle": [],
+                        "last": "Hafdell",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Pierre",
+                        "middle": [],
+                        "last": "Nugues",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "Proceedings of the Thirteenth Conference on Computational Natural Language Learning: Shared Task. Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "43--48",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Bj\u00f6rkelund, Anders, Love Hafdell, and Pierre Nugues. 2009. Multilingual semantic role la- beling. In Proceedings of the Thirteenth Con- ference on Computational Natural Language Learning: Shared Task. Association for Com- putational Linguistics, Stroudsburg, PA, USA, CoNLL '09, pages 43-48.",
+                "links": null
+            },
+            "BIBREF2": {
+                "ref_id": "b2",
+                "title": "Introduction to the conll-2005 shared task: Semantic role labeling",
+                "authors": [
+                    {
+                        "first": "Xavier",
+                        "middle": [],
+                        "last": "Carreras",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Llu\u00eds",
+                        "middle": [],
+                        "last": "M\u00e0rquez",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2005,
+                "venue": "Proceedings of the Ninth Conference on Computational Natural Language Learning. Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "152--164",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Carreras, Xavier and Llu\u00eds M\u00e0rquez. 2005. Intro- duction to the conll-2005 shared task: Semantic role labeling. In Proceedings of the Ninth Con- ference on Computational Natural Language Learning. Association for Computational Lin- guistics, Stroudsburg, PA, USA, CONLL '05, pages 152-164.",
+                "links": null
+            },
+            "BIBREF3": {
+                "ref_id": "b3",
+                "title": "Statistical parsing with an automatically-extracted tree adjoining grammar",
+                "authors": [
+                    {
+                        "first": "David",
+                        "middle": [],
+                        "last": "Chiang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2000,
+                "venue": "Proceedings of the 38th Annual Meeting on Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "456--463",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Chiang, David. 2000. Statistical parsing with an automatically-extracted tree adjoining gram- mar. In Proceedings of the 38th Annual Meeting on Association for Computational Linguistics. pages 456-463.",
+                "links": null
+            },
+            "BIBREF4": {
+                "ref_id": "b4",
+                "title": "Incremental, predictive parsing with psycholinguistically motivated treeadjoining grammar",
+                "authors": [
+                    {
+                        "first": "Vera",
+                        "middle": [],
+                        "last": "Demberg",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Frank",
+                        "middle": [],
+                        "last": "Keller",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alexander",
+                        "middle": [],
+                        "last": "Koller",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "Computational Linguistics",
+                "volume": "39",
+                "issue": "4",
+                "pages": "1025--1066",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Demberg, Vera, Frank Keller, and Alexander Koller. 2013. Incremental, predictive pars- ing with psycholinguistically motivated tree- adjoining grammar. Computational Linguistics 39(4):1025-1066.",
+                "links": null
+            },
+            "BIBREF5": {
+                "ref_id": "b5",
+                "title": "Liblinear: A library for large linear classification",
+                "authors": [
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Fan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kai-Wei",
+                        "middle": [],
+                        "last": "Rong-En",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Cho-Jui",
+                        "middle": [],
+                        "last": "Chang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xiang-Rui",
+                        "middle": [],
+                        "last": "Hsieh",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chih-Jen",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Lin",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2008,
+                "venue": "Journal of Machine Learning Research",
+                "volume": "9",
+                "issue": "",
+                "pages": "1871--1874",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Fan, Rong-En, Kai-Wei Chang, Cho-Jui Hsieh, Xiang-Rui Wang, and Chih-Jen Lin. 2008. Li- blinear: A library for large linear classification. Journal of Machine Learning Research 9:1871- 1874.",
+                "links": null
+            },
+            "BIBREF6": {
+                "ref_id": "b6",
+                "title": "The CoNLL-2009 shared task: Syntactic and semantic dependencies in multiple languages",
+                "authors": [
+                    {
+                        "first": "Jan",
+                        "middle": [],
+                        "last": "Haji\u010d",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Massimiliano",
+                        "middle": [],
+                        "last": "Ciaramita",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Richard",
+                        "middle": [],
+                        "last": "Johansson",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Daisuke",
+                        "middle": [],
+                        "last": "Kawahara",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Maria",
+                        "middle": [
+                            "Ant\u00f2nia"
+                        ],
+                        "last": "Mart\u00ed",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Llu\u00eds",
+                        "middle": [],
+                        "last": "M\u00e0rquez",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Adam",
+                        "middle": [],
+                        "last": "Meyers",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Joakim",
+                        "middle": [],
+                        "last": "Nivre",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sebastian",
+                        "middle": [],
+                        "last": "Pad\u00f3",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jan",
+                        "middle": [],
+                        "last": "\u0160t\u011bp\u00e1nek",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Pavel",
+                        "middle": [],
+                        "last": "Stra\u0148\u00e1k",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mihai",
+                        "middle": [],
+                        "last": "Surdeanu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nianwen",
+                        "middle": [],
+                        "last": "Xue",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yi",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "Proceedings of the 13th Conference on Computational Natural Language Learning (CoNLL-2009)",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Haji\u010d, Jan, Massimiliano Ciaramita, Richard Jo- hansson, Daisuke Kawahara, Maria Ant\u00f2nia Mart\u00ed, Llu\u00eds M\u00e0rquez, Adam Meyers, Joakim Nivre, Sebastian Pad\u00f3, Jan \u0160t\u011bp\u00e1nek, Pavel Stra\u0148\u00e1k, Mihai Surdeanu, Nianwen Xue, and Yi Zhang. 2009. The CoNLL-2009 shared task: Syntactic and semantic dependencies in multi- ple languages. In Proceedings of the 13th Con- ference on Computational Natural Language Learning (CoNLL-2009), June 4-5. Boulder, Colorado, USA.",
+                "links": null
+            },
+            "BIBREF7": {
+                "ref_id": "b7",
+                "title": "Extended constituent-to-dependency conversion for english",
+                "authors": [
+                    {
+                        "first": "Richard",
+                        "middle": [],
+                        "last": "Johansson",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Pierre",
+                        "middle": [],
+                        "last": "Nugues",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2007,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "105--112",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Johansson, Richard and Pierre Nugues. 2007. Ex- tended constituent-to-dependency conversion for english. In Joakim Nivre, Heiki-Jaan Kalep, Kadri Muischnek, and Mare Koit, edi- tors, NODALIDA 2007 Proceedings. University of Tartu, pages 105-112.",
+                "links": null
+            },
+            "BIBREF8": {
+                "ref_id": "b8",
+                "title": "Tree adjoining grammars and lexicalized grammars",
+                "authors": [
+                    {
+                        "first": "Aravind",
+                        "middle": [
+                            "K"
+                        ],
+                        "last": "Joshi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yves",
+                        "middle": [],
+                        "last": "Schabes",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1992,
+                "venue": "Tree Automata and Languages",
+                "volume": "",
+                "issue": "",
+                "pages": "409--432",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Joshi, Aravind K. and Yves Schabes. 1992. Tree adjoining grammars and lexicalized grammars. In Maurice Nivat and Andreas Podelski, editors, Tree Automata and Languages, North-Holland, Amsterdam, pages 409-432.",
+                "links": null
+            },
+            "BIBREF9": {
+                "ref_id": "b9",
+                "title": "Cognitively plausible models of human language processing",
+                "authors": [
+                    {
+                        "first": "Frank",
+                        "middle": [],
+                        "last": "Keller",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2010,
+                "venue": "Proceedings of the 48th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "60--67",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Keller, Frank. 2010. Cognitively plausible models of human language processing. In Proceedings of the 48th Annual Meeting of the Association for Computational Linguistics, Companion Vol- ume: Short Papers. Uppsala, pages 60-67.",
+                "links": null
+            },
+            "BIBREF10": {
+                "ref_id": "b10",
+                "title": "Similaritydriven semantic role induction via graph partitioning",
+                "authors": [
+                    {
+                        "first": "Joel",
+                        "middle": [],
+                        "last": "Lang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mirella",
+                        "middle": [],
+                        "last": "Lapata",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "Computational Linguistics Accepted",
+                "volume": "",
+                "issue": "",
+                "pages": "1--62",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Lang, Joel and Mirella Lapata. 2014. Similarity- driven semantic role induction via graph par- titioning. Computational Linguistics Accepted pages 1-62. To appear.",
+                "links": null
+            },
+            "BIBREF11": {
+                "ref_id": "b11",
+                "title": "Experimental evaluation of LTAG-based features for semantic role labeling",
+                "authors": [
+                    {
+                        "first": "Yudong",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Anoop",
+                        "middle": [],
+                        "last": "Sarkar",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2007,
+                "venue": "Proceedings of the 2007 Joint Conference on Empirical Methods in Natural Language Processing and Computational Natural Language Learning (EMNLP-CoNLL)",
+                "volume": "",
+                "issue": "",
+                "pages": "590--599",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Liu, Yudong and Anoop Sarkar. 2007. Experimen- tal evaluation of LTAG-based features for se- mantic role labeling. In Proceedings of the 2007 Joint Conference on Empirical Methods in Nat- ural Language Processing and Computational Natural Language Learning (EMNLP-CoNLL). Prague, Czech Republic, pages 590-599.",
+                "links": null
+            },
+            "BIBREF12": {
+                "ref_id": "b12",
+                "title": "Building a large annotated corpus of english: The penn treebank",
+                "authors": [
+                    {
+                        "first": "Mitchell",
+                        "middle": [
+                            "P"
+                        ],
+                        "last": "Marcus",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ann",
+                        "middle": [],
+                        "last": "Mary",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Beatrice",
+                        "middle": [],
+                        "last": "Marcinkiewicz",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Santorini",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1993,
+                "venue": "Computational Linguistics",
+                "volume": "19",
+                "issue": "2",
+                "pages": "313--330",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Marcus, Mitchell P., Mary Ann Marcinkiewicz, and Beatrice Santorini. 1993. Building a large annotated corpus of english: The penn treebank. Computational Linguistics 19(2):313-330.",
+                "links": null
+            },
+            "BIBREF13": {
+                "ref_id": "b13",
+                "title": "Semantic Role Labeling: An Introduction to the Special Issue",
+                "authors": [
+                    {
+                        "first": "Llu\u00eds",
+                        "middle": [],
+                        "last": "M\u00e0rquez",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xavier",
+                        "middle": [],
+                        "last": "Carreras",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kenneth",
+                        "middle": [
+                            "C"
+                        ],
+                        "last": "Litkowski",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Suzanne",
+                        "middle": [],
+                        "last": "Stevenson",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2008,
+                "venue": "Computational Linguistics",
+                "volume": "34",
+                "issue": "2",
+                "pages": "145--159",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "M\u00e0rquez, Llu\u00eds, Xavier Carreras, Kenneth C. Litkowski, and Suzanne Stevenson. 2008. Se- mantic Role Labeling: An Introduction to the Special Issue. Computational Linguistics 34(2):145-159.",
+                "links": null
+            },
+            "BIBREF14": {
+                "ref_id": "b14",
+                "title": "Dynamic TAG and lexical dependencies",
+                "authors": [
+                    {
+                        "first": "Alessandro",
+                        "middle": [],
+                        "last": "Mazzei",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Vincenzo",
+                        "middle": [],
+                        "last": "Lombardo",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Patrick",
+                        "middle": [],
+                        "last": "Sturt",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2007,
+                "venue": "Research on Language and Computation",
+                "volume": "5",
+                "issue": "",
+                "pages": "309--332",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Mazzei, Alessandro, Vincenzo Lombardo, and Patrick Sturt. 2007. Dynamic TAG and lexi- cal dependencies. Research on Language and Computation 5:309-332.",
+                "links": null
+            },
+            "BIBREF15": {
+                "ref_id": "b15",
+                "title": "Maltparser: A language-independent system for data-driven dependency parsing",
+                "authors": [
+                    {
+                        "first": "Joakim",
+                        "middle": [],
+                        "last": "Nivre",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Johan",
+                        "middle": [],
+                        "last": "Hall",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jens",
+                        "middle": [],
+                        "last": "Nilsson",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Atanas",
+                        "middle": [],
+                        "last": "Chanev",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "G\u00fclsen",
+                        "middle": [],
+                        "last": "Eryigit",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sandra",
+                        "middle": [],
+                        "last": "K\u00fcbler",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Svetoslav",
+                        "middle": [],
+                        "last": "Marinov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Erwin",
+                        "middle": [],
+                        "last": "Marsi",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2007,
+                "venue": "Natural Language Engineering",
+                "volume": "13",
+                "issue": "",
+                "pages": "95--135",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Nivre, Joakim, Johan Hall, Jens Nilsson, Atanas Chanev, G\u00fclsen Eryigit, Sandra K\u00fcbler, Sve- toslav Marinov, and Erwin Marsi. 2007. Malt- parser: A language-independent system for data-driven dependency parsing. Natural Lan- guage Engineering 13:95-135.",
+                "links": null
+            },
+            "BIBREF16": {
+                "ref_id": "b16",
+                "title": "A probabilistic model of semantic plausibility in sentence processing",
+                "authors": [
+                    {
+                        "first": "Ulrike",
+                        "middle": [],
+                        "last": "Pad\u00f3",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Matthew",
+                        "middle": [
+                            "W"
+                        ],
+                        "last": "Crocker",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Frank",
+                        "middle": [],
+                        "last": "Keller",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "Cognitive Science",
+                "volume": "33",
+                "issue": "5",
+                "pages": "794--838",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Pad\u00f3, Ulrike, Matthew W. Crocker, and Frank Keller. 2009. A probabilistic model of semantic plausibility in sentence processing. Cognitive Science 33(5):794-838.",
+                "links": null
+            },
+            "BIBREF17": {
+                "ref_id": "b17",
+                "title": "The proposition bank: An annotated corpus of semantic roles",
+                "authors": [
+                    {
+                        "first": "Martha",
+                        "middle": [],
+                        "last": "Palmer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Daniel",
+                        "middle": [],
+                        "last": "Gildea",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Paul",
+                        "middle": [],
+                        "last": "Kingsbury",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2005,
+                "venue": "Computational Linguistics",
+                "volume": "31",
+                "issue": "1",
+                "pages": "71--106",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Palmer, Martha, Daniel Gildea, and Paul Kings- bury. 2005. The proposition bank: An anno- tated corpus of semantic roles. Computational Linguistics 31(1):71-106.",
+                "links": null
+            },
+            "BIBREF18": {
+                "ref_id": "b18",
+                "title": "Ambiguity resolution in sentence processing: Evidence against frequency-based accounts",
+                "authors": [
+                    {
+                        "first": "Martin",
+                        "middle": [
+                            "J"
+                        ],
+                        "last": "Pickering",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "J",
+                        "middle": [],
+                        "last": "Matthew",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Matthew",
+                        "middle": [
+                            "W"
+                        ],
+                        "last": "Traxler",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Crocker",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2000,
+                "venue": "Journal of Memory and Language",
+                "volume": "43",
+                "issue": "3",
+                "pages": "447--475",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Pickering, Martin J., Matthew J. Traxler, and Matthew W. Crocker. 2000. Ambiguity reso- lution in sentence processing: Evidence against frequency-based accounts. Journal of Memory and Language 43(3):447-475.",
+                "links": null
+            },
+            "BIBREF19": {
+                "ref_id": "b19",
+                "title": "Incremental tree substitution grammar for parsing and word prediction",
+                "authors": [
+                    {
+                        "first": "Federico",
+                        "middle": [],
+                        "last": "Sangati",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Frank",
+                        "middle": [],
+                        "last": "Keller",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "Transactions of the Association for Computational Linguistics",
+                "volume": "1",
+                "issue": "",
+                "pages": "111--124",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Sangati, Federico and Frank Keller. 2013. In- cremental tree substitution grammar for pars- ing and word prediction. Transactions of the Association for Computational Linguistics 1(May):111-124.",
+                "links": null
+            },
+            "BIBREF20": {
+                "ref_id": "b20",
+                "title": "The semantic augmentation of a psycholinguisticallymotivated syntactic formalism",
+                "authors": [
+                    {
+                        "first": "Asad",
+                        "middle": [],
+                        "last": "Sayeed",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Vera",
+                        "middle": [],
+                        "last": "Demberg",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "Proceedings of the Fourth Annual Workshop on Cognitive Modeling and Computational Linguistics (CMCL). Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "57--65",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Sayeed, Asad and Vera Demberg. 2013. The se- mantic augmentation of a psycholinguistically- motivated syntactic formalism. In Proceed- ings of the Fourth Annual Workshop on Cog- nitive Modeling and Computational Linguistics (CMCL). Association for Computational Lin- guistics, Sofia, Bulgaria, pages 57-65.",
+                "links": null
+            },
+            "BIBREF21": {
+                "ref_id": "b21",
+                "title": "The CoNLL-2008 shared task on joint parsing of syntactic and semantic dependencies",
+                "authors": [
+                    {
+                        "first": "Mihai",
+                        "middle": [],
+                        "last": "Surdeanu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Richard",
+                        "middle": [],
+                        "last": "Johansson",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Adam",
+                        "middle": [],
+                        "last": "Meyers",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Llu\u00eds",
+                        "middle": [],
+                        "last": "M\u00e0rquez",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Joakim",
+                        "middle": [],
+                        "last": "Nivre",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2008,
+                "venue": "Proceedings of the 12th Conference on Computational Natural Language Learning",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Surdeanu, Mihai, Richard Johansson, Adam Mey- ers, Llu\u00eds M\u00e0rquez, and Joakim Nivre. 2008. The CoNLL-2008 shared task on joint pars- ing of syntactic and semantic dependencies. In Proceedings of the 12th Conference on Compu- tational Natural Language Learning (CoNLL- 2008).",
+                "links": null
+            },
+            "BIBREF22": {
+                "ref_id": "b22",
+                "title": "The zero-frequency problem: estimating the probabilities of novel events in adaptive text compression. Information Theory",
+                "authors": [
+                    {
+                        "first": "Ian",
+                        "middle": [
+                            "H"
+                        ],
+                        "last": "Witten",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Timothy",
+                        "middle": [
+                            "C"
+                        ],
+                        "last": "Bell",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1991,
+                "venue": "IEEE Transactions on",
+                "volume": "37",
+                "issue": "4",
+                "pages": "1085--1094",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Witten, Ian H. and Timothy C. Bell. 1991. The zero-frequency problem: estimating the proba- bilities of novel events in adaptive text compres- sion. Information Theory, IEEE Transactions on 37(4):1085-1094.",
+                "links": null
+            },
+            "BIBREF23": {
+                "ref_id": "b23",
+                "title": "A uniform method of grammar extraction and its applications",
+                "authors": [
+                    {
+                        "first": "Fei",
+                        "middle": [],
+                        "last": "Xia",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Martha",
+                        "middle": [],
+                        "last": "Palmer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Aravind",
+                        "middle": [],
+                        "last": "Joshi",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2000,
+                "venue": "Proceedings of the Joint SIGDAT Conference on Empirical Methods in Natural Language Processing and Very Large Corpora",
+                "volume": "",
+                "issue": "",
+                "pages": "53--62",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Xia, Fei, Martha Palmer, and Aravind Joshi. 2000. A uniform method of grammar extraction and its applications. In Proceedings of the Joint SIGDAT Conference on Empirical Methods in Natural Language Processing and Very Large Corpora. pages 53-62.",
+                "links": null
+            }
+        },
+        "ref_entries": {
+            "FIGREF0": {
+                "num": null,
+                "text": "Figure 1: PLTAG lexicon entries: (a) and (b) initial trees, (c) auxiliary tree, (d) prediction tree.",
+                "uris": null,
+                "fig_num": "1",
+                "type_str": "figure"
+            },
+            "FIGREF1": {
+                "num": null,
+                "text": "Figure 3: The current fringe (dashed line) indicates where valid substitutions can occur. Other substitutions result in an invalid prefix tree.",
+                "uris": null,
+                "fig_num": "3",
+                "type_str": "figure"
+            },
+            "FIGREF2": {
+                "num": null,
+                "text": "Figure 4: Syntactic dependency graph with semantic role annotation and the accompanying semantic triples, for Banks refused to open today.",
+                "uris": null,
+                "fig_num": "4",
+                "type_str": "figure"
+            },
+            "FIGREF3": {
+                "num": null,
+                "text": "Figure 2: Incremental parse for Banks rarely open using the operations substitution (with a prediction tree), adjunction, and verification.",
+                "uris": null,
+                "fig_num": "2",
+                "type_str": "figure"
+            },
+            "FIGREF4": {
+                "num": null,
+                "text": "(\u03c0 ip , T ip , T ) 13: for all remaining nodes n \u2208 T with roles do 14: ADD-TRIPLE(\u03c0 ip , n, T ) incomplete triples 15: procedure CREATE-TRIPLES-VERIF(\u03c0 ip , T v , T pr ) 16: if HAS-ROLES(T v ) then 17: anchor \u2190 lexeme of T v 18: for all T ip \u2190 node in T v with role do 19: T pr,ip \u2190 matching node of T ip in T pr 20: CREATE-TRIPLES(T pr,ip , T v ) Process the rest of covered nodes in T pr with roles 21: for all remaining T pr,ip \u2190 node in T pr with role do 22: UPDATE-TRIPLE(T pr,ip , T pr ) 23: function UPDATE-TRIPLE(\u03c0 ip , T ) 24: dep \u2190 FIND-INCOMPLETE(\u03a3, T ip ) 25:anchor \u2190 lexeme of T",
+                "uris": null,
+                "fig_num": null,
+                "type_str": "figure"
+            },
+            "FIGREF5": {
+                "num": null,
+                "text": "Figure 5: Incremental Role Propagation Algorithm application for the sentence Banks refused to open.",
+                "uris": null,
+                "fig_num": null,
+                "type_str": "figure"
+            },
+            "FIGREF7": {
+                "num": null,
+                "text": "Figure 6: Unlabeled Prediction Score (UPS)",
+                "uris": null,
+                "fig_num": null,
+                "type_str": "figure"
+            },
+            "FIGREF8": {
+                "num": null,
+                "text": "Figure 7: Combined iSRL Score (CISS)",
+                "uris": null,
+                "fig_num": "7",
+                "type_str": "figure"
+            },
+            "TABREF1": {
+                "content": "<table><tr><td>26:</td><td>if anchor of T is predicate then</td><td/></tr><tr><td>27: 28:</td><td>SET-PREDICATE(dep, anchor) else if anchor of T is argument then</td><td/></tr><tr><td>29:</td><td>SET-ARGUMENT(dep, anchor) return dep</td><td/></tr><tr><td>30: 31: 32: 33:</td><td>dep \u2190 [roles of T ip ], nil, nil anchor \u2190 lexeme of T if anchor of T is predicate then</td><td/></tr><tr><td>34:</td><td>SET-PREDICATE(dep, anchor)</td><td/></tr><tr><td>35: 36: 37:</td><td>SET-ARGUMENT(dep, head of \u03c0 ip ) else if anchor of T is argument then if T is auxiliary then</td><td>adjunction</td></tr><tr><td>38:</td><td>SET-ARGUMENT(dep, anchor)</td><td/></tr><tr><td>39: 40: 41: 42:</td><td colspan=\"2\">else SET-ARGUMENT(dep, head of T ip ) substitution: arg is head of prefix tree pred \u2190 find dep \u2208 \u03a3 with matching \u03c0 ip SET-PREDICATE(dep, pred)</td></tr><tr><td>43:</td><td>\u03a3 \u2190 (\u03c0 ip , dep)</td><td/></tr></table>",
+                "type_str": "table",
+                "text": "procedure ADD-TRIPLE(\u03c0 ip , T ip , T )",
+                "html": null,
+                "num": null
+            },
+            "TABREF3": {
+                "content": "<table><tr><td>Bilexical</td><td>Syntactic</td></tr><tr><td>PredPOS</td><td>PredElemTree</td></tr><tr><td colspan=\"2\">PredLemma ArgElemTree</td></tr><tr><td>ArgWord</td><td>IntegrationPoint</td></tr><tr><td>ArgPOS</td><td>PrefixFringe</td></tr><tr><td>Position</td><td>OperationPath</td></tr></table>",
+                "type_str": "table",
+                "text": "Features for argument identification and role label disambiguation.",
+                "html": null,
+                "num": null
+            }
+        }
+    }
+}

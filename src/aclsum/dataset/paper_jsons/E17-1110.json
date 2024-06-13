@@ -1,0 +1,3228 @@
+{
+    "paper_id": "E17-1110",
+    "header": {
+        "generated_with": "S2ORC 1.0.0",
+        "date_generated": "2023-06-16T11:56:03.856207Z"
+    },
+    "title": "Distant Supervision for Relation Extraction beyond the Sentence Boundary",
+    "authors": [
+        {
+            "first": "Chris",
+            "middle": [],
+            "last": "Quirk",
+            "suffix": "",
+            "affiliation": {},
+            "email": "chrisq@microsoft.com"
+        },
+        {
+            "first": "Hoifung",
+            "middle": [],
+            "last": "Poon",
+            "suffix": "",
+            "affiliation": {},
+            "email": "hoifung@microsoft.com"
+        }
+    ],
+    "year": "",
+    "venue": null,
+    "identifiers": {},
+    "abstract": "The growing demand for structured knowledge has led to great interest in relation extraction, especially in cases with limited supervision.\nHowever, existing distance supervision approaches only extract relations expressed in single sentences.\nIn general, cross-sentence relation extraction is under-explored, even in the supervised-learning setting. In this paper, we propose the first approach for applying distant supervision to crosssentence relation extraction. At the core of our approach is a graph representation that can incorporate both standard dependencies and discourse relations, thus providing a unifying way to model relations within and across sentences. We extract features from multiple paths in this graph, increasing accuracy and robustness when confronted with linguistic variation and analysis error. Experiments on an important extraction task for precision medicine show that our approach can learn an accurate cross-sentence extractor, using only a small existing knowledge base and unlabeled text from biomedical research articles. Compared to the existing distant supervision paradigm, our approach extracted twice as many relations at similar precision, thus demonstrating the prevalence of cross-sentence relations and the promise of our approach.",
+    "pdf_parse": {
+        "paper_id": "E17-1110",
+        "_pdf_hash": "",
+        "abstract": [
+            {
+                "text": "The growing demand for structured knowledge has led to great interest in relation extraction, especially in cases with limited supervision.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            },
+            {
+                "text": "However, existing distance supervision approaches only extract relations expressed in single sentences.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            },
+            {
+                "text": "In general, cross-sentence relation extraction is under-explored, even in the supervised-learning setting. In this paper, we propose the first approach for applying distant supervision to crosssentence relation extraction. At the core of our approach is a graph representation that can incorporate both standard dependencies and discourse relations, thus providing a unifying way to model relations within and across sentences. We extract features from multiple paths in this graph, increasing accuracy and robustness when confronted with linguistic variation and analysis error. Experiments on an important extraction task for precision medicine show that our approach can learn an accurate cross-sentence extractor, using only a small existing knowledge base and unlabeled text from biomedical research articles. Compared to the existing distant supervision paradigm, our approach extracted twice as many relations at similar precision, thus demonstrating the prevalence of cross-sentence relations and the promise of our approach.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            }
+        ],
+        "body_text": [
+            {
+                "text": "The accelerating pace in technological advance and scientific discovery has led to an explosive growth in knowledge. The ensuing information overload creates new urgency in assimilating frag-mented knowledge for integration and reasoning. A salient case in point is precision medicine (Bahcall, 2015) . The cost of sequencing a person's genome has fallen below $10001 , enabling individualized diagnosis and treatment of complex genetic diseases such as cancer. The availability of measurement for 20,000 human genes makes it imperative to integrate all knowledge about them, which grows rapidly and is scattered in millions of articles in PubMed2 . Traditional extraction approaches require annotated examples, which makes it difficult to scale to the explosion of extraction demands. Consequently, there has been increasing interest in indirect supervision (Banko et al., 2007; Poon and Domingos, 2009; Toutanova et al., 2015) , with distant supervision (Craven et al., 1998; Mintz et al., 2009) emerging as a particularly promising paradigm for augmenting existing knowledge bases from unlabeled text (Poon et al., 2015; Parikh et al., 2015) .",
+                "cite_spans": [
+                    {
+                        "start": 285,
+                        "end": 300,
+                        "text": "(Bahcall, 2015)",
+                        "ref_id": "BIBREF1"
+                    },
+                    {
+                        "start": 859,
+                        "end": 879,
+                        "text": "(Banko et al., 2007;",
+                        "ref_id": "BIBREF2"
+                    },
+                    {
+                        "start": 880,
+                        "end": 904,
+                        "text": "Poon and Domingos, 2009;",
+                        "ref_id": "BIBREF31"
+                    },
+                    {
+                        "start": 905,
+                        "end": 928,
+                        "text": "Toutanova et al., 2015)",
+                        "ref_id": "BIBREF49"
+                    },
+                    {
+                        "start": 956,
+                        "end": 977,
+                        "text": "(Craven et al., 1998;",
+                        "ref_id": "BIBREF8"
+                    },
+                    {
+                        "start": 978,
+                        "end": 997,
+                        "text": "Mintz et al., 2009)",
+                        "ref_id": "BIBREF26"
+                    },
+                    {
+                        "start": 1104,
+                        "end": 1123,
+                        "text": "(Poon et al., 2015;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 1124,
+                        "end": 1144,
+                        "text": "Parikh et al., 2015)",
+                        "ref_id": "BIBREF29"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "This progress is exciting, but distantsupervision approaches have so far been limited to single sentences, thus missing out on relations crossing the sentence boundary. Consider the following example:\"The p56Lck inhibitor Dasatinib was shown to enhance apoptosis induction by dexamethasone in otherwise GC-resistant CLL cells. This finding concurs with the observation by Sade showing that Notch-mediated resistance of a mouse lymphoma cell line could be overcome by inhibiting p56Lck.\" Together, the two sentences convey the fact that the drug Dasatinib could overcome resistance conferred by mutations to the Notch gene, which can not be inferred from either sentence alone. The impact of missed opportunities is especially pronounced in the long tail of knowledge. Such information is crucial for integrative reasoning as it includes the newest findings in specialized domains.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "In this paper, we present DISCREX, the first approach for distant supervision to relation extraction beyond the sentence boundary. The key idea is to adopt a document-level graph representation that augments conventional intra-sentential dependencies with new dependencies introduced for adjacent sentences and discourse relations. It provides a unifying way to derive features for classifying relations between entity pairs. As we augment this graph with new arcs, the number of possible paths between entities grow. We demonstrate that feature extraction along multiple paths leads to more robust extraction, allowing the learner to find structural patterns even when the language varies or the parser makes an error.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "The cross-sentence scenario presents a new challenge in candidate selection. This motivates our concept of minimal-span candidates in Section 3.2. Excluding non-minimal candidates substantially improves classification accuracy.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "There is a long line of research on discourse phenomena, including coreference (Haghighi and Klein, 2007; Poon and Domingos, 2008; Rahman and Ng, 2009; Raghunathan et al., 2010) , narrative structures (Chambers and Jurafsky, 2009; Cheung et al., 2013) , and rhetorical relations (Marcu, 2000) . For the most part, this work has not been connected to relation extraction. Our proposed extraction framework makes it easy to integrate such discourse relations. Our experiments evaluated the impact of coreference and discourse parsing, a preliminary step toward in-depth integration with discourse research.",
+                "cite_spans": [
+                    {
+                        "start": 79,
+                        "end": 105,
+                        "text": "(Haghighi and Klein, 2007;",
+                        "ref_id": "BIBREF16"
+                    },
+                    {
+                        "start": 106,
+                        "end": 130,
+                        "text": "Poon and Domingos, 2008;",
+                        "ref_id": "BIBREF30"
+                    },
+                    {
+                        "start": 131,
+                        "end": 151,
+                        "text": "Rahman and Ng, 2009;",
+                        "ref_id": "BIBREF38"
+                    },
+                    {
+                        "start": 152,
+                        "end": 177,
+                        "text": "Raghunathan et al., 2010)",
+                        "ref_id": "BIBREF37"
+                    },
+                    {
+                        "start": 201,
+                        "end": 230,
+                        "text": "(Chambers and Jurafsky, 2009;",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 231,
+                        "end": 251,
+                        "text": "Cheung et al., 2013)",
+                        "ref_id": "BIBREF6"
+                    },
+                    {
+                        "start": 279,
+                        "end": 292,
+                        "text": "(Marcu, 2000)",
+                        "ref_id": "BIBREF25"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "We conducted experiments on extracting druggene interactions from biomedical literature, an important task for precision medicine. By bootstrapping from a recently curated knowledge base (KB) with about 162 known interactions, our DIS-CREX system learned to extract inter-sentence drug-gene interactions at high precision. Crosssentence extraction doubled the yield compared to single-sentence extraction. Overall, by applying distant supervision, we extracted about 64,000 distinct interactions from about one million PubMed Central full-text articles, attaining two orders of magnitude increase compared to the original KB.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "To the best of our knowledge, distant supervision has not been applied to cross-sentence relation ex-traction in the past. For example, Mintz et al. (2009) , who coined the term \"distant supervision\", aggregated features from multiple instances for the same relation triple (relation, entity1, entity2) , but each instance is a sentence where the two entities co-occur. Thus their approach cannot extract relations where the two entities reside in different sentences. Similarly, Zheng et al. ( 2016) aggregated information from multiple sentential instances, but could not extract cross-sentence relations.",
+                "cite_spans": [
+                    {
+                        "start": 136,
+                        "end": 155,
+                        "text": "Mintz et al. (2009)",
+                        "ref_id": "BIBREF26"
+                    },
+                    {
+                        "start": 274,
+                        "end": 302,
+                        "text": "(relation, entity1, entity2)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "Distant supervision has also been applied to completing Wikipedia Infoboxes (Wu and Weld, 2007) or TAC KBP Slot Filling3 , where the goal is to extract attributes for a given entity, which could be considered a special kind of relation triples (attribute, entity, value). These scenarios are very different from general cross-sentence relation extraction. For example, the entity in consideration is often the protagonist in the document (title entity of the article). Moreover, state-of-the-art methods typically consider extracting from single sentences only (Surdeanu et al., 2012; Surdeanu and Ji, 2014; Koch et al., 2014) .",
+                "cite_spans": [
+                    {
+                        "start": 76,
+                        "end": 95,
+                        "text": "(Wu and Weld, 2007)",
+                        "ref_id": "BIBREF53"
+                    },
+                    {
+                        "start": 561,
+                        "end": 584,
+                        "text": "(Surdeanu et al., 2012;",
+                        "ref_id": "BIBREF46"
+                    },
+                    {
+                        "start": 585,
+                        "end": 607,
+                        "text": "Surdeanu and Ji, 2014;",
+                        "ref_id": "BIBREF45"
+                    },
+                    {
+                        "start": 608,
+                        "end": 626,
+                        "text": "Koch et al., 2014)",
+                        "ref_id": "BIBREF21"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "In general, cross-sentence relation extraction has received little attention, even in the supervised-learning setting. Among the limited amount of prior work, Swampillai & Stevenson (2011) is the most relevant to our approach, as it also considered syntactic features and introduced a dependency link between the root nodes of parse trees containing the given pair of entities. However, the differences are substantial. First and foremost, their approach used standard supervised learning rather than distant supervision. Moreover, we introduced the document-level graph representation, which is much more general, capable of incorporating a diverse set of discourse relations and enabling the use of rich syntactic and surface features (Section 3). Finally, Swampillai & Stevenson (2011) evaluated on MUC64 , which contains only 318 Wall Street Journal articles. In contrast, we evaluated on large-scale extraction from about one million full-text articles and demonstrated the large impact of cross-sentence extraction for an important real-world application.",
+                "cite_spans": [
+                    {
+                        "start": 159,
+                        "end": 188,
+                        "text": "Swampillai & Stevenson (2011)",
+                        "ref_id": "BIBREF48"
+                    },
+                    {
+                        "start": 759,
+                        "end": 788,
+                        "text": "Swampillai & Stevenson (2011)",
+                        "ref_id": "BIBREF48"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "The lack of prior work in cross-sentence relation extraction may be partially explained by the domains of focus. Prior extraction work focuses on newswire text5 and the Web (Craven et al., 2000) . In these domains, the extracted relations often involve popular entities, for which there often exist single sentences expressing the relation (Banko et al., 2007) . However, there is much less redundancy in specialized domains such as the frontiers of science and technology, where crosssentence extraction is more likely to have a significant impact. The long-tailed characteristics of such domains also make distant supervision a natural choice for scaling up learning. This paper represents a first step toward exploring the confluence of these two directions.",
+                "cite_spans": [
+                    {
+                        "start": 173,
+                        "end": 194,
+                        "text": "(Craven et al., 2000)",
+                        "ref_id": "BIBREF9"
+                    },
+                    {
+                        "start": 340,
+                        "end": 360,
+                        "text": "(Banko et al., 2007)",
+                        "ref_id": "BIBREF2"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "Distant supervision has been extended to capture implicit reasoning, via matrix factorization or knowledge base embedding (Riedel et al., 2013; Toutanova et al., 2015; Toutanova et al., 2016) . Additionally, various models have been proposed to address the noise in distant supervision labels (Hoffmann et al., 2011; Surdeanu et al., 2012) . These directions are orthogonal to cross-sentence extraction, and incorporating them will be interesting future work.",
+                "cite_spans": [
+                    {
+                        "start": 122,
+                        "end": 143,
+                        "text": "(Riedel et al., 2013;",
+                        "ref_id": "BIBREF41"
+                    },
+                    {
+                        "start": 144,
+                        "end": 167,
+                        "text": "Toutanova et al., 2015;",
+                        "ref_id": "BIBREF49"
+                    },
+                    {
+                        "start": 168,
+                        "end": 191,
+                        "text": "Toutanova et al., 2016)",
+                        "ref_id": "BIBREF50"
+                    },
+                    {
+                        "start": 293,
+                        "end": 316,
+                        "text": "(Hoffmann et al., 2011;",
+                        "ref_id": "BIBREF18"
+                    },
+                    {
+                        "start": 317,
+                        "end": 339,
+                        "text": "Surdeanu et al., 2012)",
+                        "ref_id": "BIBREF46"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "Recently, there has been increasing interest in relation extraction for biomedical applications (Kim et al., 2009; N\u00e9dellec et al., 2013) . However, past methods are generally limited to single sentences, whether using supervised learning (Bj\u00f6rne et al., 2009; Poon and Vanderwende, 2010; Riedel and McCallum, 2011) or distant supervision (Poon et al., 2015; Parikh et al., 2015) .",
+                "cite_spans": [
+                    {
+                        "start": 96,
+                        "end": 114,
+                        "text": "(Kim et al., 2009;",
+                        "ref_id": "BIBREF20"
+                    },
+                    {
+                        "start": 115,
+                        "end": 137,
+                        "text": "N\u00e9dellec et al., 2013)",
+                        "ref_id": "BIBREF27"
+                    },
+                    {
+                        "start": 239,
+                        "end": 260,
+                        "text": "(Bj\u00f6rne et al., 2009;",
+                        "ref_id": "BIBREF4"
+                    },
+                    {
+                        "start": 261,
+                        "end": 288,
+                        "text": "Poon and Vanderwende, 2010;",
+                        "ref_id": "BIBREF32"
+                    },
+                    {
+                        "start": 289,
+                        "end": 315,
+                        "text": "Riedel and McCallum, 2011)",
+                        "ref_id": "BIBREF40"
+                    },
+                    {
+                        "start": 339,
+                        "end": 358,
+                        "text": "(Poon et al., 2015;",
+                        "ref_id": "BIBREF34"
+                    },
+                    {
+                        "start": 359,
+                        "end": 379,
+                        "text": "Parikh et al., 2015)",
+                        "ref_id": "BIBREF29"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "The idea of leveraging graph representations has been explored in many other settings, such as knowledge base completion (Lao et al., 2011; Gardner and Mitchell, 2015) , frame-semantic parsing (Das and Smith, 2011), and other NLP tasks (Radev and Mihalcea, 2008; Subramanya et al., 2010) . Linear and dependency paths are popular features for relation extraction (Snow et al., 2006; Mintz et al., 2009) . However, past extraction focuses on single sentences, and typically considers the shortest path only. In contrast, we allow interleaving edges from dependency and word adjacency, and consider top K paths rather than just the shortest one. This resulted in substantial accuracy gain (Section 4.5).",
+                "cite_spans": [
+                    {
+                        "start": 121,
+                        "end": 139,
+                        "text": "(Lao et al., 2011;",
+                        "ref_id": "BIBREF22"
+                    },
+                    {
+                        "start": 140,
+                        "end": 167,
+                        "text": "Gardner and Mitchell, 2015)",
+                        "ref_id": "BIBREF15"
+                    },
+                    {
+                        "start": 193,
+                        "end": 201,
+                        "text": "(Das and",
+                        "ref_id": "BIBREF10"
+                    },
+                    {
+                        "start": 202,
+                        "end": 219,
+                        "text": "Smith, 2011), and",
+                        "ref_id": "BIBREF10"
+                    },
+                    {
+                        "start": 220,
+                        "end": 246,
+                        "text": "other NLP tasks (Radev and",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 247,
+                        "end": 262,
+                        "text": "Mihalcea, 2008;",
+                        "ref_id": "BIBREF36"
+                    },
+                    {
+                        "start": 263,
+                        "end": 287,
+                        "text": "Subramanya et al., 2010)",
+                        "ref_id": "BIBREF44"
+                    },
+                    {
+                        "start": 363,
+                        "end": 382,
+                        "text": "(Snow et al., 2006;",
+                        "ref_id": "BIBREF43"
+                    },
+                    {
+                        "start": 383,
+                        "end": 402,
+                        "text": "Mintz et al., 2009)",
+                        "ref_id": "BIBREF26"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "There has been prior work on leveraging coreference in relation extraction, often in the standard supervised setting (Hajishirzi et al., 2013; Durrett and Klein, 2014) , but also in distant supervision (Koch et al., 2014; Augenstein et al., 2016) . Notably, while Koch et al. (2014) and Augenstein et al. (2016) still learned to extract from single sentences, they augmented mentions with coreferent expressions to include linked entities that might be in a different sentence. We explored the potential of this approach in our experiments, but found that it had little impact in our domain, as it produced few additional candidates beyond single sentences. Recently, discourse parsing has received renewed interest (Ji and Eisenstein, 2014; Feng and Hirst, 2014; Surdeanu et al., 2015) , and discourse information has been shown to improve performance in applications such as question answering (Sharp et al., 2015) . In this paper, we generated coreference relations using the state-ofthe-art Stanford coreference systems (Lee et al., 2011; Recasens et al., 2013; Clark and Manning, 2015) , and generated rhetorical relations using the winning approach (Wang and Lan, 2015) in the CoNLL-2015 Shared Task on Discourse Parsing.",
+                "cite_spans": [
+                    {
+                        "start": 117,
+                        "end": 142,
+                        "text": "(Hajishirzi et al., 2013;",
+                        "ref_id": "BIBREF17"
+                    },
+                    {
+                        "start": 143,
+                        "end": 167,
+                        "text": "Durrett and Klein, 2014)",
+                        "ref_id": "BIBREF13"
+                    },
+                    {
+                        "start": 202,
+                        "end": 221,
+                        "text": "(Koch et al., 2014;",
+                        "ref_id": "BIBREF21"
+                    },
+                    {
+                        "start": 222,
+                        "end": 246,
+                        "text": "Augenstein et al., 2016)",
+                        "ref_id": "BIBREF0"
+                    },
+                    {
+                        "start": 264,
+                        "end": 282,
+                        "text": "Koch et al. (2014)",
+                        "ref_id": "BIBREF21"
+                    },
+                    {
+                        "start": 287,
+                        "end": 311,
+                        "text": "Augenstein et al. (2016)",
+                        "ref_id": "BIBREF0"
+                    },
+                    {
+                        "start": 716,
+                        "end": 741,
+                        "text": "(Ji and Eisenstein, 2014;",
+                        "ref_id": "BIBREF19"
+                    },
+                    {
+                        "start": 742,
+                        "end": 763,
+                        "text": "Feng and Hirst, 2014;",
+                        "ref_id": "BIBREF14"
+                    },
+                    {
+                        "start": 764,
+                        "end": 786,
+                        "text": "Surdeanu et al., 2015)",
+                        "ref_id": "BIBREF47"
+                    },
+                    {
+                        "start": 896,
+                        "end": 916,
+                        "text": "(Sharp et al., 2015)",
+                        "ref_id": "BIBREF42"
+                    },
+                    {
+                        "start": 1024,
+                        "end": 1042,
+                        "text": "(Lee et al., 2011;",
+                        "ref_id": "BIBREF23"
+                    },
+                    {
+                        "start": 1043,
+                        "end": 1065,
+                        "text": "Recasens et al., 2013;",
+                        "ref_id": "BIBREF39"
+                    },
+                    {
+                        "start": 1066,
+                        "end": 1090,
+                        "text": "Clark and Manning, 2015)",
+                        "ref_id": "BIBREF7"
+                    },
+                    {
+                        "start": 1155,
+                        "end": 1175,
+                        "text": "(Wang and Lan, 2015)",
+                        "ref_id": "BIBREF51"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "In this section, we present DISCREX, short for DIstant Supervision for Cross-sentence Relation EXraction. Similar to conventional approaches, DISCREX learns a classifier to predict the relation between two entities, given text spans where the entities co-occur. Unlike most existing methods, however, DISCREX allows text spans comprising multiple sentences and explores potentially many paths between these entities.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Distant Supervision for Cross-Sentence Relation Extraction",
+                "sec_num": "3"
+            },
+            {
+                "text": "Like prior approaches, DISCREX learns from an existing knowledge base (KB) and unlabeled text.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Distant Supervision",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "The KB contains known instances for the given relation. In a preprocessing step, relevant entities are annotated within this text using available entity extraction tools. Edges represent conventional intra-sentential dependencies, as well as connections between the roots of adjacent sentences (NEXTSENT). For simplicity, we omit edges between adjacent words or representing discourse relations.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Distant Supervision",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "In standard distant supervision, co-occurring entity pairs with known relations are enlisted as candidates of positive training examples. This is reasonable when the entity pairs are within single sentences. In the cross-sentence scenario, however, this would risk introducing too many wrong examples. Consider the following two sentences: Since amuvatinib inhibits KIT, we validated MET kinase inhibition as the primary cause of cell death. Additionally, imatinib is known to inhibit KIT. The mention of drug-gene pair imatinib and KIT (in bold) span two sentences, but the same pair also co-occur in the second sentence alone. In general, one might find co-occurring entity pairs in a large text span, where the same pairs also co-occur in a smaller text span that overlaps with the larger one. In such cases, if there is a relation between the pair, mostly likely it is expressed in the smaller text span when the entities are closer to each other.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Minimal-Span Candidates",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "This motivates us to define that an co-occurring entity pair has the minimal span if there does not exist another overlapping co-occurrence of the same pair where the distance between the entity mentions is smaller. Here, the distance is measured in the number of consecutive sentences between the two entities. Experimentally, we compared extraction with or without the restriction to minimal-span candidates, and show that the former led to much higher extraction accuracy.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Minimal-Span Candidates",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "To derive features for entity pairs both within and across sentences, DISCREX introduces a document graph with nodes representing words and edges representing intra-and inter-sentential relations such as dependency, adjacency, and discourse relations. Figure 1 shows an example document graph spanning two sentences. Each node is labeled with its lexical item, lemma, and partof-speech. We used a conventional set of intrasentential edges: typed, collapsed Stanford dependencies derived from syntactic parses (de Marneffe et al., 2006) . To mitigate parser errors, we also add edges between adjacent words.",
+                "cite_spans": [
+                    {
+                        "start": 513,
+                        "end": 535,
+                        "text": "Marneffe et al., 2006)",
+                        "ref_id": "BIBREF11"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 259,
+                        "end": 260,
+                        "text": "1",
+                        "ref_id": "FIGREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Document Graph",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "As for inter-sentential edges, a simple but intuitive approach is to add an edge between the dependency roots of adjacent sentences: if we imagined that each sentence participated as a node in a type of discourse dependency tree, this represents a simple right-branching baseline. To gather a finer grained representation of rhetorical structure, we ran a state-of-the-art discourse parser (Wang and Lan, 2015) to identify discourse relations, which returned a set of labeled binary relations between spans of words. We found the shortest path between any word in the first span and any word in the second span using only dependency and adjacent sentence edges, and added an edge labeled with the discourse relation between these two words. Another source of potentially cross-sentence links comes from coreference. We generated coreference relations using the Stanford Coreference systems (both statistical and deter-ministic) (Lee et al., 2011; Recasens et al., 2013; Clark and Manning, 2015) , and added edges from anaphora to their antecedents.",
+                "cite_spans": [
+                    {
+                        "start": 390,
+                        "end": 410,
+                        "text": "(Wang and Lan, 2015)",
+                        "ref_id": "BIBREF51"
+                    },
+                    {
+                        "start": 928,
+                        "end": 946,
+                        "text": "(Lee et al., 2011;",
+                        "ref_id": "BIBREF23"
+                    },
+                    {
+                        "start": 947,
+                        "end": 969,
+                        "text": "Recasens et al., 2013;",
+                        "ref_id": "BIBREF39"
+                    },
+                    {
+                        "start": 970,
+                        "end": 994,
+                        "text": "Clark and Manning, 2015)",
+                        "ref_id": "BIBREF7"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Document Graph",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "We also considered a special case of crosssentence relation extraction by augmenting singlesentence candidates with coreference (Koch et al., 2014; Augenstein et al., 2016) . Namely, extraction is still conducted within single sentences, yet entity linking is extended to consider all coreference mentions for a relation argument. However, this did not produce significantly more candidates (2% more for positive examples), most of which were not cross-sentence ones (only 1%).",
+                "cite_spans": [
+                    {
+                        "start": 128,
+                        "end": 147,
+                        "text": "(Koch et al., 2014;",
+                        "ref_id": "BIBREF21"
+                    },
+                    {
+                        "start": 148,
+                        "end": 172,
+                        "text": "Augenstein et al., 2016)",
+                        "ref_id": "BIBREF0"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Document Graph",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "Dependency paths have been established as a particularly effective source for relation extraction features (Mintz et al., 2009) . DISCREX generalizes this idea by defining feature templates over paths in the document graph, which may contain interleaving edges of various types (dependency, word and sentence adjacency, discourse relation). Dependency paths provide interpretable and generalizable features but are subject to parser error. One error mitigation strategy is to add edges between adjacent words, allowing multiple paths between entities.",
+                "cite_spans": [
+                    {
+                        "start": 107,
+                        "end": 127,
+                        "text": "(Mintz et al., 2009)",
+                        "ref_id": "BIBREF26"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Features",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "Feature extraction begins with a pair of entities in the document graph that potentially are connected by a relation. We begin by finding a path between the entities of interest, and extract features from that path.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Features",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "Over each such path, we explore a number of different features. Below, we assume that each path is a sequence of nodes and edges (n 1 , e 1 , n 2 , . . . , e L-1 , n L ), with n 1 and n L replaced by special entity marker nodes. 6Whole path features We extract four binary indicator features for each whole path, with nodes n i represented by their lexical item, lemma, part-ofspeech tag, or nothing. These act as high precision but low recall indicators of useful paths.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Features",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "Path n-gram features A more robust and generalizable approach is to consider a sliding window along each path. For each position i, we extract ngram (n = 1-5) features starting at each node (n i , then n i \u2022 e i and so on until",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Features",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "n i \u2022 e i \u2022 n i+1 \u2022 e i+1 \u2022 n i+2 ) and each edge (e i up to e i \u2022 n i+1 \u2022 e i+1 \u2022 n i+2 \u2022 e i+2 ).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Features",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "Again, each node could be represented by its lexical item, lemma, or part of speech, leading to 27 feature templates. We add three more feature templates using only edge labels (e i ; e i \u2022 e i+1 ; and e i \u2022 e i+1 \u2022 e i+2 ) for a total of 30 feature templates.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Features",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "Most prior work has only looked at the single shortest path between two entities. When authors use consistent lexical and syntactic constructions, and when the parser finds the correct parse, this approach works well. Real data, however, is quite noisy.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Multiple paths",
+                "sec_num": "3.5"
+            },
+            {
+                "text": "One way to mitigate errors and be robust against noise is to consider multiple possible paths. Given a document graph with arcs of multiple types, there are often multiple paths between nodes. For instance, we might navigate from the gene to the drug using only syntactic arcs, or only adjacency arcs, or some combination of the two. Considering such variations gives more opportunities to find commonalities between seemingly disparate language.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Multiple paths",
+                "sec_num": "3.5"
+            },
+            {
+                "text": "We explore varying the number of shortest paths, N , between the nodes in the document graph corresponding to the relevant entities. By default, all edge types have an equal weight of 1, except edges between adjacent words. Empirically, penalizing adjacency edges led to substantial benefits, though including adjacency arcs was important for benefits from multiple paths. This suggests that the parser produces valuable information, but that we should have a back-off strategy for accommodating parser errors.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Multiple paths",
+                "sec_num": "3.5"
+            },
+            {
+                "text": "There is no gold annotated dataset in distant supervision, so evaluation typically resorts to two strategies. One strategy uses held-out samples from the training dataset, essentially treating the noisy annotation as gold standard. This has the advantage of being automatic, but could produce biased results due to false negatives (i.e., entity pairs not known to have the relation might actually have the relation). Another strategy reports absolute recall (number of extractions from all unlabeled text), as well as estimated precision by manually annotating extraction samples from general text. We conducted both types of evaluation in the experiments. ",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Evaluation",
+                "sec_num": "3.6"
+            },
+            {
+                "text": "We consider the task of extracting drug-gene interactions from biomedical literature. A drug-gene interaction is broadly construed as an association between the drug efficacy and the gene status. The status includes mutations and activity measurements (e.g., overexpression). For simplicity, we only consider the relation at the drug-gene level, without distinguishing among details such as drug dosage or distinct gene status.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "4"
+            },
+            {
+                "text": "We used the Gene Drug Knowledge Database (GDKD) (Dienstmann et al., 2015) for distant supervision. Figure 2 shows a snapshot of the dataset. Each row specifies a gene, some drugs, the fine-grained relations (e.g., sensitive), the gene status (e.g., mutation), and some supporting article IDs. In this paper, we only consider the coarse drug-gene association and ignore the other fields.",
+                "cite_spans": [
+                    {
+                        "start": 48,
+                        "end": 73,
+                        "text": "(Dienstmann et al., 2015)",
+                        "ref_id": "BIBREF12"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 106,
+                        "end": 107,
+                        "text": "2",
+                        "ref_id": "FIGREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Knowledge Base",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "We obtained biomedical literature from PubMed Central 7 , which as of early 2015 contained about 960,000 full-text articles. We preprocessed the text using SPLAT (Quirk et al., 2012) to conduct tokenization, part-of-speech tagging, and syntactic parsing, and obtained Stanford dependencies (de Marneffe et al., 2006) using Stanford CoreNLP (Manning et al., 2014) . We used the entity taggers from Literome (Poon et al., 2014) to identify drug and gene mentions.",
+                "cite_spans": [
+                    {
+                        "start": 162,
+                        "end": 182,
+                        "text": "(Quirk et al., 2012)",
+                        "ref_id": "BIBREF35"
+                    },
+                    {
+                        "start": 290,
+                        "end": 316,
+                        "text": "(de Marneffe et al., 2006)",
+                        "ref_id": "BIBREF11"
+                    },
+                    {
+                        "start": 340,
+                        "end": 362,
+                        "text": "(Manning et al., 2014)",
+                        "ref_id": "BIBREF24"
+                    },
+                    {
+                        "start": 406,
+                        "end": 425,
+                        "text": "(Poon et al., 2014)",
+                        "ref_id": "BIBREF33"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Unlabeled Text",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "To avoid unlikely candidates such as entity pairs far apart in the document, we consider entity pairs within K consecutive sentences. K = 1 corresponds to extraction within single sentences. For cross-sentence extraction, we chose K = 3 as it doubled the number of overall candidates, while being reasonably small so as not to introduce too many unlikely ones. Table 1 shows the statistics of drug-gene interaction candidates identified in PubMed Central articles. For K = 3, there are 87,773 instances for which the drug-gene pair has known associations in Gene Drug Knowledge Database (GDKD), which are used as positive training examples. Note that these only include minimal-span candidates (Section 3.2). Without the restriction, there are 225,520 instances matching GDKD, though many are likely false positives.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 367,
+                        "end": 368,
+                        "text": "1",
+                        "ref_id": "TABREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Candidate Selection",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "Our classifiers were binary logistic regression models, trained to optimize log-likelihood with an 2 regularizer. We used a weight of 1 for the regularizer; the results were not very sensitive to the specific value. Parameters were optimized using L-BFGS (Nocedal and Wright, 2006) . Rather than explicitly mapping each feature to its own dimension, we hashed the feature names and retained 22 bits (Weinberger et al., 2009) . Approximately 4 million possible features seemed to suffice for our problem: fewer bits produced degradations, but more bits did not lead to improvements.",
+                "cite_spans": [
+                    {
+                        "start": 255,
+                        "end": 281,
+                        "text": "(Nocedal and Wright, 2006)",
+                        "ref_id": "BIBREF28"
+                    },
+                    {
+                        "start": 399,
+                        "end": 424,
+                        "text": "(Weinberger et al., 2009)",
+                        "ref_id": "BIBREF52"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Classifier",
+                "sec_num": "4.4"
+            },
+            {
+                "text": "To evaluate the impact of features, we conducted five-fold cross validation, by treating the positive (Wang and Lan, 2015) .",
+                "cite_spans": [
+                    {
+                        "start": 102,
+                        "end": 122,
+                        "text": "(Wang and Lan, 2015)",
+                        "ref_id": "BIBREF51"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Automatic Evaluation",
+                "sec_num": "4.5"
+            },
+            {
+                "text": "and negative examples from distant supervision as gold annotation. To avoid train-test contamination, all instances from a document are assigned to the same fold. We then evaluated the average test performance across folds. Since our datasets were balanced by design (Section 3.1), we simply reported accuracy. As discussed before, the results could be biased by the noise in annotation, but this automatic evaluation enables an efficient comparison of various design choices. First, we set out to investigate the impact of edge types and path number. We set the weight for adjacent-word edges to 16, to give higher priority to other edge types (weight 1) that are arguably more semantics-related. Table 2 shows the average test accuracy for single-sentence and crosssentence extraction with various edge types and path numbers. Compared to extraction within single sentences, cross-sentence extraction attains a similar accuracy, even though the recall for the latter is much higher (Table 1 ).",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 704,
+                        "end": 705,
+                        "text": "2",
+                        "ref_id": "TABREF1"
+                    },
+                    {
+                        "start": 991,
+                        "end": 992,
+                        "text": "1",
+                        "ref_id": "TABREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Automatic Evaluation",
+                "sec_num": "4.5"
+            },
+            {
+                "text": "Adding more paths other than the shortest one led to a substantial improvement in accuracy. The gain is consistent for both single-sentence and cross-sentence extraction. This is surprising, as prior methods often derive features from the short-Paths Adj. Wt. Single-Sent. Cross-Sent. est dependency path alone.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Automatic Evaluation",
+                "sec_num": "4.5"
+            },
+            {
+                "text": "Adding discourse relations, on the other hand, consistently led to a small drop in performance, especially when the path number is small. Upon manual inspection, we found that Stanford Coreference made many errors in biomedical text, such as resolving a dummy pronoun with a nearby entity. In hindsight, this is probably not surprising: state-of-the-art coreference systems are optimized for newswire domain and could be ill-suited for scientific literature (Bell et al., 2016) . We are less certain about why discourse parsing didn't seem to help. There are clearly examples where extraction errors could have been avoided given rhetorical relations (e.g., when the sentence containing the second entity starts a new topic). We leave more indepth investigation to future work.",
+                "cite_spans": [
+                    {
+                        "start": 458,
+                        "end": 477,
+                        "text": "(Bell et al., 2016)",
+                        "ref_id": "BIBREF3"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Automatic Evaluation",
+                "sec_num": "4.5"
+            },
+            {
+                "text": "Next, we further evaluated the impact of path number and adjacency edge weight. Only dependency and adjacency edges were included in these experiments. Table 3 shows the results. Penalizing adjacency produces large gains; a harsh penalty is particularly helpful with fewer paths. These results support the hypothesis that dependency edges are usually more meaningful for relation extraction than word adjacency. Therefore, if adjacency edges get the same weights, they might cause some dependency sub-paths drop out of the top K paths, thus degrading performance. When the path number increases, there is a consistent and substantial increase in accuracy, which demonstrates the advantage of allowing adjacency edges to interleave with dependency ones. This presumably helps address syntactic parsing errors, among other things. The importance of adjacency weights decreases with more paths, but it is still significantly better to penalize adjacency edges.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 158,
+                        "end": 159,
+                        "text": "3",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Automatic Evaluation",
+                "sec_num": "4.5"
+            },
+            {
+                "text": "In the experiments mentioned above, crosssentence extraction was conducted using minimalspan candidates only. We expected that this would provide a reasonable safeguard to filter out many unlikely candidates. As empirical validation, we also conducted experiments on cross-sentence extraction without the minimal-span restriction, using the base model. Test accuracy dropped sharply from 81.7% to 79.1% (not shown in the table).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Automatic Evaluation",
+                "sec_num": "4.5"
+            },
+            {
+                "text": "Our ultimate goal is to extract knowledge from all available text. First, we retrained DISCREX on all available distant-supervision data, not restricting to a subset of the folds as in the automatic evaluation. We used the systems performing best on automatic evaluation, with features derived from 30 shortest paths between each entity pair, and minimal-span candidates within three sentences for cross-sentence extraction. We then applied the learned extractors to all PubMed Central articles. We grouped the extracted instances into unique drug-gene pairs. The classifier output a probability for each instance. The maximum probability of instances in a group was assigned to the relation as a whole. Table 4 shows the statistics of extracted relations by varying the probability threshold. Cross-sentence extraction obtained far more unique relations compared to single-sentence extraction, improving absolute recall by 89-102%. Table 5 compares the number of unique genes and drugs. DISCREX extractions cover far more genes and drugs compared to GDKD, which bode well for applications in precision medicine.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 710,
+                        "end": 711,
+                        "text": "4",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 939,
+                        "end": 940,
+                        "text": "5",
+                        "ref_id": "TABREF3"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "PubMed-Scale Extraction",
+                "sec_num": "4.6"
+            },
+            {
+                "text": "Automatic evaluation accuracies can be overly optimistic. To assess the true precision of DISCREX, we also conducted manual evaluation on extracted relations. Based on the automatic evaluation, the accuracy is similar for single-sentence and crosssentence extraction. So we focused on the latter. We randomly sampled extracted relation instances and asked two researchers knowledgeable in precision medicine to evaluate their correctness. For each instance, the annotators were provided with the provenance sentences where the druggene pair were highlighted. The annotators assessed in each case whether some relation was mentioned for the given pair.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Manual Evaluation",
+                "sec_num": "4.7"
+            },
+            {
+                "text": "A total of 450 instances were judged: 150 were sampled randomly from all candidates (random baseline), 150 from the set of instances with probability no less than 0.5, and 150 with probability no less than 0.9. From each set, we randomly selected 50 relations for review by both annotators. The two annotators agreed on 133 of 150. After review, all disagreements were resolved, and each annotator judged an additional set of 50 relation instances, this time without overlap.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Manual Evaluation",
+                "sec_num": "4.7"
+            },
+            {
+                "text": "Table 6 showed the sample precision and percentage of errors due to entity linking vs. relation extraction. With either classification threshold, cross-sentence extraction clearly outperformed the random baseline by a wide margin. Not surprisingly, the higher threshold of 0.9 led to higher precision. Interestingly, a significant portion of errors stems from mistakes in entity linking, as has been observed in prior work (Poon et al., 2015) . Improved entity linking, either alone or joint with re-Prec. Entity Err. Relation Err. Based on these estimates, DISCREX extracted about 37,000 correct unique interactions at the threshold of 0.5, and about 20,000 at the threshold of 0.9. In both cases, it expanded the Gene Drug Knowledge Base by two orders of magnitude.",
+                "cite_spans": [
+                    {
+                        "start": 423,
+                        "end": 442,
+                        "text": "(Poon et al., 2015)",
+                        "ref_id": "BIBREF34"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 6,
+                        "end": 7,
+                        "text": "6",
+                        "ref_id": "TABREF4"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Manual Evaluation",
+                "sec_num": "4.7"
+            },
+            {
+                "text": "We also performed manual evaluation in the single-sentence setting. As in the automatic evaluation, single-sentence precisions are similar though slightly higher at all thresholds. This suggests that the candidate set is cleaner and the resulting predictions are more accurate. However, the resulting recall is substantially lower, dropping by 46% at a threshold of 0.5, and by 40% at a threshold of 0.9.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Single-sentence extractions",
+                "sec_num": null
+            },
+            {
+                "text": "We present the first approach for applying distant supervision to cross-sentence relation extraction, by adopting a document-level graph representation that incorporates both intra-sentential dependencies and inter-sentential relations such as adjacency and discourse relations. We conducted both automatic and manual evaluation on extracting drug-gene interactions from biomedical literature. With cross-sentence extraction, our DIS-CREX system doubled the yield of unique interactions, while maintaining the same accuracy. Using distant supervision, DISCREX improved the coverage of the Gene Drug Knowledge Database (GDKD) by two orders of magnitude, without requiring annotated examples.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion",
+                "sec_num": "5"
+            },
+            {
+                "text": "Future work includes: further exploration of features; improved integration with coreference and discourse parsing; combining distant supervision with active learning and crowd sourcing; evaluate the impact of extractions to precision medicine; applications to other domains.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion",
+                "sec_num": "5"
+            },
+            {
+                "text": "http://www.illumina.com/systems/ hiseq-x-sequencing-system.html",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "http://www.ncbi.nlm.nih.gov/pubmed",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "http://www.nist.gov/tac/2016/KBP/ ColdStart/index.html",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "https://catalog.ldc.upenn.edu/ LDC2003T13",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "E.g., MUC6, ACE https://www.ldc.upenn. edu/collaborations/past-projects/ace",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "This prevents our method from memorizing the entities in the original knowledge base.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            }
+        ],
+        "back_matter": [],
+        "bib_entries": {
+            "BIBREF0": {
+                "ref_id": "b0",
+                "title": "Distantly supervised web relation extraction for knowledge base population",
+                "authors": [
+                    {
+                        "first": "Isabelle",
+                        "middle": [],
+                        "last": "Augenstein",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Diana",
+                        "middle": [],
+                        "last": "Maynard",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Fabio",
+                        "middle": [],
+                        "last": "Ciravegna",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Semantic Web",
+                "volume": "7",
+                "issue": "",
+                "pages": "335--349",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Isabelle Augenstein, Diana Maynard, and Fabio Ciravegna. 2016. Distantly supervised web relation extraction for knowledge base population. Semantic Web, 7:335-349.",
+                "links": null
+            },
+            "BIBREF1": {
+                "ref_id": "b1",
+                "title": "Precision medicine",
+                "authors": [
+                    {
+                        "first": "Orli",
+                        "middle": [],
+                        "last": "Bahcall",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Nature",
+                "volume": "526",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Orli Bahcall. 2015. Precision medicine. Nature, 526:335.",
+                "links": null
+            },
+            "BIBREF2": {
+                "ref_id": "b2",
+                "title": "Open information extraction from the web",
+                "authors": [
+                    {
+                        "first": "Michele",
+                        "middle": [],
+                        "last": "Banko",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Michael",
+                        "middle": [
+                            "J"
+                        ],
+                        "last": "Cafarella",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Stephen",
+                        "middle": [],
+                        "last": "Soderland",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Matt",
+                        "middle": [],
+                        "last": "Broadhead",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Oren",
+                        "middle": [],
+                        "last": "Etzioni",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2007,
+                "venue": "Proceedings of the Twentieth International Joint Conference on Artificial Intelligence",
+                "volume": "",
+                "issue": "",
+                "pages": "2670--2676",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Michele Banko, Michael J. Cafarella, Stephen Soder- land, Matt Broadhead, and Oren Etzioni. 2007. Open information extraction from the web. In Pro- ceedings of the Twentieth International Joint Con- ference on Artificial Intelligence, pages 2670-2676, Hyderabad, India. AAAI Press.",
+                "links": null
+            },
+            "BIBREF3": {
+                "ref_id": "b3",
+                "title": "An investigation of coreference phenomena in the biomedical domain",
+                "authors": [
+                    {
+                        "first": "Dane",
+                        "middle": [],
+                        "last": "Bell",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Gustave",
+                        "middle": [],
+                        "last": "Hahn-Powell",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Marco",
+                        "middle": [
+                            "A"
+                        ],
+                        "last": "Valenzuela-Escarcega",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mihai",
+                        "middle": [],
+                        "last": "Surdeanu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of LREC",
+                "volume": "",
+                "issue": "",
+                "pages": "177--183",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Dane Bell, Gustave Hahn-Powell, Marco A. Valenzuela-Escarcega, and Mihai Surdeanu. 2016. An investigation of coreference phenomena in the biomedical domain. In Proceedings of LREC, pages 177-183.",
+                "links": null
+            },
+            "BIBREF4": {
+                "ref_id": "b4",
+                "title": "Extracting complex biological events with rich graphbased feature sets",
+                "authors": [
+                    {
+                        "first": "Jari",
+                        "middle": [],
+                        "last": "Bj\u00f6rne",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Juho",
+                        "middle": [],
+                        "last": "Heimonen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Filip",
+                        "middle": [],
+                        "last": "Ginter",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Antti",
+                        "middle": [],
+                        "last": "Airola",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tapio",
+                        "middle": [],
+                        "last": "Pahikkala",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tapio",
+                        "middle": [],
+                        "last": "Salakoski",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "Proceedings of the BioNLP 2009 Workshop Companion Volume for Shared Task",
+                "volume": "",
+                "issue": "",
+                "pages": "10--18",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jari Bj\u00f6rne, Juho Heimonen, Filip Ginter, Antti Airola, Tapio Pahikkala, and Tapio Salakoski. 2009. Ex- tracting complex biological events with rich graph- based feature sets. In Proceedings of the BioNLP 2009 Workshop Companion Volume for Shared Task, pages 10-18, Boulder, Colorado, June. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF5": {
+                "ref_id": "b5",
+                "title": "Unsupervised learning of narrative schemas and their participants",
+                "authors": [
+                    {
+                        "first": "Nathanael",
+                        "middle": [],
+                        "last": "Chambers",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dan",
+                        "middle": [],
+                        "last": "Jurafsky",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "Proceedings of the Joint Conference of the 47th Annual Meeting of the ACL and the 4th International Joint Conference on Natural Language Processing of the AFNLP",
+                "volume": "",
+                "issue": "",
+                "pages": "602--610",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Nathanael Chambers and Dan Jurafsky. 2009. Unsu- pervised learning of narrative schemas and their par- ticipants. In Proceedings of the Joint Conference of the 47th Annual Meeting of the ACL and the 4th In- ternational Joint Conference on Natural Language Processing of the AFNLP, pages 602-610, Suntec, Singapore, August. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF6": {
+                "ref_id": "b6",
+                "title": "Probabilistic frame induction",
+                "authors": [
+                    {
+                        "first": "Jackie",
+                        "middle": [],
+                        "last": "Chi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kit",
+                        "middle": [],
+                        "last": "Cheung",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hoifung",
+                        "middle": [],
+                        "last": "Poon",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Lucy",
+                        "middle": [],
+                        "last": "Vanderwende",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "Proceedings of the 2013 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies",
+                "volume": "",
+                "issue": "",
+                "pages": "837--846",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jackie Chi Kit Cheung, Hoifung Poon, and Lucy Van- derwende. 2013. Probabilistic frame induction. In Proceedings of the 2013 Conference of the North American Chapter of the Association for Computa- tional Linguistics: Human Language Technologies, pages 837-846, Atlanta, Georgia, June. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF7": {
+                "ref_id": "b7",
+                "title": "Entity-centric coreference resolution with model stacking",
+                "authors": [
+                    {
+                        "first": "Kevin",
+                        "middle": [],
+                        "last": "Clark",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [
+                            "D"
+                        ],
+                        "last": "Manning",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Proceedings of the 53rd Annual Meeting of the Association for Computational Linguistics and the 7th International Joint Conference on Natural Language Processing",
+                "volume": "1",
+                "issue": "",
+                "pages": "1405--1415",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Kevin Clark and Christopher D. Manning. 2015. Entity-centric coreference resolution with model stacking. In Proceedings of the 53rd Annual Meet- ing of the Association for Computational Linguistics and the 7th International Joint Conference on Natu- ral Language Processing (Volume 1: Long Papers), pages 1405-1415, Beijing, China, July. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF8": {
+                "ref_id": "b8",
+                "title": "Learning to extract symbolic knowledge from the World Wide Web",
+                "authors": [
+                    {
+                        "first": "M",
+                        "middle": [
+                            "W"
+                        ],
+                        "last": "Craven",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "D",
+                        "middle": [],
+                        "last": "Dipasquo",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "D",
+                        "middle": [],
+                        "last": "Freitag",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "A",
+                        "middle": [],
+                        "last": "Mccallum",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "T",
+                        "middle": [],
+                        "last": "Mitchell",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "K",
+                        "middle": [],
+                        "last": "Nigam",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "S",
+                        "middle": [],
+                        "last": "Slattery",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1998,
+                "venue": "Proceedings of the Fifteenth National Conference on Artificial Intelligence",
+                "volume": "",
+                "issue": "",
+                "pages": "509--516",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "M. W. Craven, D. DiPasquo, D. Freitag, A. McCallum, T. Mitchell, K. Nigam, and S. Slattery. 1998. Learn- ing to extract symbolic knowledge from the World Wide Web. In Proceedings of the Fifteenth Na- tional Conference on Artificial Intelligence, pages 509-516, Madison, WI. AAAI Press.",
+                "links": null
+            },
+            "BIBREF9": {
+                "ref_id": "b9",
+                "title": "Learning to construct knowledge bases from the world wide web",
+                "authors": [
+                    {
+                        "first": "Mark",
+                        "middle": [],
+                        "last": "Craven",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dan",
+                        "middle": [],
+                        "last": "Dipasquo",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dayne",
+                        "middle": [],
+                        "last": "Freitag",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Andrew",
+                        "middle": [],
+                        "last": "Mccallum",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tom",
+                        "middle": [],
+                        "last": "Mitchell",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kamal",
+                        "middle": [],
+                        "last": "Nigam",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sean",
+                        "middle": [],
+                        "last": "Slattery",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2000,
+                "venue": "Artificial Intelligence",
+                "volume": "118",
+                "issue": "",
+                "pages": "69--113",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Mark Craven, Dan DiPasquo, Dayne Freitag, Andrew McCallum, Tom Mitchell, Kamal Nigam, and Sean Slattery. 2000. Learning to construct knowledge bases from the world wide web. Artificial Intelli- gence, 118:69-113.",
+                "links": null
+            },
+            "BIBREF10": {
+                "ref_id": "b10",
+                "title": "Semisupervised frame-semantic parsing for unknown predicates",
+                "authors": [
+                    {
+                        "first": "Dipanjan",
+                        "middle": [],
+                        "last": "Das",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Noah",
+                        "middle": [
+                            "A"
+                        ],
+                        "last": "Smith",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2011,
+                "venue": "Proceedings of the 49th Annual Meeting of the Association for Computational Linguistics: Human Language Technologies",
+                "volume": "",
+                "issue": "",
+                "pages": "1435--1444",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Dipanjan Das and Noah A. Smith. 2011. Semi- supervised frame-semantic parsing for unknown predicates. In Proceedings of the 49th Annual Meet- ing of the Association for Computational Linguis- tics: Human Language Technologies, pages 1435- 1444, Portland, Oregon, USA, June. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF11": {
+                "ref_id": "b11",
+                "title": "Generating typed dependency parses from phrase structure parses",
+                "authors": [
+                    {
+                        "first": "Marie-Catherine",
+                        "middle": [],
+                        "last": "De Marneffe",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Bill",
+                        "middle": [],
+                        "last": "Maccartney",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [
+                            "D"
+                        ],
+                        "last": "Manning",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2006,
+                "venue": "Proceedings of the Fifth International Conference on Language Resources and Evaluation",
+                "volume": "",
+                "issue": "",
+                "pages": "449--454",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Marie-Catherine de Marneffe, Bill MacCartney, and Christopher D. Manning. 2006. Generating typed dependency parses from phrase structure parses. In Proceedings of the Fifth International Conference on Language Resources and Evaluation, pages 449- 454, Genoa, Italy. ELRA.",
+                "links": null
+            },
+            "BIBREF12": {
+                "ref_id": "b12",
+                "title": "Database of genomic biomarkers for cancer drugs and clinical targetability in solid tumors",
+                "authors": [
+                    {
+                        "first": "Rodrigo",
+                        "middle": [],
+                        "last": "Dienstmann",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "In",
+                        "middle": [
+                            "Sock"
+                        ],
+                        "last": "Jang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Brian",
+                        "middle": [],
+                        "last": "Bot",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Stephen",
+                        "middle": [],
+                        "last": "Friend",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Justin",
+                        "middle": [],
+                        "last": "Guinney",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Cancer Discovery",
+                "volume": "5",
+                "issue": "",
+                "pages": "118--123",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Rodrigo Dienstmann, In Sock Jang, Brian Bot, Stephen Friend, and Justin Guinney. 2015. Database of genomic biomarkers for cancer drugs and clinical targetability in solid tumors. Cancer Discovery, 5:118-123.",
+                "links": null
+            },
+            "BIBREF13": {
+                "ref_id": "b13",
+                "title": "A joint model for entity analysis: Coreference, typing, and linking",
+                "authors": [
+                    {
+                        "first": "Greg",
+                        "middle": [],
+                        "last": "Durrett",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dan",
+                        "middle": [],
+                        "last": "Klein",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "Transactions of the Association for Computational Linguistics",
+                "volume": "2",
+                "issue": "",
+                "pages": "477--490",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Greg Durrett and Dan Klein. 2014. A joint model for entity analysis: Coreference, typing, and linking. Transactions of the Association for Computational Linguistics, 2:477-490.",
+                "links": null
+            },
+            "BIBREF14": {
+                "ref_id": "b14",
+                "title": "A lineartime bottom-up discourse parser with constraints and post-editing",
+                "authors": [
+                    {
+                        "first": "Vanessa",
+                        "middle": [],
+                        "last": "Wei",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Feng",
+                        "middle": [],
+                        "last": "",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Graeme",
+                        "middle": [],
+                        "last": "Hirst",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "Proceedings of the 52nd Annual Meeting of the Association for Computational Linguistics",
+                "volume": "1",
+                "issue": "",
+                "pages": "511--521",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Vanessa Wei Feng and Graeme Hirst. 2014. A linear- time bottom-up discourse parser with constraints and post-editing. In Proceedings of the 52nd Annual Meeting of the Association for Computational Lin- guistics (Volume 1: Long Papers), pages 511-521, Baltimore, Maryland, June. Association for Compu- tational Linguistics.",
+                "links": null
+            },
+            "BIBREF15": {
+                "ref_id": "b15",
+                "title": "Efficient and expressive knowledge base completion using subgraph feature extraction",
+                "authors": [
+                    {
+                        "first": "Matt",
+                        "middle": [],
+                        "last": "Gardner",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tom",
+                        "middle": [],
+                        "last": "Mitchell",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Proceedings of the 2015 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "1488--1498",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Matt Gardner and Tom Mitchell. 2015. Efficient and expressive knowledge base completion using sub- graph feature extraction. In Proceedings of the 2015 Conference on Empirical Methods in Natural Lan- guage Processing, pages 1488-1498, Lisbon, Portu- gal, September. Association for Computational Lin- guistics.",
+                "links": null
+            },
+            "BIBREF16": {
+                "ref_id": "b16",
+                "title": "Unsupervised coreference resolution in a nonparametric bayesian model",
+                "authors": [
+                    {
+                        "first": "Aria",
+                        "middle": [],
+                        "last": "Haghighi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dan",
+                        "middle": [],
+                        "last": "Klein",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2007,
+                "venue": "Proceedings of the 45th Annual Meeting of the Association of Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "848--855",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Aria Haghighi and Dan Klein. 2007. Unsupervised coreference resolution in a nonparametric bayesian model. In Proceedings of the 45th Annual Meet- ing of the Association of Computational Linguistics, pages 848-855, Prague, Czech Republic, June. As- sociation for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF17": {
+                "ref_id": "b17",
+                "title": "Joint coreference resolution and named-entity linking with multi-pass sieves",
+                "authors": [
+                    {
+                        "first": "Hannaneh",
+                        "middle": [],
+                        "last": "Hajishirzi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Leila",
+                        "middle": [],
+                        "last": "Zilles",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Daniel",
+                        "middle": [
+                            "S"
+                        ],
+                        "last": "Weld",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Luke",
+                        "middle": [],
+                        "last": "Zettlemoyer",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "Proceedings of the 2013 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "289--299",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Hannaneh Hajishirzi, Leila Zilles, Daniel S. Weld, and Luke Zettlemoyer. 2013. Joint coreference res- olution and named-entity linking with multi-pass sieves. In Proceedings of the 2013 Conference on Empirical Methods in Natural Language Process- ing, pages 289-299, Seattle, Washington, USA, Oc- tober. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF18": {
+                "ref_id": "b18",
+                "title": "Knowledge-based weak supervision for information extraction of overlapping relations",
+                "authors": [
+                    {
+                        "first": "Raphael",
+                        "middle": [],
+                        "last": "Hoffmann",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Congle",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xiao",
+                        "middle": [],
+                        "last": "Ling",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Luke",
+                        "middle": [],
+                        "last": "Zettlemoyer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Daniel",
+                        "middle": [
+                            "S"
+                        ],
+                        "last": "Weld",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2011,
+                "venue": "Proceedings of the 49th Annual Meeting of the Association for Computational Linguistics: Human Language Technologies",
+                "volume": "",
+                "issue": "",
+                "pages": "541--550",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Raphael Hoffmann, Congle Zhang, Xiao Ling, Luke Zettlemoyer, and Daniel S. Weld. 2011. Knowledge-based weak supervision for information extraction of overlapping relations. In Proceedings of the 49th Annual Meeting of the Association for Computational Linguistics: Human Language Tech- nologies, pages 541-550, Portland, Oregon, USA, June. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF19": {
+                "ref_id": "b19",
+                "title": "Representation learning for text-level discourse parsing",
+                "authors": [
+                    {
+                        "first": "Yangfeng",
+                        "middle": [],
+                        "last": "Ji",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jacob",
+                        "middle": [],
+                        "last": "Eisenstein",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "Proceedings of the 52nd Annual Meeting of the Association for Computational Linguistics",
+                "volume": "1",
+                "issue": "",
+                "pages": "13--24",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Yangfeng Ji and Jacob Eisenstein. 2014. Represen- tation learning for text-level discourse parsing. In Proceedings of the 52nd Annual Meeting of the As- sociation for Computational Linguistics (Volume 1: Long Papers), pages 13-24, Baltimore, Maryland, June. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF20": {
+                "ref_id": "b20",
+                "title": "Overview of BioNLP'09 Shared Task on event extraction",
+                "authors": [
+                    {
+                        "first": "Jin-Dong",
+                        "middle": [],
+                        "last": "Kim",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tomoko",
+                        "middle": [],
+                        "last": "Ohta",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sampo",
+                        "middle": [],
+                        "last": "Pyysalo",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yoshinobu",
+                        "middle": [],
+                        "last": "Kano",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jun'ichi",
+                        "middle": [],
+                        "last": "Tsujii",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "Proceedings of the BioNLP 2009 Workshop Companion Volume for Shared Task",
+                "volume": "",
+                "issue": "",
+                "pages": "1--9",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jin-Dong Kim, Tomoko Ohta, Sampo Pyysalo, Yoshi- nobu Kano, and Jun'ichi Tsujii. 2009. Overview of BioNLP'09 Shared Task on event extraction. In Proceedings of the BioNLP 2009 Workshop Com- panion Volume for Shared Task, pages 1-9, Boulder, Colorado, June. Association for Computational Lin- guistics.",
+                "links": null
+            },
+            "BIBREF21": {
+                "ref_id": "b21",
+                "title": "Type-aware distantly supervised relation extraction with linked arguments",
+                "authors": [
+                    {
+                        "first": "Mitchell",
+                        "middle": [],
+                        "last": "Koch",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "John",
+                        "middle": [],
+                        "last": "Gilmer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Stephen",
+                        "middle": [],
+                        "last": "Soderland",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "S",
+                        "middle": [],
+                        "last": "Daniel Weld",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "Proceedings of the 2014 Conference on Empirical Methods in Natural Language Processing (EMNLP)",
+                "volume": "",
+                "issue": "",
+                "pages": "1891--1901",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Mitchell Koch, John Gilmer, Stephen Soderland, and S. Daniel Weld. 2014. Type-aware distantly su- pervised relation extraction with linked arguments. In Proceedings of the 2014 Conference on Em- pirical Methods in Natural Language Processing (EMNLP), pages 1891-1901. Association for Com- putational Linguistics.",
+                "links": null
+            },
+            "BIBREF22": {
+                "ref_id": "b22",
+                "title": "Random walk inference and learning in a large scale knowledge base",
+                "authors": [
+                    {
+                        "first": "Ni",
+                        "middle": [],
+                        "last": "Lao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tom",
+                        "middle": [],
+                        "last": "Mitchell",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "William",
+                        "middle": [
+                            "W"
+                        ],
+                        "last": "Cohen",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2011,
+                "venue": "Proceedings of the 2011 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "529--539",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ni Lao, Tom Mitchell, and William W. Cohen. 2011. Random walk inference and learning in a large scale knowledge base. In Proceedings of the 2011 Con- ference on Empirical Methods in Natural Language Processing, pages 529-539, Edinburgh, Scotland, UK., July. Association for Computational Linguis- tics.",
+                "links": null
+            },
+            "BIBREF23": {
+                "ref_id": "b23",
+                "title": "Stanford's multi-pass sieve coreference resolution system at the conll-2011 shared task",
+                "authors": [
+                    {
+                        "first": "Heeyoung",
+                        "middle": [],
+                        "last": "Lee",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yves",
+                        "middle": [],
+                        "last": "Peirsman",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Angel",
+                        "middle": [],
+                        "last": "Chang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nathanael",
+                        "middle": [],
+                        "last": "Chambers",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mihai",
+                        "middle": [],
+                        "last": "Surdeanu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dan",
+                        "middle": [],
+                        "last": "Jurafsky",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2011,
+                "venue": "Proceedings of the Fifteenth Conference on Computational Natural Language Learning: Shared Task",
+                "volume": "",
+                "issue": "",
+                "pages": "28--34",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Heeyoung Lee, Yves Peirsman, Angel Chang, Nathanael Chambers, Mihai Surdeanu, and Dan Ju- rafsky. 2011. Stanford's multi-pass sieve coref- erence resolution system at the conll-2011 shared task. In Proceedings of the Fifteenth Conference on Computational Natural Language Learning: Shared Task, pages 28-34, Portland, Oregon, USA, June. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF24": {
+                "ref_id": "b24",
+                "title": "The Stanford CoreNLP Natural Language Processing toolkit",
+                "authors": [
+                    {
+                        "first": "Christopher",
+                        "middle": [],
+                        "last": "Manning",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mihai",
+                        "middle": [],
+                        "last": "Surdeanu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "John",
+                        "middle": [],
+                        "last": "Bauer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jenny",
+                        "middle": [],
+                        "last": "Finkel",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Steven",
+                        "middle": [],
+                        "last": "Bethard",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "David",
+                        "middle": [],
+                        "last": "Mcclosky",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "Proceedings of 52nd Annual Meeting of the Association for Computational Linguistics: System Demonstrations",
+                "volume": "",
+                "issue": "",
+                "pages": "55--60",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Christopher Manning, Mihai Surdeanu, John Bauer, Jenny Finkel, Steven Bethard, and David McClosky. 2014. The Stanford CoreNLP Natural Language Processing toolkit. In Proceedings of 52nd Annual Meeting of the Association for Computational Lin- guistics: System Demonstrations, pages 55-60, Bal- timore, Maryland, June. Association for Computa- tional Linguistics.",
+                "links": null
+            },
+            "BIBREF25": {
+                "ref_id": "b25",
+                "title": "The Theory and Practice of Discourse Parsing and Summarization",
+                "authors": [
+                    {
+                        "first": "Daniel",
+                        "middle": [],
+                        "last": "Marcu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2000,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Daniel Marcu. 2000. The Theory and Practice of Dis- course Parsing and Summarization. The MIT Press, Cambridge, Massachusetts, November.",
+                "links": null
+            },
+            "BIBREF26": {
+                "ref_id": "b26",
+                "title": "Distant supervision for relation extraction without labeled data",
+                "authors": [
+                    {
+                        "first": "Mike",
+                        "middle": [],
+                        "last": "Mintz",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Steven",
+                        "middle": [],
+                        "last": "Bills",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Rion",
+                        "middle": [],
+                        "last": "Snow",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Daniel",
+                        "middle": [],
+                        "last": "Jurafsky",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "Proceedings of the Joint Conference of the 47th Annual Meeting of the ACL and the 4th International Joint Conference on Natural Language Processing of the AFNLP",
+                "volume": "",
+                "issue": "",
+                "pages": "1003--1011",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Mike Mintz, Steven Bills, Rion Snow, and Daniel Ju- rafsky. 2009. Distant supervision for relation ex- traction without labeled data. In Proceedings of the Joint Conference of the 47th Annual Meeting of the ACL and the 4th International Joint Conference on Natural Language Processing of the AFNLP, pages 1003-1011, Suntec, Singapore, August. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF27": {
+                "ref_id": "b27",
+                "title": "Overview of BioNLP Shared Task",
+                "authors": [
+                    {
+                        "first": "Claire",
+                        "middle": [],
+                        "last": "N\u00e9dellec",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Robert",
+                        "middle": [],
+                        "last": "Bossy",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jin-Dong",
+                        "middle": [],
+                        "last": "Kim",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jung-Jae",
+                        "middle": [],
+                        "last": "Kim",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tomoko",
+                        "middle": [],
+                        "last": "Ohta",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sampo",
+                        "middle": [],
+                        "last": "Pyysalo",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Pierre",
+                        "middle": [],
+                        "last": "Zweigenbaum",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "Proceedings of the BioNLP Shared Task 2013 Workshop",
+                "volume": "",
+                "issue": "",
+                "pages": "1--7",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Claire N\u00e9dellec, Robert Bossy, Jin-Dong Kim, Jung- Jae Kim, Tomoko Ohta, Sampo Pyysalo, and Pierre Zweigenbaum. 2013. Overview of BioNLP Shared Task 2013. In Proceedings of the BioNLP Shared Task 2013 Workshop, pages 1-7, Sofia, Bulgaria, August. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF28": {
+                "ref_id": "b28",
+                "title": "Numerical Optimization",
+                "authors": [
+                    {
+                        "first": "J",
+                        "middle": [],
+                        "last": "Nocedal",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "S",
+                        "middle": [],
+                        "last": "Wright",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2006,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "J. Nocedal and S. Wright. 2006. Numerical Optimiza- tion. Springer, New York, NY.",
+                "links": null
+            },
+            "BIBREF29": {
+                "ref_id": "b29",
+                "title": "Grounded semantic parsing for complex knowledge extraction",
+                "authors": [
+                    {
+                        "first": "P",
+                        "middle": [],
+                        "last": "Ankur",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hoifung",
+                        "middle": [],
+                        "last": "Parikh",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kristina",
+                        "middle": [],
+                        "last": "Poon",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Toutanova",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Proceedings of the 2015 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies",
+                "volume": "",
+                "issue": "",
+                "pages": "756--766",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ankur P. Parikh, Hoifung Poon, and Kristina Toutanova. 2015. Grounded semantic parsing for complex knowledge extraction. In Proceedings of the 2015 Conference of the North American Chap- ter of the Association for Computational Linguis- tics: Human Language Technologies, pages 756- 766, Denver, Colorado, May-June. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF30": {
+                "ref_id": "b30",
+                "title": "Joint unsupervised coreference resolution with Markov logic",
+                "authors": [
+                    {
+                        "first": "Hoifung",
+                        "middle": [],
+                        "last": "Poon",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Pedro",
+                        "middle": [],
+                        "last": "Domingos",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2008,
+                "venue": "Proceedings of the 2008 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "649--658",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Hoifung Poon and Pedro Domingos. 2008. Joint unsu- pervised coreference resolution with Markov logic. In Proceedings of the 2008 Conference on Empiri- cal Methods in Natural Language Processing, pages 649-658, Honolulu, HI. ACL.",
+                "links": null
+            },
+            "BIBREF31": {
+                "ref_id": "b31",
+                "title": "Unsupervised semantic parsing",
+                "authors": [
+                    {
+                        "first": "Hoifung",
+                        "middle": [],
+                        "last": "Poon",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Pedro",
+                        "middle": [],
+                        "last": "Domingos",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "Proceedings of the 2009 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "1--10",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Hoifung Poon and Pedro Domingos. 2009. Unsuper- vised semantic parsing. In Proceedings of the 2009 Conference on Empirical Methods in Natural Lan- guage Processing, pages 1-10, Singapore. ACL.",
+                "links": null
+            },
+            "BIBREF32": {
+                "ref_id": "b32",
+                "title": "Joint inference for knowledge extraction from biomedical literature",
+                "authors": [
+                    {
+                        "first": "Hoifung",
+                        "middle": [],
+                        "last": "Poon",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Lucy",
+                        "middle": [],
+                        "last": "Vanderwende",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2010,
+                "venue": "Human Language Technologies: The 2010 Annual Conference of the North American Chapter of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "813--821",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Hoifung Poon and Lucy Vanderwende. 2010. Joint inference for knowledge extraction from biomedi- cal literature. In Human Language Technologies: The 2010 Annual Conference of the North American Chapter of the Association for Computational Lin- guistics, pages 813-821, Los Angeles, California, June. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF33": {
+                "ref_id": "b33",
+                "title": "Literome: Pubmed-scale genomic knowledge base in the cloud",
+                "authors": [
+                    {
+                        "first": "Hoifung",
+                        "middle": [],
+                        "last": "Poon",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chris",
+                        "middle": [],
+                        "last": "Quirk",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Charlie",
+                        "middle": [],
+                        "last": "Deziel",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "David",
+                        "middle": [],
+                        "last": "Heckerman",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "Bioinformatics",
+                "volume": "30",
+                "issue": "19",
+                "pages": "2840--2842",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Hoifung Poon, Chris Quirk, Charlie DeZiel, and David Heckerman. 2014. Literome: Pubmed-scale ge- nomic knowledge base in the cloud. Bioinformatics, 30(19):2840-2842.",
+                "links": null
+            },
+            "BIBREF34": {
+                "ref_id": "b34",
+                "title": "Distant supervision for cancer pathway extraction from text",
+                "authors": [
+                    {
+                        "first": "Hoifung",
+                        "middle": [],
+                        "last": "Poon",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kristina",
+                        "middle": [],
+                        "last": "Toutanova",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chris",
+                        "middle": [],
+                        "last": "Quirk",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Pacific Symposium of Biocomputing",
+                "volume": "",
+                "issue": "",
+                "pages": "121--131",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Hoifung Poon, Kristina Toutanova, and Chris Quirk. 2015. Distant supervision for cancer pathway ex- traction from text. In Pacific Symposium of Biocom- puting, pages 121-131, Big Island of Hawaii.",
+                "links": null
+            },
+            "BIBREF35": {
+                "ref_id": "b35",
+                "title": "MSR SPLAT, a language analysis toolkit",
+                "authors": [
+                    {
+                        "first": "Chris",
+                        "middle": [],
+                        "last": "Quirk",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Pallavi",
+                        "middle": [],
+                        "last": "Choudhury",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jianfeng",
+                        "middle": [],
+                        "last": "Gao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hisami",
+                        "middle": [],
+                        "last": "Suzuki",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kristina",
+                        "middle": [],
+                        "last": "Toutanova",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Michael",
+                        "middle": [],
+                        "last": "Gamon",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Wentau",
+                        "middle": [],
+                        "last": "Yih",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Colin",
+                        "middle": [],
+                        "last": "Cherry",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Lucy",
+                        "middle": [],
+                        "last": "Vanderwende",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2012,
+                "venue": "Proceedings of the Demonstration Session at the Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies",
+                "volume": "",
+                "issue": "",
+                "pages": "21--24",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Chris Quirk, Pallavi Choudhury, Jianfeng Gao, Hisami Suzuki, Kristina Toutanova, Michael Gamon, Wen- tau Yih, Colin Cherry, and Lucy Vanderwende. 2012. MSR SPLAT, a language analysis toolkit. In Proceedings of the Demonstration Session at the Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies, pages 21-24, Montr\u00e9al, Canada, June. Association for Computational Lin- guistics.",
+                "links": null
+            },
+            "BIBREF36": {
+                "ref_id": "b36",
+                "title": "Networks and natural language processing",
+                "authors": [
+                    {
+                        "first": "R",
+                        "middle": [],
+                        "last": "Dragomir",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Rada",
+                        "middle": [],
+                        "last": "Radev",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Mihalcea",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2008,
+                "venue": "AI Magazine",
+                "volume": "29",
+                "issue": "3",
+                "pages": "16--28",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Dragomir R. Radev and Rada Mihalcea. 2008. Net- works and natural language processing. AI Maga- zine, 29(3):16-28.",
+                "links": null
+            },
+            "BIBREF37": {
+                "ref_id": "b37",
+                "title": "A multipass sieve for coreference resolution",
+                "authors": [
+                    {
+                        "first": "Heeyoung",
+                        "middle": [],
+                        "last": "Karthik Raghunathan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sudarshan",
+                        "middle": [],
+                        "last": "Lee",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nate",
+                        "middle": [],
+                        "last": "Rangarajan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mihai",
+                        "middle": [],
+                        "last": "Chambers",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dan",
+                        "middle": [],
+                        "last": "Surdeanu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [],
+                        "last": "Jurafsky",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Manning",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2010,
+                "venue": "Proceedings of the 2010 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "492--501",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Karthik Raghunathan, Heeyoung Lee, Sudarshan Ran- garajan, Nate Chambers, Mihai Surdeanu, Dan Ju- rafsky, and Christopher Manning. 2010. A multi- pass sieve for coreference resolution. In Proceed- ings of the 2010 Conference on Empirical Methods in Natural Language Processing, pages 492-501, Cambridge, MA, October. Association for Compu- tational Linguistics.",
+                "links": null
+            },
+            "BIBREF38": {
+                "ref_id": "b38",
+                "title": "Supervised models for coreference resolution",
+                "authors": [
+                    {
+                        "first": "Altaf",
+                        "middle": [],
+                        "last": "Rahman",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Vincent",
+                        "middle": [],
+                        "last": "Ng",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "Proceedings of the 2009 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "968--977",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Altaf Rahman and Vincent Ng. 2009. Supervised mod- els for coreference resolution. In Proceedings of the 2009 Conference on Empirical Methods in Natural Language Processing, pages 968-977, Singapore, August. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF39": {
+                "ref_id": "b39",
+                "title": "The life and death of discourse entities: Identifying singleton mentions",
+                "authors": [
+                    {
+                        "first": "Marta",
+                        "middle": [],
+                        "last": "Recasens",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Marie-Catherine",
+                        "middle": [],
+                        "last": "De Marneffe",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [],
+                        "last": "Potts",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "Proceedings of the 2013 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies",
+                "volume": "",
+                "issue": "",
+                "pages": "627--633",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Marta Recasens, Marie-Catherine de Marneffe, and Christopher Potts. 2013. The life and death of dis- course entities: Identifying singleton mentions. In Proceedings of the 2013 Conference of the North American Chapter of the Association for Computa- tional Linguistics: Human Language Technologies, pages 627-633, Atlanta, Georgia, June. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF40": {
+                "ref_id": "b40",
+                "title": "Fast and robust joint models for biomedical event extraction",
+                "authors": [
+                    {
+                        "first": "Sebastian",
+                        "middle": [],
+                        "last": "Riedel",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Andrew",
+                        "middle": [],
+                        "last": "Mccallum",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2011,
+                "venue": "Proceedings of the 2011 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "1--12",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Sebastian Riedel and Andrew McCallum. 2011. Fast and robust joint models for biomedical event extrac- tion. In Proceedings of the 2011 Conference on Em- pirical Methods in Natural Language Processing, pages 1-12, Edinburgh, Scotland, UK., July. Asso- ciation for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF41": {
+                "ref_id": "b41",
+                "title": "Relation extraction with matrix factorization and universal schemas",
+                "authors": [
+                    {
+                        "first": "Sebastian",
+                        "middle": [],
+                        "last": "Riedel",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Limin",
+                        "middle": [],
+                        "last": "Yao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Andrew",
+                        "middle": [],
+                        "last": "Mccallum",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Benjamin",
+                        "middle": [
+                            "M"
+                        ],
+                        "last": "Marlin",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "Proceedings of the 2013 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies",
+                "volume": "",
+                "issue": "",
+                "pages": "74--84",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Sebastian Riedel, Limin Yao, Andrew McCallum, and Benjamin M. Marlin. 2013. Relation extraction with matrix factorization and universal schemas. In Proceedings of the 2013 Conference of the North American Chapter of the Association for Computa- tional Linguistics: Human Language Technologies, pages 74-84, Atlanta, Georgia, June. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF42": {
+                "ref_id": "b42",
+                "title": "Spinning straw into gold: Using free text to train monolingual alignment models for non-factoid question answering",
+                "authors": [
+                    {
+                        "first": "Rebecca",
+                        "middle": [],
+                        "last": "Sharp",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Peter",
+                        "middle": [],
+                        "last": "Jansen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mihai",
+                        "middle": [],
+                        "last": "Surdeanu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Peter",
+                        "middle": [],
+                        "last": "Clark",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Proceedings of the 2015 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies",
+                "volume": "",
+                "issue": "",
+                "pages": "231--237",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Rebecca Sharp, Peter Jansen, Mihai Surdeanu, and Pe- ter Clark. 2015. Spinning straw into gold: Using free text to train monolingual alignment models for non-factoid question answering. In Proceedings of the 2015 Conference of the North American Chap- ter of the Association for Computational Linguis- tics: Human Language Technologies, pages 231- 237, Denver, Colorado, May-June. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF43": {
+                "ref_id": "b43",
+                "title": "Semantic taxonomy induction from heterogenous evidence",
+                "authors": [
+                    {
+                        "first": "Rion",
+                        "middle": [],
+                        "last": "Snow",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Daniel",
+                        "middle": [],
+                        "last": "Jurafsky",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Andrew",
+                        "middle": [
+                            "Y"
+                        ],
+                        "last": "Ng",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2006,
+                "venue": "Proceedings of the 21st International Conference on Computational Linguistics and 44th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "801--808",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Rion Snow, Daniel Jurafsky, and Andrew Y. Ng. 2006. Semantic taxonomy induction from heterogenous evidence. In Proceedings of the 21st International Conference on Computational Linguistics and 44th Annual Meeting of the Association for Computa- tional Linguistics, pages 801-808, Sydney, Aus- tralia, July. Association for Computational Linguis- tics.",
+                "links": null
+            },
+            "BIBREF44": {
+                "ref_id": "b44",
+                "title": "Efficient graph-based semisupervised learning of structured tagging models",
+                "authors": [
+                    {
+                        "first": "Amarnag",
+                        "middle": [],
+                        "last": "Subramanya",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Slav",
+                        "middle": [],
+                        "last": "Petrov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Fernando",
+                        "middle": [],
+                        "last": "Pereira",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2010,
+                "venue": "Proceedings of the 2010 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "167--176",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Amarnag Subramanya, Slav Petrov, and Fernando Pereira. 2010. Efficient graph-based semi- supervised learning of structured tagging models. In Proceedings of the 2010 Conference on Empiri- cal Methods in Natural Language Processing, pages 167-176, Cambridge, MA, October. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF45": {
+                "ref_id": "b45",
+                "title": "Overview of the English Slot Filling Track at the TAC2014 Knowledge Base Population evaluation",
+                "authors": [
+                    {
+                        "first": "Mihai",
+                        "middle": [],
+                        "last": "Surdeanu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Heng",
+                        "middle": [],
+                        "last": "Ji",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "Proceedings of the TAC-KBP 2014 Workshop",
+                "volume": "",
+                "issue": "",
+                "pages": "1--15",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Mihai Surdeanu and Heng Ji. 2014. Overview of the English Slot Filling Track at the TAC2014 Knowledge Base Population evaluation. In Proceed- ings of the TAC-KBP 2014 Workshop, pages 1-15, Gaithersburg, Maryland, USA.",
+                "links": null
+            },
+            "BIBREF46": {
+                "ref_id": "b46",
+                "title": "Multi-instance multi-label learning for relation extraction",
+                "authors": [
+                    {
+                        "first": "Mihai",
+                        "middle": [],
+                        "last": "Surdeanu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Julie",
+                        "middle": [],
+                        "last": "Tibshirani",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ramesh",
+                        "middle": [],
+                        "last": "Nallapati",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [
+                            "D"
+                        ],
+                        "last": "Manning",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2012,
+                "venue": "Proceedings of the 2012 Joint Conference on Empirical Methods in Natural Language Processing and Computational Natural Language Learning",
+                "volume": "",
+                "issue": "",
+                "pages": "455--465",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Mihai Surdeanu, Julie Tibshirani, Ramesh Nallapati, and Christopher D. Manning. 2012. Multi-instance multi-label learning for relation extraction. In Pro- ceedings of the 2012 Joint Conference on Empirical Methods in Natural Language Processing and Com- putational Natural Language Learning, pages 455- 465, Jeju Island, Korea, July. Association for Com- putational Linguistics.",
+                "links": null
+            },
+            "BIBREF47": {
+                "ref_id": "b47",
+                "title": "Two practical rhetorical structure theory parsers",
+                "authors": [
+                    {
+                        "first": "Mihai",
+                        "middle": [],
+                        "last": "Surdeanu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tom",
+                        "middle": [],
+                        "last": "Hicks",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Marco",
+                        "middle": [
+                            "Antonio"
+                        ],
+                        "last": "Valenzuela-Escarcega",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Proceedings of the 2015 Conference of the North American Chapter",
+                "volume": "",
+                "issue": "",
+                "pages": "1--5",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Mihai Surdeanu, Tom Hicks, and Marco Antonio Valenzuela-Escarcega. 2015. Two practical rhetori- cal structure theory parsers. In Proceedings of the 2015 Conference of the North American Chapter of the Association for Computational Linguistics: Demonstrations, pages 1-5, Denver, Colorado, June. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF48": {
+                "ref_id": "b48",
+                "title": "Extracting relations within and across sentences",
+                "authors": [
+                    {
+                        "first": "Kumutha",
+                        "middle": [],
+                        "last": "Swampillai",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mark",
+                        "middle": [],
+                        "last": "Stevenson",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2011,
+                "venue": "Proceedings of the International Conference Recent Advances in Natural Language Processing 2011",
+                "volume": "",
+                "issue": "",
+                "pages": "25--32",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Kumutha Swampillai and Mark Stevenson. 2011. Ex- tracting relations within and across sentences. In Proceedings of the International Conference Recent Advances in Natural Language Processing 2011, pages 25-32, Hissar, Bulgaria, September. RANLP 2011 Organising Committee.",
+                "links": null
+            },
+            "BIBREF49": {
+                "ref_id": "b49",
+                "title": "Representing text for joint embedding of text and knowledge bases",
+                "authors": [
+                    {
+                        "first": "Kristina",
+                        "middle": [],
+                        "last": "Toutanova",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Danqi",
+                        "middle": [],
+                        "last": "Chen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Patrick",
+                        "middle": [],
+                        "last": "Pantel",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hoifung",
+                        "middle": [],
+                        "last": "Poon",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Pallavi",
+                        "middle": [],
+                        "last": "Choudhury",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Michael",
+                        "middle": [],
+                        "last": "Gamon",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Proceedings of the 2015 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "1499--1509",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Kristina Toutanova, Danqi Chen, Patrick Pantel, Hoi- fung Poon, Pallavi Choudhury, and Michael Gamon. 2015. Representing text for joint embedding of text and knowledge bases. In Proceedings of the 2015 Conference on Empirical Methods in Natural Lan- guage Processing, pages 1499-1509, Lisbon, Portu- gal, September. Association for Computational Lin- guistics.",
+                "links": null
+            },
+            "BIBREF50": {
+                "ref_id": "b50",
+                "title": "Compositional learning of embeddings for relation paths in knowledge base and text",
+                "authors": [
+                    {
+                        "first": "Kristina",
+                        "middle": [],
+                        "last": "Toutanova",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Victoria",
+                        "middle": [],
+                        "last": "Lin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Wen-Tau",
+                        "middle": [],
+                        "last": "Yih",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hoifung",
+                        "middle": [],
+                        "last": "Poon",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chris",
+                        "middle": [],
+                        "last": "Quirk",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of the 54th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "1",
+                "issue": "",
+                "pages": "1434--1444",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Kristina Toutanova, Victoria Lin, Wen-tau Yih, Hoi- fung Poon, and Chris Quirk. 2016. Compositional learning of embeddings for relation paths in knowl- edge base and text. In Proceedings of the 54th Annual Meeting of the Association for Computa- tional Linguistics (Volume 1: Long Papers), pages 1434-1444, Berlin, Germany, August. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF51": {
+                "ref_id": "b51",
+                "title": "A refined endto-end discourse parser",
+                "authors": [
+                    {
+                        "first": "Jianxiang",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Man",
+                        "middle": [],
+                        "last": "Lan",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Proceedings of the Nineteenth Conference on Computational Natural Language Learning -Shared Task",
+                "volume": "",
+                "issue": "",
+                "pages": "17--24",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jianxiang Wang and Man Lan. 2015. A refined end- to-end discourse parser. In Proceedings of the Nine- teenth Conference on Computational Natural Lan- guage Learning -Shared Task, pages 17-24, Bei- jing, China, July. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF52": {
+                "ref_id": "b52",
+                "title": "Feature hashing for large scale multitask learning",
+                "authors": [
+                    {
+                        "first": "Kilian",
+                        "middle": [],
+                        "last": "Weinberger",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Anirban",
+                        "middle": [],
+                        "last": "Dasgupta",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "John",
+                        "middle": [],
+                        "last": "Langford",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alex",
+                        "middle": [],
+                        "last": "Smola",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Josh",
+                        "middle": [],
+                        "last": "Attenberg",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "Proceedings of the 26th Annual International Conference on Machine Learning, ICML '09",
+                "volume": "",
+                "issue": "",
+                "pages": "1113--1120",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Kilian Weinberger, Anirban Dasgupta, John Langford, Alex Smola, and Josh Attenberg. 2009. Feature hashing for large scale multitask learning. In Pro- ceedings of the 26th Annual International Confer- ence on Machine Learning, ICML '09, pages 1113- 1120, New York, NY, USA. ACM.",
+                "links": null
+            },
+            "BIBREF53": {
+                "ref_id": "b53",
+                "title": "Autonomously semantifying wikipedia",
+                "authors": [
+                    {
+                        "first": "Fei",
+                        "middle": [],
+                        "last": "Wu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Daniel",
+                        "middle": [
+                            "S"
+                        ],
+                        "last": "Weld",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2007,
+                "venue": "Proceedings of the Sixteenth ACM Conference on Conference on Information and Knowledge Management, CIKM '07",
+                "volume": "",
+                "issue": "",
+                "pages": "41--50",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Fei Wu and Daniel S. Weld. 2007. Autonomously semantifying wikipedia. In Proceedings of the Six- teenth ACM Conference on Conference on Informa- tion and Knowledge Management, CIKM '07, pages 41-50, New York, NY, USA. ACM.",
+                "links": null
+            },
+            "BIBREF54": {
+                "ref_id": "b54",
+                "title": "Aggregating intersentence information to enhance relation extraction",
+                "authors": [
+                    {
+                        "first": "Zhoujun",
+                        "middle": [],
+                        "last": "Hao Zheng",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Senzhang",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zhao",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jianshe",
+                        "middle": [],
+                        "last": "Yan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Zhou",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of the Thirtieth AAAI Conference on Artificial Intelligence, AAAI'16",
+                "volume": "",
+                "issue": "",
+                "pages": "3108--3114",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Hao Zheng, Zhoujun Li, Senzhang Wang, Zhao Yan, and Jianshe Zhou. 2016. Aggregating inter- sentence information to enhance relation extraction. In Proceedings of the Thirtieth AAAI Conference on Artificial Intelligence, AAAI'16, pages 3108-3114. AAAI Press.",
+                "links": null
+            }
+        },
+        "ref_entries": {
+            "FIGREF0": {
+                "num": null,
+                "text": "ABBREV AUXPASS",
+                "uris": null,
+                "fig_num": "1",
+                "type_str": "figure"
+            },
+            "FIGREF1": {
+                "num": null,
+                "text": "Figure 2: Sample rows from the Gene Drug Knowledge Database. Our current work focuses on two important columns: gene, and therapeutic context (drug).",
+                "uris": null,
+                "fig_num": "2",
+                "type_str": "figure"
+            },
+            "TABREF0": {
+                "content": "<table><tr><td>Number of Candidates</td><td>K = 1</td><td>K = 3</td></tr><tr><td>Unique Pairs</td><td>169,168</td><td>332,969</td></tr><tr><td>Instances</td><td colspan=\"2\">1,724,119 3,913,338</td></tr><tr><td>Matching GDKD</td><td>58,523</td><td>87,773</td></tr></table>",
+                "type_str": "table",
+                "text": "Statistics for drug-gene interaction can-",
+                "html": null,
+                "num": null
+            },
+            "TABREF1": {
+                "content": "<table><tr><td>Features</td><td colspan=\"2\">Single-Sent. Cross-Sent.</td></tr><tr><td>Base</td><td>81.3</td><td>81.7</td></tr><tr><td>3 paths</td><td>85.4</td><td>85.5</td></tr><tr><td>+coref</td><td>85.0</td><td>84.7</td></tr><tr><td>+disc</td><td>-</td><td>84.6</td></tr><tr><td>+coref+disc</td><td>-</td><td>84.5</td></tr><tr><td>10 paths</td><td>87.0</td><td>86.6</td></tr><tr><td>+coref</td><td>86.5</td><td>85.9</td></tr><tr><td>+disc</td><td>-</td><td>86.5</td></tr><tr><td>+coref+disc</td><td>-</td><td>85.9</td></tr></table>",
+                "type_str": "table",
+                "text": "Average test accuracy in five-fold crossvalidation. Cross-sentence extraction was conducted within a sliding window of 3 sentences using minimal-span candidates. Base only used the shortest path to construct features. 3 paths and 10 paths gathered features from the top three or ten shortest paths, assigning uniform weights to all edges except adjacency, which had a weight of 16. +coref adds edges for the relations predicted by Stanford Coreference. +disc adds edges for the predicted rhetorical relations by a state-of-the-art discourse parser",
+                "html": null,
+                "num": null
+            },
+            "TABREF3": {
+                "content": "<table><tr><td colspan=\"2\">Relations</td><td colspan=\"2\">Single-Sent. Cross-Sent.</td></tr><tr><td colspan=\"2\">Candidates</td><td>169,168</td><td>332,969</td></tr><tr><td>p \u2265 0.5</td><td/><td>32,028</td><td>64,828</td></tr><tr><td>p \u2265 0.9</td><td/><td>17,349</td><td>32,775</td></tr><tr><td>GDKD</td><td/><td colspan=\"2\">162</td></tr><tr><td>Table 4:</td><td colspan=\"3\">Unique drug-gene interactions ex-</td></tr><tr><td colspan=\"4\">tracted from PubMed Central articles, compared</td></tr><tr><td colspan=\"4\">to the manually curated Gene Drug Knowledge</td></tr><tr><td colspan=\"4\">Database (GDKD) used for distant supervision. p</td></tr><tr><td colspan=\"4\">signifies the output probability. GDKD contains</td></tr><tr><td colspan=\"4\">341 relations, but only 162 have specific drug ref-</td></tr><tr><td colspan=\"4\">erences usable as distant supervision.</td></tr><tr><td/><td/><td colspan=\"2\">Gene Drug</td></tr><tr><td>GDKD</td><td/><td/><td>140</td><td>80</td></tr><tr><td colspan=\"4\">Single-Sent. (p \u2265 0.9) 4036</td><td>311</td></tr><tr><td colspan=\"4\">Single-Sent. (p \u2265 0.5) 6189</td><td>347</td></tr><tr><td colspan=\"3\">Cross-Sent. (p \u2265 0.9)</td><td>5580</td><td>338</td></tr><tr><td colspan=\"3\">Cross-Sent. (p \u2265 0.5)</td><td>9470</td><td>373</td></tr></table>",
+                "type_str": "table",
+                "text": "Numbers of unique genes and drugs in the Gene Drug Knowledge Database (GDKD) vs. DISCREX extractions.",
+                "html": null,
+                "num": null
+            },
+            "TABREF4": {
+                "content": "<table><tr><td>Random</td><td>31</td><td>52</td><td>17</td></tr><tr><td>p \u2265 0.5</td><td>61</td><td>25</td><td>15</td></tr><tr><td>p \u2265 0.9</td><td>71</td><td>13</td><td>15</td></tr><tr><td colspan=\"2\">Cross-sentence extractions</td><td/><td/></tr><tr><td>Random</td><td>23</td><td>50</td><td>27</td></tr><tr><td>p \u2265 0.5</td><td>57</td><td>20</td><td>23</td></tr><tr><td>p \u2265 0.9</td><td>61</td><td>13</td><td>26</td></tr></table>",
+                "type_str": "table",
+                "text": "Sample precision and error percentage: comparison between the single sentence and cross-sentence extraction models at various thresholds. Single sentence extraction is slightly better at all thresholds, at the expense of substantially lower recall: a reduction of 40% or more in terms of unique interactions. lation extraction, is an important future direction.",
+                "html": null,
+                "num": null
+            }
+        }
+    }
+}

@@ -1,0 +1,3033 @@
+{
+    "paper_id": "2021",
+    "header": {
+        "generated_with": "S2ORC 1.0.0",
+        "date_generated": "2023-06-16T12:33:38.469873Z"
+    },
+    "title": "SMBOP: Semi-autoregressive Bottom-up Semantic Parsing",
+    "authors": [
+        {
+            "first": "Ohad",
+            "middle": [],
+            "last": "Rubin",
+            "suffix": "",
+            "affiliation": {},
+            "email": "ohadr@mail.tau.ac.il"
+        },
+        {
+            "first": "Jonathan",
+            "middle": [],
+            "last": "Berant",
+            "suffix": "",
+            "affiliation": {},
+            "email": "joberant@cs.tau.ac.il"
+        }
+    ],
+    "year": "",
+    "venue": null,
+    "identifiers": {},
+    "abstract": "The de-facto standard decoding method for semantic parsing in recent years has been to autoregressively decode the abstract syntax tree of the target program using a top-down depthfirst traversal. In this work, we propose an alternative approach: a Semi-autoregressive Bottom-up Parser (SMBOP) that constructs at decoding step t the top-K sub-trees of height \u2264 t. Our parser enjoys several benefits compared to top-down autoregressive parsing. From an efficiency perspective, bottom-up parsing allows to decode all sub-trees of a certain height in parallel, leading to logarithmic runtime complexity rather than linear. From a modeling perspective, a bottom-up parser learns representations for meaningful semantic sub-programs at each step, rather than for semantically-vacuous partial trees. We apply SMBOP on SPIDER, a challenging zero-shot semantic parsing benchmark, and show that SMBOP leads to a 2.2x speed-up in decoding time and a \u223c5x speed-up in training time, compared to a semantic parser that uses autoregressive decoding. SMBOP obtains 71.1 denotation accuracy on SPIDER, establishing a new state-of-the-art, and 69.5 exact match, comparable to the 69.6 exact match of the autoregressive RAT-SQL+GRAPPA.",
+    "pdf_parse": {
+        "paper_id": "2021",
+        "_pdf_hash": "",
+        "abstract": [
+            {
+                "text": "The de-facto standard decoding method for semantic parsing in recent years has been to autoregressively decode the abstract syntax tree of the target program using a top-down depthfirst traversal. In this work, we propose an alternative approach: a Semi-autoregressive Bottom-up Parser (SMBOP) that constructs at decoding step t the top-K sub-trees of height \u2264 t. Our parser enjoys several benefits compared to top-down autoregressive parsing. From an efficiency perspective, bottom-up parsing allows to decode all sub-trees of a certain height in parallel, leading to logarithmic runtime complexity rather than linear. From a modeling perspective, a bottom-up parser learns representations for meaningful semantic sub-programs at each step, rather than for semantically-vacuous partial trees. We apply SMBOP on SPIDER, a challenging zero-shot semantic parsing benchmark, and show that SMBOP leads to a 2.2x speed-up in decoding time and a \u223c5x speed-up in training time, compared to a semantic parser that uses autoregressive decoding. SMBOP obtains 71.1 denotation accuracy on SPIDER, establishing a new state-of-the-art, and 69.5 exact match, comparable to the 69.6 exact match of the autoregressive RAT-SQL+GRAPPA.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            }
+        ],
+        "body_text": [
+            {
+                "text": "Semantic parsing, the task of mapping natural language utterances into programs (Zelle and Mooney, 1996; Zettlemoyer and Collins, 2005; Clarke et al.; Liang et al., 2011) , has converged in recent years on a standard encoder-decoder architecture. Recently, meaningful advances emerged on the encoder side, including developments in Transformer-based architectures (Wang et al., 2020a) and new pretraining techniques (Yin et al., 2020; Herzig et al., 2020; Yu et al., 2020; Deng et al., 2020; Shi et al., 2021) . Conversely, the decoder has remained roughly constant for years, where the abstract syntax tree of the target program is autoregressively decoded in a top-down manner (Yin and Neubig, 2017; Krishnamurthy et al., 2017; Rabinovich et al., 2017) .",
+                "cite_spans": [
+                    {
+                        "start": 80,
+                        "end": 104,
+                        "text": "(Zelle and Mooney, 1996;",
+                        "ref_id": "BIBREF33"
+                    },
+                    {
+                        "start": 105,
+                        "end": 135,
+                        "text": "Zettlemoyer and Collins, 2005;",
+                        "ref_id": "BIBREF34"
+                    },
+                    {
+                        "start": 136,
+                        "end": 150,
+                        "text": "Clarke et al.;",
+                        "ref_id": "BIBREF2"
+                    },
+                    {
+                        "start": 151,
+                        "end": 170,
+                        "text": "Liang et al., 2011)",
+                        "ref_id": "BIBREF13"
+                    },
+                    {
+                        "start": 364,
+                        "end": 384,
+                        "text": "(Wang et al., 2020a)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 416,
+                        "end": 434,
+                        "text": "(Yin et al., 2020;",
+                        "ref_id": "BIBREF29"
+                    },
+                    {
+                        "start": 435,
+                        "end": 455,
+                        "text": "Herzig et al., 2020;",
+                        "ref_id": "BIBREF10"
+                    },
+                    {
+                        "start": 456,
+                        "end": 472,
+                        "text": "Yu et al., 2020;",
+                        "ref_id": "BIBREF30"
+                    },
+                    {
+                        "start": 473,
+                        "end": 491,
+                        "text": "Deng et al., 2020;",
+                        "ref_id": "BIBREF4"
+                    },
+                    {
+                        "start": 492,
+                        "end": 509,
+                        "text": "Shi et al., 2021)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 679,
+                        "end": 701,
+                        "text": "(Yin and Neubig, 2017;",
+                        "ref_id": "BIBREF28"
+                    },
+                    {
+                        "start": 702,
+                        "end": 729,
+                        "text": "Krishnamurthy et al., 2017;",
+                        "ref_id": "BIBREF11"
+                    },
+                    {
+                        "start": 730,
+                        "end": 754,
+                        "text": "Rabinovich et al., 2017)",
+                        "ref_id": "BIBREF18"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Bottom-up decoding in semantic parsing has received little attention (Cheng et al., 2019; Odena et al., 2020) . In this work, we propose a bottom-up semantic parser, and demonstrate that equipped with recent developments in Transformer-based (Vaswani et al., 2017) architectures, it offers several advantages. From an efficiency perspective, bottom-up parsing can naturally be done semiautoregressively: at each decoding step t, the parser generates in parallel the top-K program sub-trees of depth \u2264 t (akin to beam search). This leads to runtime complexity that is logarithmic in the tree size, rather than linear, contributing to the rocketing interest in efficient and greener artificial intelligence technologies (Schwartz et al., 2020) . From a modeling perspective, neural bottom-up parsing provides learned representations for meaningful (and executable) sub-programs, which are sub-trees computed during the search procedure, in contrast to top-down parsing, where hidden states represent partial trees without clear semantics.",
+                "cite_spans": [
+                    {
+                        "start": 69,
+                        "end": 89,
+                        "text": "(Cheng et al., 2019;",
+                        "ref_id": "BIBREF1"
+                    },
+                    {
+                        "start": 90,
+                        "end": 109,
+                        "text": "Odena et al., 2020)",
+                        "ref_id": "BIBREF17"
+                    },
+                    {
+                        "start": 242,
+                        "end": 264,
+                        "text": "(Vaswani et al., 2017)",
+                        "ref_id": "BIBREF24"
+                    },
+                    {
+                        "start": 718,
+                        "end": 741,
+                        "text": "(Schwartz et al., 2020)",
+                        "ref_id": "BIBREF20"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Figure 1 illustrates a single decoding step of our parser. Given a beam Z t with K = 4 trees of height t (blue vectors), we use cross-attention to contextualize the trees with information from the input question (orange). Then, we score the frontier, that is, the set of all trees of height t + 1 that can be constructed using a grammar from the current beam, and the top-K trees are kept (purple). Last, a representation for each of the new K trees is generated and placed in the new beam Z t+1 . After T decoding steps, the parser returns the highest-scoring tree in Z T that corresponds to a full program. Because we have gold trees at training time, the entire model is trained jointly using maximum likelihood.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 7,
+                        "end": 8,
+                        "text": "1",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "We evaluate our model, SMBOP1 (SeMiautoregressive Bottom-up semantic Parser), on SPI- What are the names of actors over 60?",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Prune frontier",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Figure 1 : An overview of the decoding procedure of SMBOP. Z t is is the beam at step t, Z t is the contextualized beam after cross-attention, F t+1 is the frontier (\u03ba, \u03c3, \u2265 are logical operations applied on trees, as explained below), F t+1 is the pruned frontier, and Z t+1 is the new beam. At the top we see the new trees created in this step. For t = 0 (depicted here), the beam contains the predicted schema constants and DB values.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 7,
+                        "end": 8,
+                        "text": "1",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Represent-beam",
+                "sec_num": null
+            },
+            {
+                "text": "DER (Yu et al., 2018) , a challenging zero-shot text-to-SQL dataset. We implement the RAT-SQL+GRAPPA encoder (Yu et al., 2020) , currently the best model on SPIDER, and replace the autoregressive decoder with the semi-autoregressive SM-BOP. SMBOP obtains an exact match accuracy of 69.5, comparable to the autoregressive RAT-SQL+GRAPPA at 69.6 exact match, and to current state-of-the-art at 69.8 exact match (Zhao et al., 2021) (i) , y (i) , S (i) )} N i=1 , where x (i) is an utterance, y (i) is its translation to a SQL query, and S (i) is the schema of the target database (DB), our goal is to learn a model that maps new question-schema pairs (x, S) to the correct SQL query y. A DB schema S includes : (a) a set of tables, (b) a set of columns for each table, and (c) a set of foreign key-primary key column pairs describing relations between table columns. Schema tables and columns are termed schema constants, and denoted by S.",
+                "cite_spans": [
+                    {
+                        "start": 4,
+                        "end": 21,
+                        "text": "(Yu et al., 2018)",
+                        "ref_id": "BIBREF31"
+                    },
+                    {
+                        "start": 109,
+                        "end": 126,
+                        "text": "(Yu et al., 2020)",
+                        "ref_id": "BIBREF30"
+                    },
+                    {
+                        "start": 409,
+                        "end": 428,
+                        "text": "(Zhao et al., 2021)",
+                        "ref_id": "BIBREF35"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Represent-beam",
+                "sec_num": null
+            },
+            {
+                "text": "This work is focused on decoding, and thus we implement the state-of-the-art RAT-SQL encoder (Wang et al., 2020b) , on top of GRAPPA (Yu et al., 2020) , a pre-trained encoder for semantic parsing. We now briefly review this encoder for completeness.",
+                "cite_spans": [
+                    {
+                        "start": 93,
+                        "end": 113,
+                        "text": "(Wang et al., 2020b)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 133,
+                        "end": 150,
+                        "text": "(Yu et al., 2020)",
+                        "ref_id": "BIBREF30"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "RAT-SQL encoder",
+                "sec_num": null
+            },
+            {
+                "text": "The RAT-SQL encoder is based on two main ideas. First, it provides a joint contextualized representation of the utterance and schema. Specifically, the utterance x is concatenated to a linearized form of the schema S, and they are passed through a stack of Transformer (Vaswani et al., 2017) layers. Then, tokens that correspond to a single schema constant are aggregated, which results in a final contextualized representation (x, s) = (x 1 , . . . , x |x| , s 1 , . . . , s |s| ), where s i is a vector representing a single schema constant. This contextualization of x and S leads to better representation and alignment between the utterance and schema.",
+                "cite_spans": [
+                    {
+                        "start": 269,
+                        "end": 291,
+                        "text": "(Vaswani et al., 2017)",
+                        "ref_id": "BIBREF24"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "RAT-SQL encoder",
+                "sec_num": null
+            },
+            {
+                "text": "Second, RAT-SQL uses relational-aware self-attention (Shaw et al., 2018) to encode the structure of the schema and other prior knowledge on relations between encoded tokens. Specifically, given a sequence of token representations (u 1 , . . . , u |u| ), relational-aware self-attention computes a scalar similarity score between pairs of token representations",
+                "cite_spans": [
+                    {
+                        "start": 53,
+                        "end": 72,
+                        "text": "(Shaw et al., 2018)",
+                        "ref_id": "BIBREF21"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "RAT-SQL encoder",
+                "sec_num": null
+            },
+            {
+                "text": "e ij \u221d u i W Q (u j W K + r K ij )",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "RAT-SQL encoder",
+                "sec_num": null
+            },
+            {
+                "text": ". This is identical to standard self-attention (W Q and W K are the query and key parameter matrices), except for the term r K ij , which is an embedding that represents a relation between u i and u j from a closed set of possible relations. For example, if both tokens correspond to schema tables, an embedding will represent whether there is a primary-foreign key relation between the tables. If one of the tokens is an utterance word and another is a table column, a relation will denote if there is a string match between them. The same principle is also applied for representing the self-attention values, where another relation embedding matrix is used. We refer the reader to the RAT-SQL paper for details.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "RAT-SQL encoder",
+                "sec_num": null
+            },
+            {
+                "text": "Overall, RAT-SQL jointly encodes the utterance, schema, the structure of the schema and alignments between the utterance and schema, and leads to state-of-the-art results in text-to-SQL parsing.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "RAT-SQL encoder",
+                "sec_num": null
+            },
+            {
+                "text": "RAT-SQL layers are typically stacked on top of a pre-trained language model, such as BERT (Devlin et al., 2019) . In this work, we use GRAPPA (Yu et al., 2020) , a recent pre-trained model that has obtained state-of-the-art results in text-to-SQL parsing. GRAPPA is based on ROBERTA (Liu et al., 2019) , but is further fine-tuned on synthetically generated utterance-query pairs using an objective for aligning the utterance and query.",
+                "cite_spans": [
+                    {
+                        "start": 90,
+                        "end": 111,
+                        "text": "(Devlin et al., 2019)",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 142,
+                        "end": 159,
+                        "text": "(Yu et al., 2020)",
+                        "ref_id": "BIBREF30"
+                    },
+                    {
+                        "start": 283,
+                        "end": 301,
+                        "text": "(Liu et al., 2019)",
+                        "ref_id": "BIBREF15"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "RAT-SQL encoder",
+                "sec_num": null
+            },
+            {
+                "text": "Autoregressive top-down decoding The prevailing method for decoding in semantic parsing has been grammar-based autoregressive top-down decoding (Yin and Neubig, 2017; Krishnamurthy et al., 2017; Rabinovich et al., 2017) , which guarantees decoding of syntactically valid programs. Specifically, the target program is represented as an abstract syntax tree under the grammar of the formal language, and linearized to a sequence of rules (or actions) using a top-down depth-first traversal. Once the program is represented as a sequence, it can be decoded using a standard sequence-tosequence model with encoder attention (Dong and Lapata, 2016) , often combined with beam search. We refer the reader to the aforementioned papers for further details on grammar-based decoding.",
+                "cite_spans": [
+                    {
+                        "start": 144,
+                        "end": 166,
+                        "text": "(Yin and Neubig, 2017;",
+                        "ref_id": "BIBREF28"
+                    },
+                    {
+                        "start": 167,
+                        "end": 194,
+                        "text": "Krishnamurthy et al., 2017;",
+                        "ref_id": "BIBREF11"
+                    },
+                    {
+                        "start": 195,
+                        "end": 219,
+                        "text": "Rabinovich et al., 2017)",
+                        "ref_id": "BIBREF18"
+                    },
+                    {
+                        "start": 620,
+                        "end": 643,
+                        "text": "(Dong and Lapata, 2016)",
+                        "ref_id": "BIBREF6"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "RAT-SQL encoder",
+                "sec_num": null
+            },
+            {
+                "text": "We now turn to describe our method, which pro- vides a radically different approach for decoding in semantic parsing.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "RAT-SQL encoder",
+                "sec_num": null
+            },
+            {
+                "text": "We first provide a high-level overview of SMBOP (see Algorithm 1 and Figure 1 ). As explained in \u00a72, we encode the utterance and schema with a RAT-SQL encoder. We initialize the beam (line 3) with the K highest scoring trees of height 0, which include either schema constants or DB values. All trees are scored independently and in parallel, in a procedure formally defined in \u00a73.3. Next, we start the search procedure. At every step t, attention is used to contextualize the trees with information from input question representation (line 5). This representation is used to score every tree on the frontier: the set of sub-trees of depth \u2264 t + 1 that can be constructed from subtrees on the beam with depth \u2264 t (lines 6-7). After choosing the top-K trees for step t+1, we compute a new representation for them (line 8). Finally, we return the top-scoring tree from the final decoding step, T . Steps in our model operate on tree representations independently, and thus each step is efficiently parallelized.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 76,
+                        "end": 77,
+                        "text": "1",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "The SMBOP parser",
+                "sec_num": "3"
+            },
+            {
+                "text": "SMBOP resembles beam search as in each step it holds the top-K trees of a fixed height. It is also related to (pruned) chart parsing, since trees at step t + 1 are computed from trees that were found at step t. This is unlike sequence-to-sequence models where items on the beam are competing hypotheses without any interaction.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "The SMBOP parser",
+                "sec_num": "3"
+            },
+            {
+                "text": "We now provide the details of our parser. First, we describe the formal language ( \u00a73.1), then we provide precise details of our model architecture ( \u00a73.2) including beam initialization ( \u00a73.3, we describe the training procedure ( \u00a73.4), and last, we discuss the properties of SMBOP compared to prior work ( \u00a73.5).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "The SMBOP parser",
+                "sec_num": "3"
+            },
+            {
+                "text": "Notation Input \u2192 Output Set Union \u222a R \u00d7 R \u2192 R Set Intersection \u2229 R \u00d7 R \u2192 R Set difference \\ R \u00d7 R \u2192 R Selection \u03c3 P \u00d7 R \u2192 R Cartesian product \u00d7 R \u00d7 R \u2192 R Projection \u03a0 C \u00d7 R \u2192 R And \u2227 P \u00d7 P \u2192 P Or \u2228 P \u00d7 P \u2192 P Comparison {\u2264 , \u2265 , = , =} C \u00d7 C \u2192 P Constant Union C \u00d7 C \u2192 C Order by \u03c4 asc/dsc C \u00d7 R \u2192 R Group by \u03b3 C \u00d7 R \u2192 R Limit \u03bb C \u00d7 R \u2192 R In/Not In \u2208, \u2208 C \u00d7 R \u2192 P Like/Not Like \u223c, \u223c C \u00d7 C \u2192 P Aggregation G agg C \u2192 C Distinct \u03b4 C \u2192 C Keep \u03ba Any \u2192 Any",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Operation",
+                "sec_num": null
+            },
+            {
+                "text": "Table 1 : Our relational algebra grammar, along with the input and output semantic types of each operation. P : Predicate, R: Relation, C: schema constant or DB value, C : A set of constants/values, and agg \u2208 {sum, max, min, count, avg}.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 6,
+                        "end": 7,
+                        "text": "1",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Operation",
+                "sec_num": null
+            },
+            {
+                "text": "Relational algebra Guo et al. (2019) have shown recently that the mismatch between natural language and SQL leads to parsing difficulties. Therefore, they proposed SemQL, a formal query language with better alignment to natural language.",
+                "cite_spans": [
+                    {
+                        "start": 19,
+                        "end": 36,
+                        "text": "Guo et al. (2019)",
+                        "ref_id": "BIBREF9"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Representation of Query Trees",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "In this work, we follow their intuition, but instead of SemQL, we use the standard query language relational algebra (Codd, 1970) . Relational algebra describes queries as trees, where leaves (terminals) are schema constants or DB values, and inner nodes (non-terminals) are operations (see Table 1 ). Similar to SemQL, its alignment with natural language is better than SQL. However, unlike SemQL, it is an existing query language, commonly used by SQL execution engines for query planning.",
+                "cite_spans": [
+                    {
+                        "start": 117,
+                        "end": 129,
+                        "text": "(Codd, 1970)",
+                        "ref_id": "BIBREF3"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 297,
+                        "end": 298,
+                        "text": "1",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Representation of Query Trees",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "We write a grammar for relational algebra, augmented with SQL operators that are missing from relational algebra. We then implement a transpiler that converts SQL queries to relational algebra for parsing, and then back from relational algebra to SQL for evaluation. Table 1 shows the full grammar, including the input and output semantic types of all operations. A relation (R) is a tuple (or tuples), a predicate (P ) is a Boolean condition (evaluating to True or False), a constant (C) is a schema constant or DB value, and (C ) is a set of constants/values. Figure 2 shows an example re- lational algebra tree with the corresponding SQL query. More examples illustrating the correspondence between SQL and relational algebra (e.g., for the SQL JOIN operation) are in Appendix B.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 273,
+                        "end": 274,
+                        "text": "1",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 569,
+                        "end": 570,
+                        "text": "2",
+                        "ref_id": "FIGREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Representation of Query Trees",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "While our relational algebra grammar can also be adapted for standard top-down autoregressive parsing, we leave this endeavour for future work.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Representation of Query Trees",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "Tree balancing Conceptually, at each step SM-BOP should generate new trees of height \u2264 t + 1 and keep the top-K trees computed so far. In practice, it is convenient to assume that trees are balanced. Thus, we want the beam at step t to only have trees that are of height exactly t (t-high trees).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Representation of Query Trees",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "To achieve this, we introduce a unary KEEP operation that does not change the semantics of the subtree it is applied on. Hence, we can always grow the height of trees in the beam without changing the formal query. For training (which we elaborate on in \u00a73.4), we balance all relational algebra trees in the training set using the KEEP operation, such that the distance from the root to all leaves is equal. For example, in Figure 2 , two KEEP operations are used to balance the column actor.name. After tree balancing, all constants and values are at height 0, and the goal of the parser at step t is to generate the gold set of t-high trees.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 430,
+                        "end": 431,
+                        "text": "2",
+                        "ref_id": "FIGREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Representation of Query Trees",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "To fully specify Alg. 1, we need to define the following components: (a) scoring of trees on the frontier (lines 5-6), (b) representation of trees (line 8), and (c) representing and scoring of constants and DB values during beam initialization (leaves). We now describe these components. Figure 3 illustrates the scoring and representation of a binary operation.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 295,
+                        "end": 296,
+                        "text": "3",
+                        "ref_id": "FIGREF2"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Model Architecture",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "Scoring with contextualized beams SMBOP maintains at each decoding step a beam Z t = ((z",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model Architecture",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "(t) 1 , z (t) 1 ), . . . , (z (t) K , z (t) K )), where z (t)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model Architecture",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "i is a symbolic representation of the query tree, and z (t) i is its corresponding vector representation. Unlike standard beam search, trees on our beams do not only compete with one another, but also compose with each other (similar to chart parsing). For example, in Fig. 1 , the beam Z 0 contains the column age and the value 60, which compose using the \u2265 operator to form the age \u2265 60 tree.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 274,
+                        "end": 275,
+                        "text": "1",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Model Architecture",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "We contextualize tree representations on the beam using cross-attention. Specifically, we use standard attention (Vaswani et al., 2017) to give tree representations access to the input question: Z t \u2190 Attention(Z t , x, x), where the tree representations (z",
+                "cite_spans": [
+                    {
+                        "start": 113,
+                        "end": 135,
+                        "text": "(Vaswani et al., 2017)",
+                        "ref_id": "BIBREF24"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model Architecture",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "(t) 1 , . . . , z (t)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model Architecture",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "K ) are the queries, and the input tokens (x 1 , . . . , x |x| ) are the keys and values.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model Architecture",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "Next, we compute scores for all (t + 1)-high trees on the frontier. Trees can be generated by applying either a unary (including KEEP) operation u \u2208 U or binary operation b \u2208 B on beam trees. Let w u be a scoring vector for a unary operation (such as w \u03ba , w \u03b4 , etc.), let w b be a scoring vector for a binary operation (such as w \u03c3 , w \u03a0 , etc.), and let z i , z j be contextualized tree representations on the beam. We define a scoring function for frontier trees, where the score for a new tree z new generated by applying a unary rule u on a tree z i is defined as follows:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model Architecture",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "s(z new ) = w u F F U ([z i ; z i ]),",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model Architecture",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "where F F U is a 2-hidden layer feed-forward layer with relu activations, and [\u2022; \u2022] denotes concatenation. Similarly the score for a tree generated by applying a binary rule b on the trees z i , z j is:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model Architecture",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "s(z new ) = w b F F B ([z i ; z i ; z j ; z j ]),",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model Architecture",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "where F F B is another 2-hidden layer feed-forward layer with relu activations.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model Architecture",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "We use semantic types to detect invalid rule applications and fix their score to s(z new ) = -\u221e. This guarantees that the trees SMBOP generates are well-formed, and the resulting SQL is executable. Overall, the total number of trees on the frontier is \u2264 K|U| + K 2 |B|. Because scores of different trees on the frontier are independent, they are efficiently computed in parallel. Note that we score new trees from the frontier before creating a representation for them, which we describe next.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model Architecture",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "Recursive tree representation after scoring the frontier, we generate a recursive vector representation for the top-K trees. While scoring is done with contextualized trees, representations are not contextualized. We empirically found that contextualized tree representations slightly reduce performance, possibly due to optimization issues.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model Architecture",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "We represent trees with another standard Transformer layer. Let z new be the representation for a new tree, let e be an embedding for a unary or binary operation, and let z i , z j be non-contextualized tree representations from the beam we are extending. We compute a new representation as follows:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model Architecture",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "z new = \uf8f1 \uf8f2 \uf8f3 Transformer(e , z i ) unary Transformer(e , z i , z j ) binary z i = KEEP",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model Architecture",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "where for the unary KEEP operation, we simply copy the representation from the previous step.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model Architecture",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "Return value As mentioned, the parser returns the highest-scoring tree in Z T . More precisely, we return the highest-scoring returnable tree, where a returnable tree is a tree that has a valid semantic type, that is, Relation (R).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model Architecture",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "As described in Line 3 of Alg. 1, the beam Z 0 is initialized with K schema constants (e.g., actor, age) and DB values (e.g., 60, \"France\"). In particular, we independently score schema constants and choose the top-K 2 , and similarly score DB values and choose the top-K 2 , resulting in a total beam of size K.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Beam initialization",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "We use a simple scoring function f const (\u2022). Recall that s i is a representation of a constant, contextualized by the rest of the schema and the utterance. The function f const (\u2022) is a feedforward network that scores each schema constant independently: f const (s i ) = w const tanh (W const s i ), and the top-K 2 constants are placed in Z 0 . DB values Because the number of values in the DB is potentially huge, we do not score all DB values. Instead, we learn to detect spans in the question that correspond to DB values. This leads to a setup that is similar to extractive question answering (Rajpurkar et al., 2016) , where the model outputs a distribution over input spans, and thus we adopt the architecture commonly used in extractive question answering. Concretely, we compute the probability that a token is the start token of a DB value, P start (x i ) \u221d exp(w start x i ), and similarly the probability that a token is the end token of a DB value, P end (x i ) \u221d exp(w end x i ), where w start and w end are parameter vectors. We define the probability of a span (x i , . . . , x j ) to be P start (x i ) \u2022 P end (x j ), and place in the beam Z 0 the top-K 2 input spans, where the representation of a span (x i , x j ) is the average of x i and x j .",
+                "cite_spans": [
+                    {
+                        "start": 599,
+                        "end": 623,
+                        "text": "(Rajpurkar et al., 2016)",
+                        "ref_id": "BIBREF19"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Schema constants",
+                "sec_num": null
+            },
+            {
+                "text": "A current limitation of SMBOP is that it cannot generate DB values that do not appear in the input question. This would require adding a mechanism such as \"BRIDGE\" proposed by Lin et al. (2020).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Schema constants",
+                "sec_num": null
+            },
+            {
+                "text": "To specify the loss function, we need to define the supervision signal. Recall that given the gold SQL program, we convert it into a gold balanced relational algebra tree z gold , as explained in \u00a73.1 and Figure 2 . This lets us define for every decoding step the set of t-high gold sub-trees Z gold t",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 212,
+                        "end": 213,
+                        "text": "2",
+                        "ref_id": "FIGREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Training",
+                "sec_num": "3.4"
+            },
+            {
+                "text": ". For example Z gold 0 includes all gold schema constants and input spans that match a gold DB value,3 Z gold 1 includes all 1-high gold trees, etc.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "During training, we apply \"bottom-up Teacher Forcing\" (Williams and Zipser, 1989) , that is, we populate4 the beam Z t with all trees from Z gold t and then fill the rest of the beam (of size K) with the top-scoring non-gold predicted trees. This guarantees that we will be able to compute a loss at each decoding step, as described below.",
+                "cite_spans": [
+                    {
+                        "start": 54,
+                        "end": 81,
+                        "text": "(Williams and Zipser, 1989)",
+                        "ref_id": "BIBREF27"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "Loss function During search, our goal is to give high scores to the possibly multiple sub-trees of the gold tree. Because of teacher forcing, the frontier F t+1 is guaranteed to contain all gold trees Z gold t+1 . We first apply a softmax over all frontier trees p(z new ) = softmax{s(z new )} znew\u2208F t+1 and then maximize the probabilities of gold trees:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "1 C T t=0 zt\u2208Z gold t log p (z t )",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "where the loss is normalized by C, the total number of summed terms. In the initial beam, Z 0 , the probability of an input span is the product of the start and end probabilities, as explained in \u00a73.3.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "To our knowledge, this work is the first to present a semi-autoregressive bottom-up semantic parser. We discuss the benefits of our approach.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Discussion",
+                "sec_num": "3.5"
+            },
+            {
+                "text": "SMBOP has theoretical runtime complexity that is logarithmic in the size of the tree instead of linear for autoregressive models. Figure 4 shows the distribution over the height of relational algebra trees in SPIDER, and the size of equivalent SQL query trees. Clearly, the height of most trees is at most 10, while the size is 30-50, illustrating the potential of this approach. In \u00a74, we demonstrate that indeed semi-autoregressive parsing leads to substantial empirical speed-up.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 137,
+                        "end": 138,
+                        "text": "4",
+                        "ref_id": "FIGREF3"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Discussion",
+                "sec_num": "3.5"
+            },
+            {
+                "text": "Unlike top-down autoregressive models, SM-BOP naturally computes representations z for all sub-trees constructed at decoding time, which are well-defined semantic objects. These representations can be used in setups such as contextual semantic parsing, where a semantic parser answers a sequence of questions. For example, given the questions \"How many students are living in the dorms?\" and then \"what are their last names?\", the pronoun \"their\" refers to a sub-tree from the SQL tree of the first question. Having a representation for such sub-trees can be useful when parsing the second question, in benchmarks such as SPARC (Yu et al., 2019) .",
+                "cite_spans": [
+                    {
+                        "start": 628,
+                        "end": 645,
+                        "text": "(Yu et al., 2019)",
+                        "ref_id": "BIBREF32"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Discussion",
+                "sec_num": "3.5"
+            },
+            {
+                "text": "Another potential benefit of bottom-up parsing is that sub-queries can be executed while parsing (Berant et al., 2013; Liang et al., 2017) , which can guide the search procedure. Recently, Odena et al. (2020) proposed such an approach for program synthesis, and showed that conditioning on the results of execution can improve performance. We do not explore this advantage of bottom-up parsing in this work, since executing queries at training time leads to a slow-down during training.",
+                "cite_spans": [
+                    {
+                        "start": 97,
+                        "end": 118,
+                        "text": "(Berant et al., 2013;",
+                        "ref_id": "BIBREF0"
+                    },
+                    {
+                        "start": 119,
+                        "end": 138,
+                        "text": "Liang et al., 2017)",
+                        "ref_id": "BIBREF12"
+                    },
+                    {
+                        "start": 189,
+                        "end": 208,
+                        "text": "Odena et al. (2020)",
+                        "ref_id": "BIBREF17"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Discussion",
+                "sec_num": "3.5"
+            },
+            {
+                "text": "SMBOP is a bottom-up semi-autoregressive parser, but it could potentially be modified to be autoregressive by decoding one tree at a time. Past work (Cheng et al., 2019) has shown that the performance of bottom-up and top-down autoregressive parsers is similar, but it is possible to re-examine this given recent advances in neural architectures.",
+                "cite_spans": [
+                    {
+                        "start": 149,
+                        "end": 169,
+                        "text": "(Cheng et al., 2019)",
+                        "ref_id": "BIBREF1"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Discussion",
+                "sec_num": "3.5"
+            },
+            {
+                "text": "We conduct our experimental evaluation on SPIDER (Yu et al., 2018) , a challenging large-scale dataset for text-to-SQL parsing. SPIDER has become a common benchmark for evaluating semantic parsers because it includes complex SQL queries and a realistic zero-shot setup, where schemas at test time are different from training time.",
+                "cite_spans": [
+                    {
+                        "start": 49,
+                        "end": 66,
+                        "text": "(Yu et al., 2018)",
+                        "ref_id": "BIBREF31"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experimental Evaluation",
+                "sec_num": "4"
+            },
+            {
+                "text": "We encode the input utterance x and the schema S with GRAPPA, consisting of 24 Transformer layers, followed by another 8 RAT-SQL layers, which we implement inside AllenNLP (Gardner et al., 2018) . Our beam size is K = 30, and the number of decoding steps is T = 9 at inference time, which is the maximal tree depth on the development set. The transformer used for tree representations has one layer, 8 heads, and dimensionality 256. We train for 60K steps with batch size 60, and perform early stopping based on the development set.",
+                "cite_spans": [
+                    {
+                        "start": 172,
+                        "end": 194,
+                        "text": "(Gardner et al., 2018)",
+                        "ref_id": "BIBREF7"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experimental setup",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "Evaluation We evaluate performance with the official SPIDER evaluation script, which computes exact match (EM), i.e., whether the predicted SQL query is identical to the gold query after some query normalization. The evaluation script uses anonymized queries, where DB values are converted to a special value token. In addition, for models that output DB values, the evaluation script computes denotation accuracy, that is, whether executing the output SQL query results in the right denotation (answer). As SMBOP generates DB values, we evaluate using both EM and denotation accuracy Models We compare SMBOP to the best nonanonymous models on the SPIDER leaderboard at the time of writing. Our model is most comparable to RAT-SQL+GRAPPA, which has the same encoder, but an autoregressive decoder.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experimental setup",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "In addition, we perform the following ablations and oracle experiments: \u2022 NO X-ATTENTION: We remove the cross attention that computes Z t and uses the representations in Z t directly to score the frontier. In this setup, the decoder only observes the input question through the 0-high trees in Z 0 .",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experimental setup",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "\u2022 WITH CNTX REP.: We use the contextualized representations not only for scoring, but also as input for creating the new trees Z t+1 . This tests if contextualized representations on the beam hurt or improve performance.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experimental setup",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "\u2022 NO DB VALUES: We anonymize all SQL queries by replacing DB values with value, as described above, and evaluate SMBOP using EM. This tests whether learning from DB values improves performance.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experimental setup",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "\u2022 Z 0 -ORACLE: An oracle experiment where Z 0 is populated with the gold schema constants (but predicted DB values). This shows results given perfect schema matching.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experimental setup",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "Table 2 shows test results of SMBOP compared to the top (non-anonymous) entries on the leaderboard (Zhao et al., 2021; Shi et al., 2021; Yu et al., 2020; Deng et al., 2020; Lin et al., 2020; Wang et al., 2020a) . SMBOP obtains an EM of 69.5%, only 0.3% lower than the best model, and 0.1% lower than RAT-SQL+GRAPPA, which has the same encoder, but an autoregressive decoder. Moreover, SMBOP outputs DB values, unlike other models that output anonymized queries that cannot be executed. SMBOP establishes a new state-of-the-art in denotation accuracy, surpassing an ensemble of BRIDGE+BERT models by 2.9 denotation accuracy points, and 2 EM points.",
+                "cite_spans": [
+                    {
+                        "start": 99,
+                        "end": 118,
+                        "text": "(Zhao et al., 2021;",
+                        "ref_id": "BIBREF35"
+                    },
+                    {
+                        "start": 119,
+                        "end": 136,
+                        "text": "Shi et al., 2021;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 137,
+                        "end": 153,
+                        "text": "Yu et al., 2020;",
+                        "ref_id": "BIBREF30"
+                    },
+                    {
+                        "start": 154,
+                        "end": 172,
+                        "text": "Deng et al., 2020;",
+                        "ref_id": "BIBREF4"
+                    },
+                    {
+                        "start": 173,
+                        "end": 190,
+                        "text": "Lin et al., 2020;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 191,
+                        "end": 210,
+                        "text": "Wang et al., 2020a)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 6,
+                        "end": 7,
+                        "text": "2",
+                        "ref_id": "TABREF3"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "Turning to decoding time, we compare SMBOP to RAT-SQLv3+BERT, since the code for RAT-SQLv3+GRAPPA was not available. To the best of our knowledge the decoder in both is identical, so this should not affect decoding time. We find that the decoder of SMBOP is on average 2.23x faster than the autoregressive decoder on the development set. Figure 5 shows the average speed-up for different query tree sizes, where we observe a clear linear speed-up as a function of query size. For long queries the speed-up factor reaches 4x-6x. When including also the encoder, the average speed-up obtained by SMBOP is 1.55x.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 345,
+                        "end": 346,
+                        "text": "5",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "In terms of training time, SMBOP leads to much faster training and convergence. We compare the learning curves of SMBOP and RAT-SQLv3+BERT, both trained on an RTX 3090, and also to RAT-SQLv3+GRAPPA using performance as a function of the number of examples, sent to us in a personal communication from the authors. SMBOP converges much faster than RAT-SQL (Fig. 7 ). E.g., after 120K examples, the EM of SM-BOP is 67.5, while for RAT-SQL+GRAPPA it is 47.6. Moreover, SMBOP processes at training time 20.4 examples per second, compared to only 3.8 for the official RAT-SQL implementation. Combining these two facts leads to much faster training time (Fig. 6 ), slighly more than one day for SMBOP vs. 5-6 days for RAT-SQL.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 361,
+                        "end": 362,
+                        "text": "7",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 654,
+                        "end": 655,
+                        "text": "6",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "Ablations Table 3 shows results of ablations on the development set. Apart from EM, we also report: (a) beam EM (BEM): whether a correct tree was found anywhere during the T decoding steps, and (b) Z 0 recall: the fraction of examples where the parser placed all gold schema constants and DB values in Z 0 . This estimates the ability of our models to perform schema matching in a single non-autoregressive step.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 16,
+                        "end": 17,
+                        "text": "3",
+                        "ref_id": "TABREF5"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "We observe that ablating cross-attention leads to a small reduction in EM. This rather small drop is surprising since it means that all information about the question is passed to the decoder through Z 0 . We hypothesize that this is possible, because the number of decoding steps is small, and thus utterance information can propagate through the decoder. Using contextualized representations for trees also leads to a small drop in performance. Last, we see that feeding the model with actual DB values rather than an anonymized value token improves performance by 3.4 EM points.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "Looking at Z 0 RECALL, we see that models perform well at detecting relevant schema constants and DB values (96.6%-98.3%), despite the fact that this step is fully non-autoregressive. However, an oracle model that places all gold schema constants and only gold schema constants in Z 0 further improves EM (74.7 \u219279.1%), with a BEM of 85.8%. This shows that better schema matching and search can still improve performance on SPIDER.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "BEM is 8%-9% higher than EM, showing that, similar to past findings in semantic parsing (Goldman et al., 2018; Yin and Neubig, 2019) , adding a re-ranker on top of the trees computed by SMBOP can potentially improve performance. We leave this for future work.",
+                "cite_spans": [
+                    {
+                        "start": 88,
+                        "end": 110,
+                        "text": "(Goldman et al., 2018;",
+                        "ref_id": "BIBREF8"
+                    },
+                    {
+                        "start": 111,
+                        "end": 132,
+                        "text": "Yin and Neubig, 2019)",
+                        "ref_id": "BIBREF28"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "We extend the notion of Z 0 recall to all decoding steps, where Z t recall is whether all gold t-high sub-trees were generated at step t. We see Z t recall across decoding steps in Figure 8 . 5 The drop after step 0 and subsequent rise indicate that the model maintains in the beam, using the KEEP operation, trees that are sub-trees of the gold tree, and expands them in later steps. This means that the parser can recover from errors in early decoding steps as long as the relevant trees are kept on the beam.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 188,
+                        "end": 189,
+                        "text": "8",
+                        "ref_id": "FIGREF5"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Analysis",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "To better understand search errors we perform the following analysis. For each example, we find the first gold tree that is dropped from the beam (if there is more than one, we choose one randomly). We then look at the children of t, and see whether at least one was expanded in some later step in decoding, or whether the children were completely abandoned by the search procedure. We find that in 62% of the cases indeed one of the children was incorrectly expanded, indicating a composition error.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Analysis",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "In this work, we used beam size K = 30. Reducing K to 20 leads to a drop of less than point (74.7\u219273.8), and increasing K to 40 reduces performance by (74.7\u219272.6). In all cases, decoding time does not dramatically change.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Analysis",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "Last, we randomly sample 50 errors from SM-BOP and categorize them into the following types: \u2022 Search errors (52%): we find that most search errors are due to either extra or missing JOIN or WHERE conditions . \u2022 Schema encoding errors (34%): Missing or extra schema constants in the predicted query.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Analysis",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "\u2022 Equivalent queries (12%): Predicted trees that are equivalent to the gold tree, but the automatic evaluation script does not handle.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Analysis",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "In this work we present the first semiautoregressive bottom-up semantic parser that enjoys logarithmic theoretical runtime, and show that it leads to a 2.2x speed-up in decoding and \u223c5x faster taining, while maintaining state-of-the-art performance. Our work shows that bottom-up parsing, where the model learns representations for semantically meaningful sub-trees is a promising research direction, that can contribute in the future to setups such as contextual semantic parsing, where sub-trees often repeat, and can enjoy the benefits of execution at training time. Future work can also leverage work on learning tree representations (Shiv and Quirk, 2019) to further improve parser performance.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusions",
+                "sec_num": "5"
+            },
+            {
+                "text": "In every decoding step t, we wish to compute for every tree z new in the frontier F t+1 if z new \u2208 Z gold t . This is achieved using tree hashing. First, during preprocessing, for every height t, we compute the gold hashes h gold t , the hash values of every sub-tree of z gold of height t, in a recursive fashion using a Merkle tree hash (Merkle, 1987) . Specifically, we define: hash(z) = g(label(z), hash(z l ), hash(z r ))",
+                "cite_spans": [
+                    {
+                        "start": 339,
+                        "end": 353,
+                        "text": "(Merkle, 1987)",
+                        "ref_id": "BIBREF16"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "A Computing supervision through tree hashing",
+                "sec_num": null
+            },
+            {
+                "text": "Where g is a simple hash function, z l , z r are the left and right children of z, and label(\u2022) gives the node type (such as \u03c3 and \u03a0).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "A Computing supervision through tree hashing",
+                "sec_num": null
+            },
+            {
+                "text": "During training, in each decoding step t, since the hash function is defined recursively, we can compute the frontier hashes using the hash values of the current beam. Then, for every frontier hash we can perform a lookup to check if hash(z) \u2208 h gold t . Both the hash computation and lookup are done in parallel for all frontier trees using the GPU.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "A Computing supervision through tree hashing",
+                "sec_num": null
+            },
+            {
+                "text": "We show multiple examples of relation algebra trees along with the corresponding SQL query, for better understanding of the mapping between the two. ",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "B Examples for Relational Algebra Trees",
+                "sec_num": null
+            },
+            {
+                "text": "Rhymes with 'MMMBop'.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "Our code is available at https://github.com/ OhadRubin/SmBop",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "In Spider, in 98.2% of the training examples, all gold DB values appear as input spans.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "We compute this through an efficient tree hashing procedure. See Appendix A.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "This metric checks for exact sub-tree match, unlike EM that does more normalization, so numbers are not comparable to EM.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            }
+        ],
+        "back_matter": [
+            {
+                "text": "We thank Tao Yu, Ben Bogin, Jonathan Herzig, Inbar Oren, Elad Segal and Ankit Gupta for their useful comments. This research was partially supported by The Yandex Initiative for Machine Learning, and the European Research Council (ERC) under the European Union Horizons 2020 research and innovation programme (grant ERC DELPHI 802800).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Acknowledgments",
+                "sec_num": null
+            }
+        ],
+        "bib_entries": {
+            "BIBREF0": {
+                "ref_id": "b0",
+                "title": "Semantic parsing on Freebase from question-answer pairs",
+                "authors": [
+                    {
+                        "first": "J",
+                        "middle": [],
+                        "last": "Berant",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "A",
+                        "middle": [],
+                        "last": "Chou",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "R",
+                        "middle": [],
+                        "last": "Frostig",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "P",
+                        "middle": [],
+                        "last": "Liang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "J. Berant, A. Chou, R. Frostig, and P. Liang. 2013. Se- mantic parsing on Freebase from question-answer pairs. In Empirical Methods in Natural Language Processing (EMNLP).",
+                "links": null
+            },
+            "BIBREF1": {
+                "ref_id": "b1",
+                "title": "Learning an executable neural semantic parser",
+                "authors": [
+                    {
+                        "first": "Jianpeng",
+                        "middle": [],
+                        "last": "Cheng",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Siva",
+                        "middle": [],
+                        "last": "Reddy",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Vijay",
+                        "middle": [],
+                        "last": "Saraswat",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mirella",
+                        "middle": [],
+                        "last": "Lapata",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Computational Linguistics",
+                "volume": "45",
+                "issue": "1",
+                "pages": "59--94",
+                "other_ids": {
+                    "DOI": [
+                        "10.1162/coli_a_00342"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Jianpeng Cheng, Siva Reddy, Vijay Saraswat, and Mirella Lapata. 2019. Learning an executable neu- ral semantic parser. Computational Linguistics, 45(1):59-94.",
+                "links": null
+            },
+            "BIBREF2": {
+                "ref_id": "b2",
+                "title": "Driving semantic parsing from the world's response",
+                "authors": [
+                    {
+                        "first": "James",
+                        "middle": [],
+                        "last": "Clarke",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dan",
+                        "middle": [],
+                        "last": "Goldwasser",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ming-Wei",
+                        "middle": [],
+                        "last": "Chang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dan",
+                        "middle": [],
+                        "last": "Roth",
+                        "suffix": ""
+                    }
+                ],
+                "year": null,
+                "venue": "Proceedings of the Fourteenth Conference on Computational Natural Language Learning (CoNLL)",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "James Clarke, Dan Goldwasser, Ming-Wei Chang, and Dan Roth. Driving semantic parsing from the world's response. In Proceedings of the Fourteenth Conference on Computational Natural Language Learning (CoNLL).",
+                "links": null
+            },
+            "BIBREF3": {
+                "ref_id": "b3",
+                "title": "A relational model of data for large shared data banks",
+                "authors": [
+                    {
+                        "first": "E",
+                        "middle": [
+                            "F"
+                        ],
+                        "last": "Codd",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1970,
+                "venue": "Commun. ACM",
+                "volume": "13",
+                "issue": "6",
+                "pages": "377--387",
+                "other_ids": {
+                    "DOI": [
+                        "10.1145/362384.362685"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "E. F. Codd. 1970. A relational model of data for large shared data banks. Commun. ACM, 13(6):377-387.",
+                "links": null
+            },
+            "BIBREF4": {
+                "ref_id": "b4",
+                "title": "Structure-grounded pretraining for text-to-sql",
+                "authors": [
+                    {
+                        "first": "Xiang",
+                        "middle": [],
+                        "last": "Deng",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ahmed",
+                        "middle": [],
+                        "last": "Hassan Awadallah",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [],
+                        "last": "Meek",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Oleksandr",
+                        "middle": [],
+                        "last": "Polozov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Huan",
+                        "middle": [],
+                        "last": "Sun",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Matthew",
+                        "middle": [],
+                        "last": "Richardson",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:2010.12773"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Xiang Deng, Ahmed Hassan Awadallah, Christopher Meek, Oleksandr Polozov, Huan Sun, and Matthew Richardson. 2020. Structure-grounded pretraining for text-to-sql. arXiv preprint arXiv:2010.12773.",
+                "links": null
+            },
+            "BIBREF5": {
+                "ref_id": "b5",
+                "title": "BERT: Pre-training of deep bidirectional transformers for language understanding",
+                "authors": [
+                    {
+                        "first": "Jacob",
+                        "middle": [],
+                        "last": "Devlin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ming-Wei",
+                        "middle": [],
+                        "last": "Chang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kenton",
+                        "middle": [],
+                        "last": "Lee",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kristina",
+                        "middle": [],
+                        "last": "Toutanova",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies",
+                "volume": "1",
+                "issue": "",
+                "pages": "4171--4186",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/N19-1423"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Jacob Devlin, Ming-Wei Chang, Kenton Lee, and Kristina Toutanova. 2019. BERT: Pre-training of deep bidirectional transformers for language under- standing. In Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies, Volume 1 (Long and Short Papers), pages 4171-4186, Minneapolis, Minnesota. Associ- ation for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF6": {
+                "ref_id": "b6",
+                "title": "Language to logical form with neural attention",
+                "authors": [
+                    {
+                        "first": "Li",
+                        "middle": [],
+                        "last": "Dong",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mirella",
+                        "middle": [],
+                        "last": "Lapata",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of the 54th Annual Meeting of the Association for Computational Linguistics (ACL)",
+                "volume": "",
+                "issue": "",
+                "pages": "33--43",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/P16-1004"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Li Dong and Mirella Lapata. 2016. Language to logi- cal form with neural attention. In Proceedings of the 54th Annual Meeting of the Association for Compu- tational Linguistics (ACL), pages 33-43, Berlin, Ger- many. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF7": {
+                "ref_id": "b7",
+                "title": "AllenNLP: A deep semantic natural language processing platform",
+                "authors": [
+                    {
+                        "first": "Matt",
+                        "middle": [],
+                        "last": "Gardner",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Joel",
+                        "middle": [],
+                        "last": "Grus",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mark",
+                        "middle": [],
+                        "last": "Neumann",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Oyvind",
+                        "middle": [],
+                        "last": "Tafjord",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Pradeep",
+                        "middle": [],
+                        "last": "Dasigi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nelson",
+                        "middle": [
+                            "F"
+                        ],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Matthew",
+                        "middle": [],
+                        "last": "Peters",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Michael",
+                        "middle": [],
+                        "last": "Schmitz",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Luke",
+                        "middle": [],
+                        "last": "Zettlemoyer",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of Workshop for NLP Open Source Software (NLP-OSS)",
+                "volume": "",
+                "issue": "",
+                "pages": "1--6",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/W18-2501"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Matt Gardner, Joel Grus, Mark Neumann, Oyvind Tafjord, Pradeep Dasigi, Nelson F. Liu, Matthew Pe- ters, Michael Schmitz, and Luke Zettlemoyer. 2018. AllenNLP: A deep semantic natural language pro- cessing platform. In Proceedings of Workshop for NLP Open Source Software (NLP-OSS), pages 1- 6, Melbourne, Australia. Association for Computa- tional Linguistics.",
+                "links": null
+            },
+            "BIBREF8": {
+                "ref_id": "b8",
+                "title": "Weakly supervised semantic parsing with abstract examples",
+                "authors": [
+                    {
+                        "first": "Omer",
+                        "middle": [],
+                        "last": "Goldman",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Veronica",
+                        "middle": [],
+                        "last": "Latcinnik",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ehud",
+                        "middle": [],
+                        "last": "Nave",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jonathan",
+                        "middle": [],
+                        "last": "Amir Globerson",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Berant",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 56th Annual Meeting of the Association for Computational Linguistics (ACL) (Volume 1: Long Papers)",
+                "volume": "",
+                "issue": "",
+                "pages": "1809--1819",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/P18-1168"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Omer Goldman, Veronica Latcinnik, Ehud Nave, Amir Globerson, and Jonathan Berant. 2018. Weakly su- pervised semantic parsing with abstract examples. In Proceedings of the 56th Annual Meeting of the As- sociation for Computational Linguistics (ACL) (Vol- ume 1: Long Papers), pages 1809-1819, Melbourne, Australia. Association for Computational Linguis- tics.",
+                "links": null
+            },
+            "BIBREF9": {
+                "ref_id": "b9",
+                "title": "Towards complex text-to-SQL in crossdomain database with intermediate representation",
+                "authors": [
+                    {
+                        "first": "Jiaqi",
+                        "middle": [],
+                        "last": "Guo",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zecheng",
+                        "middle": [],
+                        "last": "Zhan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yan",
+                        "middle": [],
+                        "last": "Gao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yan",
+                        "middle": [],
+                        "last": "Xiao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jian-Guang",
+                        "middle": [],
+                        "last": "Lou",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ting",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dongmei",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics (ACL)",
+                "volume": "",
+                "issue": "",
+                "pages": "4524--4535",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/P19-1444"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Jiaqi Guo, Zecheng Zhan, Yan Gao, Yan Xiao, Jian-Guang Lou, Ting Liu, and Dongmei Zhang. 2019. Towards complex text-to-SQL in cross- domain database with intermediate representation. In Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics (ACL), pages 4524-4535, Florence, Italy. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF10": {
+                "ref_id": "b10",
+                "title": "TaPas: Weakly supervised table parsing via pre-training",
+                "authors": [
+                    {
+                        "first": "Jonathan",
+                        "middle": [],
+                        "last": "Herzig",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Krzysztof",
+                        "middle": [],
+                        "last": "Pawel",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Thomas",
+                        "middle": [],
+                        "last": "Nowak",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Francesco",
+                        "middle": [],
+                        "last": "M\u00fcller",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Julian",
+                        "middle": [],
+                        "last": "Piccinno",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Eisenschlos",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "4320--4333",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/2020.acl-main.398"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Jonathan Herzig, Pawel Krzysztof Nowak, Thomas M\u00fcller, Francesco Piccinno, and Julian Eisenschlos. 2020. TaPas: Weakly supervised table parsing via pre-training. In Proceedings of the 58th Annual Meeting of the Association for Computational Lin- guistics, pages 4320-4333, Online. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF11": {
+                "ref_id": "b11",
+                "title": "Neural semantic parsing with type constraints for semi-structured tables",
+                "authors": [
+                    {
+                        "first": "Jayant",
+                        "middle": [],
+                        "last": "Krishnamurthy",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Pradeep",
+                        "middle": [],
+                        "last": "Dasigi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Matt",
+                        "middle": [],
+                        "last": "Gardner",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Proceedings of the Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jayant Krishnamurthy, Pradeep Dasigi, and Matt Gard- ner. 2017. Neural semantic parsing with type con- straints for semi-structured tables. In Proceedings of the Conference on Empirical Methods in Natural Language Processing (EMNLP).",
+                "links": null
+            },
+            "BIBREF12": {
+                "ref_id": "b12",
+                "title": "Neural symbolic machines: Learning semantic parsers on Freebase with weak supervision",
+                "authors": [
+                    {
+                        "first": "C",
+                        "middle": [],
+                        "last": "Liang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "J",
+                        "middle": [],
+                        "last": "Berant",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Q",
+                        "middle": [],
+                        "last": "Le",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "K",
+                        "middle": [
+                            "D F N"
+                        ],
+                        "last": "Lao",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "C. Liang, J. Berant, Q. Le, and K. D. F. N. Lao. 2017. Neural symbolic machines: Learning seman- tic parsers on Freebase with weak supervision. In Association for Computational Linguistics (ACL).",
+                "links": null
+            },
+            "BIBREF13": {
+                "ref_id": "b13",
+                "title": "Learning dependency-based compositional semantics",
+                "authors": [
+                    {
+                        "first": "Percy",
+                        "middle": [],
+                        "last": "Liang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Michael",
+                        "middle": [],
+                        "last": "Jordan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dan",
+                        "middle": [],
+                        "last": "Klein",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2011,
+                "venue": "Proceedings of the 49th Annual Meeting of the Association for Computational Linguistics: Human Language Technologies (ACL-HLT)",
+                "volume": "",
+                "issue": "",
+                "pages": "590--599",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Percy Liang, Michael Jordan, and Dan Klein. 2011. Learning dependency-based compositional seman- tics. In Proceedings of the 49th Annual Meeting of the Association for Computational Linguistics: Human Language Technologies (ACL-HLT), pages 590-599, Portland, Oregon, USA. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF14": {
+                "ref_id": "b14",
+                "title": "Bridging textual and tabular data for crossdomain text-to-SQL semantic parsing",
+                "authors": [
+                    {
+                        "first": "Victoria",
+                        "middle": [],
+                        "last": "Xi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Richard",
+                        "middle": [],
+                        "last": "Lin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Caiming",
+                        "middle": [],
+                        "last": "Socher",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Xiong",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "Findings of the Association for Computational Linguistics: EMNLP 2020",
+                "volume": "",
+                "issue": "",
+                "pages": "4870--4888",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/2020.findings-emnlp.438"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Xi Victoria Lin, Richard Socher, and Caiming Xiong. 2020. Bridging textual and tabular data for cross- domain text-to-SQL semantic parsing. In Findings of the Association for Computational Linguistics: EMNLP 2020, pages 4870-4888, Online. Associa- tion for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF15": {
+                "ref_id": "b15",
+                "title": "Roberta: A robustly optimized bert pretraining approach",
+                "authors": [
+                    {
+                        "first": "Yinhan",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Myle",
+                        "middle": [],
+                        "last": "Ott",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Naman",
+                        "middle": [],
+                        "last": "Goyal",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jingfei",
+                        "middle": [],
+                        "last": "Du",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mandar",
+                        "middle": [],
+                        "last": "Joshi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Danqi",
+                        "middle": [],
+                        "last": "Chen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Omer",
+                        "middle": [],
+                        "last": "Levy",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mike",
+                        "middle": [],
+                        "last": "Lewis",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Luke",
+                        "middle": [],
+                        "last": "Zettlemoyer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Veselin",
+                        "middle": [],
+                        "last": "Stoyanov",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1907.11692"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Yinhan Liu, Myle Ott, Naman Goyal, Jingfei Du, Man- dar Joshi, Danqi Chen, Omer Levy, Mike Lewis, Luke Zettlemoyer, and Veselin Stoyanov. 2019. Roberta: A robustly optimized bert pretraining ap- proach. arXiv preprint arXiv:1907.11692.",
+                "links": null
+            },
+            "BIBREF16": {
+                "ref_id": "b16",
+                "title": "A digital signature based on a conventional encryption function",
+                "authors": [
+                    {
+                        "first": "C",
+                        "middle": [],
+                        "last": "Ralph",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Merkle",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1987,
+                "venue": "Advances in Cryptology -CRYPTO '87, A Conference on the Theory and Applications of Cryptographic Techniques",
+                "volume": "293",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "DOI": [
+                        "10.1007/3-540-48184-2_32"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Ralph C. Merkle. 1987. A digital signature based on a conventional encryption function. In Advances in Cryptology -CRYPTO '87, A Conference on the Theory and Applications of Cryptographic Tech- niques, Santa Barbara, California, USA, August 16- 20, 1987, Proceedings, volume 293 of Lecture Notes in Computer Science.",
+                "links": null
+            },
+            "BIBREF17": {
+                "ref_id": "b17",
+                "title": "Bustle: Bottomup program-synthesis through learning-guided exploration",
+                "authors": [
+                    {
+                        "first": "Augustus",
+                        "middle": [],
+                        "last": "Odena",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kensen",
+                        "middle": [],
+                        "last": "Shi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "David",
+                        "middle": [],
+                        "last": "Bieber",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Rishabh",
+                        "middle": [],
+                        "last": "Singh",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Charles",
+                        "middle": [],
+                        "last": "Sutton",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Augustus Odena, Kensen Shi, David Bieber, Rishabh Singh, and Charles Sutton. 2020. Bustle: Bottom- up program-synthesis through learning-guided ex- ploration.",
+                "links": null
+            },
+            "BIBREF18": {
+                "ref_id": "b18",
+                "title": "Abstract syntax networks for code generation and semantic parsing",
+                "authors": [
+                    {
+                        "first": "Maxim",
+                        "middle": [],
+                        "last": "Rabinovich",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mitchell",
+                        "middle": [],
+                        "last": "Stern",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dan",
+                        "middle": [],
+                        "last": "Klein",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Proceedings of the 55th Annual Meeting of the Association for Computational Linguistics (ACL)",
+                "volume": "",
+                "issue": "",
+                "pages": "1139--1149",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/P17-1105"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Maxim Rabinovich, Mitchell Stern, and Dan Klein. 2017. Abstract syntax networks for code genera- tion and semantic parsing. In Proceedings of the 55th Annual Meeting of the Association for Compu- tational Linguistics (ACL), pages 1139-1149, Van- couver, Canada. Association for Computational Lin- guistics.",
+                "links": null
+            },
+            "BIBREF19": {
+                "ref_id": "b19",
+                "title": "SQuAD: 100,000+ questions for machine comprehension of text",
+                "authors": [
+                    {
+                        "first": "Pranav",
+                        "middle": [],
+                        "last": "Rajpurkar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jian",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Konstantin",
+                        "middle": [],
+                        "last": "Lopyrev",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Percy",
+                        "middle": [],
+                        "last": "Liang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of the 2016 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "2383--2392",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/D16-1264"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Pranav Rajpurkar, Jian Zhang, Konstantin Lopyrev, and Percy Liang. 2016. SQuAD: 100,000+ questions for machine comprehension of text. In Proceedings of the 2016 Conference on Empirical Methods in Natu- ral Language Processing, pages 2383-2392, Austin, Texas. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF20": {
+                "ref_id": "b20",
+                "title": "Green AI. Communications of the ACM",
+                "authors": [
+                    {
+                        "first": "Roy",
+                        "middle": [],
+                        "last": "Schwartz",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jesse",
+                        "middle": [],
+                        "last": "Dodge",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Noah",
+                        "middle": [
+                            "A"
+                        ],
+                        "last": "Smith",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Oren",
+                        "middle": [],
+                        "last": "Etzioni",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "",
+                "volume": "63",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Roy Schwartz, Jesse Dodge, Noah A. Smith, and Oren Etzioni. 2020. Green AI. Communications of the ACM, 63.",
+                "links": null
+            },
+            "BIBREF21": {
+                "ref_id": "b21",
+                "title": "Self-attention with relative position representations",
+                "authors": [
+                    {
+                        "first": "Peter",
+                        "middle": [],
+                        "last": "Shaw",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jakob",
+                        "middle": [],
+                        "last": "Uszkoreit",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ashish",
+                        "middle": [],
+                        "last": "Vaswani",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 2018 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies (NAACL-HLT)",
+                "volume": "2",
+                "issue": "",
+                "pages": "464--468",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/N18-2074"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Peter Shaw, Jakob Uszkoreit, and Ashish Vaswani. 2018. Self-attention with relative position represen- tations. In Proceedings of the 2018 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Tech- nologies (NAACL-HLT), Volume 2 (Short Papers), pages 464-468, New Orleans, Louisiana. Associa- tion for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF22": {
+                "ref_id": "b22",
+                "title": "Cicero Nogueira dos Santos, and Bing Xiang. 2021. Learning contextual representations for semantic parsing with generation-augmented pre-training",
+                "authors": [
+                    {
+                        "first": "Peng",
+                        "middle": [],
+                        "last": "Shi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Patrick",
+                        "middle": [],
+                        "last": "Ng",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zhiguo",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Henghui",
+                        "middle": [],
+                        "last": "Zhu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alexander",
+                        "middle": [
+                            "Hanbo"
+                        ],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jun",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    }
+                ],
+                "year": null,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:2012.10309"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Peng Shi, Patrick Ng, Zhiguo Wang, Henghui Zhu, Alexander Hanbo Li, Jun Wang, Cicero Nogueira dos Santos, and Bing Xiang. 2021. Learn- ing contextual representations for semantic pars- ing with generation-augmented pre-training. arXiv preprint arXiv:2012.10309.",
+                "links": null
+            },
+            "BIBREF23": {
+                "ref_id": "b23",
+                "title": "Novel positional encodings to enable tree-structured transformers",
+                "authors": [
+                    {
+                        "first": "Leonardo",
+                        "middle": [],
+                        "last": "Vighnesh",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chris",
+                        "middle": [],
+                        "last": "Shiv",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Quirk",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Advances in Neural Information Processing Systems (NeurIPS)",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Vighnesh Leonardo Shiv and Chris Quirk. 2019. Novel positional encodings to enable tree-structured trans- formers. In Advances in Neural Information Pro- cessing Systems (NeurIPS).",
+                "links": null
+            },
+            "BIBREF24": {
+                "ref_id": "b24",
+                "title": "Attention is all you need",
+                "authors": [
+                    {
+                        "first": "Ashish",
+                        "middle": [],
+                        "last": "Vaswani",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Noam",
+                        "middle": [],
+                        "last": "Shazeer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Niki",
+                        "middle": [],
+                        "last": "Parmar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jakob",
+                        "middle": [],
+                        "last": "Uszkoreit",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Llion",
+                        "middle": [],
+                        "last": "Jones",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Aidan",
+                        "middle": [
+                            "N"
+                        ],
+                        "last": "Gomez",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "\u0141 Ukasz",
+                        "middle": [],
+                        "last": "Kaiser",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Illia",
+                        "middle": [],
+                        "last": "Polosukhin",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Advances in Neural Information Processing Systems (NeurIPS)",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N Gomez, \u0141 ukasz Kaiser, and Illia Polosukhin. 2017. Attention is all you need. In I. Guyon, U. V. Luxburg, S. Bengio, H. Wallach, R. Fergus, S. Vishwanathan, and R. Gar- nett, editors, Advances in Neural Information Pro- cessing Systems (NeurIPS).",
+                "links": null
+            },
+            "BIBREF25": {
+                "ref_id": "b25",
+                "title": "RAT-SQL: Relation-aware schema encoding and linking for text-to-SQL parsers",
+                "authors": [
+                    {
+                        "first": "Bailin",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Richard",
+                        "middle": [],
+                        "last": "Shin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xiaodong",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Oleksandr",
+                        "middle": [],
+                        "last": "Polozov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Matthew",
+                        "middle": [],
+                        "last": "Richardson",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics (ACL)",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Bailin Wang, Richard Shin, Xiaodong Liu, Oleksandr Polozov, and Matthew Richardson. 2020a. RAT- SQL: Relation-aware schema encoding and linking for text-to-SQL parsers. In Proceedings of the 58th Annual Meeting of the Association for Computa- tional Linguistics (ACL).",
+                "links": null
+            },
+            "BIBREF26": {
+                "ref_id": "b26",
+                "title": "RAT-SQL: Relation-aware schema encoding and linking for text-to-SQL parsers",
+                "authors": [
+                    {
+                        "first": "Bailin",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Richard",
+                        "middle": [],
+                        "last": "Shin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xiaodong",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Oleksandr",
+                        "middle": [],
+                        "last": "Polozov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Matthew",
+                        "middle": [],
+                        "last": "Richardson",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics (ACL)",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Bailin Wang, Richard Shin, Xiaodong Liu, Oleksandr Polozov, and Matthew Richardson. 2020b. RAT- SQL: Relation-aware schema encoding and linking for text-to-SQL parsers. In Proceedings of the 58th Annual Meeting of the Association for Computa- tional Linguistics (ACL).",
+                "links": null
+            },
+            "BIBREF27": {
+                "ref_id": "b27",
+                "title": "A learning algorithm for continually running fully recurrent neural networks",
+                "authors": [
+                    {
+                        "first": "Ronald",
+                        "middle": [
+                            "J"
+                        ],
+                        "last": "Williams",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "David",
+                        "middle": [],
+                        "last": "Zipser",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1989,
+                "venue": "Neural Computation",
+                "volume": "1",
+                "issue": "2",
+                "pages": "270--280",
+                "other_ids": {
+                    "DOI": [
+                        "10.1162/neco.1989.1.2.270"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Ronald J. Williams and David Zipser. 1989. A learn- ing algorithm for continually running fully recurrent neural networks. Neural Computation, 1(2):270- 280.",
+                "links": null
+            },
+            "BIBREF28": {
+                "ref_id": "b28",
+                "title": "Association for Computational Linguistics. Pengcheng Yin and Graham Neubig",
+                "authors": [
+                    {
+                        "first": "Pengcheng",
+                        "middle": [],
+                        "last": "Yin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Graham",
+                        "middle": [],
+                        "last": "Neubig",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Proceedings of the 55th Annual Meeting of the Association for Computational Linguistics (ACL)",
+                "volume": "",
+                "issue": "",
+                "pages": "440--450",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/P19-1447"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Pengcheng Yin and Graham Neubig. 2017. A syn- tactic neural model for general-purpose code gen- eration. In Proceedings of the 55th Annual Meet- ing of the Association for Computational Linguistics (ACL), pages 440-450, Vancouver, Canada. Associ- ation for Computational Linguistics. Pengcheng Yin and Graham Neubig. 2019. Reranking for neural semantic parsing. In Proceedings of the 57th Annual Meeting of the Association for Compu- tational Linguistics (ACL).",
+                "links": null
+            },
+            "BIBREF29": {
+                "ref_id": "b29",
+                "title": "TaBERT: Pretraining for joint understanding of textual and tabular data",
+                "authors": [
+                    {
+                        "first": "Pengcheng",
+                        "middle": [],
+                        "last": "Yin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Graham",
+                        "middle": [],
+                        "last": "Neubig",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Wen-Tau",
+                        "middle": [],
+                        "last": "Yih",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sebastian",
+                        "middle": [],
+                        "last": "Riedel",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "8413--8426",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/2020.acl-main.745"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Pengcheng Yin, Graham Neubig, Wen-tau Yih, and Se- bastian Riedel. 2020. TaBERT: Pretraining for joint understanding of textual and tabular data. In Pro- ceedings of the 58th Annual Meeting of the Asso- ciation for Computational Linguistics, pages 8413- 8426, Online. Association for Computational Lin- guistics.",
+                "links": null
+            },
+            "BIBREF30": {
+                "ref_id": "b30",
+                "title": "Grappa: Grammar-augmented pre-training for table semantic parsing",
+                "authors": [
+                    {
+                        "first": "Tao",
+                        "middle": [],
+                        "last": "Yu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chien-Sheng",
+                        "middle": [],
+                        "last": "Wu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xi",
+                        "middle": [],
+                        "last": "Victoria Lin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Bailin",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yi",
+                        "middle": [],
+                        "last": "Chern Tan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xinyi",
+                        "middle": [],
+                        "last": "Yang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dragomir",
+                        "middle": [],
+                        "last": "Radev",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:2009.13845"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Tao Yu, Chien-Sheng Wu, Xi Victoria Lin, Bailin Wang, Yi Chern Tan, Xinyi Yang, Dragomir Radev, Richard Socher, and Caiming Xiong. 2020. Grappa: Grammar-augmented pre-training for table semantic parsing. arXiv preprint arXiv:2009.13845.",
+                "links": null
+            },
+            "BIBREF31": {
+                "ref_id": "b31",
+                "title": "Spider: A largescale human-labeled dataset for complex and crossdomain semantic parsing and text-to-SQL task",
+                "authors": [
+                    {
+                        "first": "Tao",
+                        "middle": [],
+                        "last": "Yu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Rui",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kai",
+                        "middle": [],
+                        "last": "Yang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Michihiro",
+                        "middle": [],
+                        "last": "Yasunaga",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dongxu",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zifan",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "James",
+                        "middle": [],
+                        "last": "Ma",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Irene",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Qingning",
+                        "middle": [],
+                        "last": "Yao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Shanelle",
+                        "middle": [],
+                        "last": "Roman",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zilin",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dragomir",
+                        "middle": [],
+                        "last": "Radev",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing (EMNLP)",
+                "volume": "",
+                "issue": "",
+                "pages": "3911--3921",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/D18-1425"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Tao Yu, Rui Zhang, Kai Yang, Michihiro Yasunaga, Dongxu Wang, Zifan Li, James Ma, Irene Li, Qingning Yao, Shanelle Roman, Zilin Zhang, and Dragomir Radev. 2018. Spider: A large- scale human-labeled dataset for complex and cross- domain semantic parsing and text-to-SQL task. In Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing (EMNLP), pages 3911-3921, Brussels, Belgium. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF32": {
+                "ref_id": "b32",
+                "title": "Sparc: Cross-domain semantic parsing in context",
+                "authors": [
+                    {
+                        "first": "Tao",
+                        "middle": [],
+                        "last": "Yu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Rui",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Michihiro",
+                        "middle": [],
+                        "last": "Yasunaga",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yi",
+                        "middle": [],
+                        "last": "Chern Tan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xi",
+                        "middle": [],
+                        "last": "Victoria Lin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Suyi",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Irene",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Heyang",
+                        "middle": [],
+                        "last": "Er",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Bo",
+                        "middle": [],
+                        "last": "Pang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tao",
+                        "middle": [],
+                        "last": "Chen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Emily",
+                        "middle": [],
+                        "last": "Ji",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Shreya",
+                        "middle": [],
+                        "last": "Dixit",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "David",
+                        "middle": [],
+                        "last": "Proctor",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sungrok",
+                        "middle": [],
+                        "last": "Shim",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Vincent",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jonathan",
+                        "middle": [],
+                        "last": "Kraft",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Caiming",
+                        "middle": [],
+                        "last": "Xiong",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Richard",
+                        "middle": [],
+                        "last": "Socher",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dragomir",
+                        "middle": [],
+                        "last": "Radev",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics (ACL)",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Tao Yu, Rui Zhang, Michihiro Yasunaga, Yi Chern Tan, Xi Victoria Lin, Suyi Li, Irene Li Heyang Er, Bo Pang, Tao Chen, Emily Ji, Shreya Dixit, David Proctor, Sungrok Shim, Vincent Zhang Jonathan Kraft, Caiming Xiong, Richard Socher, and Dragomir Radev. 2019. Sparc: Cross-domain semantic parsing in context. In Proceedings of the 57th Annual Meeting of the Association for Compu- tational Linguistics (ACL), Florence, Italy. Associa- tion for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF33": {
+                "ref_id": "b33",
+                "title": "Learning to parse database queries using inductive logic programming",
+                "authors": [
+                    {
+                        "first": "John",
+                        "middle": [
+                            "M"
+                        ],
+                        "last": "Zelle",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Raymond",
+                        "middle": [
+                            "J"
+                        ],
+                        "last": "Mooney",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1996,
+                "venue": "Proceedings of the Thirteenth National Conference on Artificial Intelligence (AAAI)",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "John M. Zelle and Raymond J. Mooney. 1996. Learn- ing to parse database queries using inductive logic programming. In Proceedings of the Thirteenth Na- tional Conference on Artificial Intelligence (AAAI).",
+                "links": null
+            },
+            "BIBREF34": {
+                "ref_id": "b34",
+                "title": "Learning to map sentences to logical form: Structured classification with probabilistic categorial grammars",
+                "authors": [
+                    {
+                        "first": "Luke",
+                        "middle": [
+                            "S"
+                        ],
+                        "last": "Zettlemoyer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Michael",
+                        "middle": [],
+                        "last": "Collins",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2005,
+                "venue": "Proceedings of the Twenty-First Conference on Uncertainty in Artificial Intelligence (UAI)",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Luke S. Zettlemoyer and Michael Collins. 2005. Learn- ing to map sentences to logical form: Structured classification with probabilistic categorial grammars. In Proceedings of the Twenty-First Conference on Uncertainty in Artificial Intelligence (UAI).",
+                "links": null
+            },
+            "BIBREF35": {
+                "ref_id": "b35",
+                "title": "Gp: Context-free grammar pre-training for text-tosql parsers",
+                "authors": [
+                    {
+                        "first": "Liang",
+                        "middle": [],
+                        "last": "Zhao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hexin",
+                        "middle": [],
+                        "last": "Cao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yunsong",
+                        "middle": [],
+                        "last": "Zhao",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2021,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Liang Zhao, Hexin Cao, and Yunsong Zhao. 2021. Gp: Context-free grammar pre-training for text-to- sql parsers.",
+                "links": null
+            }
+        },
+        "ref_entries": {
+            "FIGREF1": {
+                "num": null,
+                "text": "Figure 2: An unbalanced and balanced relational algebra tree (with the unary KEEP operation) for the utterance \"What are the names of actors older than 60?\", where the corresponding SQL query is SELECT name FROM actor WHERE age \u2265 60.",
+                "uris": null,
+                "fig_num": "2",
+                "type_str": "figure"
+            },
+            "FIGREF2": {
+                "num": null,
+                "text": "Figure3: Illustration of our tree scoring and representation mechanisms. z is the symbolic tree, z is its vector representation, and z its contextualized representation.",
+                "uris": null,
+                "fig_num": "3",
+                "type_str": "figure"
+            },
+            "FIGREF3": {
+                "num": null,
+                "text": "Figure 4: A histogram showing the distribution of the height of relational algebra trees in SPIDER, and the size of equivalent SQL query trees.",
+                "uris": null,
+                "fig_num": "4",
+                "type_str": "figure"
+            },
+            "FIGREF4": {
+                "num": null,
+                "text": "Figure 5: Speed-up on the development set compared to autoregressive decoding, w.r.t the size of the SQL query.",
+                "uris": null,
+                "fig_num": "56",
+                "type_str": "figure"
+            },
+            "FIGREF5": {
+                "num": null,
+                "text": "Figure 8: Z t Recall across decoding steps.",
+                "uris": null,
+                "fig_num": "8",
+                "type_str": "figure"
+            },
+            "FIGREF6": {
+                "num": null,
+                "text": "Figure 9: Unbalanced and balanced relational algebra trees for the utterance \"How many flights arriving in Aberdeen city?\", where the corresponding SQL query is SELECT COUNT( * ) FROM flights JOIN airports ON flights.destairport = airports.airportcode WHERE airports.city = 'Aberdeen'.",
+                "uris": null,
+                "fig_num": "9",
+                "type_str": "figure"
+            },
+            "FIGREF7": {
+                "num": null,
+                "text": "Figure 10: Unbalanced and balanced relational algebra trees for the utterance \"When is the first transcript released?List the date and details.\", where the corresponding SQL query is SELECT transcripts.transcript_date , transcripts.other_details FROM transcripts ORDER BY transcripts.transcript_date ASC LIMIT 1.",
+                "uris": null,
+                "fig_num": "10",
+                "type_str": "figure"
+            },
+            "FIGREF8": {
+                "num": null,
+                "text": "Figure 11: Unbalanced and balanced relational algebra trees for the utterance \"How many dog pets are raised by female students?\", where the corresponding SQL query is SELECT COUNT( * ) FROM student JOIN has_pet ON student.stuid = has_pet.stuid JOIN pets ON has_pet.petid = pets.petid WHERE student.sex = 'F' AND pets.pettype = 'dog'.",
+                "uris": null,
+                "fig_num": "1112",
+                "type_str": "figure"
+            },
+            "TABREF3": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "Results on the SPIDER test set.",
+                "html": null,
+                "num": null
+            },
+            "TABREF5": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "Development set EM, beam EM (BEM) and recall on schema constants and DB values (Z 0 rec.) for all models.",
+                "html": null,
+                "num": null
+            }
+        }
+    }
+}

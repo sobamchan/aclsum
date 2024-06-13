@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 import sienna
 
@@ -81,6 +81,9 @@ class Document:
         labels = self.get_all_highlights(aspect, sections)
         assert len(sents) == len(labels)
         return [sent for sent, label in zip(sents, labels) if label == 1]
+
+    def get_fulltext_parse(self) -> dict[str, Any]:
+        return sienna.load(str(DATA_DIR / "paper_jsons" / f"{self.id}.json"))
 
 
 @dataclass

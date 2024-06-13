@@ -1,0 +1,1520 @@
+{
+    "paper_id": "2021",
+    "header": {
+        "generated_with": "S2ORC 1.0.0",
+        "date_generated": "2023-06-16T12:06:33.177371Z"
+    },
+    "title": "Joint Learning of Representations for Web-tables, Entities and Types using Graph Convolutional Network",
+    "authors": [
+        {
+            "first": "Aniket",
+            "middle": [],
+            "last": "Pramanick",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "TCS Research",
+                "location": {}
+            },
+            "email": "aniket.pramanick@tcs.com"
+        },
+        {
+            "first": "Indrajit",
+            "middle": [],
+            "last": "Bhattacharya",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "TCS Research",
+                "location": {}
+            },
+            "email": "b.indrajit@tcs.com"
+        }
+    ],
+    "year": "",
+    "venue": null,
+    "identifiers": {},
+    "abstract": "Existing approaches for table annotation with entities and types either capture the structure of table using graphical models, or learn embeddings of table entries without accounting for the complete syntactic structure. We propose TabGCN, which uses Graph Convolutional Networks to capture the complete structure of tables, knowledge graph and the training annotations, and jointly learns embeddings for table elements as well as the entities and types. To account for knowledge incompleteness, TabGCN's embeddings can be used to discover new entities and types. Using experiments on 5 benchmark datasets, we show that TabGCN significantly outperforms multiple state-of-the-art baselines for table annotation, while showing promising performance on downstream table-related applications.",
+    "pdf_parse": {
+        "paper_id": "2021",
+        "_pdf_hash": "",
+        "abstract": [
+            {
+                "text": "Existing approaches for table annotation with entities and types either capture the structure of table using graphical models, or learn embeddings of table entries without accounting for the complete syntactic structure. We propose TabGCN, which uses Graph Convolutional Networks to capture the complete structure of tables, knowledge graph and the training annotations, and jointly learns embeddings for table elements as well as the entities and types. To account for knowledge incompleteness, TabGCN's embeddings can be used to discover new entities and types. Using experiments on 5 benchmark datasets, we show that TabGCN significantly outperforms multiple state-of-the-art baselines for table annotation, while showing promising performance on downstream table-related applications.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            }
+        ],
+        "body_text": [
+            {
+                "text": "Table data abounds in webpages and organizational documents. Annotation of table entries, such as columns, cells and rows, using available background knowledge (e.g. Yago, DBPedia, Freebase, etc.), such as knowledge of entities and their types, helps in better understanding and semantic interpretation of such tabular data. The challenge, however, is that such web tables do not adhere to any standard format, schema or convention (Limaye et al., 2010) . Additionally, knowledge graphs are typically incomplete -entities and types mentioned in tables may not always exist in the knowledge graph. Therefore, it becomes necessary to expand the knowledge graph with new entities (Zhang et al., 2020) and types for annotating tables.",
+                "cite_spans": [
+                    {
+                        "start": 432,
+                        "end": 453,
+                        "text": "(Limaye et al., 2010)",
+                        "ref_id": "BIBREF7"
+                    },
+                    {
+                        "start": 677,
+                        "end": 697,
+                        "text": "(Zhang et al., 2020)",
+                        "ref_id": "BIBREF17"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Initial research on table annotation (Limaye et al., 2010; Takeoka et al., 2019; Bhagavatula et al., 2015) used probabilistic graphical models to capture the complete row-column structure of tables and also the knowledge graph for collective annotation. More recent approaches using embeddings (Gentile et al., 2017; Zhang and Balog, 2018; Zhang et al., 2019; Chen et al., 2019; Yin et al., 2020) only partly capture the syntactic structure of tables, and also ignore the structure of the knowledge graph. The problem of incompleteness of the knowledge representation (Zhang et al., 2020) is mostly not addressed.",
+                "cite_spans": [
+                    {
+                        "start": 37,
+                        "end": 58,
+                        "text": "(Limaye et al., 2010;",
+                        "ref_id": "BIBREF7"
+                    },
+                    {
+                        "start": 59,
+                        "end": 80,
+                        "text": "Takeoka et al., 2019;",
+                        "ref_id": "BIBREF11"
+                    },
+                    {
+                        "start": 81,
+                        "end": 106,
+                        "text": "Bhagavatula et al., 2015)",
+                        "ref_id": "BIBREF0"
+                    },
+                    {
+                        "start": 294,
+                        "end": 316,
+                        "text": "(Gentile et al., 2017;",
+                        "ref_id": "BIBREF3"
+                    },
+                    {
+                        "start": 317,
+                        "end": 339,
+                        "text": "Zhang and Balog, 2018;",
+                        "ref_id": "BIBREF16"
+                    },
+                    {
+                        "start": 340,
+                        "end": 359,
+                        "text": "Zhang et al., 2019;",
+                        "ref_id": "BIBREF15"
+                    },
+                    {
+                        "start": 360,
+                        "end": 378,
+                        "text": "Chen et al., 2019;",
+                        "ref_id": "BIBREF1"
+                    },
+                    {
+                        "start": 379,
+                        "end": 396,
+                        "text": "Yin et al., 2020)",
+                        "ref_id": "BIBREF14"
+                    },
+                    {
+                        "start": 568,
+                        "end": 588,
+                        "text": "(Zhang et al., 2020)",
+                        "ref_id": "BIBREF17"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "In this work, we propose the TabGCN model that uses a Graph Convolutional Network (GCN) (Kipf and Welling, 2017) to unify the complete syntactic structure of tables (rows, columns and cells) and that of the knowledge graph (entities and types) via available annotations. The embeddings of the table elements as well as knowledge graph entities and types are trained jointly and end-to-end. While GCNs have been used for learning embeddings for many NLP tasks using the syntactic and semantic structure of natural language sentences (Marcheggiani and Titov, 2017; Vashishth et al., 2019) , encoding tabular structure using GCNs has not been addressed before. The model and embeddings thus trained are used to annotate new tables with known entities and types, while discovering hitherto unseen entities and types. Additionally, we use the trained embeddings for tables and rows for downstream table-related tasks -identifying similar tables, and identifying the appropriate table for any row.",
+                "cite_spans": [
+                    {
+                        "start": 88,
+                        "end": 112,
+                        "text": "(Kipf and Welling, 2017)",
+                        "ref_id": "BIBREF6"
+                    },
+                    {
+                        "start": 532,
+                        "end": 562,
+                        "text": "(Marcheggiani and Titov, 2017;",
+                        "ref_id": "BIBREF8"
+                    },
+                    {
+                        "start": 563,
+                        "end": 586,
+                        "text": "Vashishth et al., 2019)",
+                        "ref_id": "BIBREF13"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "We demonstrate these capabilities of TabGCN using experiments on 5 benchmark web table datasets comparing against 5 existing models. We show that WebGCN significantly improves performance for entity and type annotation. For the other tasks, we show that the same embeddings show impressive performance. No existing model can perform all of these tasks.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Our contributions are as follows: (a) We propose a model called TabGCN based on the GCN architecture that captures the complete syntactic structure of tables as well as the knowledge representation, and learns embeddings of tables, rows, columns and cells, as well as entities and types jointly and in an end-to-end fashion. (b) TabGCN addresses incompleteness in the knowledge representation by discovering new entities and types. (c) TabGCN significantly outperforms 5 existing approaches in 5 different benchmark datasets for the task of table annotation. (d) The trained embeddings show impressive performance in downstream tasks such as identifying similar tables and assignment of rows to appropriate tables.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Existing literature on table annotation considers two different types of tables. In general, web tables (Limaye et al., 2010; Takeoka et al., 2019; Bhagavatula et al., 2015) contain mentions of entities under every column, which need to be annotated. In contrast, relational tables (Gentile et al., 2017; Zhang and Balog, 2018; Zhang et al., 2019 Zhang et al., , 2020) ) refer to a single entity in each row, with a single core or anchor column and multiple attribute columns. Here, the entire row is annotated with a single entity. While both tasks are important, our focus is on the first category.",
+                "cite_spans": [
+                    {
+                        "start": 104,
+                        "end": 125,
+                        "text": "(Limaye et al., 2010;",
+                        "ref_id": "BIBREF7"
+                    },
+                    {
+                        "start": 126,
+                        "end": 147,
+                        "text": "Takeoka et al., 2019;",
+                        "ref_id": "BIBREF11"
+                    },
+                    {
+                        "start": 148,
+                        "end": 173,
+                        "text": "Bhagavatula et al., 2015)",
+                        "ref_id": "BIBREF0"
+                    },
+                    {
+                        "start": 282,
+                        "end": 304,
+                        "text": "(Gentile et al., 2017;",
+                        "ref_id": "BIBREF3"
+                    },
+                    {
+                        "start": 305,
+                        "end": 327,
+                        "text": "Zhang and Balog, 2018;",
+                        "ref_id": "BIBREF16"
+                    },
+                    {
+                        "start": 328,
+                        "end": 346,
+                        "text": "Zhang et al., 2019",
+                        "ref_id": "BIBREF15"
+                    },
+                    {
+                        "start": 347,
+                        "end": 370,
+                        "text": "Zhang et al., , 2020) )",
+                        "ref_id": "BIBREF17"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "In terms of approaches, one category of work considers graphical models to capture table structure and performs joint inference for entity and type classification (Limaye et al., 2010; Takeoka et al., 2019; Bhagavatula et al., 2015) . Limaye et al. (2010) uses a Markov Random Field that captures the structure of tables, and creates dependencies between entity and type annotations to jointly classify entities for cells and types for columns. The Markov Random Field (MRF) potentials capture domain knowledge about similarities between cells, between cells and entity lemmas and between entities using the type hierarchy. It cannot handle entities and types not used as labels during training. MeiMei (Takeoka et al., 2019) extends this MRF framework to handle numeric columns and focuses on multi-label classifiers for entities with multiple types. Additionally, it constructs embeddings of entities and types using knowledge graph structure to avoid expensive graph traversal for computing potential function features. However, it still requires manual construction of these features based on domain knowledge. Our GCN architecture is motivated by the structure of the graphical model in these papers. Both these models also jointly label pairs of columns with known relationships, which we do not address in our work.",
+                "cite_spans": [
+                    {
+                        "start": 163,
+                        "end": 184,
+                        "text": "(Limaye et al., 2010;",
+                        "ref_id": "BIBREF7"
+                    },
+                    {
+                        "start": 185,
+                        "end": 206,
+                        "text": "Takeoka et al., 2019;",
+                        "ref_id": "BIBREF11"
+                    },
+                    {
+                        "start": 207,
+                        "end": 232,
+                        "text": "Bhagavatula et al., 2015)",
+                        "ref_id": "BIBREF0"
+                    },
+                    {
+                        "start": 235,
+                        "end": 255,
+                        "text": "Limaye et al. (2010)",
+                        "ref_id": "BIBREF7"
+                    },
+                    {
+                        "start": 703,
+                        "end": 725,
+                        "text": "(Takeoka et al., 2019)",
+                        "ref_id": "BIBREF11"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "The second category focuses on embeddings for tables (Gentile et al., 2017; Zhang and Balog, 2018; Zhang et al., 2019) . All of these models transform table data to word sequences and then make use of neural language models. Zhang and Balog (2018) make use of RDF2vec for embedding tables, which internally uses neural language models after transforming graphs to sequences. ColNet (Chen et al., 2019) considers columns as cell sequences and uses a CNN to learn the representations of individual cells, which are used to predict entity types for columns. TaBERT (Yin et al., 2020) focuses on retrieving table rows for natural language utterances and learns a joint representation for utterances and cell sequences in table rows using BERT. In summary, these fail to capture the complete rowcolumn structure of tables in the embeddings. In contrast, our GCN architecture captures the structure of all tables, the entities, the types and the training annotations.",
+                "cite_spans": [
+                    {
+                        "start": 53,
+                        "end": 75,
+                        "text": "(Gentile et al., 2017;",
+                        "ref_id": "BIBREF3"
+                    },
+                    {
+                        "start": 76,
+                        "end": 98,
+                        "text": "Zhang and Balog, 2018;",
+                        "ref_id": "BIBREF16"
+                    },
+                    {
+                        "start": 99,
+                        "end": 118,
+                        "text": "Zhang et al., 2019)",
+                        "ref_id": "BIBREF15"
+                    },
+                    {
+                        "start": 382,
+                        "end": 401,
+                        "text": "(Chen et al., 2019)",
+                        "ref_id": "BIBREF1"
+                    },
+                    {
+                        "start": 562,
+                        "end": 580,
+                        "text": "(Yin et al., 2020)",
+                        "ref_id": "BIBREF14"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "For the problem of extending the knowledge graph from tables, Zhang et al. (2020) consider discovery of new entities, but only in the context of relational tables, with a single core column. Their approach make use of pre-trained neural embeddings (word2vec) and cosine similarity in addition to lexical similarity. Our focus is on web tables, where we need to discover new entities and types for all columns in a table. Our approach makes use of GCN embeddings trained using entity and type labels to detect new entities and types.",
+                "cite_spans": [
+                    {
+                        "start": 62,
+                        "end": 81,
+                        "text": "Zhang et al. (2020)",
+                        "ref_id": "BIBREF17"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "3 Problem: Table Annotation In this section, we first define tables, the background knowledge of entities and types, annotation of tables with entities and types, and, finally, the problem of semi-supervised table annotation with incomplete knowledge.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 17,
+                        "end": 27,
+                        "text": "Annotation",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "Tables: We are given a set of tables S. Fig. 1 shows an example at the top. The k th table S k \u2208 S, consists of m k rows and n k columns of individual cells. The individual cell in the i th row and j th column of the k th table is denoted as x k ij . We consider textual tables only, so that each x k ij takes a string as value. Also, we denote the i th row as R k i and the j th column as C k j .",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 45,
+                        "end": 46,
+                        "text": "1",
+                        "ref_id": "FIGREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "Entities and Types: We assume background knowledge of entities and entity types (or simply, types). Let T denote the set of types, and E the set of entities. Each entity E is associated with a type T (E). For each entity E, there is also an entity description or lemma L(E). In Fig. 1 , the oval nodes shows example entities and types. Entity E123 has associated type T12:Person and lemma Tamara K..",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 283,
+                        "end": 284,
+                        "text": "1",
+                        "ref_id": "FIGREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "We assume that tables contain information about entities E and types T . Specifically, each column of each table corresponds to a single type, each cell corresponds to a specific entity of that type. In our example table, cell x 11 is annotated with entity E123, and column C 1 is annotated with type T12:Person. Let T (C k j ) denote the type associated with column C k j , and E(x k ij ) the entity associated with the cell x k ij . Let A e be the set of all entity annotations of cells, and A t that of all type annotations of columns.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Table Annotations:",
+                "sec_num": null
+            },
+            {
+                "text": "In the semi-supervised table annotation task, we are given the entire set of tables S but only a subset A o e \u2282 A e of the entity annotations, and a subset A o t \u2282 A t of the type annotations are observed. The task is to annotate the unannotated cells and columns of the tables, using the observed annotations as training data.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Semi-supervised Table Annotation with Incomplete Knowledge:",
+                "sec_num": null
+            },
+            {
+                "text": "Let T o denote the set of unique types seen in A o t , and E o the set of unique entities seen in A o e . In the incomplete knowledge setting, T o \u2282 T , indicating that all the types are not seen in the training annotations. Similarly, all the entities are also not seen in training: E o \u2282 E. Now, the task for the unannotated cells and columns is three-fold. The first is to decide whether these correspond to observed entities A o e and observed types A o t . We call this novelty classification. Next, the non-novel table columns need to be annotated with observed types T o , and the non-novel table cells with observed entities E o . We call these type detection and entity detection respectively. Finally, the columns corresponding to novel types need to be grouped according to distinct novel types, and the cells corresponding to novel entities need to be grouped according to distinct novel entities. We call these type discovery and entity discovery respectively.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Semi-supervised Table Annotation with Incomplete Knowledge:",
+                "sec_num": null
+            },
+            {
+                "text": "We first present at a high level the network architecture of our model, which we call TabGCN. The core components TabGCN are (I) a Graph Convolutional Network (GCN), which captures the various syntactic relationships between table and knowledge elements, and then jointly learns embeddings for these via the convolution operation. The GCN embeddings of table elements contain information about both types and entities. These are fed into two parallel components: (II) the Type Classification component, and (III) the Entity Classification component. The Type Classification component first projects the GCN embedding of table columns to a type space using a type-projection matrix, and then uses a soft-max layer to classify this type embedding according to observed types. Similarly, the Entity Classification component first projects the GCN embeddings of table cells to an entity space using an entity-projection matrix, and then uses a soft-max layer to classify this entity embedding according to observed entities. Fig. 2 shows the high level architecture of our model for a subgraph of our example table graph in Fig. 1 . The parameters of all three components are trained jointly in an endto-end fashion using training entity annotations for cells and type annotations for columns via backpropagation. We next describe these components in greater detail.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 1026,
+                        "end": 1027,
+                        "text": "2",
+                        "ref_id": "FIGREF1"
+                    },
+                    {
+                        "start": 1125,
+                        "end": 1126,
+                        "text": "1",
+                        "ref_id": "FIGREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Joint Table and Knowledge Embedding",
+                "sec_num": "4"
+            },
+            {
+                "text": "Graph Convolutional Network: Graph Convolutional Networks (GCN) (Kipf and Welling, 2017; Gilmer et al., 2017) extend the notion of convolution to graphs. Let G = (V, R) be a directed graph where V is the set of n nodes and R the set of directed edges. An edge between nodes u, v \u2208 V with label L uv is denoted as (u, v, L uv ) \u2208 R. The edge set includes an inverse edge for each edge and a self-loop for each node. An input feature matrix X \u2208 R m\u00d7n contains the input feature representation x u \u2208 R m of each node \u2200u \u2208 V in its columns. Output embedding of a node v at k th layer of GCN is given by Luv are label specific model parameters at k th layer and h",
+                "cite_spans": [
+                    {
+                        "start": 64,
+                        "end": 88,
+                        "text": "(Kipf and Welling, 2017;",
+                        "ref_id": "BIBREF6"
+                    },
+                    {
+                        "start": 89,
+                        "end": 109,
+                        "text": "Gilmer et al., 2017)",
+                        "ref_id": "BIBREF4"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Joint Table and Knowledge Embedding",
+                "sec_num": "4"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "h (k+1) v = f \uf8eb \uf8ed u\u2208N (v) W (k) Luv h (k) u + b (k) Luv \uf8f6 \uf8f8 , \u2200v \u2208 V",
+                        "eq_num": "("
+                    }
+                ],
+                "section": "Joint Table and Knowledge Embedding",
+                "sec_num": "4"
+            },
+            {
+                "text": "(1) u = x u . For classification, a linear classification layer is added on top of final GCN layer. Function f () is a non-linear activation for which we used ReLU. Recall that edges in a GCN serve to bring the embeddings of their end nodes closer, the extent being determined by their weight. With this intuition we create the edges R of different types reflecting the underlying semantics of tables and the annotations. These are table edges R t , knowledge edges R k , annotation edges R a , and lexical similarity edges R l .",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Joint Table and Knowledge Embedding",
+                "sec_num": "4"
+            },
+            {
+                "text": "Table edges capture the semantics of web tables, which do not have special anchor columns. These are of four categories: a cell-column edge between a cell node x k ij and its corresponding column node C k j ; a cell-row edge between a cell node x k ij and its corresponding row node R k i ; a column-table edge between a column node C k j and its corresponding table node S k ; and a row-table edge between a row node R k i and its corresponding table node S k . Knowledge edges connect each entity node E o with its corresponding type node T (E o ).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "GCN for",
+                "sec_num": null
+            },
+            {
+                "text": "Annotation edges are of two categories: an entity annotation edge for each entity annotation in A o e between a cell node x k ij and its labeled entity node E(x k ij ); and a type annotation edge for each type annotation in A o t between a column node C k j and its labeled type node T (C k j ). Lexical similarity edges are added between pairs of cells in the same or different tables whose lexical similarity, computed using character-based Jaccard (Limaye et al., 2010) , is above a threshold.",
+                "cite_spans": [
+                    {
+                        "start": 451,
+                        "end": 472,
+                        "text": "(Limaye et al., 2010)",
+                        "ref_id": "BIBREF7"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "GCN for",
+                "sec_num": null
+            },
+            {
+                "text": "All edges are bi-directional. Each of the 8 edge categories above has its own parameters (W",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "GCN for",
+                "sec_num": null
+            },
+            {
+                "text": "(k) l , b (k)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "GCN for",
+                "sec_num": null
+            },
+            {
+                "text": "l ) for each layer in our GCN. Self loops are added for nodes associated with textual input, specifically, cells and entities with lemmas. For the input representation of such nodes, we use the pre-trained word embeddings for each of their constituent tokens, and take their mean. For this paper we used GloVe (Pennington et al., 2014) .",
+                "cite_spans": [
+                    {
+                        "start": 310,
+                        "end": 335,
+                        "text": "(Pennington et al., 2014)",
+                        "ref_id": "BIBREF9"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "GCN for",
+                "sec_num": null
+            },
+            {
+                "text": "Type Classification: The final (K th ) GCN layer generates an embedding h",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "GCN for",
+                "sec_num": null
+            },
+            {
+                "text": "(K) v",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "GCN for",
+                "sec_num": null
+            },
+            {
+                "text": "for each node v. This contains information about both types and entities. For type classification of a column node c, we first get its type embedding h t (c) by projecting h (K) c to a type space using a type projection matrix P t : h t (c) = P t h (K) c . Then we get the probability distribution g t (c) over known types T o for the type embedding h t (c) using a soft-max layer with weight matrix \u03b8 t : g t (c) = \u03c3(h t (c); \u03b8 t ). The type projection matrix P t and the sigmoid weight matrix \u03b8 t form the parameters for this component.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "GCN for",
+                "sec_num": null
+            },
+            {
+                "text": "We follow a similar approach for entity classification of a cell node x. We first project its GCN embedding h (K) x to an entity space using an entity projection matrix P e . The entity embedding h e (x) is passed through a soft-max layer with weight matrix \u03b8 e to get the probability distribution g e (x) over known entities E o . The entity projection matrix P e and the sigmoid weight matrix \u03b8 e form the parameters for this component.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Entity Classification:",
+                "sec_num": null
+            },
+            {
+                "text": "The parameters for all three components are trained end-to-end using available entity annotations for cells and type annotations for columns. Specifically, we consider the type predictions g t (c) for columns and minimize classification loss with the observed entity labels T (c). We similarly minimize classification loss between entity predictions g e (x) and observed entity labels E(x) for cells. We consider a weighted combination of the entity prediction loss and the type prediction loss. We have used cross-entropy as the classification loss function, and Adam (Kingma and Ba, 2015) for optimization.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Joint Training:",
+                "sec_num": null
+            },
+            {
+                "text": "Training the network in Sec.4 generates estimates of the model parameters as well as embeddings for all table and knowledge elements. In this section, we describe the use of these parameters and embeddings for the tasks defined in Sec.3. We use h(v) for the GCN embedding of a node v instead of h (K) v for brevity.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Annotating Tables using Embeddings",
+                "sec_num": "5"
+            },
+            {
+                "text": "Novelty Classification: To decide whether an unannotated column c corresponds to any of the known types in T o (novel type classification), we make use of their type embeddings. Column c corresponds to a new type if its typespace embedding h t (c) = P t h(c) is 'far away' from the type space embedding h t (T ) = P t h(T ) for all T \u2208 T o . More specifically, we use \u03b4(max T \u2208T o cos(P t h(c), P t h(T )) \u2264 t ), where t is the novel type threshold, and \u03b4() is the Kronecker delta function. A similar approach is followed for deciding if an unannotated cell x corresponds to any of the known entities in E o (novel entity classification) by using the entity embeddings. Specifically, we use \u03b4(max E\u2208E o cos(P e h(x), P e h(E)) \u2264 e ), where e is the novel entity threshold.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Annotating Tables using Embeddings",
+                "sec_num": "5"
+            },
+            {
+                "text": "Type and Entity Detection: Columns and cells determined to be non-novel need to be classified according to known types and entities respectively. This can be done using forward propagation in the trained network on the embeddings of the corresponding nodes. The type prediction g t (c) of a column c is obtained as g t (c) = \u03c3(P t h(c); \u03b8 t ). Similarly, the entity prediction g e (x) of a cell x is obtained as g t (x) = \u03c3(P e h(x); \u03b8 e ).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Annotating Tables using Embeddings",
+                "sec_num": "5"
+            },
+            {
+                "text": "Type and Entity Discovery: On the other hand, columns and cells determined to be novel need to be grouped according to distinct new types and entities respectively. This is done by clustering their projections in the appropriate space. Specifically, for type discovery, we take the type embeddings h t (c) of all novel columns c and cluster these. Similarly, for entity discovery, we cluster the entity embeddings h e (x) of all novel cells x. The clustering algorithm needs to automatically determine the number of clusters in both cases. In this paper, we have used Silhouette clustering (Rousseeuw, 1987) as a representative non-parametric clustering algorithm. Other algorithms approaches such as Bayesian non-parametric techniques (Teh, 2010) may be used here.",
+                "cite_spans": [
+                    {
+                        "start": 590,
+                        "end": 607,
+                        "text": "(Rousseeuw, 1987)",
+                        "ref_id": "BIBREF10"
+                    },
+                    {
+                        "start": 736,
+                        "end": 747,
+                        "text": "(Teh, 2010)",
+                        "ref_id": "BIBREF12"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Annotating Tables using Embeddings",
+                "sec_num": "5"
+            },
+            {
+                "text": "Training annotations are only provided for cells and columns. But embeddings are available for the rows and tables as well after training, and these can be used for different down-stream application tasks. Since these do not involve type or entity spaces, we directly use their GCN embeddings for these tasks. As examples, we define two such tasks here. Table clustering is the task of grouping together semantically related tables. For this, we cluster the table embeddings h(S) of all tables S \u2208 S. For consistency, we again use Silhouette clustering. Row to Table assignment is the task of assigning a row to its most appropriate table. For this, we assign a row R with embedding h(R) to the table S k with the 'closest' embedding h(S k ), or, more specifically, to S * = arg max S k cos(h(R), h(S k )). If R is a row from a table provided during training, then its embedding is readily available. If it is a new row, then its embedding is created by convolving over the input embeddings of its constituent cells using the trained parameters W l for cell-row edge.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 360,
+                        "end": 370,
+                        "text": "clustering",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 567,
+                        "end": 577,
+                        "text": "assignment",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Down-stream Inference for Rows and Tables:",
+                "sec_num": null
+            },
+            {
+                "text": "In this section, we first present experimental results for table annotation, and then for down-stream table-related tasks. We compare our proposed model TabGCN with appropriate state-of-the-art baselines. We have uploaded our source code as supplementary material for reproducibility.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "6"
+            },
+            {
+                "text": "Wiki M Web M T2Dv2 Limaye Wikipedia Hits@1 MRR Hits@1 MRR Hits@1 MRR Hits@1 MRR Hits@1 MRR Detection Results: We first present results for entity and type detection, addressed by most of the baselines. For this task, all models predict entity labels for all cells and type labels for all columns that are unannotated. However, evaluation is only for those cells and columns whose true entity and type labels are contained in the observed entities E o and observed types T o respectively. For evaluation, as in earlier table annotation papers (Limaye et al., 2010; Chen et al., 2019) , we use micro-averaged F1, which takes the weighted average of the F1 scores over the entities or types. This takes class imbalance into account and is therefore more appropriate than accuracy. We note that MeiMei addresses the multi-label setting with multiple possible type labels, and therefore uses ranking evaluation measures (e.g. NDCG). This is not meaningful in our single-labeled setting.",
+                "cite_spans": [
+                    {
+                        "start": 542,
+                        "end": 563,
+                        "text": "(Limaye et al., 2010;",
+                        "ref_id": "BIBREF7"
+                    },
+                    {
+                        "start": 564,
+                        "end": 582,
+                        "text": "Chen et al., 2019)",
+                        "ref_id": "BIBREF1"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model",
+                "sec_num": null
+            },
+            {
+                "text": "Tab. 1 shows detailed results for all models across datasets. We can see that TabGCN signifi- cantly outperforms all baselines on all datasets for both detection tasks. The only exception is for Wiki Manual. The graphical model based approaches with handcrafted potential functions outperform the representation learning approaches, possibly on account of the smallness of the dataset. Among the embedding based approaches, TabGCN performs the best.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model",
+                "sec_num": null
+            },
+            {
+                "text": "Novelty Classification Results: In our second experiment, we consider novelty classification. This is an unsupervised task, where a model makes a binary decision for each unannotated column (novel type classification) and for each unannotated cell (novel entity classification). Since the decision depends on the thresholds for type ( t ) and entity ( e ), we plot F1 score on the y-axis against the corresponding threshold on the x-axis. Of the baselines, only PGM can address this task, but outputting a NONE label for the type or entity. Fig. 3 ",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 546,
+                        "end": 547,
+                        "text": "3",
+                        "ref_id": "FIGREF4"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Model",
+                "sec_num": null
+            },
+            {
+                "text": "N M I = 2I(C,Y ) H(C)+H(Y )",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model",
+                "sec_num": null
+            },
+            {
+                "text": "between the assigned cluster labels (Y) and the true entity or type labels (C), where I(, ) denotes mutual information and H() denotes entropy. In Tab. 2, we see that TabGCN performs consistently above 80% for entity and type discovery across datasets, significantly outperforming ColNet and TaBERT.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model",
+                "sec_num": null
+            },
+            {
+                "text": "Ablation Study: Next, we analyze the performance of TabGCN, using multiple ablations of the full model. -K leaves out the knowledge nodes and their incident edges from the GCN graph during training. -E focuses only on types by removing all entity nodes and entity-related edges (type-entity and cell-entity annotation) from the GCN graph. It is trained only using type loss. Note that it cannot perform tasks associated with entities, specifically entity detection, novel entity classification and novel entity discovery. Similarly, -T focuses only on entities by removing all type nodes and type-related edges (type-entity and column-type annotation) from the GCN graph. It is trained only using entity loss, and cannot perform tasks associated with types. Finally, -L removes the lexical similarity edges from the GCN graph. The results are recorded in Table . 5. We can see that all the components of the architecture contribute to performance improvements. The improvement is statistically significant (using the Wilson Interval with \u03b1 = 0.05) for all ablations other than -K. While -K performs comparably here, its performance drops significantly for novelty classification, as can be seen in Fig. 3 .",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 1203,
+                        "end": 1204,
+                        "text": "3",
+                        "ref_id": "FIGREF4"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Model",
+                "sec_num": null
+            },
+            {
+                "text": "Tasks: Finally, we include some results for the table and row related inference tasks defined at the end of Sec.5. This is to demonstrate how the learnt embeddings can benefit potential down-stream tasks. Note that TabGCN directly outputs table embeddings. Of the baselines, Tab2Vec and TaBERT output row embeddings. For these models, we create table embeddings by averaging the corresponding row embeddings. In Tab. 6, we record performance for table clustering. TabGCN again significantly outperforms both baselines for both datasets.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Downstream Table Related",
+                "sec_num": null
+            },
+            {
+                "text": "We finally consider row-to-table assignment. In this task, one randomly selected row is removed from every table during training. These rows then need to be classified according to their parent table. Since the models output a ranking of tables for each row, we evaluate using two ranking related measures. Hits@1 measures the fraction of rows with the correct table at rank 1. Mean Reciprocal rank (MRR) is the mean of the reciprocal rank of the correct table over all rows, and its perfect value is 1.0. In Tab. 3, we again see that TabGCN performs the best across datasets.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Downstream Table Related",
+                "sec_num": null
+            },
+            {
+                "text": "In summary, we have demonstrated the usefulness of learning embeddings of table elements and knowledge elements jointly using both entity and type losses in an end-to-end fashion for type and entity annotation on 5 benchmark datasets. In addition, we have demonstrated how the learned embeddings can be useful for downstream table-related tasks. In all cases, TabGCN has significantly outperformed multiple state-of-the-art baselines using probabilistic graphical models as well as other neural approaches.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Downstream Table Related",
+                "sec_num": null
+            },
+            {
+                "text": "We have proposed a model for that jointly learns representations of tables, rows, columns and cell, as well as entities and types by capturing the complete syntactic structure of all tables, the relevant entities and types and the available annotations using the Graph Convolutional Network. As a result, TabGCN unifies the benefits of probabilistic graphical model based approaches and embedding based approaches for table annotation. Using these embeddings, TabGCN significantly outperforms existing approaches for table annotation, as well as entity and type discovery.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion",
+                "sec_num": "7"
+            }
+        ],
+        "back_matter": [
+            {
+                "text": "Wiki It focuses on relational tables and associates a single entity with a row for its core column. We adapted this model for web tables which associate an entity for each cell. We use their Table2VecE version, which models a row as a sequences of all entities that appear within cells of that row. After training the word2vec model, instead of considering the embedding for the entire row as in Table2VecE, we create cell-specific embeddings from only the tokens for that cell. Col-Net (Chen et al., 2019) models each column as a sequence of words from the cells under the column and uses a CNN to predict the column type. We also use an adaptation of TaBERT (Yin et al., 2020) which trains a joint language model for retrieval from tables given utterances. We adapt their approach to independently linearize each row and column of a table as a sequence of cells under that row and column, and get column and row embeddings using the mean of corresponding cell embeddings.For cells, we use pre-trained BERT embeddings.Hyper-parameters: We used one-hot encodings as inputs for cells and entities with lemmas. We used ReLU as the nonlinear GCN activation, 2 GCN layers with 512 and 256 dimensions. As a result, the 8 GCN weight matrices were Vx512 in the first layer, where V is the vocabulary size,",
+                "cite_spans": [
+                    {
+                        "start": 487,
+                        "end": 506,
+                        "text": "(Chen et al., 2019)",
+                        "ref_id": "BIBREF1"
+                    },
+                    {
+                        "start": 660,
+                        "end": 678,
+                        "text": "(Yin et al., 2020)",
+                        "ref_id": "BIBREF14"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model",
+                "sec_num": null
+            }
+        ],
+        "bib_entries": {
+            "BIBREF0": {
+                "ref_id": "b0",
+                "title": "Tabel: Entity linking in web tables",
+                "authors": [
+                    {
+                        "first": "Chandra",
+                        "middle": [],
+                        "last": "Sekhar Bhagavatula",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Thanapon",
+                        "middle": [],
+                        "last": "Noraset",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Doug",
+                        "middle": [],
+                        "last": "Downey",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "The Semantic Web -ISWC 2015 -14th International Semantic Web Conference",
+                "volume": "9366",
+                "issue": "",
+                "pages": "425--441",
+                "other_ids": {
+                    "DOI": [
+                        "10.1007/978-3-319-25007-6_25"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Chandra Sekhar Bhagavatula, Thanapon Noraset, and Doug Downey. 2015. Tabel: Entity linking in web tables. In The Semantic Web -ISWC 2015 -14th International Semantic Web Conference, Bethlehem, PA, USA, October 11-15, 2015, Proceedings, Part I, volume 9366 of Lecture Notes in Computer Science, pages 425-441. Springer.",
+                "links": null
+            },
+            "BIBREF1": {
+                "ref_id": "b1",
+                "title": "Colnet: Embedding the semantics of web tables for column type prediction",
+                "authors": [
+                    {
+                        "first": "Jiaoyan",
+                        "middle": [],
+                        "last": "Chen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ernesto",
+                        "middle": [],
+                        "last": "Jim\u00e9nez-Ruiz",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ian",
+                        "middle": [],
+                        "last": "Horrocks",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Charles",
+                        "middle": [],
+                        "last": "Sutton",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "The Thirty-Third AAAI Conference on Artificial Intelligence, AAAI 2019",
+                "volume": "",
+                "issue": "",
+                "pages": "29--36",
+                "other_ids": {
+                    "DOI": [
+                        "10.1609/aaai.v33i01.330129"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Jiaoyan Chen, Ernesto Jim\u00e9nez-Ruiz, Ian Horrocks, and Charles Sutton. 2019. Colnet: Embedding the semantics of web tables for column type prediction. In The Thirty-Third AAAI Conference on Artificial Intelligence, AAAI 2019, Honolulu, Hawaii, USA, January 27 -February 1, 2019, pages 29-36. AAAI Press.",
+                "links": null
+            },
+            "BIBREF2": {
+                "ref_id": "b2",
+                "title": "Matching web tables with knowledge base entities: From entity lookups to entity embeddings",
+                "authors": [
+                    {
+                        "first": "Vasilis",
+                        "middle": [],
+                        "last": "Efthymiou",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Oktie",
+                        "middle": [],
+                        "last": "Hassanzadeh",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mariano",
+                        "middle": [],
+                        "last": "Rodriguez-Muro",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Vassilis",
+                        "middle": [],
+                        "last": "Christophides",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "The Semantic Web -ISWC 2017 -16th International Semantic Web Conference",
+                "volume": "",
+                "issue": "",
+                "pages": "260--277",
+                "other_ids": {
+                    "DOI": [
+                        "10.1007/978-3-319-68288-4_16"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Vasilis Efthymiou, Oktie Hassanzadeh, Mariano Rodriguez-Muro, and Vassilis Christophides. 2017. Matching web tables with knowledge base entities: From entity lookups to entity embeddings. In The Semantic Web -ISWC 2017 -16th International Se- mantic Web Conference, Vienna, Austria, October 21-25, 2017, Proceedings, Part I, pages 260-277. Springer.",
+                "links": null
+            },
+            "BIBREF3": {
+                "ref_id": "b3",
+                "title": "Entity matching on web tables: a table embeddings approach for blocking",
+                "authors": [
+                    {
+                        "first": "Anna",
+                        "middle": [],
+                        "last": "Lisa Gentile",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Petar",
+                        "middle": [],
+                        "last": "Ristoski",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Steffen",
+                        "middle": [],
+                        "last": "Eckel",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Proceedings of the 20th International Conference on Extending Database Technology",
+                "volume": "",
+                "issue": "",
+                "pages": "510--513",
+                "other_ids": {
+                    "DOI": [
+                        "10.5441/002/edbt.2017.57"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Anna Lisa Gentile, Petar Ristoski, Steffen Eckel, Do- minique Ritze, and Heiko Paulheim. 2017. Entity matching on web tables: a table embeddings ap- proach for blocking. In Proceedings of the 20th International Conference on Extending Database Technology, EDBT 2017, Venice, Italy, March 21-24, 2017, pages 510-513. OpenProceedings.org.",
+                "links": null
+            },
+            "BIBREF4": {
+                "ref_id": "b4",
+                "title": "Neural message passing for quantum chemistry",
+                "authors": [
+                    {
+                        "first": "Justin",
+                        "middle": [],
+                        "last": "Gilmer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Samuel",
+                        "middle": [
+                            "S"
+                        ],
+                        "last": "Schoenholz",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Patrick",
+                        "middle": [
+                            "F"
+                        ],
+                        "last": "Riley",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Oriol",
+                        "middle": [],
+                        "last": "Vinyals",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "George",
+                        "middle": [
+                            "E"
+                        ],
+                        "last": "Dahl",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Proceedings of the 34th International Conference on Machine Learning",
+                "volume": "70",
+                "issue": "",
+                "pages": "1263--1272",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Justin Gilmer, Samuel S. Schoenholz, Patrick F. Ri- ley, Oriol Vinyals, and George E. Dahl. 2017. Neu- ral message passing for quantum chemistry. In Proceedings of the 34th International Conference on Machine Learning -Volume 70, ICML'17, page 1263-1272.",
+                "links": null
+            },
+            "BIBREF5": {
+                "ref_id": "b5",
+                "title": "Adam: A method for stochastic optimization",
+                "authors": [
+                    {
+                        "first": "P",
+                        "middle": [],
+                        "last": "Diederik",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jimmy",
+                        "middle": [],
+                        "last": "Kingma",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Ba",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "3rd International Conference on Learning Representations, ICLR 2015",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Diederik P. Kingma and Jimmy Ba. 2015. Adam: A method for stochastic optimization. In 3rd Inter- national Conference on Learning Representations, ICLR 2015, San Diego, CA, USA, May 7-9, 2015, Conference Track Proceedings.",
+                "links": null
+            },
+            "BIBREF6": {
+                "ref_id": "b6",
+                "title": "Semisupervised classification with graph convolutional networks",
+                "authors": [
+                    {
+                        "first": "Thomas",
+                        "middle": [
+                            "N"
+                        ],
+                        "last": "Kipf",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Max",
+                        "middle": [],
+                        "last": "Welling",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "5th International Conference on Learning Representations",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Thomas N. Kipf and Max Welling. 2017. Semi- supervised classification with graph convolutional networks. In 5th International Conference on Learn- ing Representations, ICLR 2017, Toulon, France, April 24-26, 2017, Conference Track Proceedings. OpenReview.net.",
+                "links": null
+            },
+            "BIBREF7": {
+                "ref_id": "b7",
+                "title": "Annotating and searching web tables using entities, types and relationships",
+                "authors": [
+                    {
+                        "first": "Girija",
+                        "middle": [],
+                        "last": "Limaye",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sunita",
+                        "middle": [],
+                        "last": "Sarawagi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Soumen",
+                        "middle": [],
+                        "last": "Chakrabarti",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2010,
+                "venue": "Proc. VLDB Endow",
+                "volume": "3",
+                "issue": "",
+                "pages": "1338--1347",
+                "other_ids": {
+                    "DOI": [
+                        "10.14778/1920841.1921005"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Girija Limaye, Sunita Sarawagi, and Soumen Chakrabarti. 2010. Annotating and searching web tables using entities, types and relationships. Proc. VLDB Endow., 3(1-2):1338-1347.",
+                "links": null
+            },
+            "BIBREF8": {
+                "ref_id": "b8",
+                "title": "Encoding sentences with graph convolutional networks for semantic role labeling",
+                "authors": [
+                    {
+                        "first": "Diego",
+                        "middle": [],
+                        "last": "Marcheggiani",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ivan",
+                        "middle": [],
+                        "last": "Titov",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Proceedings of the 2017 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "1506--1515",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/d17-1159"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Diego Marcheggiani and Ivan Titov. 2017. Encoding sentences with graph convolutional networks for se- mantic role labeling. In Proceedings of the 2017 Conference on Empirical Methods in Natural Lan- guage Processing, EMNLP 2017, Copenhagen, Den- mark, September 9-11, 2017, pages 1506-1515. As- sociation for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF9": {
+                "ref_id": "b9",
+                "title": "Glove: Global vectors for word representation",
+                "authors": [
+                    {
+                        "first": "Jeffrey",
+                        "middle": [],
+                        "last": "Pennington",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Richard",
+                        "middle": [],
+                        "last": "Socher",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [
+                            "D"
+                        ],
+                        "last": "Manning",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "Proceedings of the 2014 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "1532--1543",
+                "other_ids": {
+                    "DOI": [
+                        "10.3115/v1/d14-1162"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Jeffrey Pennington, Richard Socher, and Christopher D. Manning. 2014. Glove: Global vectors for word representation. In Proceedings of the 2014 Confer- ence on Empirical Methods in Natural Language Processing, EMNLP 2014, October 25-29, 2014, Doha, Qatar, A meeting of SIGDAT, a Special Inter- est Group of the ACL, pages 1532-1543. ACL.",
+                "links": null
+            },
+            "BIBREF10": {
+                "ref_id": "b10",
+                "title": "Silhouettes: A graphical aid to the interpretation and validation of cluster analysis",
+                "authors": [
+                    {
+                        "first": "Peter",
+                        "middle": [],
+                        "last": "Rousseeuw",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1987,
+                "venue": "Journal of Computational and Applied Mathematics",
+                "volume": "20",
+                "issue": "",
+                "pages": "53--65",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Peter Rousseeuw. 1987. Silhouettes: A graphical aid to the interpretation and validation of cluster analysis. comput. appl. math. 20, 53-65. Journal of Computa- tional and Applied Mathematics, 20:53-65.",
+                "links": null
+            },
+            "BIBREF11": {
+                "ref_id": "b11",
+                "title": "Meimei: An efficient probabilistic approach for semantically annotating tables",
+                "authors": [
+                    {
+                        "first": "Kunihiro",
+                        "middle": [],
+                        "last": "Takeoka",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Masafumi",
+                        "middle": [],
+                        "last": "Oyamada",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Shinji",
+                        "middle": [],
+                        "last": "Nakadai",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Takeshi",
+                        "middle": [],
+                        "last": "Okadome",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "The Thirty-Third AAAI Conference on Artificial Intelligence, AAAI 2019",
+                "volume": "",
+                "issue": "",
+                "pages": "281--288",
+                "other_ids": {
+                    "DOI": [
+                        "10.1609/aaai.v33i01.3301281"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Kunihiro Takeoka, Masafumi Oyamada, Shinji Nakadai, and Takeshi Okadome. 2019. Meimei: An efficient probabilistic approach for semanti- cally annotating tables. In The Thirty-Third AAAI Conference on Artificial Intelligence, AAAI 2019, Honolulu, Hawaii, USA, January 27 -February 1, 2019, pages 281-288. AAAI Press.",
+                "links": null
+            },
+            "BIBREF12": {
+                "ref_id": "b12",
+                "title": "Dirichlet processes",
+                "authors": [
+                    {
+                        "first": "Yee",
+                        "middle": [
+                            "Whye"
+                        ],
+                        "last": "Teh",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2010,
+                "venue": "Encyclopedia of Machine Learning",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Yee Whye Teh. 2010. Dirichlet processes. In Encyclo- pedia of Machine Learning. Springer.",
+                "links": null
+            },
+            "BIBREF13": {
+                "ref_id": "b13",
+                "title": "Incorporating syntactic and semantic information in word embeddings using graph convolutional networks",
+                "authors": [
+                    {
+                        "first": "Shikhar",
+                        "middle": [],
+                        "last": "Vashishth",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Manik",
+                        "middle": [],
+                        "last": "Bhandari",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Prateek",
+                        "middle": [],
+                        "last": "Yadav",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Piyush",
+                        "middle": [],
+                        "last": "Rai",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chiranjib",
+                        "middle": [],
+                        "last": "Bhattacharyya",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Partha",
+                        "middle": [],
+                        "last": "Talukdar",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "3308--3318",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/P19-1320"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Shikhar Vashishth, Manik Bhandari, Prateek Yadav, Piyush Rai, Chiranjib Bhattacharyya, and Partha Talukdar. 2019. Incorporating syntactic and seman- tic information in word embeddings using graph con- volutional networks. In Proceedings of the 57th An- nual Meeting of the Association for Computational Linguistics, pages 3308-3318, Florence, Italy. Asso- ciation for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF14": {
+                "ref_id": "b14",
+                "title": "Tabert: Pretraining for joint understanding of textual and tabular data",
+                "authors": [
+                    {
+                        "first": "Pengcheng",
+                        "middle": [],
+                        "last": "Yin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Graham",
+                        "middle": [],
+                        "last": "Neubig",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Wen-Tau",
+                        "middle": [],
+                        "last": "Yih",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sebastian",
+                        "middle": [],
+                        "last": "Riedel",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics, ACL 2020, Online",
+                "volume": "",
+                "issue": "",
+                "pages": "8413--8426",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/2020.acl-main.745"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Pengcheng Yin, Graham Neubig, Wen-tau Yih, and Se- bastian Riedel. 2020. Tabert: Pretraining for joint understanding of textual and tabular data. In Pro- ceedings of the 58th Annual Meeting of the Associ- ation for Computational Linguistics, ACL 2020, On- line, July 5-10, 2020, pages 8413-8426. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF15": {
+                "ref_id": "b15",
+                "title": "Table2vec: Neural word and entity embeddings for table population and retrieval",
+                "authors": [
+                    {
+                        "first": "Li",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Shuo",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Krisztian",
+                        "middle": [],
+                        "last": "Balog",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 42nd International ACM SIGIR Conference on Research and Development in Information Retrieval",
+                "volume": "",
+                "issue": "",
+                "pages": "1029--1032",
+                "other_ids": {
+                    "DOI": [
+                        "10.1145/3331184.3331333"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Li Zhang, Shuo Zhang, and Krisztian Balog. 2019. Ta- ble2vec: Neural word and entity embeddings for ta- ble population and retrieval. In Proceedings of the 42nd International ACM SIGIR Conference on Re- search and Development in Information Retrieval, SIGIR 2019, Paris, France, July 21-25, 2019, pages 1029-1032. ACM.",
+                "links": null
+            },
+            "BIBREF16": {
+                "ref_id": "b16",
+                "title": "Ad hoc table retrieval using semantic similarity",
+                "authors": [
+                    {
+                        "first": "Shuo",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Krisztian",
+                        "middle": [],
+                        "last": "Balog",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 2018 World Wide Web Conference on World Wide Web, WWW 2018",
+                "volume": "",
+                "issue": "",
+                "pages": "1553--1562",
+                "other_ids": {
+                    "DOI": [
+                        "10.1145/3178876.3186067"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Shuo Zhang and Krisztian Balog. 2018. Ad hoc table retrieval using semantic similarity. In Proceedings of the 2018 World Wide Web Conference on World Wide Web, WWW 2018, Lyon, France, April 23-27, 2018, pages 1553-1562. ACM.",
+                "links": null
+            },
+            "BIBREF17": {
+                "ref_id": "b17",
+                "title": "Novel entity discovery from web tables",
+                "authors": [
+                    {
+                        "first": "Shuo",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Edgar",
+                        "middle": [],
+                        "last": "Meij",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Krisztian",
+                        "middle": [],
+                        "last": "Balog",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ridho",
+                        "middle": [],
+                        "last": "Reinanda",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "Proceedings of The Web Conference 2020, WWW '20, page 1298-1308",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "DOI": [
+                        "10.1145/3366423.3380205"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Shuo Zhang, Edgar Meij, Krisztian Balog, and Ridho Reinanda. 2020. Novel entity discovery from web tables. In Proceedings of The Web Conference 2020, WWW '20, page 1298-1308, New York, NY, USA. Association for Computing Machinery.",
+                "links": null
+            }
+        },
+        "ref_entries": {
+            "FIGREF0": {
+                "num": null,
+                "text": "Figure 1: (a) Example table with 2 columns and 2 rows. The column annotations with types and the cell annotations with entities are shown within brackets. (b) GCN graph for exampletable with table nodes as boxes and entities and types nodes as ovals. Table edges are shown using fine solid lines, entity-type edges with thick solid lines and annotation edges using dashed lines. Lexical similarity edges are typically between cells in different tables and are not shown.",
+                "uris": null,
+                "fig_num": "1",
+                "type_str": "figure"
+            },
+            "FIGREF1": {
+                "num": null,
+                "text": "Figure 2: Model architecture showing GCN component with gray nodes, entity classification component with blue nodes and type classification components with red nodes.",
+                "uris": null,
+                "fig_num": "2",
+                "type_str": "figure"
+            },
+            "FIGREF3": {
+                "num": null,
+                "text": "and 512x256 in the second layer. The entity and type space embeddings had dimension 256, so that the entity and type projection matrices were both 256x256. For training, we used learning rate 0.001, dropout 0.5, 1000 epochs. The weights for combining the type and entity losses was 1 : 2 for both datasets, optimized manually. All experiments were performed on a Dual-core intel Core i5 Processor with 8GB RAM. The average training time per epoch ranges from 1.3 secs for Wiki Manual to 35.4 secs for T2Dv2.",
+                "uris": null,
+                "fig_num": null,
+                "type_str": "figure"
+            },
+            "FIGREF4": {
+                "num": null,
+                "text": "Figure 3: Novelty classification Performance on (a) types and (b) entities for TabGCN, its ablation TabGCN(-K) and PGM for Web Manual, showing F1 on the y-axis and decision threshold on x-axis. PGM does not use a decision threshold. Results on other datasets are very similar. Other baselines cannot address this task.",
+                "uris": null,
+                "fig_num": "3",
+                "type_str": "figure"
+            },
+            "TABREF1": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "Table and Knowledge Elements: Our GCN graph connects table parts, entities and types. We show the GCN graph for our example table in Fig.1. Its node set V consists of table nodes (boxes) and knowledge nodes (ovals). For each table S k \u2208 S, the table nodes include one node for each cell x k ij , one node for each column C k j , one node for each row R k i , and one node for the table S k itself. The knowledge nodes include one node for each observed type T o \u2208 T o and one node for each observed entity E o \u2208 E o .",
+                "html": null,
+                "num": null
+            },
+            "TABREF3": {
+                "content": "<table><tr><td>Dataset</td><td>T</td><td>R</td><td>C</td><td>E</td><td>T</td><td colspan=\"2\">E  *  T  *</td></tr><tr><td>Wiki Man.</td><td>39</td><td colspan=\"6\">36.3 4.2 1026 49 308 15</td></tr><tr><td colspan=\"4\">Web Man. 403 34.4 3.7</td><td>883</td><td colspan=\"3\">48 265 14</td></tr><tr><td>Limaye</td><td colspan=\"2\">294 27.7</td><td>3</td><td>504</td><td colspan=\"2\">21 151</td><td>6</td></tr><tr><td>T2Dv2</td><td colspan=\"3\">345 44.8 4.8</td><td>-</td><td>27</td><td>-</td><td>8</td></tr><tr><td colspan=\"3\">Wikipedia 572 24.4</td><td>5</td><td>-</td><td>29</td><td>-</td><td>9</td></tr></table>",
+                "type_str": "table",
+                "text": "Row assignment performance using Hits@1 and MRR for TabGCN, Tab2Vec and TaBERT on all datasets.",
+                "html": null,
+                "num": null
+            },
+            "TABREF4": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "Dataset Statistics: For each dataset, T indictates the number of tables, R the average number of rows per table, C the average number of columns per table, E the number of unique entities and T the number of unique types used for annotation, E * the number of new unique entities and T",
+                "html": null,
+                "num": null
+            },
+            "TABREF5": {
+                "content": "<table><tr><td>Models</td><td colspan=\"6\">Wiki M Type Ent. Type Ent. Type Ent. Web M Limaye</td></tr><tr><td>-K</td><td colspan=\"6\">0.29 0.23 0.84 0.82 0.83 0.78</td></tr><tr><td>-E</td><td>0.22</td><td>-</td><td>0.82</td><td>-</td><td>0.81</td><td>-</td></tr><tr><td>-T</td><td>-</td><td>0.22</td><td>-</td><td>0.63</td><td>-</td><td>0.63</td></tr><tr><td>-L</td><td colspan=\"6\">0.33 0.23 0.80 0.75 0.81 0.74</td></tr><tr><td>TabGCN</td><td colspan=\"6\">0.33 0.24 0.84 0.83 0.84 0.79</td></tr><tr><td colspan=\"7\">Table 5: Ablation study for entity and type detection</td></tr><tr><td colspan=\"7\">showing micro. F1. -K removes knowledge (entity and</td></tr><tr><td colspan=\"7\">type) nodes, -E removes entity nodes, -T removes type</td></tr><tr><td colspan=\"6\">nodes and -L removes lexical similarity edges.</td><td/></tr><tr><td colspan=\"2\">performs PGM.</td><td/><td/><td/><td/><td/></tr></table>",
+                "type_str": "table",
+                "text": "shows novelty classification performance for Web Manual. Results for Wiki Manual and Limaye are very similar. TabGCN reaches F1 around 0.8 for both tasks for appropriate thresholds. Across thresholds, TabGCN significantly out-Type and Entity Discovery Results: The final annotation tasks are type discovery, where all unannotated columns that do not correspond to known types in T o need to be clustered into distinct new types, and entity discovery, where all unannotated cells that do not correspond to known entities in E 0 need to be clustered into distinct new entities. We used Normalized Mutual Information (NMI)",
+                "html": null,
+                "num": null
+            },
+            "TABREF7": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "Table clustering performance using NMI for TabGCN, Tab2Vec and TaBERT on T2Dv2 and Limaye. Other baselines cannot address this task. T2Dv2 has 40 table categories and Limaye 15. Other datasets do not have table categories for evaluation.",
+                "html": null,
+                "num": null
+            }
+        }
+    }
+}

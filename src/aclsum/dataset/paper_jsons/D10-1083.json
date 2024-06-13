@@ -1,0 +1,1341 @@
+{
+    "paper_id": "D10-1083",
+    "header": {
+        "generated_with": "S2ORC 1.0.0",
+        "date_generated": "2023-06-16T11:57:49.155449Z"
+    },
+    "title": "Simple Type-Level Unsupervised POS Tagging",
+    "authors": [
+        {
+            "first": "Yoong",
+            "middle": [
+                "Keok"
+            ],
+            "last": "Lee",
+            "suffix": "",
+            "affiliation": {},
+            "email": "yklee@csail.mit.edu"
+        },
+        {
+            "first": "Aria",
+            "middle": [],
+            "last": "Haghighi",
+            "suffix": "",
+            "affiliation": {},
+            "email": "aria42@csail.mit.edu"
+        },
+        {
+            "first": "Regina",
+            "middle": [],
+            "last": "Barzilay",
+            "suffix": "",
+            "affiliation": {},
+            "email": "regina@csail.mit.edu"
+        }
+    ],
+    "year": "",
+    "venue": null,
+    "identifiers": {},
+    "abstract": "Part-of-speech (POS) tag distributions are known to exhibit sparsity -a word is likely to take a single predominant tag in a corpus. Recent research has demonstrated that incorporating this sparsity constraint improves tagging accuracy. However, in existing systems, this expansion come with a steep increase in model complexity. This paper proposes a simple and effective tagging method that directly models tag sparsity and other distributional properties of valid POS tag assignments. In addition, this formulation results in a dramatic reduction in the number of model parameters thereby, enabling unusually rapid training. Our experiments consistently demonstrate that this model architecture yields substantial performance gains over more complex tagging counterparts. On several languages, we report performance exceeding that of more complex state-of-the art systems. 1",
+    "pdf_parse": {
+        "paper_id": "D10-1083",
+        "_pdf_hash": "",
+        "abstract": [
+            {
+                "text": "Part-of-speech (POS) tag distributions are known to exhibit sparsity -a word is likely to take a single predominant tag in a corpus. Recent research has demonstrated that incorporating this sparsity constraint improves tagging accuracy. However, in existing systems, this expansion come with a steep increase in model complexity. This paper proposes a simple and effective tagging method that directly models tag sparsity and other distributional properties of valid POS tag assignments. In addition, this formulation results in a dramatic reduction in the number of model parameters thereby, enabling unusually rapid training. Our experiments consistently demonstrate that this model architecture yields substantial performance gains over more complex tagging counterparts. On several languages, we report performance exceeding that of more complex state-of-the art systems. 1",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            }
+        ],
+        "body_text": [
+            {
+                "text": "Since the early days of statistical NLP, researchers have observed that a part-of-speech tag distribution exhibits \"one tag per discourse\" sparsity -words are likely to select a single predominant tag in a corpus, even when several tags are possible. Simply assigning to each word its most frequent associated tag in a corpus achieves 94.6% accuracy on the WSJ portion of the Penn Treebank. This distributional sparsity of syntactic tags is not unique to English 1 The source code for the work presented in this paper is available at http://groups.csail.mit.edu/rbg/code/typetagging/.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "-similar results have been observed across multiple languages. Clearly, explicitly modeling such a powerful constraint on tagging assignment has a potential to significantly improve the accuracy of an unsupervised part-of-speech tagger learned without a tagging dictionary. In practice, this sparsity constraint is difficult to incorporate in a traditional POS induction system (M\u00e9rialdo, 1994; Johnson, 2007; Gao and Johnson, 2008; Grac \u00b8a et al., 2009; Berg-Kirkpatrick et al., 2010) . These sequence models-based approaches commonly treat token-level tag assignment as the primary latent variable. By design, they readily capture regularities at the token-level. However, these approaches are ill-equipped to directly represent type-based constraints such as sparsity. Previous work has attempted to incorporate such constraints into token-level models via heavy-handed modifications to inference procedure and objective function (e.g., posterior regularization and ILP decoding) (Grac \u00b8a et al., 2009; Ravi and Knight, 2009) . In most cases, however, these expansions come with a steep increase in model complexity, with respect to training procedure and inference time.",
+                "cite_spans": [
+                    {
+                        "start": 378,
+                        "end": 394,
+                        "text": "(M\u00e9rialdo, 1994;",
+                        "ref_id": "BIBREF9"
+                    },
+                    {
+                        "start": 395,
+                        "end": 409,
+                        "text": "Johnson, 2007;",
+                        "ref_id": "BIBREF7"
+                    },
+                    {
+                        "start": 410,
+                        "end": 432,
+                        "text": "Gao and Johnson, 2008;",
+                        "ref_id": "BIBREF2"
+                    },
+                    {
+                        "start": 433,
+                        "end": 454,
+                        "text": "Grac \u00b8a et al., 2009;",
+                        "ref_id": "BIBREF4"
+                    },
+                    {
+                        "start": 455,
+                        "end": 485,
+                        "text": "Berg-Kirkpatrick et al., 2010)",
+                        "ref_id": "BIBREF0"
+                    },
+                    {
+                        "start": 983,
+                        "end": 1005,
+                        "text": "(Grac \u00b8a et al., 2009;",
+                        "ref_id": "BIBREF4"
+                    },
+                    {
+                        "start": 1006,
+                        "end": 1028,
+                        "text": "Ravi and Knight, 2009)",
+                        "ref_id": "BIBREF10"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "In this work, we take a more direct approach and treat a word type and its allowed POS tags as a primary element of the model. The model starts by generating a tag assignment for each word type in a vocabulary, assuming one tag per word. Then, tokenlevel HMM emission parameters are drawn conditioned on these assignments such that each word is only allowed probability mass on a single assigned tag. In this way we restrict the parameterization of a token-level HMM to reflect lexicon sparsity. This model admits a simple Gibbs sampling algorithm where the number of latent variables is proportional to the number of word types, rather than the size of a corpus as for a standard HMM sampler (Johnson, 2007) .",
+                "cite_spans": [
+                    {
+                        "start": 693,
+                        "end": 708,
+                        "text": "(Johnson, 2007)",
+                        "ref_id": "BIBREF7"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "There are two key benefits of this model architecture. First, it directly encodes linguistic intuitions about POS tag assignments: the model structure reflects the one-tag-per-word property, and a typelevel tag prior captures the skew on tag assignments (e.g., there are fewer unique determiners than unique nouns). Second, the reduced number of hidden variables and parameters dramatically speeds up learning and inference.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "We evaluate our model on seven languages exhibiting substantial syntactic variation. On several languages, we report performance exceeding that of state-of-the art systems. Our analysis identifies three key factors driving our performance gain: 1) selecting a model structure which directly encodes tag sparsity, 2) a type-level prior on tag assignments, and 3) a straightforward na\u00efve-Bayes approach to incorporate features. The observed performance gains, coupled with the simplicity of model implementation, makes it a compelling alternative to existing more complex counterparts.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Recent work has made significant progress on unsupervised POS tagging (M\u00e9rialdo, 1994; Smith and Eisner, 2005; Haghighi and Klein, 2006; Johnson, 2007; Goldwater and Griffiths, 2007; Gao and John-son, 2008; Ravi and Knight, 2009) . Our work is closely related to recent approaches that incorporate the sparsity constraint into the POS induction process. This line of work has been motivated by empirical findings that the standard EM-learned unsupervised HMM does not exhibit sufficient word tag sparsity.",
+                "cite_spans": [
+                    {
+                        "start": 70,
+                        "end": 86,
+                        "text": "(M\u00e9rialdo, 1994;",
+                        "ref_id": "BIBREF9"
+                    },
+                    {
+                        "start": 87,
+                        "end": 110,
+                        "text": "Smith and Eisner, 2005;",
+                        "ref_id": "BIBREF12"
+                    },
+                    {
+                        "start": 111,
+                        "end": 136,
+                        "text": "Haghighi and Klein, 2006;",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 137,
+                        "end": 151,
+                        "text": "Johnson, 2007;",
+                        "ref_id": "BIBREF7"
+                    },
+                    {
+                        "start": 152,
+                        "end": 182,
+                        "text": "Goldwater and Griffiths, 2007;",
+                        "ref_id": "BIBREF3"
+                    },
+                    {
+                        "start": 183,
+                        "end": 206,
+                        "text": "Gao and John-son, 2008;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 207,
+                        "end": 229,
+                        "text": "Ravi and Knight, 2009)",
+                        "ref_id": "BIBREF10"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "The extent to which this constraint is enforced varies greatly across existing methods. On one end of the spectrum are clustering approaches that assign a single POS tag to each word type (Schutze, 1995; Lamar et al., 2010) . These clusters are computed using an SVD variant without relying on transitional structure. While our method also enforces a singe tag per word constraint, it leverages the transition distribution encoded in an HMM, thereby benefiting from a richer representation of context.",
+                "cite_spans": [
+                    {
+                        "start": 188,
+                        "end": 203,
+                        "text": "(Schutze, 1995;",
+                        "ref_id": "BIBREF11"
+                    },
+                    {
+                        "start": 204,
+                        "end": 223,
+                        "text": "Lamar et al., 2010)",
+                        "ref_id": "BIBREF8"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "Other approaches encode sparsity as a soft constraint. For instance, by altering the emission distribution parameters, Johnson (2007) encourages the model to put most of the probability mass on few tags. This design does not guarantee \"structural zeros,\" but biases towards sparsity. A more forceful approach for encoding sparsity is posterior regularization, which constrains the posterior to have a small number of expected tag assignments (Grac \u00b8a et al., 2009) . This approach makes the training objective more complex by adding linear constraints proportional to the number of word types, which is rather prohibitive. A more rigid mechanism for modeling sparsity is proposed by Ravi and Knight (2009) , who minimize the size of tagging grammar as measured by the number of transition types. The use of ILP in learning the desired grammar significantly increases the computational complexity of this method.",
+                "cite_spans": [
+                    {
+                        "start": 119,
+                        "end": 133,
+                        "text": "Johnson (2007)",
+                        "ref_id": "BIBREF7"
+                    },
+                    {
+                        "start": 442,
+                        "end": 464,
+                        "text": "(Grac \u00b8a et al., 2009)",
+                        "ref_id": "BIBREF4"
+                    },
+                    {
+                        "start": 683,
+                        "end": 705,
+                        "text": "Ravi and Knight (2009)",
+                        "ref_id": "BIBREF10"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "In contrast to these approaches, our method directly incorporates these constraints into the structure of the model. This design leads to a significant reduction in the computational complexity of training and inference.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "Another thread of relevant research has explored the use of features in unsupervised POS induction (Smith and Eisner, 2005; Berg-Kirkpatrick et al., 2010; Hasan and Ng, 2009) . These methods demonstrated the benefits of incorporating linguistic features using a log-linear parameterization, but requires elaborate machinery for training. In our work, we demonstrate that using a simple na\u00efve-Bayes approach also yields substantial performance gains, without the associated training complexity.",
+                "cite_spans": [
+                    {
+                        "start": 99,
+                        "end": 123,
+                        "text": "(Smith and Eisner, 2005;",
+                        "ref_id": "BIBREF12"
+                    },
+                    {
+                        "start": 124,
+                        "end": 154,
+                        "text": "Berg-Kirkpatrick et al., 2010;",
+                        "ref_id": "BIBREF0"
+                    },
+                    {
+                        "start": 155,
+                        "end": 174,
+                        "text": "Hasan and Ng, 2009)",
+                        "ref_id": "BIBREF6"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "We consider the unsupervised POS induction problem without the use of a tagging dictionary. A graphical depiction of our model as well as a summary of random variables and parameters can be found in Figure 1 . As is standard, we use a fixed constant K for the number of tagging states.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 206,
+                        "end": 207,
+                        "text": "1",
+                        "ref_id": "FIGREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Generative Story",
+                "sec_num": "3"
+            },
+            {
+                "text": "The model starts by generating a tag assignment T for each word type in a vocabulary, assuming one tag per word. Conditioned on T , features of word types W are drawn. We refer to (T , W ) as the lexicon of a language and \u03c8 for the parameters for their generation; \u03c8 depends on a single hyperparameter \u03b2.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model Overview",
+                "sec_num": null
+            },
+            {
+                "text": "Once the lexicon has been drawn, the model proceeds similarly to the standard token-level HMM: Emission parameters \u03b8 are generated conditioned on tag assignments T . We also draw transition parameters \u03c6. Both parameters depend on a single hyperparameter \u03b1. Once HMM parameters (\u03b8, \u03c6) are drawn, a token-level tag and word sequence, (t, w), is generated in the standard HMM fashion: a tag sequence t is generated from \u03c6. The corresponding token words w are drawn conditioned on t and \u03b8.2 Our full generative model is given by:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model Overview",
+                "sec_num": null
+            },
+            {
+                "text": "P (T , W , \u03b8, \u03c8, \u03c6, t, w|\u03b1, \u03b2) = P (T , W , \u03c8|\u03b2)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model Overview",
+                "sec_num": null
+            },
+            {
+                "text": "[Lexicon] P (\u03c6, \u03b8|T , \u03b1, \u03b2)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model Overview",
+                "sec_num": null
+            },
+            {
+                "text": "[Parameter] P (w, t|\u03c6, \u03b8)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model Overview",
+                "sec_num": null
+            },
+            {
+                "text": "[Token]",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model Overview",
+                "sec_num": null
+            },
+            {
+                "text": "We refer to the components on the right hand side as the lexicon, parameter, and token component respectively. Since the parameter and token components will remain fixed throughout experiments, we briefly describe each.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model Overview",
+                "sec_num": null
+            },
+            {
+                "text": "Parameter Component As in the standard Bayesian HMM (Goldwater and Griffiths, 2007) , all distributions are independently drawn from symmetric Dirichlet distributions:",
+                "cite_spans": [
+                    {
+                        "start": 52,
+                        "end": 83,
+                        "text": "(Goldwater and Griffiths, 2007)",
+                        "ref_id": "BIBREF3"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model Overview",
+                "sec_num": null
+            },
+            {
+                "text": "P (\u03c6, \u03b8|T , \u03b1, \u03b2) = K t=1 (P (\u03c6 t |\u03b1)P (\u03b8 t |T , \u03b1))",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model Overview",
+                "sec_num": null
+            },
+            {
+                "text": "The transition distribution \u03c6 t for each tag t is drawn according to DIRICHLET(\u03b1, K), where \u03b1 is the shared transition and emission distribution hyperparameter. In total there are O(K 2 ) parameters associated with the transition parameters.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model Overview",
+                "sec_num": null
+            },
+            {
+                "text": "In contrast to the Bayesian HMM, \u03b8 t is not drawn from a distribution which has support for each of the n word types. Instead, we condition on the type-level tag assignments T . Specifically, let S t = {i|T i = t} denote the indices of the word types which have been assigned tag t according to the tag assignments T . Then \u03b8 t is drawn from DIRICHLET(\u03b1, S t ), a symmetric Dirichlet which only places mass on word types indicated by S t . This ensures that each word will only be assigned a single tag at inference time (see Section 4).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model Overview",
+                "sec_num": null
+            },
+            {
+                "text": "Note that while the standard HMM, has O(Kn) emission parameters, our model has O(n) effective parameters. 3Token Component Once HMM parameters (\u03c6, \u03b8) have been drawn, the HMM generates a token-level corpus w in the standard way:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model Overview",
+                "sec_num": null
+            },
+            {
+                "text": "P (w, t|\u03c6, \u03b8) = (w,t)\u2208(w,t) \uf8eb \uf8ed j P (t j |\u03c6 t j-1 )P (w j |t j , \u03b8 t j ) \uf8f6 \uf8f8",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model Overview",
+                "sec_num": null
+            },
+            {
+                "text": "Note that in our model, conditioned on T , there is precisely one t which has non-zero probability for the token component, since for each word, exactly one \u03b8 t has support.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model Overview",
+                "sec_num": null
+            },
+            {
+                "text": "We present several variations for the lexical component P (T , W |\u03c8), each adding more complex parameterizations.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Lexicon Component",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "Uniform Tag Prior (1TW) Our initial lexicon component will be uniform over possible tag assignments as well as word types. Its only purpose is to explore how well we can induce POS tags using only the one-tag-per-word constraint. Specifically, the lexicon is generated as:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Lexicon Component",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "\u03c6 K T W N T Y P E T O K E N w 1 t 1 \u03c6 \u03b8 w 2 t 2 \u03c6 \u03b8 w m t m \u03c6 \u03b8 N \u03b1 \u03b1 \u03b8 K : Word types (obs) VARIABLES W : Tag assigns (T 1 , . . . , T n ) (W 1 , . . . , W n ) T :",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Lexicon Component",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "P (T , W |\u03c8) =P (T )P (W |T ) = n i=1 P (T i )P (W i |T i ) = 1 Kn n",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Lexicon Component",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "This model is equivalent to the standard HMM except that it enforces the one-word-per-tag constraint.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Lexicon Component",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "Learned Tag Prior (PRIOR) We next assume there exists a single prior distribution \u03c8 over tag assignments drawn from DIRICHLET(\u03b2, K). This alters generation of T as follows:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Lexicon Component",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "P (T |\u03c8) = n i=1 P (T i |\u03c8)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Lexicon Component",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "Note that this distribution captures the frequency of a tag across word types, as opposed to tokens. ",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Lexicon Component",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "P (W |T , \u03c8) = n i=1 P (W i |T i , \u03c8) = n i=1 \uf8eb \uf8ed (f,v)\u2208W i P (v|\u03c8 T i f ) \uf8f6 \uf8f8",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Lexicon Component",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "4 Learning and Inference",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Lexicon Component",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "For inference, we are interested in the posterior probability over the latent variables in our model.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Lexicon Component",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "During training, we treat as observed the language word types W as well as the token-level corpus w.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Lexicon Component",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "We utilize Gibbs sampling to approximate our collapsed model posterior:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Lexicon Component",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "P (T ,t|W , w, \u03b1, \u03b2) \u221d P (T , t, W , w|\u03b1, \u03b2)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Lexicon Component",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "= P (T , t, W , w, \u03c8, \u03b8, \u03c6, w|\u03b1, \u03b2)d\u03c8d\u03b8d\u03c6",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Lexicon Component",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "Note that given tag assignments T , there is only one setting of token-level tags t which has mass in the above posterior. Specifically, for the ith word type, the set of token-level tags associated with token occurrences of this word, denoted t (i) , must all take the value T i to have non-zero mass. Thus in the context of Gibbs sampling, if we want to block sample T i with t (i) , we only need sample values for T i and consider this setting of t (i) .",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Lexicon Component",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "The equation for sampling a single type-level assignment T i is given by,",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Lexicon Component",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "P (T i , t (i) |T -i , W , t (-i) , w, \u03b1, \u03b2) = P (T i |W , T -i , \u03b2)P (t (i) |T i , t (-i) , w, \u03b1)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Lexicon Component",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "where T -i denotes all type-level tag assignment except T i and t (-i) denotes all token-level tags except t (i) . The terms on the right-hand-side denote the type-level and token-level probability terms respectively. The type-level posterior term can be computed according to,",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Lexicon Component",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "P (T i |W , T -i , \u03b2) \u221d P (T i |T -i , \u03b2) (f,v)\u2208W i P (v|T i , f, W -i , T -i , \u03b2)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Lexicon Component",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "All of the probabilities on the right-hand-side are Dirichlet, distributions which can be computed analytically given counts.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Lexicon Component",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "The token-level term is similar to the standard HMM sampling equations found in Johnson (2007) . The relevant variables are the set of token-level tags that appear before and after each instance of the ith word type; we denote these context pairs with the set {(t b , t a )} and they are contained in t (-i) . We use w to represent the ith word type emitted by the HMM:",
+                "cite_spans": [
+                    {
+                        "start": 80,
+                        "end": 94,
+                        "text": "Johnson (2007)",
+                        "ref_id": "BIBREF7"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Lexicon Component",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "P (t (i) |T i , t (-i) , w, \u03b1) \u221d (t b ,t a ) P (w|T i , t (-i) , w (-i) , \u03b1) P (T i |t b , t (-i) , \u03b1)P (t a |T i , t (-i) , \u03b1)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Lexicon Component",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "All terms are Dirichlet distributions and parameters can be analytically computed from counts in t (-i) and w (-i) (Johnson, 2007) .",
+                "cite_spans": [
+                    {
+                        "start": 115,
+                        "end": 130,
+                        "text": "(Johnson, 2007)",
+                        "ref_id": "BIBREF7"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Lexicon Component",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "Note that each round of sampling T i variables takes time proportional to the size of the corpus, as with the standard token-level HMM. A crucial difference is that the number of parameters is greatly reduced as is the number of variables that are sampled during each iteration. In contrast to results reported in Johnson (2007) , we found that the performance of our Gibbs sampler on the basic 1TW model stabilized very quickly after about 10 full iterations of sampling (see Figure 2 for a depiction).",
+                "cite_spans": [
+                    {
+                        "start": 314,
+                        "end": 328,
+                        "text": "Johnson (2007)",
+                        "ref_id": "BIBREF7"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 484,
+                        "end": 485,
+                        "text": "2",
+                        "ref_id": "FIGREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Lexicon Component",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "We evaluate our approach on seven languages: English, Danish, Dutch, German, Portuguese, Spanish, and Swedish. On each language we investigate the contribution of each component of our model. For all languages we do not make use of a tagging dictionary. We report token-level one-to-one and many-to-one accuracy on a variety of languages under several experimental settings (Section 5). For each language and setting, we report one-to-one (1-1) and manyto-one (m-1) accuracies. For each cell, the first row corresponds to the result using the best hyperparameter choice, where best is defined by the 1-1 metric. The second row represents the performance of the median hyperparameter setting. Model components cascade, so the row corresponding to +FEATS also includes the PRIOR component (see Section 3).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "5"
+            },
+            {
+                "text": "- English Danish Dutch German Portuguese Spanish Swedish param. 1-1 m-1 1-1 m-1 1-1 m-1 1-1 m-1 1-1 m-1 1-1 m-1 1-1 m-",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model Hyper",
+                "sec_num": null
+            },
+            {
+                "text": "# ",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Language",
+                "sec_num": null
+            },
+            {
+                "text": "Following the set-up of Johnson (2007) , we use the whole of the Penn Treebank corpus for training and evaluation on English. For other languages, we use the CoNLL-X multilingual dependency parsing shared task corpora (Buchholz and Marsi, 2006) which include gold POS tags (used for evaluation).",
+                "cite_spans": [
+                    {
+                        "start": 24,
+                        "end": 38,
+                        "text": "Johnson (2007)",
+                        "ref_id": "BIBREF7"
+                    },
+                    {
+                        "start": 218,
+                        "end": 244,
+                        "text": "(Buchholz and Marsi, 2006)",
+                        "ref_id": "BIBREF1"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Data Sets",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "We train and test on the CoNLL-X training set. Statistics for all data sets are shown in Table 2 .",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 95,
+                        "end": 96,
+                        "text": "2",
+                        "ref_id": "TABREF3"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Data Sets",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "Models To assess the marginal utility of each component of the model (see Section 3), we incrementally increase its sophistication. Specifically, we evaluate three variants: The first model (1TW) only encodes the one tag per word constraint and is uniform over type-level tag assignments. The second model (+PRIOR) utilizes the independent prior over type-level tag assignments P (T |\u03c8). The final model (+FEATS) utilizes the tag prior as well as features (e.g., suffixes and orthographic features), discussed in Section 3, for the P (W |T , \u03c8) component.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Setup",
+                "sec_num": "5.2"
+            },
+            {
+                "text": "Hyperparameters Our model has two Dirichlet concentration hyperparameters: \u03b1 is the shared hyperparameter for the token-level HMM emission and transition distributions. \u03b2 is the shared hyperparameter for the tag assignment prior and word feature multinomials. We experiment with four values for each hyperparameter resulting in 16 (\u03b1, \u03b2) combinations: \u03b1 \u03b2 0.001, 0.01, 0.1, 1.0 0.01, 0.1, 1.0, 10 Iterations In each run, we performed 30 iterations of Gibbs sampling for the type assignment variables W . 4 We use the final sample for evaluation.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Setup",
+                "sec_num": "5.2"
+            },
+            {
+                "text": "We report three metrics to evaluate tagging performance. As is standard, we report the greedy one-to-one (Haghighi and Klein, 2006) and the many-to-one token-level accuracy obtained from mapping model states to gold POS tags. We also report word type level accuracy, the fraction of word types assigned their majority tag (where the mapping between model state and tag is determined by greedy one-to-one mapping discussed above). 5For each language, we aggregate results in the following way: First, for each hyperparameter setting, we perform five runs with different random initialization of sampling state. Hyperparameter settings are sorted according to the median one-to-one metric over runs. We report results for the best and median hyperparameter settings obtained in this way. Specifically, for both settings we report results on the median run for each setting.",
+                "cite_spans": [
+                    {
+                        "start": 105,
+                        "end": 131,
+                        "text": "(Haghighi and Klein, 2006)",
+                        "ref_id": "BIBREF5"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Evaluation Metrics",
+                "sec_num": null
+            },
+            {
+                "text": "Tag set As is standard, for all experiments, we set the number of latent model tag states to the size of the annotated tag set. The original tag set for the CoNLL-X Dutch data set consists of compounded tags that are used to tag multi-word units (MWUs) resulting in a tag set of over 300 tags. We tokenize MWUs and their POS tags; this reduces the tag set size to 12. See Table 2 for the tag set size of other languages. With the exception of the Dutch data set, no other processing is performed on the annotated tags.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 378,
+                        "end": 379,
+                        "text": "2",
+                        "ref_id": "TABREF3"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Evaluation Metrics",
+                "sec_num": null
+            },
+            {
+                "text": "We report token-and type-level accuracy in Table 3 and 6 for all languages and system settings. Our analysis and comparison focuses primarily on the one-to-one accuracy since it is a stricter metric than many-to-one accuracy, but also report many-to-one for completeness.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 49,
+                        "end": 50,
+                        "text": "3",
+                        "ref_id": "TABREF2"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Results and Analysis",
+                "sec_num": "6"
+            },
+            {
+                "text": "Comparison with state-of-the-art taggers For comparison we consider two unsupervised taggers: the HMM with log-linear features of Berg-Kirkpatrick et al. (2010) and the posterior regularization HMM of Grac \u00b8a et al. (2009) . The system of Berg-Kirkpatrick et al. (2010) reports the best unsupervised results for English. We consider two variants of Berg-Kirkpatrick et al. ( 2010)'s richest model: optimized via either EM or LBFGS, as their relative performance depends on the language. Our model outperforms theirs on four out of five languages on the best hyperparameter setting and three out of five on the median setting, yielding an average absolute difference across languages of 12.9% and 3.9% for best and median settings respectively compared to their best EM or LBFGS performance. While Berg-Kirkpatrick et al. (2010) consistently outperforms ours on English, we obtain substantial gains across other languages. For instance, on Spanish, the absolute gap on median performance is 10%. Ablation Analysis We evaluate the impact of incorporating various linguistic features into our model in Table 3 . A novel element of our model is the ability to capture type-level tag frequencies. For this experiment, we compare our model with the uniform tag assignment prior (1TW) with the learned prior (+PRIOR). Across all languages, +PRIOR consistently outperforms 1TW, reducing error on average by 9.1% and 5.9% on best and median settings respectively. Similar behavior is observed when adding features. The difference between the featureless model (+PRIOR) and our full model (+FEATS) is 13.6% and 7.7% average error reduction on best and median settings respectively. Overall, the difference between our most basic model (1TW) and our full model (+FEATS) is 21.2% and 13.1% for the best and median settings respectively. One striking example is the error reduction for Spanish, which reduces error by 36.5% and 24.7% for the best and median settings respectively. We observe similar trends when using another measure -type-level accuracy (defined as the fraction of words correctly assigned their majority tag), according to which Table 6 : Type-level Results: Each cell report the typelevel accuracy computed against the most frequent tag of each word type. The state-to-tag mapping is obtained from the best hyperparameter setting for 1-1 mapping shown in Table 3 .",
+                "cite_spans": [
+                    {
+                        "start": 130,
+                        "end": 160,
+                        "text": "Berg-Kirkpatrick et al. (2010)",
+                        "ref_id": "BIBREF0"
+                    },
+                    {
+                        "start": 201,
+                        "end": 222,
+                        "text": "Grac \u00b8a et al. (2009)",
+                        "ref_id": "BIBREF4"
+                    },
+                    {
+                        "start": 239,
+                        "end": 269,
+                        "text": "Berg-Kirkpatrick et al. (2010)",
+                        "ref_id": "BIBREF0"
+                    },
+                    {
+                        "start": 797,
+                        "end": 827,
+                        "text": "Berg-Kirkpatrick et al. (2010)",
+                        "ref_id": "BIBREF0"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 1105,
+                        "end": 1106,
+                        "text": "3",
+                        "ref_id": "TABREF2"
+                    },
+                    {
+                        "start": 2141,
+                        "end": 2142,
+                        "text": "6",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 2368,
+                        "end": 2369,
+                        "text": "3",
+                        "ref_id": "TABREF2"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Results and Analysis",
+                "sec_num": "6"
+            },
+            {
+                "text": "our full model yields 39.3% average error reduction across languages when compared to the basic configuration (1TW).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Results and Analysis",
+                "sec_num": "6"
+            },
+            {
+                "text": "Table 5 provides insight into the behavior of different models in terms of the tagging lexicon they generate. The table shows that the lexicon tag frequency predicated by our full model are the closest to the gold standard.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 6,
+                        "end": 7,
+                        "text": "5",
+                        "ref_id": "TABREF5"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Results and Analysis",
+                "sec_num": "6"
+            },
+            {
+                "text": "We have presented a method for unsupervised partof-speech tagging that considers a word type and its allowed POS tags as a primary element of the model. This departure from the traditional token-based tagging approach allows us to explicitly capture typelevel distributional properties of valid POS tag as-signments as part of the model. The resulting model is compact, efficiently learnable and linguistically expressive. Our empirical results demonstrate that the type-based tagger rivals state-of-the-art tag-level taggers which employ more sophisticated learning mechanisms to exploit similar constraints.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion and Future Work",
+                "sec_num": "7"
+            },
+            {
+                "text": "In this paper, we make a simplifying assumption of one-tag-per-word. This assumption, however, is not inherent to type-based tagging models. A promising direction for future work is to explicitly model a distribution over tags for each word type. We hypothesize that modeling morphological information will greatly constrain the set of possible tags, thereby further refining the representation of the tag lexicon.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion and Future Work",
+                "sec_num": "7"
+            },
+            {
+                "text": "Note that t and w denote tag and word sequences respectively, rather than individual tokens or tags.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "This follows since each \u03b8t has St -1 parameters and P t St = n.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "Typically, the performance stabilizes after only 10 iterations.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "5 We choose these two metrics over the Variation Information measure due to the deficiencies discussed inGao and Johnson (2008).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            }
+        ],
+        "back_matter": [
+            {
+                "text": "The authors acknowledge the support of the NSF (CAREER grant IIS-0448168, and grant IIS-0904684). We are especially grateful to Taylor Berg-Kirkpatrick for running additional experiments. We thank members of the MIT NLP group for their suggestions and comments. Any opinions, findings, conclusions, or recommendations expressed in this paper are those of the authors, and do not necessarily reflect the views of the funding organizations.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Acknowledgments",
+                "sec_num": null
+            }
+        ],
+        "bib_entries": {
+            "BIBREF0": {
+                "ref_id": "b0",
+                "title": "Painless unsupervised learning with features",
+                "authors": [
+                    {
+                        "first": "Taylor",
+                        "middle": [],
+                        "last": "Berg-Kirkpatrick",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alexandre",
+                        "middle": [],
+                        "last": "Bouchard-C\u00f4t\u00e9",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "John",
+                        "middle": [],
+                        "last": "Denero",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dan",
+                        "middle": [],
+                        "last": "Klein",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2010,
+                "venue": "Proceedings of NAACL-HLT",
+                "volume": "",
+                "issue": "",
+                "pages": "582--590",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Taylor Berg-Kirkpatrick, Alexandre Bouchard-C\u00f4t\u00e9, John DeNero, and Dan Klein. 2010. Painless un- supervised learning with features. In Proceedings of NAACL-HLT, pages 582-590.",
+                "links": null
+            },
+            "BIBREF1": {
+                "ref_id": "b1",
+                "title": "Conll-x shared task on multilingual dependency parsing",
+                "authors": [
+                    {
+                        "first": "Sabine",
+                        "middle": [],
+                        "last": "Buchholz",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Erwin",
+                        "middle": [],
+                        "last": "Marsi",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2006,
+                "venue": "Proc. of CoNLL",
+                "volume": "",
+                "issue": "",
+                "pages": "149--164",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Sabine Buchholz and Erwin Marsi. 2006. Conll-x shared task on multilingual dependency parsing. In In Proc. of CoNLL, pages 149-164.",
+                "links": null
+            },
+            "BIBREF2": {
+                "ref_id": "b2",
+                "title": "A comparison of bayesian estimators for unsupervised hidden markov model pos taggers",
+                "authors": [
+                    {
+                        "first": "Jianfeng",
+                        "middle": [],
+                        "last": "Gao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mark",
+                        "middle": [],
+                        "last": "Johnson",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2008,
+                "venue": "Proceedings of the EMNLP",
+                "volume": "",
+                "issue": "",
+                "pages": "344--352",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jianfeng Gao and Mark Johnson. 2008. A comparison of bayesian estimators for unsupervised hidden markov model pos taggers. In Proceedings of the EMNLP, pages 344-352.",
+                "links": null
+            },
+            "BIBREF3": {
+                "ref_id": "b3",
+                "title": "A fully Bayesian approach to unsupervised part-ofspeech tagging",
+                "authors": [
+                    {
+                        "first": "Sharon",
+                        "middle": [],
+                        "last": "Goldwater",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Thomas",
+                        "middle": [
+                            "L"
+                        ],
+                        "last": "Griffiths",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2007,
+                "venue": "Proceedings of the ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "744--751",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Sharon Goldwater and Thomas L. Griffiths. 2007. A fully Bayesian approach to unsupervised part-of- speech tagging. In Proceedings of the ACL, pages 744-751.",
+                "links": null
+            },
+            "BIBREF4": {
+                "ref_id": "b4",
+                "title": "Posterior vs. parameter sparsity in latent variable models",
+                "authors": [
+                    {
+                        "first": "Jo\u00e3o",
+                        "middle": [],
+                        "last": "Grac \u00b8a",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kuzman",
+                        "middle": [],
+                        "last": "Ganchev",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ben",
+                        "middle": [],
+                        "last": "Taskar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Fernando",
+                        "middle": [],
+                        "last": "Pereira",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "Proceeding of NIPS",
+                "volume": "",
+                "issue": "",
+                "pages": "664--672",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jo\u00e3o Grac \u00b8a, Kuzman Ganchev, Ben Taskar, and Fernando Pereira. 2009. Posterior vs. parameter sparsity in la- tent variable models. In Proceeding of NIPS, pages 664-672.",
+                "links": null
+            },
+            "BIBREF5": {
+                "ref_id": "b5",
+                "title": "Prototype-driven learning for sequence models",
+                "authors": [
+                    {
+                        "first": "Aria",
+                        "middle": [],
+                        "last": "Haghighi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dan",
+                        "middle": [],
+                        "last": "Klein",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2006,
+                "venue": "Proceedings of the HLT-NAACL",
+                "volume": "",
+                "issue": "",
+                "pages": "320--327",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Aria Haghighi and Dan Klein. 2006. Prototype-driven learning for sequence models. In Proceedings of the HLT-NAACL, pages 320-327.",
+                "links": null
+            },
+            "BIBREF6": {
+                "ref_id": "b6",
+                "title": "Weakly supervised part-of-speech tagging for morphologically-rich, resource-scarce languages",
+                "authors": [
+                    {
+                        "first": "Saidul",
+                        "middle": [],
+                        "last": "Kazi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Vincent",
+                        "middle": [],
+                        "last": "Hasan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Ng",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "Proceedings of EACL",
+                "volume": "",
+                "issue": "",
+                "pages": "363--371",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Kazi Saidul Hasan and Vincent Ng. 2009. Weakly super- vised part-of-speech tagging for morphologically-rich, resource-scarce languages. In Proceedings of EACL, pages 363-371.",
+                "links": null
+            },
+            "BIBREF7": {
+                "ref_id": "b7",
+                "title": "Why doesn't em find good hmm pos-taggers?",
+                "authors": [
+                    {
+                        "first": "Mark",
+                        "middle": [],
+                        "last": "Johnson",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2007,
+                "venue": "Proceedings of EMNLP-CoNLL",
+                "volume": "",
+                "issue": "",
+                "pages": "296--305",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Mark Johnson. 2007. Why doesn't em find good hmm pos-taggers? In Proceedings of EMNLP-CoNLL, pages 296-305.",
+                "links": null
+            },
+            "BIBREF8": {
+                "ref_id": "b8",
+                "title": "Svd Clustering for Unsupervised POS Tagging",
+                "authors": [
+                    {
+                        "first": "Michael",
+                        "middle": [],
+                        "last": "Lamar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yariv",
+                        "middle": [],
+                        "last": "Maron",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Marko",
+                        "middle": [],
+                        "last": "Johnson",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Elie",
+                        "middle": [],
+                        "last": "Bienstock",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2010,
+                "venue": "Proceedings of ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "215--219",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Michael Lamar, Yariv Maron, Marko Johnson, and Elie Bienstock. 2010. Svd Clustering for Unsupervised POS Tagging. In Proceedings of ACL, pages 215-219.",
+                "links": null
+            },
+            "BIBREF9": {
+                "ref_id": "b9",
+                "title": "Tagging english text with a probabilistic model",
+                "authors": [
+                    {
+                        "first": "Bernard",
+                        "middle": [],
+                        "last": "M\u00e9rialdo",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1994,
+                "venue": "Computational Linguistics",
+                "volume": "20",
+                "issue": "2",
+                "pages": "155--171",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Bernard M\u00e9rialdo. 1994. Tagging english text with a probabilistic model. Computational Linguistics, 20(2):155-171.",
+                "links": null
+            },
+            "BIBREF10": {
+                "ref_id": "b10",
+                "title": "Minimized models for unsupervised part-of-speech tagging",
+                "authors": [
+                    {
+                        "first": "Sujith",
+                        "middle": [],
+                        "last": "Ravi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kevin",
+                        "middle": [],
+                        "last": "Knight",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "Proceedings of ACL-IJCNLP",
+                "volume": "",
+                "issue": "",
+                "pages": "504--512",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Sujith Ravi and Kevin Knight. 2009. Minimized models for unsupervised part-of-speech tagging. In Proceed- ings of ACL-IJCNLP, pages 504-512.",
+                "links": null
+            },
+            "BIBREF11": {
+                "ref_id": "b11",
+                "title": "Distributional part of speech tagging",
+                "authors": [
+                    {
+                        "first": "Hinrich",
+                        "middle": [],
+                        "last": "Schutze",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1995,
+                "venue": "Proceedings of the EACL",
+                "volume": "",
+                "issue": "",
+                "pages": "141--148",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Hinrich Schutze. 1995. Distributional part of speech tag- ging. In Proceedings of the EACL, pages 141-148.",
+                "links": null
+            },
+            "BIBREF12": {
+                "ref_id": "b12",
+                "title": "Contrastive estimation: Training log-linear models on unlabeled data",
+                "authors": [
+                    {
+                        "first": "Noah",
+                        "middle": [
+                            "A"
+                        ],
+                        "last": "Smith",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jason",
+                        "middle": [],
+                        "last": "Eisner",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2005,
+                "venue": "Proceedings of the ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Noah A. Smith and Jason Eisner. 2005. Contrastive esti- mation: Training log-linear models on unlabeled data. In Proceedings of the ACL.",
+                "links": null
+            }
+        },
+        "ref_entries": {
+            "FIGREF0": {
+                "num": null,
+                "text": "Figure1: Graphical depiction of our model and summary of latent variables and parameters. The type-level tag assignments T generate features associated with word types W . The tag assignments constrain the HMM emission parameters \u03b8. The tokens w are generated by token-level tags t from an HMM parameterized by the lexicon structure. The hyperparameters \u03b1 and \u03b2 represent the concentration parameters of the token-and type-level components of the model respectively. They are set to fixed constants.",
+                "uris": null,
+                "fig_num": "1",
+                "type_str": "figure"
+            },
+            "FIGREF1": {
+                "num": null,
+                "text": "Figure2: Graph of the one-to-one accuracy of our full model (+FEATS) under the best hyperparameter setting by iteration (see Section 5). Performance typically stabilizes across languages after only a few number of iterations.",
+                "uris": null,
+                "fig_num": "2",
+                "type_str": "figure"
+            },
+            "TABREF0": {
+                "content": "<table><tr><td>Language</td><td>Original case</td></tr><tr><td>English</td><td>94.6</td></tr><tr><td>Danish</td><td>96.3</td></tr><tr><td>Dutch</td><td>96.6</td></tr><tr><td>German</td><td>95.5</td></tr><tr><td>Spanish</td><td>95.4</td></tr><tr><td>Swedish</td><td>93.3</td></tr><tr><td>Portuguese</td><td>95.6</td></tr></table>",
+                "type_str": "table",
+                "text": "Upper bound on tagging accuracy assuming each word type is assigned to majority POS tag. Across all languages, high performance can be attained by selecting a single tag per word type.",
+                "html": null,
+                "num": null
+            },
+            "TABREF2": {
+                "content": "<table><tr><td>1</td></tr></table>",
+                "type_str": "table",
+                "text": "Multi-lingual Results:",
+                "html": null,
+                "num": null
+            },
+            "TABREF3": {
+                "content": "<table><tr><td/><td colspan=\"3\">Tokens # Word Types # Tags</td></tr><tr><td>English</td><td>1173766</td><td>49206</td><td>45</td></tr><tr><td>Danish</td><td>94386</td><td>18356</td><td>25</td></tr><tr><td>Dutch</td><td>203568</td><td>28393</td><td>12</td></tr><tr><td>German</td><td>699605</td><td>72325</td><td>54</td></tr><tr><td>Portuguese</td><td>206678</td><td>28931</td><td>22</td></tr><tr><td>Spanish</td><td>89334</td><td>16458</td><td>47</td></tr><tr><td>Swedish</td><td>191467</td><td>20057</td><td>41</td></tr></table>",
+                "type_str": "table",
+                "text": "Statistics for various corpora utilized in experiments. See Section 5. The English data comes from the WSJ portion of the Penn Treebank and the other languages from the training set of the CoNLL-X multilingual dependency parsing shared task.",
+                "html": null,
+                "num": null
+            },
+            "TABREF5": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "Type-level English POS Tag Ranking: We list the top 5 and bottom 5 POS tags in the lexicon and the predictions of our models under the best hyperparameter setting.Our second point of comparison is with Grac \u00b8a et al. (2009), who also incorporate a sparsity constraint, but does via altering the model objective using posterior regularization. We can only compare with Grac \u00b8a et al. (2009) on Portuguese (Grac \u00b8a et al. (2009) also report results on English, but on the reduced 17 tag set, which is not comparable to ours). Their best model yields 44.5% one-to-one accuracy, compared to our best median 56.5% result. However, our full model takes advantage of word features not present in Grac \u00b8a et al.(2009). Even without features, but still using the tag prior, our median result is 52.0%, still significantly outperforming Grac \u00b8a et al.(2009).",
+                "html": null,
+                "num": null
+            },
+            "TABREF6": {
+                "content": "<table><tr><td>Language</td><td colspan=\"7\">Metric BK10 EM BK10 LBFGS G10 FEATS Best FEATS Median</td></tr><tr><td>English</td><td/><td>1-1 m-1</td><td>48.3 68.1</td><td>56.0 75.5</td><td>--</td><td>50.9 66.4</td><td>47.8 66.4</td></tr><tr><td>Danish</td><td/><td>1-1 m-1</td><td>42.3 66.7</td><td>42.6 58.0</td><td>--</td><td>52.1 61.2</td><td>43.2 60.7</td></tr><tr><td>Dutch</td><td/><td>1-1 m-1</td><td>53.7 67.0</td><td>55.1 64.7</td><td>--</td><td>56.4 69.0</td><td>51.5 67.3</td></tr><tr><td colspan=\"2\">Portuguese</td><td>1-1 m-1</td><td>50.8 75.3</td><td>43.2 74.8</td><td>44.5 69.2</td><td>64.1 74.5</td><td>56.5 70.1</td></tr><tr><td>Spanish</td><td/><td>1-1 m-1</td><td>--</td><td>40.6 73.2</td><td>--</td><td>58.3 68.9</td><td>50.0 57.2</td></tr><tr><td>Language</td><td colspan=\"4\">1TW +PRIOR +FEATS</td><td/><td/></tr><tr><td>English</td><td colspan=\"2\">21.1</td><td>28.8</td><td>42.8</td><td/><td/></tr><tr><td>Danish</td><td colspan=\"2\">10.1</td><td>20.7</td><td>45.9</td><td/><td/></tr><tr><td>Dutch</td><td colspan=\"2\">23.8</td><td>32.3</td><td>44.3</td><td/><td/></tr><tr><td>German</td><td colspan=\"2\">12.8</td><td>35.2</td><td>60.6</td><td/><td/></tr><tr><td colspan=\"3\">Portuguese 18.4</td><td>29.6</td><td>61.5</td><td/><td/></tr><tr><td>Spanish</td><td>7.3</td><td/><td>27.6</td><td>49.9</td><td/><td/></tr><tr><td>Swedish</td><td>8.9</td><td/><td>14.2</td><td>33.9</td><td/><td/></tr></table>",
+                "type_str": "table",
+                "text": "Comparison of our method (FEATS) to state-of-the-art methods. Feature-based HMM Model (Berg-Kirkpatrick et al., 2010): The KM model uses a variety of orthographic features and employs the EM or LBFGS optimization algorithm; Posterior regulariation model (Grac \u00b8a et al., 2009): The G10 model uses the posterior regularization approach to ensure tag sparsity constraint.",
+                "html": null,
+                "num": null
+            }
+        }
+    }
+}

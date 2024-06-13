@@ -1,0 +1,2127 @@
+{
+    "paper_id": "D12-1011",
+    "header": {
+        "generated_with": "S2ORC 1.0.0",
+        "date_generated": "2023-06-16T11:58:35.583721Z"
+    },
+    "title": "Linking Named Entities to Any Database",
+    "authors": [
+        {
+            "first": "Avirup",
+            "middle": [],
+            "last": "Sil",
+            "suffix": "",
+            "affiliation": {},
+            "email": ""
+        },
+        {
+            "first": "Ernest",
+            "middle": [],
+            "last": "Cronin",
+            "suffix": "",
+            "affiliation": {},
+            "email": "ernest.cronin@gmail.com"
+        },
+        {
+            "first": "Penghai",
+            "middle": [],
+            "last": "Nie",
+            "suffix": "",
+            "affiliation": {},
+            "email": ""
+        },
+        {
+            "first": "Yinfei",
+            "middle": [],
+            "last": "Yang",
+            "suffix": "",
+            "affiliation": {},
+            "email": ""
+        },
+        {
+            "first": "Ana-Maria",
+            "middle": [],
+            "last": "Popescu",
+            "suffix": "",
+            "affiliation": {},
+            "email": ""
+        },
+        {
+            "first": "Alexander",
+            "middle": [],
+            "last": "Yates",
+            "suffix": "",
+            "affiliation": {},
+            "email": "yates@temple.edu"
+        }
+    ],
+    "year": "",
+    "venue": null,
+    "identifiers": {},
+    "abstract": "Existing techniques for disambiguating named entities in text mostly focus on Wikipedia as a target catalog of entities. Yet for many types of entities, such as restaurants and cult movies, relational databases exist that contain far more extensive information than Wikipedia. This paper introduces a new task, called Open-Database Named-Entity Disambiguation (Open-DB NED), in which a system must be able to resolve named entities to symbols in an arbitrary database, without requiring labeled data for each new database. We introduce two techniques for Open-DB NED, one based on distant supervision and the other based on domain adaptation. In experiments on two domains, one with poor coverage by Wikipedia and the other with near-perfect coverage, our Open-DB NED strategies outperform a state-of-the-art Wikipedia NED system by over 25% in accuracy.",
+    "pdf_parse": {
+        "paper_id": "D12-1011",
+        "_pdf_hash": "",
+        "abstract": [
+            {
+                "text": "Existing techniques for disambiguating named entities in text mostly focus on Wikipedia as a target catalog of entities. Yet for many types of entities, such as restaurants and cult movies, relational databases exist that contain far more extensive information than Wikipedia. This paper introduces a new task, called Open-Database Named-Entity Disambiguation (Open-DB NED), in which a system must be able to resolve named entities to symbols in an arbitrary database, without requiring labeled data for each new database. We introduce two techniques for Open-DB NED, one based on distant supervision and the other based on domain adaptation. In experiments on two domains, one with poor coverage by Wikipedia and the other with near-perfect coverage, our Open-DB NED strategies outperform a state-of-the-art Wikipedia NED system by over 25% in accuracy.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            }
+        ],
+        "body_text": [
+            {
+                "text": "Named-entity disambiguation (NED) is the task of linking names mentioned in text with an established catalog of entities (Bunescu and Pasca, 2006; Ratinov et al., 2011) . It is a vital first step for semantic understanding of text, such as in grounded semantic parsing (Kwiatkowski et al., 2011) , as well as for information retrieval tasks like person name search (Chen and Martin, 2007; Mann and Yarowsky, 2003) .",
+                "cite_spans": [
+                    {
+                        "start": 121,
+                        "end": 146,
+                        "text": "(Bunescu and Pasca, 2006;",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 147,
+                        "end": 168,
+                        "text": "Ratinov et al., 2011)",
+                        "ref_id": "BIBREF27"
+                    },
+                    {
+                        "start": 269,
+                        "end": 295,
+                        "text": "(Kwiatkowski et al., 2011)",
+                        "ref_id": "BIBREF18"
+                    },
+                    {
+                        "start": 365,
+                        "end": 388,
+                        "text": "(Chen and Martin, 2007;",
+                        "ref_id": "BIBREF6"
+                    },
+                    {
+                        "start": 389,
+                        "end": 413,
+                        "text": "Mann and Yarowsky, 2003)",
+                        "ref_id": "BIBREF22"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "NED requires a catalog of symbols, called referents, to which named-entities will be resolved. Most NED systems today use Wikipedia as the catalog of referents, but exclusive focus on Wikipedia as a target for NED systems has significant drawbacks: despite its breadth, Wikipedia still does not contain all or even most real-world entities mentioned in text.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "As one example, it has poor coverage of entities that are mostly important in a small geographical region, such as hotels and restaurants, which are widely discussed on the Web. 57% of the named-entities in the Text Analysis Conference's (TAC) 2009 entity linking task refer to an entity that does not appear in Wikipedia (McNamee et al., 2009) . Wikipedia is clearly a highly valuable resource, but it should not be thought of as the only one.",
+                "cite_spans": [
+                    {
+                        "start": 322,
+                        "end": 344,
+                        "text": "(McNamee et al., 2009)",
+                        "ref_id": "BIBREF23"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Instead of relying solely on Wikipedia, we propose a novel approach to NED, which we refer to as Open-DB NED: the task is to resolve an entity to Wikipedia or to any relational database that meets mild conditions about the format of the data, described below. Leveraging structured, relational data should allow systems to achieve strong accuracy, as with domain-specific or database-specific NED techniques like Hoffart et al.'s NED system for YAGO (Hoffart et al., 2011) . And because of the availability of huge numbers of databases on the Web, many for specialized domains, a successful system for this task will cover entities that a Wikipedia NED or database-specific system cannot.",
+                "cite_spans": [
+                    {
+                        "start": 450,
+                        "end": 472,
+                        "text": "(Hoffart et al., 2011)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "We investigate two complementary learning strategies for Open-DB NED, both of which significantly relax the assumptions of traditional NED systems. The first strategy, a distant supervision approach, uses the relational information in a given database and a large corpus of unlabeled text to learn a database-specific model. The second strat-egy, a domain adaptation approach, assumes a single source database that has accompanying labeled data. Classifiers in this setting must learn a model that transfers from the source database to any new database, without requiring new training data for the new database. Experiments show that both strategies outperform a state-of-the-art Wikipedia NED system by wide margins without requiring any labeled data from the test domain, highlighting the significant advantage of having domain-specific relational data.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "The next section contrasts Open-DB NED with previous work. Section 3 formalizes the task. Sections 4 and 5 present our distant supervision strategy and domain-adaptation strategy, respectively. Section 6 introduces a technique that is a hybrid of the two learning strategies. Section 7 describes our experiments, and Section 8 concludes.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "As mentioned above, restricting the catalog of referents to Wikipedia, as most recent NED systems do (Bunescu and Pasca, 2006; Mihalcea and Csomai, 2007; Fader et al., 2009; Han and Zhao, 2009; Kulkarni et al., 2009; Ratinov et al., 2011) , can restrict the coverage of the system. Zhou et al. (2010) estimate that 23% of names in Yahoo! news articles have no referent in Wikipedia, and Cucerzan (2007) estimates the rate at 16% in MSNBC news articles. There is reason to suspect that these estimates are on the low side, however, as news tends to cover popular entities, which are most likely to appear in Wikipedia; the mentions in TAC's 2009 entity linking task are drawn from both newswire and blogs, and have a far higher rate (57%) of missing Wikipedia entries. Lin et al. (2012) find that 33% of mentions in a corpus of 500 million Web documents cannot be linked to Wikipedia.",
+                "cite_spans": [
+                    {
+                        "start": 101,
+                        "end": 126,
+                        "text": "(Bunescu and Pasca, 2006;",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 127,
+                        "end": 153,
+                        "text": "Mihalcea and Csomai, 2007;",
+                        "ref_id": "BIBREF24"
+                    },
+                    {
+                        "start": 154,
+                        "end": 173,
+                        "text": "Fader et al., 2009;",
+                        "ref_id": "BIBREF12"
+                    },
+                    {
+                        "start": 174,
+                        "end": 193,
+                        "text": "Han and Zhao, 2009;",
+                        "ref_id": "BIBREF13"
+                    },
+                    {
+                        "start": 194,
+                        "end": 216,
+                        "text": "Kulkarni et al., 2009;",
+                        "ref_id": "BIBREF17"
+                    },
+                    {
+                        "start": 217,
+                        "end": 238,
+                        "text": "Ratinov et al., 2011)",
+                        "ref_id": "BIBREF27"
+                    },
+                    {
+                        "start": 282,
+                        "end": 300,
+                        "text": "Zhou et al. (2010)",
+                        "ref_id": "BIBREF32"
+                    },
+                    {
+                        "start": 387,
+                        "end": 402,
+                        "text": "Cucerzan (2007)",
+                        "ref_id": "BIBREF7"
+                    },
+                    {
+                        "start": 768,
+                        "end": 785,
+                        "text": "Lin et al. (2012)",
+                        "ref_id": "BIBREF20"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Previous Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "NED systems that are focused on specific domains (or verticals) greatly benefit from repositories of domain-specific knowledge, only a subset of which may be found in Wikipedia. For example, Pantel and Fuxman (2011) use a query-click graph to resolve names in search engine queries to a large product catalog from a commercial search engine, while Dalvi et al. (2009; 2012) focus on movie and restaurant databases. Bellare and McCallum (2009) use the sequence information available in citation text to link author, title, and venue names to a publication database. Open-DB NED systems work on any database, so they can serve as baselines for domain-specific NED tasks, as well as provide disambiguation for domains where no domain-specific NED system exists.",
+                "cite_spans": [
+                    {
+                        "start": 191,
+                        "end": 215,
+                        "text": "Pantel and Fuxman (2011)",
+                        "ref_id": "BIBREF26"
+                    },
+                    {
+                        "start": 348,
+                        "end": 367,
+                        "text": "Dalvi et al. (2009;",
+                        "ref_id": "BIBREF8"
+                    },
+                    {
+                        "start": 368,
+                        "end": 373,
+                        "text": "2012)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 415,
+                        "end": 442,
+                        "text": "Bellare and McCallum (2009)",
+                        "ref_id": "BIBREF1"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Previous Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "Numerous previous studies have considered distant or weak supervision from a single relational database as an alternative to manual supervision for information extraction (Hoffmann et al., 2011; Weld et al., 2009; Bellare and McCallum, 2007; Bunescu and Mooney, 2007; Mintz et al., 2009; Riedel et al., 2010; Yao et al., 2010) . In contrast to these systems, our distant supervision NED system provides a meta-algorithm for generating an NED system for any database and any entity type.",
+                "cite_spans": [
+                    {
+                        "start": 171,
+                        "end": 194,
+                        "text": "(Hoffmann et al., 2011;",
+                        "ref_id": "BIBREF15"
+                    },
+                    {
+                        "start": 195,
+                        "end": 213,
+                        "text": "Weld et al., 2009;",
+                        "ref_id": "BIBREF30"
+                    },
+                    {
+                        "start": 214,
+                        "end": 241,
+                        "text": "Bellare and McCallum, 2007;",
+                        "ref_id": "BIBREF0"
+                    },
+                    {
+                        "start": 242,
+                        "end": 267,
+                        "text": "Bunescu and Mooney, 2007;",
+                        "ref_id": "BIBREF4"
+                    },
+                    {
+                        "start": 268,
+                        "end": 287,
+                        "text": "Mintz et al., 2009;",
+                        "ref_id": "BIBREF25"
+                    },
+                    {
+                        "start": 288,
+                        "end": 308,
+                        "text": "Riedel et al., 2010;",
+                        "ref_id": "BIBREF28"
+                    },
+                    {
+                        "start": 309,
+                        "end": 326,
+                        "text": "Yao et al., 2010)",
+                        "ref_id": "BIBREF31"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Previous Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "Existing domain adaptation or transfer learning approaches are inappropriate for the Open-DB NED task, either because they require labeled data in both the source and target domains (Daum\u00e9 III et al., 2010; Ben-David et al., 2010) , or because they leverage some notion of distributional similarity between words in the source and target domains (Blitzer et al., 2006; Huang and Yates, 2009) , which does not apply to the database symbols across the two domains. Instead, our domain adaptation technique uses domain-independent features of relational data, which apply regardless of the actual contents of the database, as explained further below.",
+                "cite_spans": [
+                    {
+                        "start": 182,
+                        "end": 206,
+                        "text": "(Daum\u00e9 III et al., 2010;",
+                        "ref_id": "BIBREF10"
+                    },
+                    {
+                        "start": 207,
+                        "end": 230,
+                        "text": "Ben-David et al., 2010)",
+                        "ref_id": "BIBREF2"
+                    },
+                    {
+                        "start": 346,
+                        "end": 368,
+                        "text": "(Blitzer et al., 2006;",
+                        "ref_id": "BIBREF3"
+                    },
+                    {
+                        "start": 369,
+                        "end": 391,
+                        "text": "Huang and Yates, 2009)",
+                        "ref_id": "BIBREF16"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Previous Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "3 The Open-DB NED Problem and Assumptions",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Previous Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "A mention is an occurrence of a named-entity in a document. Formally, a mention m = (d, start, end) is a triple consisting of a document d, as well as a start and end position for the mention within the document. We say that d is the context of m. A relational database is a 2-tuple (S, R). Here, S is a set of symbols for constants, attributes, and relations in the database, and R = {r 1 , . . . , r n } is a set of relation instances of the form",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Problem Formulation",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "r i = {(c 1,1 , . . . , c 1,k i ), . . . , (c n i ,1 , . . . , c n i ,k i )},",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Problem Formulation",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "where each c j is taken from S, k i is the arity of relation r i and n i is the number of known instances of r i . We will write example database symbols in teletype, and mentions in \"quotations.\" For a particular database DB, we refer to its components as DB.S and DB.R. For a set of databases D, define the set of referents as S D = ( DB\u2208D DB.S) \u222a {OOD}, where OOD is a special symbol indicating something that is \"out of database\", or not found in any of the databases in D.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Problem Formulation",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "Given a corpus C, a set of mentions M that occur in C, and a set of databases D, the Open-DB NED task is to produce a function f : M \u2192 S D , which identifies an appropriate target symbol from one of the databases in D, or determines that the mention is OOD. Note that this problem formulation assumes no labeled data. This is significantly more challenging than traditional NED settings, but allows the system to generalize easily to any new database. In the domain adaptation section below, we relax this condition somewhat, to allow labeled data for a small number of initial databases; the system must then transfer what it learns from the labeled domains to any new database. Also note that the focus for this paper is disambiguation; we assume that the set of mentions are correctly demarcated in the input text. Previous systems, such as Lex (Downey et al., 2007) , have investigated the task of finding correct named-entity boundaries in text.",
+                "cite_spans": [
+                    {
+                        "start": 848,
+                        "end": 869,
+                        "text": "(Downey et al., 2007)",
+                        "ref_id": "BIBREF11"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Problem Formulation",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "To allow our systems to handle arbitrary databases, we need to make some assumptions about a standard format for the data. We will assume that databases are provided in a particular form, called Boyce-Codd Normal Form (BCNF) (Silberschatz et al., 2010) . A relational schema is said to be in BCNF when all redundancy based on functional dependency has been removed, although other types of redundancy may still exist. Formally, a schema R is said to be in BCNF with respect to a set of functional dependencies F if for every one of the dependencies (X \u2192 Y ) \u2208 F, either 1. Y \u2282 X, meaning this is a trivial functional dependency, or 2. X is a superkey, meaning that X is a set of attributes that together define a unique ID for the relation.",
+                "cite_spans": [
+                    {
+                        "start": 225,
+                        "end": 252,
+                        "text": "(Silberschatz et al., 2010)",
+                        "ref_id": "BIBREF29"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Assumptions",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "In practice, this is a relatively safe assumption as database designers often aim for even stricter normal forms. For databases not in BCNF, such as tables extracted from Web pages, standard algorithms exist for converting them into BCNF, given appropriate functional dependencies, although there are sets of functional dependencies for which BCNF is not achievable. Figure 1 shows two example databases in BCNF. We use these tables as examples throughout the paper. We will additionally assume that all attributes, including names and nicknames, of entities that are covered by the database are treated as functional dependencies of the entity. Again, in practice, this is a fairly safe assumption as this is part of good database design, but if a database does not conform to this, then there will be some entities in the database that our algorithms cannot resolve to. This assumption implies that it is enough to use the set of superkeys for relations as the set of possible referents; our algorithms make use of this fact.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 374,
+                        "end": 375,
+                        "text": "1",
+                        "ref_id": "FIGREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Assumptions",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "Finally, we will assume the existence of a function \u00b5(s, t) which indicates whether the text t is a valid surface form of database symbol s. Our experiments in Section 7.3 explore several possible simple definitions for this function.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Assumptions",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "mentions have only a very small number of possible referents in a given database. \"Chris Johnson\" is the name of doubtless thousands of people, but for articles that are reasonably well-aligned with our sports database, most of the time the name will refer to just three different people. Most sports names are in fact less ambiguous still. Thus, taking a corpus of unlabeled sports articles, we use the information in the database to provide (uncertain) labels, and then train a log-linear model from this probabilisticallylabeled data.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Assumptions",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "This strategy requires a set of features for the model. Traditionally, such features would be handcrafted for a particular domain and database. As a first step towards our Open-DB system, we present a log-linear model for disambiguation, as well as a simple feature-generation algorithm that produces a large set of useful features from a BCNF database. We then present a distant-supervision learning procedure for this model.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Assumptions",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "Let S D be the set of possible referents. We construct a vector of feature functions f (m, s) describing the degree to which m and s \u2208 S D appear to match one another. The feature functions are described below. The model includes a vector of weights w, one weight per feature function, and sets the probability of entity s given m and w as:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Disambiguation Model",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "P (s|m, w) = exp (w \u2022 f (m, s)) s \u2208S D exp (w \u2022 f (m, s ))",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Disambiguation Model",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "(1)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Disambiguation Model",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "Figure 2 shows our algorithm for automatically generating feature functions f i (m, s) from a BCNF database. As mentioned above, we only need to consider resolving to database symbols s that are keys, or unique IDs, for some tuple in a database. For an entity in the database with key id, the feature generation algorithm generates two types of feature functions: attribute counts and similar entity counts. Each of these features measures the similarity between the information stored in the database about the entity id, and the information in the text in d surrounding mention m.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 7,
+                        "end": 8,
+                        "text": "2",
+                        "ref_id": "FIGREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Database-driven Feature Generation",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "An attribute count feature function f att i,j (m, id) for the jth attribute of relation r i counts how many Algorithm: Feature Generation Input: DB, a database in BCNF Output: F, a set of feature functions Initialization: F \u2190 \u2205 Attribute Count Feature Functions:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Database-driven Feature Generation",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "For each relation r i \u2208 DB.R For each j in {1, . . . , k i } Define function f att i,j (m, id): count \u2190 0 Identify the tuple t \u2208 r i containing id val \u2190 t j count \u2190 count + ContextM atches(val, m) return count F \u2190 F \u222a {f att i,j } Similar-Entity Count Feature Functions: For each relation r i \u2208 DB.R For each j in {1, . . . , k i } Define function f sim i,j (m, id): count \u2190 0 Identify the tuple t \u2208 r i containing id val \u2190 t j",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Database-driven Feature Generation",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "Identify the set of similar tuples T : attributes of the entity id appear near m. For example, if id is 5 in the movie relation in Figure 1 , the feature function for attribute year would count how often 2010 matches the text surrounding mention m. Defining precisely whether a database symbol \"matches\" a word or phrase is a subtle issue; we explore several possibilities in Section 7.3. In addition to attribute counts for attributes within a single relation, we also use attributes from relations that have been inner-joined on primary key and foreign key pairs. For example, for movies, we include attributes such as director name, genre, and actor name. High values for these attribute count features indicate that the text around m closely matches the information in the database about entity id, and therefore id is a strong candidate for the referent of m. We use the whole document as the context for finding matches, although other variants are worth future investigation.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 138,
+                        "end": 139,
+                        "text": "1",
+                        "ref_id": "FIGREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Database-driven Feature Generation",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "T = {t |t \u2208 r i , t j = val} For each tuple t \u2208 T For each j \u2208 {1, . . . , k i } val \u2190 t j count \u2190 count + ContextM atches(val , m) return count F \u2190 F \u222a {f sim i,j }",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Database-driven Feature Generation",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "A similar entity count feature function f sim i,j (m, id) for the jth attribute in relation r i counts how many entities similar to id are mentioned in the neighborhood of m. As an example, consider a mention of \"Chris Johnson\", id = 3, and the similar entity feature for the position attribute of the players relation in the sports database. The feature function would first identify that 3B is the position of the player with id = 3. It would then identify all players that had the same position. Finally, it would count how often any attributes of this set of players appear near \"Chris Johnson\". Likewise, the similar entity feature for the team id attribute would count how many teammates of the player with id = 3 appear near \"Chris Johnson\". A high count for this teammate feature is a strong clue that id is the correct referent for m, while a high count for players of the same position is a weak but still valuable clue.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Database-driven Feature Generation",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "Using string similarity, we can heuristically determine that three IDs with name attribute Chris Johnson are highly likely to be the correct target for a mention of \"Chris Johnson\". Our distant supervision parameter estimation strategy is to move as much probability mass as possible onto the set of realistic referents obtained via string similarity. Since our features rely on finding attributes and similar entities, the side effect of this strategy is that most of the probability mass for a particular mention is moved onto the one target ID with high attribute count and similar entity count features, thus disambiguating the entity. Although the string-similarity heuristic is typically noisy, the strong information in the database and the fact that many entity mentions are typically not ambiguous allows the technique to learn effectively from unlabeled text. Let \u03c6(m, DB) be a heuristic string-matching function that returns a set of plausible ID values in database DB for mention m. The objective function for this training procedure is a modified marginal log likelihood (MLL) function that encourages probability mass to be placed on the heuristically-matched targets:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Parameter Estimation via Distant Supervision",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "M LL(M, w) = m\u2208M log id\u2208\u03c6(m,DB) P (id|m, w)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Parameter Estimation via Distant Supervision",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "This objective is smooth but non-convex. We use a gradient-based optimization procedure that finds a local maximum. Our implementation uses an opensource version of the LBFG-S optimization technique (Liu and Nocedal, 1989) . The gradient of our objective is given by",
+                "cite_spans": [
+                    {
+                        "start": 199,
+                        "end": 222,
+                        "text": "(Liu and Nocedal, 1989)",
+                        "ref_id": "BIBREF21"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Parameter Estimation via Distant Supervision",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "\u2202LL(M, w) \u2202w i = m\u2208M E id\u2208\u03c6(m,DB) [f i (m, id)] -E id\u2208DB.S [f i (m, id)]",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Parameter Estimation via Distant Supervision",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "where the expectations are taken according to P (id|m, w).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Parameter Estimation via Distant Supervision",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "Open-DB NED At first, the problem seems intractable -just because a system can disambiguate between \"Next Door\", the 2005 Norwegian film, and \"Next Door\", the 1975 short film by director Andrew Silver, that seems to provide little benefit for disambiguating between different athletes named \"Andre Smith.\" The crux of the problem lies in the fact that databasedriven features are domain-specific. Counting how many times the director of a movie appears is highly useful in the movie domain, but worthless in the sports domain.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "A Domain-Adaptation Strategy for",
+                "sec_num": "5"
+            },
+            {
+                "text": "Our solution works by re-defining the problem in such a way that we can define domain-independent and database-independent features. For example, rather than counting how often the director of a movie appears in the context around a movie mention, we create a domain-independent Count Att(m, s) feature function that counts how often any attribute of s appears in the context of m. For movies, Count Att will add together counts for appearances of a movie's production year and IMDB rating, among other attributes. In the sports domain, Count Att will add together counts for appearances of a player's height, position, salary, etc.. But in either domain, the feature is well-defined, and in either domain, larger values of the feature indicate a better match between m and s. Thus there is a hope for training a model with domain-independent features like Count Att on labeled data from one domain, say movies, and producing a model that has high accuracy on the sports domain.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "A Domain-Adaptation Strategy for",
+                "sec_num": "5"
+            },
+            {
+                "text": "We first formalize the notion of a domain adaptation NED model, and then describe our algorithm for producing such a model. We say that a domain consists of a database DB as well as a distribution D(M), where M is the space of mentions. For instance, the movie domain might consist of the Internet Movie Database (IMDB) and a distribution that places most probability mass on documents about movies and Hollywood stars. In domain adaptation, a system observes a set of training examples (m, s, g(m, s)), where instances m \u2208 M are drawn from a source domain's distribution D S and referents s are drawn from the source domain's database DB S . The labels g(m, s) are boolean values indicating a correct or incorrect match between the mention and referent. The system must then learn a hypothesis for classifying examples (m, s) drawn from a target domain's distribution D T and database DB T . Note that for domain adaptation, we cannot use the more traditional problem formulation in which the referent s is a label (i.e., s = g(m)) for the mention, since the set of possible referents changes from domain to domain, and therefore the output of g would be completely different from one domain to the next. ",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "A Domain-Adaptation Strategy for",
+                "sec_num": "5"
+            },
+            {
+                "text": "i,j 0 if f att i,j (m, s) = 0, 1 if f att i,j (m, s) > 0. Count Num:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "A Domain-Adaptation Strategy for",
+                "sec_num": "5"
+            },
+            {
+                "text": "i,j|jis a numeric att. f att i,j (m, s) used in our domain adaptation model. These features use the attribute counts and similar entity counts from the distant supervision model as subroutines. By aggregating over those domain-dependent feature functions, the domain adaptation system arrives at feature functions that can be defined for any database, rather than for a specific database. Note that there is a tradeoff between the domain adaptation technique and the distant supervision technique. The domain adaptation model has access to labeled data, unlike the distant supervision model. In addition, the domain adaptation model requires no text whatsoever from the target domain, not even an unlabeled corpus, to set weights for the target domain. Once trained, it is ready for NED over any database that meets our assumptions, out of the box. However, because the model needs to be able to transfer to arbitrary new domains, the domain adaptation model is restricted to domain-independent features, which are \"coarsergrained.\" That is, the distant supervision model has the ability to place more weight on attributes like director rather than genre, or team rather than position, if those attributes are more discriminative. The domain adaptation model cannot place different weights on the different attributes, since those weights would not transfer across databases.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "A Domain-Adaptation Strategy for",
+                "sec_num": "5"
+            },
+            {
+                "text": "As with distant supervision, the domain adaptation strategy uses a log-linear model over these feature functions. We use standard techniques for training the model using labeled data from the source do-main: conditional log likelihood (CLL) as the objective function, and LBFG-S for convex optimization.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "A Domain-Adaptation Strategy for",
+                "sec_num": "5"
+            },
+            {
+                "text": "(m,id,label)\u2208L log P (label|m, id, w)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "CLL(L, w) =",
+                "sec_num": null
+            },
+            {
+                "text": "The training algorithm is guaranteed to converge to the globally optimal parameter setting for this objective function over the training data. The manually annotated data contains only positive examples; to generate negative examples, we use the same namematching heuristic \u03c6(m, DB) to identify a set of potentially confusing bad matches. On test data, we use the trained model to choose the id for a given m with the highest probability of being correct.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "CLL(L, w) =",
+                "sec_num": null
+            },
+            {
+                "text": "The distant supervision and domain adaptation strategies use two very different sources of evidence for training a disambiguation classifier: the stringmatching heuristic and unlabeled text from the target domain for the the distant supervision model, and aggregate features over labeled text from a separate domain for domain adaptation. This begs the question, do these sources of evidence complement one another? To address this question, we design a Hybrid model with features and training strategies from both distant supervision and domain adaptation.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "A Hybrid Model",
+                "sec_num": "6"
+            },
+            {
+                "text": "The training data consists of a set L S of labeled mentions from a source domain, a source database DB S , a set of unlabeled mentions M T from the target domain, and the target-domain database DB T . The full feature set of the Hybrid model is the union of the distant supervision feature functions for the target domain and the domain-independent domain adaptation feature functions. Note that the distant supervision feature functions are domain-specific, so they almost always will be uniformly zero on L S , but the domain adaptation feature functions will be activated on both L S and M T . The combined training objective for the Hybrid model is:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "A Hybrid Model",
+                "sec_num": "6"
+            },
+            {
+                "text": "LL(L S , M T , w) = CLL(L S , w) + M LL(M T , w)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "A Hybrid Model",
+                "sec_num": "6"
+            },
+            {
+                "text": "Our experiments compare our strategies for Open-DB NED against one another, as well as against a Wikipedia NED system from previous work, on two domains: sports and movies.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "7"
+            },
+            {
+                "text": "For the movie domain, we collected a set of 156 cult movie titles from an online movie site (www.olivefilms.com). For each movie title, we executed a Web search using a commercial search engine, and collected the top five documents for each title from the search engine's results. Nearly all topfive results included at least one mention of an entity not found in Wikipedia; overall, only 16% of the mentions could be linked to Wikipedia. After stripping javascript and html annotations, we removed documents with fewer than 50 words, leaving a total of 770 documents. We select one occurrence of any of the 156 movie titles from each document as our set of mentions. Many titles are ambiguous not just among different movies with the same name, but also among novels, plays, geographical entities, and assorted other types of entities. To provide labels for these mentions, we use both a movie database and Wikipedia. We downloaded the complete data dump from the online Internet Movie Database (IMDB, www.imdb.com). For our set of possible referents, we use the set of all key values in IMDB, and the set of all Wikipedia articles. Annotators manually labeled each mention using this set of referents. Table 2 shows summary statistics about this labeled data.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 1210,
+                        "end": 1211,
+                        "text": "2",
+                        "ref_id": "TABREF4"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Data",
+                "sec_num": "7.1"
+            },
+            {
+                "text": "For the sports domain, we downloaded all player data from Yahoo!, Inc.'s sports database for the years 2011-2012 and two American sports leagues, the National Football League (NFL) and Major League Baseball (MLB). From the database, we extracted ambiguous player names and team names, including names like \"Philadelphia\" which may refer to Philadelphia Eagles in the NFL data, Philadelphia Phillies in the MLB data, or the city of Philadelphia itself (in both types of data). We then collected 1300 Yahoo! news articles which include a mention that partially matches at least one of these database symbols. We manually labeled a random sample of 564 mentions from this data, including 279 player name mentions and 285 city name mentions. Many player name and place name mentions are ambiguous between the two sports leagues, as well as with teams or players from other leagues. In order to focus on the hardest cases, we specifically exclude mentions like \"Philadelphia\" from the labeled data if any of their unambiguous completions appears in the same article (that is, if either of the team names \"Philadelphia Eagles\" or \"Philadelphia Phillies\" appears in the same article, we exclude the \"Philadelphia\" mention). As before, the set of possible referents includes the symbol OOD, key values from the sports database, and Wikipedia articles, and a given mention may be labeled with both a sports entity and a Wikipedia article, if appropriate. All of our data is available from the last author's website.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Data",
+                "sec_num": "7.1"
+            },
+            {
+                "text": "We report on a version of exact-match accuracy. The system chooses the most likely label \u015d for each m. This is judged correct if \u015d matches the correct label s exactly, or (in cases where both a Wikipedia and a database entity are considered correct) if one of the labels matches \u015d exactly. This metric allows systems to resolve against either reference, Wikipedia or another database, without requiring it to match both if the same entity appears in both references.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Evaluation Metric",
+                "sec_num": "7.2"
+            },
+            {
+                "text": "One important question in the design of our systems is how to determine the \"match\" between database symbols and text. This question comes into play in two components of our systems: it affects the computation of feature functions that count how often a match of some attribute is found in text, and it affects which set of heuristically-determined database entities are considered to be possible matches for a given mention. We experiment with two different matching strategies between a symbol s and text t, exact matching and partial matching. Exact matching \u00b5 exact (s, t) requires the sequence of characters in s to appear exactly (modulo character encoding) in t.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Exact or Partial Matching?",
+                "sec_num": "7.3"
+            },
+            {
+                "text": "No-Wikipedia Domain Adapt. 0.61 DocSim-Wikipedia Domain Adapt.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "System Accuracy",
+                "sec_num": null
+            },
+            {
+                "text": "Table 3 : Including a simple document-similarity feature for comparing a mention's context with a Wikipedia page provides an 8% improvement over ignoring Wikipedia information.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 6,
+                        "end": 7,
+                        "text": "3",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "0.69",
+                "sec_num": null
+            },
+            {
+                "text": "would match \"Chris Johnson\", but not \"C. Johnson\" or \"Johnson\" in text. For partial matching, we used different tests for numeric and textual entities. For numeric entities, \u00b5 partial matched s and t if the numeric value of one was within 10% of the other, so that 5312 would match \"5,000.\" We made no attempt to convert numeric phrases, such as \"3.6 million\", into numeric values. For textual entities, \u00b5 partial matched s and t if at least one token from each matched exactly. Thus Chris Johnson matches both \"Chris\" and \"C. Johnson\". We found \u00b5 partial to be consistently superior for computing \u03c6(m, DB), since it has much better recall for mentions like \"Philadelphia\". On the other hand, if we use \u00b5 partial for computing our models' feature functions, like the Count Att(m, s) in the domain adaptation model, counts varied widely across domains. A simple version of the domain adaptation classifier (only the Count All and Count Unique features) trained on sports data and tested on movies achieved an accuracy of 24% using \u00b5 partial , compared with 61% using \u00b5 exact . For all remaining tests, we used \u00b5 exact for computing features, and \u00b5 partial for computing \u03c6(m, DB).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "0.69",
+                "sec_num": null
+            },
+            {
+                "text": "Thus far, all of our features work on relational data, not Wikipedia. In order to allow our systems to link to Wikipedia, we create a single \"document similarity\" feature describing the similarity between the text around a mention and the text appearing on a Wikipedia page. We build a vector space model of both the document containing the mention and the Wikipedia page, remove stopwords, and use cosine similarity to compute this feature.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Incorporating Wikipedia referents",
+                "sec_num": "7.4"
+            },
+            {
+                "text": "To evaluate the effectiveness of this Wikipedia feature, we tested two versions of our domain adaptation system, both trained on sports data and tested on the movies domain. The first version involves no Wikipedia information whatsoever, thus it has no reason to select a Wikipedia article over OOD. The second system includes the document similarity feature. Table 3 shows the results of these systems. Encouragingly, our single document similarity feature produces a significant improvement over the model without Wikipedia information, so we use this feature in all of our systems tested below. More sophisticated use of Wikipedia is certainly possible, and an important question for future work is how to combine Open-DB NED more seamlessly with Wikipedia NED.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 366,
+                        "end": 367,
+                        "text": "3",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Incorporating Wikipedia referents",
+                "sec_num": "7.4"
+            },
+            {
+                "text": "For each domain, we compare our domainadaptation strategy, distant supervision, and hybrid strategies. The domain-adaptation model is trained on the labeled data for sports when testing on movies, and vice versa. We use a movies test set of 180 mentions that is separate from the development data used for the above tests. For the distant supervision strategy, we use the entire collection of texts from each domain as input (1300 articles for sports, 770 articles for movies), with the labels removed during training. We compare against a state-of-the-art Wikipedia NED system used in production by a major Web company. This system is a modified version of the system described by Zhou et al. (2010) , where certain features have been removed for efficiency. We refer to this as the Modified-Zhou Wikifier. This system uses a gradient-boosted decision tree and multiple local and global features for computing the similarity between a mention's context and a Wikipedia article. We also test a hypothetical system, Oracle Wikifier, which is given no information about entities in IMDB, but is assumed to be able to correctly resolve any mention that refers to an entity found in Wikipedia. Thus, this system has perfect accuracy on mentions that can be found in Wikipedia, and accuracy similar to a baseline that predicts randomly on all mentions that fall outside of Wikipedia1 . Oracle-Wikifier serves as an upper bound on systems that have no access to a domainspecific database. In addition, we compare against two standard baselines: a classifier that always predicts OOD, and a classifier that chooses randomly. Finally, we compare against a system that trains the domain adaptation model using distant supervision (\"DA Trained with DS\").",
+                "cite_spans": [
+                    {
+                        "start": 682,
+                        "end": 700,
+                        "text": "Zhou et al. (2010)",
+                        "ref_id": "BIBREF32"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Comparing Open-DB NED Strategies",
+                "sec_num": "7.5"
+            },
+            {
+                "text": "Figure 3 shows our results. All three Open-DB approaches outperform the baseline techniques on this test by wide margins, with the Hybrid model increasing by 30% or more over the random baseline. On the movie domain, the Hybrid model outperforms the Oracle Wikifier by nearly 20%. Encouragingly, the Hybrid model consistently outperforms both distant supervision and domain adaptation, suggesting that the two sources of evidence are partially complementary. Distant supervision performs better on the movies test, whereas domain adaptation has the advantage on sports. The differences among all three Open-DB approaches is relatively small, compared with the difference between these approaches and Oracle Wikifier on the movie data.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 7,
+                        "end": 8,
+                        "text": "3",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Comparing Open-DB NED Strategies",
+                "sec_num": "7.5"
+            },
+            {
+                "text": "The domain adaptation system outperforms DA Trained with DS on both domains, suggesting that labeled data from a separate domain is better evidence for parameter estimates than unlabeled data from the same domain. The distant supervision system also outperforms DA Trained with DS on both domains, suggesting that the finegrained, domain-specific features do in fact provide more helpful information than the coarser-grained, domain-independent features of the domain adaptation model.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Comparing Open-DB NED Strategies",
+                "sec_num": "7.5"
+            },
+            {
+                "text": "All of the Open-DB NED systems outperform the Modified Zhou Wikifier on both data sets by a wide margin. In fact the Modified Zhou Wikifier has similar results on both domains, despite the fact that Wikipedia has far greater coverage on sports than movies. In part, the poor performance of the Modified Zhou Wikifier reflects the difficult nature of the task. In previous experiments on an MSNBC news test set it reached 85% accuracy, but a random classifier there achieved 60% accuracy compared with 21% on our sports data. Another difficulty with the Modified Zhou Wikifier is its strong preference for globally common entities. It consistently classifies mentions that are ambiguous between a city and a team (like \"Chicago\" in \"Chicago sweeps the Red Sox\") as cities when they should be resolved to teams, in large part because Chicago is a more common referent in general text than either of the baseball teams that play in that city. In sports articles, however, both meanings are common, and only the surrounding context can help determine the correct referent.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Comparing Open-DB NED Strategies",
+                "sec_num": "7.5"
+            },
+            {
+                "text": "Besides wikifiers, NED systems may also be compared with dictionary-based word sense disambiguation techniques like the Lesk algorithm 2 (Lesk, 1986) . The Lesk algorithm is \"open\" in the sense that it works for arbitrary dictionaries, and it defines a vector space model of the dictionary definitions that may be likened to the attribute-value model in our representation of entities in the database. Our approach, however, estimates parameters for a statistical model from data, whereas the Lesk algorithm uses an equal weight for all attributes. To make an empirical comparison, we created a variant of the Lesk algorithm for relational data: we took the disambiguation model from Eqn. 1, supplied all of the features from the distant supervision model, and manually set w = 1. This \"relational Lesk\" model achieves an accuracy of 0.11 on movies, and 0.15 on sports, significantly below the random baseline. Giving equal weight to noisy attributes like genre 2 We thank the reviewers for making this connection. and more discriminative attributes like director significantly hurts the performance.",
+                "cite_spans": [
+                    {
+                        "start": 137,
+                        "end": 149,
+                        "text": "(Lesk, 1986)",
+                        "ref_id": "BIBREF19"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Comparing Open-DB NED Strategies",
+                "sec_num": "7.5"
+            },
+            {
+                "text": "For both the movie and sports domain, approximately 80% of the Hybrid model's errors are because of predicting database symbols, when the correct referent is a Wikipedia page or OOD. This nearly always occurs because some words in the context of a mention match an attribute of an incorrect database referent. For instance, the crime genre is an attribute for several movies, but it also matches in contexts surrounding book titles and numerous other entities. In the movie domain, most of the remaining errors are incorrect OOD predictions for mentions that should resolve to the database, but the article contains no attributes or similar entities to the database entity. In the sports domain, many of the remaining errors were due to predicting incorrect player referents. Quite often, this was because the document discusses a fantasy sports league or team, where players from different professional sports teams are mixed together on a \"fantasy team\" belonging to a fan of the sport. Since players in the fantasy leagues have different teammates than they do in the database, these articles consistently confuse our methods.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Comparing Open-DB NED Strategies",
+                "sec_num": "7.5"
+            },
+            {
+                "text": "This paper introduces the task of Open-DB Named Entity Disambiguation, and presents two distinct strategies for solving this task. Experiments indicate that a mixture of the two strategies significantly outperforms a state-of-the-art Wikipedia NED system, on a dataset where Wikipedia has good coverage and on another dataset where Wikipedia has poor coverage. The results indicate that there is a significant benefit to leveraging other sources of knowledge in addition to Wikipedia, and that it is possible to leverage this knowledge without requiring labeled data for each new source. The initial success of these Open-DB NED approaches indicates that this task is a promising area for future research, including exciting extensions that link large numbers of domainspecific databases to text.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion and Future Work",
+                "sec_num": "8"
+            },
+            {
+                "text": "A Distant Supervision Strategy for Open-DB NEDOur first approach to the Open-DB NED problem relies on the fact that, while many mentions are indeed ambiguous and difficult to resolve correctly, most",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "Alternatively, one could make the oracle system predict OOD on all mentions that fall outside of Wikipedia. Random predictions perform better on our data.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            }
+        ],
+        "back_matter": [
+            {
+                "text": "This work was supported in part by a gift from Yahoo!, Inc.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Acknowledgments",
+                "sec_num": null
+            }
+        ],
+        "bib_entries": {
+            "BIBREF0": {
+                "ref_id": "b0",
+                "title": "Learning extractors from unlabeled text using relevant databases",
+                "authors": [
+                    {
+                        "first": "Kedar",
+                        "middle": [],
+                        "last": "Bellare",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Andrew",
+                        "middle": [],
+                        "last": "Mccallum",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2007,
+                "venue": "Sixth International Workshop on Information Integration on the Web",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Kedar Bellare and Andrew McCallum. 2007. Learn- ing extractors from unlabeled text using relevant data- bases. In Sixth International Workshop on Information Integration on the Web.",
+                "links": null
+            },
+            "BIBREF1": {
+                "ref_id": "b1",
+                "title": "Generalized Expectation Criteria for Bootstrapping Extractors using Record-Text Alignment",
+                "authors": [
+                    {
+                        "first": "Kedar",
+                        "middle": [],
+                        "last": "Bellare",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Andrew",
+                        "middle": [],
+                        "last": "Mccallum",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Kedar Bellare and Andrew McCallum. 2009. General- ized Expectation Criteria for Bootstrapping Extractors using Record-Text Alignment. In Empirical Methods in Natural Language Processing (EMNLP-09).",
+                "links": null
+            },
+            "BIBREF2": {
+                "ref_id": "b2",
+                "title": "A theory of learning from different domains",
+                "authors": [
+                    {
+                        "first": "Shai",
+                        "middle": [],
+                        "last": "Ben-David",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "John",
+                        "middle": [],
+                        "last": "Blitzer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Koby",
+                        "middle": [],
+                        "last": "Crammer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alex",
+                        "middle": [],
+                        "last": "Kulesza",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Fernando",
+                        "middle": [],
+                        "last": "Pereira",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jennifer",
+                        "middle": [
+                            "Wortman"
+                        ],
+                        "last": "Vaughan",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2010,
+                "venue": "Machine Learning",
+                "volume": "79",
+                "issue": "",
+                "pages": "151--175",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Shai Ben-David, John Blitzer, Koby Crammer, Alex Kulesza, Fernando Pereira, and Jennifer Wortman Vaughan. 2010. A theory of learning from different domains. Machine Learning, 79:151-175.",
+                "links": null
+            },
+            "BIBREF3": {
+                "ref_id": "b3",
+                "title": "Domain adaptation with structural correspondence learning",
+                "authors": [
+                    {
+                        "first": "John",
+                        "middle": [],
+                        "last": "Blitzer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ryan",
+                        "middle": [],
+                        "last": "Mcdonald",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Fernando",
+                        "middle": [],
+                        "last": "Pereira",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2006,
+                "venue": "EMNLP",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "John Blitzer, Ryan McDonald, and Fernando Pereira. 2006. Domain adaptation with structural correspon- dence learning. In EMNLP.",
+                "links": null
+            },
+            "BIBREF4": {
+                "ref_id": "b4",
+                "title": "Learning to extract relations from the web using minimal supervision",
+                "authors": [
+                    {
+                        "first": "Razvan",
+                        "middle": [],
+                        "last": "Bunescu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Raymond",
+                        "middle": [],
+                        "last": "Mooney",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2007,
+                "venue": "Proceedings of the 45th Annual Meeting of the Association for Computational Linguistics (ACL-07)",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Razvan Bunescu and Raymond Mooney. 2007. Learning to extract relations from the web using minimal super- vision. In Proceedings of the 45th Annual Meeting of the Association for Computational Linguistics (ACL- 07).",
+                "links": null
+            },
+            "BIBREF5": {
+                "ref_id": "b5",
+                "title": "Using encyclopedic knowledge for named entity disambiguation",
+                "authors": [
+                    {
+                        "first": "R",
+                        "middle": [],
+                        "last": "Bunescu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "M",
+                        "middle": [],
+                        "last": "Pasca",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2006,
+                "venue": "Proceedings of the 11th Conference of the European Chapter",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "R. Bunescu and M. Pasca. 2006. Using encyclope- dic knowledge for named entity disambiguation. In Proceedings of the 11th Conference of the European Chapter of the Association for Computational Linguis- tics (EACL-06).",
+                "links": null
+            },
+            "BIBREF6": {
+                "ref_id": "b6",
+                "title": "Towards Robust Unsupervised Personal Name Disambiguation",
+                "authors": [
+                    {
+                        "first": "Ying",
+                        "middle": [],
+                        "last": "Chen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "James",
+                        "middle": [],
+                        "last": "Martin",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2007,
+                "venue": "EMNLP",
+                "volume": "",
+                "issue": "",
+                "pages": "190--198",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ying Chen and James Martin. 2007. Towards Ro- bust Unsupervised Personal Name Disambiguation. In EMNLP, pages 190-198.",
+                "links": null
+            },
+            "BIBREF7": {
+                "ref_id": "b7",
+                "title": "Large-scale named entity disambiguation based on wikipedia data",
+                "authors": [
+                    {
+                        "first": "Silviu",
+                        "middle": [],
+                        "last": "Cucerzan",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2007,
+                "venue": "Proceedings of the 2007 Joint Conference on Empirical Methods in Natural Language Processing and Computational Natural Language Learning (EMNLP-CoNLL)",
+                "volume": "",
+                "issue": "",
+                "pages": "708--716",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Silviu Cucerzan. 2007. Large-scale named entity dis- ambiguation based on wikipedia data. In Proceedings of the 2007 Joint Conference on Empirical Methods in Natural Language Processing and Computational Natural Language Learning (EMNLP-CoNLL), pages 708-716.",
+                "links": null
+            },
+            "BIBREF8": {
+                "ref_id": "b8",
+                "title": "Matching Reviews to Objects using a Language Model",
+                "authors": [
+                    {
+                        "first": "N",
+                        "middle": [],
+                        "last": "Nilesh",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ravi",
+                        "middle": [],
+                        "last": "Dalvi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Bo",
+                        "middle": [],
+                        "last": "Kumar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Andrew",
+                        "middle": [],
+                        "last": "Pang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Tomkins",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "EMNLP",
+                "volume": "",
+                "issue": "",
+                "pages": "609--618",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Nilesh N. Dalvi, Ravi Kumar, Bo Pang, and Andrew Tomkins. 2009. Matching Reviews to Objects using a Language Model. In EMNLP, pages 609-618.",
+                "links": null
+            },
+            "BIBREF9": {
+                "ref_id": "b9",
+                "title": "Object matching in tweets with spatial models",
+                "authors": [
+                    {
+                        "first": "N",
+                        "middle": [],
+                        "last": "Nilesh",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ravi",
+                        "middle": [],
+                        "last": "Dalvi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Bo",
+                        "middle": [],
+                        "last": "Kumar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Pang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2012,
+                "venue": "WSDM",
+                "volume": "",
+                "issue": "",
+                "pages": "43--52",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Nilesh N. Dalvi, Ravi Kumar, and Bo Pang. 2012. Object matching in tweets with spatial models. In WSDM, pages 43-52.",
+                "links": null
+            },
+            "BIBREF10": {
+                "ref_id": "b10",
+                "title": "Frustratingly easy semi-supervised domain adaptation",
+                "authors": [
+                    {
+                        "first": "Hal",
+                        "middle": [],
+                        "last": "Daum\u00e9",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Iii",
+                        "middle": [],
+                        "last": "",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Abhishek",
+                        "middle": [],
+                        "last": "Kumar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Avishek",
+                        "middle": [],
+                        "last": "Saha",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2010,
+                "venue": "Proceedings of the ACL Workshop on Domain Adaptation (DANLP)",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Hal Daum\u00e9 III, Abhishek Kumar, and Avishek Saha. 2010. Frustratingly easy semi-supervised domain adaptation. In Proceedings of the ACL Workshop on Domain Adaptation (DANLP).",
+                "links": null
+            },
+            "BIBREF11": {
+                "ref_id": "b11",
+                "title": "Locating complex named entities in web text",
+                "authors": [
+                    {
+                        "first": "D",
+                        "middle": [],
+                        "last": "Downey",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "M",
+                        "middle": [],
+                        "last": "Broadhead",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "O",
+                        "middle": [],
+                        "last": "Etzioni",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2007,
+                "venue": "Procs. of the 20th International Joint Conference on Artificial Intelligence",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "D. Downey, M. Broadhead, and O. Etzioni. 2007. Lo- cating complex named entities in web text. In Procs. of the 20th International Joint Conference on Artificial Intelligence (IJCAI 2007).",
+                "links": null
+            },
+            "BIBREF12": {
+                "ref_id": "b12",
+                "title": "Scaling wikipedia-based named entity disambiguation to arbitrary web text",
+                "authors": [
+                    {
+                        "first": "Anthony",
+                        "middle": [],
+                        "last": "Fader",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Stephen",
+                        "middle": [],
+                        "last": "Soderland",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Oren",
+                        "middle": [],
+                        "last": "Etzioni",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "Proceedings of the WikiAI 09 -IJCAI Workshop: User Contributed Knowledge and Artificial Intelligence: An Evolving Synergy",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Anthony Fader, Stephen Soderland, and Oren Etzioni. 2009. Scaling wikipedia-based named entity disam- biguation to arbitrary web text. In Proceedings of the WikiAI 09 -IJCAI Workshop: User Contributed Knowledge and Artificial Intelligence: An Evolving Synergy.",
+                "links": null
+            },
+            "BIBREF13": {
+                "ref_id": "b13",
+                "title": "Named entity disambiguation by leveraging Wikipedia semantic knowledge",
+                "authors": [
+                    {
+                        "first": "Xianpei",
+                        "middle": [],
+                        "last": "Han",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jun",
+                        "middle": [],
+                        "last": "Zhao",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "Proceeding of the 18th ACM Conference on Information and Knowledge Management (CIKM)",
+                "volume": "",
+                "issue": "",
+                "pages": "215--224",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Xianpei Han and Jun Zhao. 2009. Named entity dis- ambiguation by leveraging Wikipedia semantic knowl- edge. In Proceeding of the 18th ACM Conference on Information and Knowledge Management (CIKM), pages 215-224.",
+                "links": null
+            },
+            "BIBREF14": {
+                "ref_id": "b14",
+                "title": "Stefan Thater, and Gerhard Weikum1. 2011. Robust Disambiguation of Named Entities in Text",
+                "authors": [
+                    {
+                        "first": "Johannes",
+                        "middle": [],
+                        "last": "Hoffart",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mohamed",
+                        "middle": [
+                            "Amir"
+                        ],
+                        "last": "Yosef",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ilaria",
+                        "middle": [],
+                        "last": "Bordino",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hagen",
+                        "middle": [],
+                        "last": "Furstenau",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Manfred",
+                        "middle": [],
+                        "last": "Pinkal",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Marc",
+                        "middle": [],
+                        "last": "Spaniol",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Bilyana",
+                        "middle": [],
+                        "last": "Taneva",
+                        "suffix": ""
+                    }
+                ],
+                "year": null,
+                "venue": "EMNLP",
+                "volume": "",
+                "issue": "",
+                "pages": "782--792",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Johannes Hoffart, Mohamed Amir Yosef, Ilaria Bordino, Hagen Furstenau, Manfred Pinkal, Marc Spaniol, Bilyana Taneva, Stefan Thater, and Gerhard Weikum1. 2011. Robust Disambiguation of Named Entities in Text. In EMNLP, pages 782-792.",
+                "links": null
+            },
+            "BIBREF15": {
+                "ref_id": "b15",
+                "title": "Knowledge-Based Weak Supervision for Information Extraction of Overlapping Relations",
+                "authors": [
+                    {
+                        "first": "Raphael",
+                        "middle": [],
+                        "last": "Hoffmann",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Congle",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xiao",
+                        "middle": [],
+                        "last": "Ling",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Luke",
+                        "middle": [],
+                        "last": "Zettlemoyer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Daniel",
+                        "middle": [
+                            "S"
+                        ],
+                        "last": "Weld",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2011,
+                "venue": "Proceedings of the Annual Meeting of the Association for Computational Linguistics (ACL)",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Raphael Hoffmann, Congle Zhang, Xiao Ling, Luke Zettlemoyer, and Daniel S. Weld. 2011. Knowledge- Based Weak Supervision for Information Extraction of Overlapping Relations. In Proceedings of the Annual Meeting of the Association for Computational Linguis- tics (ACL).",
+                "links": null
+            },
+            "BIBREF16": {
+                "ref_id": "b16",
+                "title": "Distributional representations for handling sparsity in supervised sequence labeling",
+                "authors": [
+                    {
+                        "first": "Fei",
+                        "middle": [],
+                        "last": "Huang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alexander",
+                        "middle": [],
+                        "last": "Yates",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "Proceedings of the Annual Meeting of the Association for Computational Linguistics (ACL)",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Fei Huang and Alexander Yates. 2009. Distributional representations for handling sparsity in supervised se- quence labeling. In Proceedings of the Annual Meet- ing of the Association for Computational Linguistics (ACL).",
+                "links": null
+            },
+            "BIBREF17": {
+                "ref_id": "b17",
+                "title": "Collective annotation of wikipedia entities in web text",
+                "authors": [
+                    {
+                        "first": "Sayali",
+                        "middle": [],
+                        "last": "Kulkarni",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Amit",
+                        "middle": [],
+                        "last": "Singh",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ganesh",
+                        "middle": [],
+                        "last": "Ramakrishnan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Soumen",
+                        "middle": [],
+                        "last": "Chakrabarti",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "Proceedings of the 15th ACM SIGKDD International Conference on Knowledge Discovery and Data Mining (KDD)",
+                "volume": "",
+                "issue": "",
+                "pages": "457--466",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Sayali Kulkarni, Amit Singh, Ganesh Ramakrishnan, and Soumen Chakrabarti. 2009. Collective annotation of wikipedia entities in web text. In Proceedings of the 15th ACM SIGKDD International Conference on Knowledge Discovery and Data Mining (KDD), pages 457-466.",
+                "links": null
+            },
+            "BIBREF18": {
+                "ref_id": "b18",
+                "title": "Lexical Generalization in CCG Grammar Induction for Semantic Parsing",
+                "authors": [
+                    {
+                        "first": "Tom",
+                        "middle": [],
+                        "last": "Kwiatkowski",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Luke",
+                        "middle": [],
+                        "last": "Zettlemoyer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sharon",
+                        "middle": [],
+                        "last": "Goldwater",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mark",
+                        "middle": [],
+                        "last": "Steedman",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2011,
+                "venue": "Proceedings of the Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Tom Kwiatkowski, Luke Zettlemoyer, Sharon Goldwater, and Mark Steedman. 2011. Lexical Generalization in CCG Grammar Induction for Semantic Parsing. In Proceedings of the Conference on Empirical Methods in Natural Language Processing (EMNLP).",
+                "links": null
+            },
+            "BIBREF19": {
+                "ref_id": "b19",
+                "title": "Automatic sense disambiguation using machine readable dictionaries: How to tell a pine cone from an ice cream cone",
+                "authors": [
+                    {
+                        "first": "M",
+                        "middle": [
+                            "E"
+                        ],
+                        "last": "Lesk",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1986,
+                "venue": "Proceedings of the SIGDOC Conference",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "M.E. Lesk. 1986. Automatic sense disambiguation us- ing machine readable dictionaries: How to tell a pine cone from an ice cream cone. In Proceedings of the SIGDOC Conference.",
+                "links": null
+            },
+            "BIBREF20": {
+                "ref_id": "b20",
+                "title": "Entity linking at web scale",
+                "authors": [
+                    {
+                        "first": "Thomas",
+                        "middle": [],
+                        "last": "Lin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Oren",
+                        "middle": [],
+                        "last": "Mausam",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Etzioni",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2012,
+                "venue": "Knowledge Extraction Workshop",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Thomas Lin, Mausam, and Oren Etzioni. 2012. Entity linking at web scale. In Knowledge Extraction Work- shop (AKBC-WEKEX), 2012.",
+                "links": null
+            },
+            "BIBREF21": {
+                "ref_id": "b21",
+                "title": "On the limited memory method for large scale optimization",
+                "authors": [
+                    {
+                        "first": "D",
+                        "middle": [
+                            "C"
+                        ],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "J",
+                        "middle": [],
+                        "last": "",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1989,
+                "venue": "Mathematical Programming B",
+                "volume": "45",
+                "issue": "3",
+                "pages": "503--528",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "D.C. Liu and J. Nocedal. 1989. On the limited mem- ory method for large scale optimization. Mathemati- cal Programming B, 45(3):503-528.",
+                "links": null
+            },
+            "BIBREF22": {
+                "ref_id": "b22",
+                "title": "Unsupervised personal name disambiguation",
+                "authors": [
+                    {
+                        "first": "G",
+                        "middle": [
+                            "S"
+                        ],
+                        "last": "Mann",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "D",
+                        "middle": [],
+                        "last": "Yarowsky",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2003,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "G.S. Mann and D. Yarowsky. 2003. Unsupervised per- sonal name disambiguation. In CoNLL.",
+                "links": null
+            },
+            "BIBREF23": {
+                "ref_id": "b23",
+                "title": "HLTCOE Approaches to Knowledge Base Population at TAC 2009",
+                "authors": [
+                    {
+                        "first": "Paul",
+                        "middle": [],
+                        "last": "Mcnamee",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mark",
+                        "middle": [],
+                        "last": "Dredze",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Adam",
+                        "middle": [],
+                        "last": "Gerber",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nikesh",
+                        "middle": [],
+                        "last": "Garera",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tim",
+                        "middle": [],
+                        "last": "Finin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "James",
+                        "middle": [],
+                        "last": "Mayfield",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christine",
+                        "middle": [],
+                        "last": "Piatko",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Delip",
+                        "middle": [],
+                        "last": "Rao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "David",
+                        "middle": [],
+                        "last": "Yarowsky",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Markus",
+                        "middle": [],
+                        "last": "Dreyer",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "Text Analysis Conference",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Paul McNamee, Mark Dredze, Adam Gerber, Nikesh Garera, Tim Finin, James Mayfield, Christine Pi- atko, Delip Rao, David Yarowsky, and Markus Dreyer. 2009. HLTCOE Approaches to Knowledge Base Pop- ulation at TAC 2009. In Text Analysis Conference.",
+                "links": null
+            },
+            "BIBREF24": {
+                "ref_id": "b24",
+                "title": "Wikify!: Linking documents to encyclopedic knowledge",
+                "authors": [
+                    {
+                        "first": "Rada",
+                        "middle": [],
+                        "last": "Mihalcea",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Andras",
+                        "middle": [],
+                        "last": "Csomai",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2007,
+                "venue": "Proceedings of the Sixteenth ACM Conference on Information and Knowledge Management (CIKM)",
+                "volume": "",
+                "issue": "",
+                "pages": "233--242",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Rada Mihalcea and Andras Csomai. 2007. Wikify!: Linking documents to encyclopedic knowledge. In Proceedings of the Sixteenth ACM Conference on Information and Knowledge Management (CIKM), pages 233-242.",
+                "links": null
+            },
+            "BIBREF25": {
+                "ref_id": "b25",
+                "title": "Distant supervision for relation extraction without labeled data",
+                "authors": [
+                    {
+                        "first": "Mike",
+                        "middle": [],
+                        "last": "Mintz",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Steven",
+                        "middle": [],
+                        "last": "Bills",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Rion",
+                        "middle": [],
+                        "last": "Snow",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Daniel",
+                        "middle": [],
+                        "last": "Jurafsky",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "Proceedings of the 47th Annual Meeting of the Association for Computational Linguistics (ACL-2009)",
+                "volume": "",
+                "issue": "",
+                "pages": "1003--1011",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Mike Mintz, Steven Bills, Rion Snow, and Daniel Juraf- sky. 2009. Distant supervision for relation extrac- tion without labeled data. In Proceedings of the 47th Annual Meeting of the Association for Computational Linguistics (ACL-2009), pages 1003-1011.",
+                "links": null
+            },
+            "BIBREF26": {
+                "ref_id": "b26",
+                "title": "Jigs and Lures: Associating Web Queries with Structured Entities",
+                "authors": [
+                    {
+                        "first": "Patrick",
+                        "middle": [],
+                        "last": "Pantel",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ariel",
+                        "middle": [],
+                        "last": "Fuxman",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2011,
+                "venue": "ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Patrick Pantel and Ariel Fuxman. 2011. Jigs and Lures: Associating Web Queries with Structured Entities. In ACL.",
+                "links": null
+            },
+            "BIBREF27": {
+                "ref_id": "b27",
+                "title": "Local and global algorithms for disambiguation to wikipedia",
+                "authors": [
+                    {
+                        "first": "L",
+                        "middle": [],
+                        "last": "Ratinov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "D",
+                        "middle": [],
+                        "last": "Roth",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "D",
+                        "middle": [],
+                        "last": "Downey",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "M",
+                        "middle": [],
+                        "last": "Anderson",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2011,
+                "venue": "Proc. of the Annual Meeting of the Association of Computational Linguistics (ACL)",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "L. Ratinov, D. Roth, D. Downey, and M. Anderson. 2011. Local and global algorithms for disambiguation to wikipedia. In Proc. of the Annual Meeting of the Association of Computational Linguistics (ACL).",
+                "links": null
+            },
+            "BIBREF28": {
+                "ref_id": "b28",
+                "title": "Modeling relations and their mentions without labeled text",
+                "authors": [
+                    {
+                        "first": "Sebastian",
+                        "middle": [],
+                        "last": "Riedel",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Limin",
+                        "middle": [],
+                        "last": "Yao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Andrew",
+                        "middle": [],
+                        "last": "Mccallum",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2010,
+                "venue": "Proceedings of the Sixteenth European Conference on Machine Learning (ECML-2010)",
+                "volume": "",
+                "issue": "",
+                "pages": "148--163",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Sebastian Riedel, Limin Yao, and Andrew McCallum. 2010. Modeling relations and their mentions without labeled text. In Proceedings of the Sixteenth Euro- pean Conference on Machine Learning (ECML-2010), pages 148-163.",
+                "links": null
+            },
+            "BIBREF29": {
+                "ref_id": "b29",
+                "title": "Database System Concepts",
+                "authors": [
+                    {
+                        "first": "Avi",
+                        "middle": [],
+                        "last": "Silberschatz",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Henry",
+                        "middle": [
+                            "F"
+                        ],
+                        "last": "Korth",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "S",
+                        "middle": [],
+                        "last": "Sudarshan",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2010,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Avi Silberschatz, Henry F. Korth, and S. Sudarshan. 2010. Database System Concepts. McGraw-Hill, sixth edition.",
+                "links": null
+            },
+            "BIBREF30": {
+                "ref_id": "b30",
+                "title": "Using Wikipedia to Bootstrap Open Information Extraction",
+                "authors": [
+                    {
+                        "first": "Daniel",
+                        "middle": [
+                            "S"
+                        ],
+                        "last": "Weld",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Raphael",
+                        "middle": [],
+                        "last": "Hoffmann",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Fei",
+                        "middle": [],
+                        "last": "Wu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "ACM SIGMOD Record",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Daniel S. Weld, Raphael Hoffmann, and Fei Wu. 2009. Using Wikipedia to Bootstrap Open Information Ex- traction. In ACM SIGMOD Record.",
+                "links": null
+            },
+            "BIBREF31": {
+                "ref_id": "b31",
+                "title": "Collective cross-document relation extraction without labelled data",
+                "authors": [
+                    {
+                        "first": "Limin",
+                        "middle": [],
+                        "last": "Yao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sebastian",
+                        "middle": [],
+                        "last": "Riedel",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Andrew",
+                        "middle": [],
+                        "last": "Mccallum",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2010,
+                "venue": "Proceedings of the 2010 Conference on Empirical Methods in Natural Language Processing (EMNLP-2010)",
+                "volume": "",
+                "issue": "",
+                "pages": "1013--1023",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Limin Yao, Sebastian Riedel, and Andrew McCallum. 2010. Collective cross-document relation extraction without labelled data. In Proceedings of the 2010 Con- ference on Empirical Methods in Natural Language Processing (EMNLP-2010), pages 1013-1023.",
+                "links": null
+            },
+            "BIBREF32": {
+                "ref_id": "b32",
+                "title": "Resolving surface forms to wikipedia topics",
+                "authors": [
+                    {
+                        "first": "Yiping",
+                        "middle": [],
+                        "last": "Zhou",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Lan",
+                        "middle": [],
+                        "last": "Nie",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Omid",
+                        "middle": [],
+                        "last": "Rouhani-Kalleh",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Flavian",
+                        "middle": [],
+                        "last": "Vasile",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Scott",
+                        "middle": [],
+                        "last": "Gaffney",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2010,
+                "venue": "Proceedings of the 23rd International Conference on Computational Linguistics (Coling)",
+                "volume": "",
+                "issue": "",
+                "pages": "1335--1343",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Yiping Zhou, Lan Nie, Omid Rouhani-Kalleh, Flavian Vasile, and Scott Gaffney. 2010. Resolving surface forms to wikipedia topics. In Proceedings of the 23rd International Conference on Computational Linguis- tics (Coling), pages 1335-1343.",
+                "links": null
+            }
+        },
+        "ref_entries": {
+            "FIGREF0": {
+                "num": null,
+                "text": "Figure 1: Example movie database (above) and sports database (below) in BCNF.",
+                "uris": null,
+                "fig_num": "1",
+                "type_str": "figure"
+            },
+            "FIGREF1": {
+                "num": null,
+                "text": "Figure 2: Feature generation algorithm. The ContextM atches(s, m) function counts how many times a string that matches database symbol s appears in the context of m. In our implementation, we use all of d(m) as the context. Matching between strings and database symbols is discussed in Sec. 7.3.",
+                "uris": null,
+                "fig_num": "2",
+                "type_str": "figure"
+            },
+            "TABREF0": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "Our domain-adaptation strategy builds an Open-DB NED system by training it on labeled examples from an initial database or small set of initial databases. Unlike traditional NED, however, the purpose in Open-DB NED is to resolve to any database. Thus the strategy must take care to build a model that can transfer what it has learned to a new database, without requiring additional labeled data for the new database.",
+                "html": null,
+                "num": null
+            },
+            "TABREF1": {
+                "content": "<table><tr><td>lists the domain-independent features</td></tr></table>",
+                "type_str": "table",
+                "text": "",
+                "html": null,
+                "num": null
+            },
+            "TABREF2": {
+                "content": "<table><tr><td>: Primary feature functions for a domain adapta-</td></tr><tr><td>tion approach to NED. These features made the biggest</td></tr><tr><td>difference in our experiments, but we also tested varia-</td></tr><tr><td>tions such as counting unique numeric attribute appear-</td></tr><tr><td>ances, counting unique similar entities, counting relation</td></tr><tr><td>name appearances, counting extended attributed appear-</td></tr><tr><td>ances, and others.</td></tr></table>",
+                "type_str": "table",
+                "text": "",
+                "html": null,
+                "num": null
+            },
+            "TABREF4": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "Number of mentions, average number of referents per mention, % of mentions that are OOD, and % of mentions that are in Wikipedia in our movie and sports data.",
+                "html": null,
+                "num": null
+            }
+        }
+    }
+}

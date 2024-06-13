@@ -1,0 +1,2357 @@
+{
+    "paper_id": "2020",
+    "header": {
+        "generated_with": "S2ORC 1.0.0",
+        "date_generated": "2023-06-16T12:21:02.986948Z"
+    },
+    "title": "Compressing Pre-trained Language Models by Matrix Decomposition",
+    "authors": [
+        {
+            "first": "Matan",
+            "middle": [],
+            "last": "Ben",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "Intel AI Lab",
+                "location": {
+                    "settlement": "Petah-Tikva",
+                    "country": "Israel"
+                }
+            },
+            "email": ""
+        },
+        {
+            "first": "Yoav",
+            "middle": [],
+            "last": "Goldberg",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "Bar-Ilan University",
+                "location": {
+                    "settlement": "Ramat",
+                    "country": "Gan Israel"
+                }
+            },
+            "email": "yoav.goldberg@gmail.com"
+        }
+    ],
+    "year": "",
+    "venue": null,
+    "identifiers": {},
+    "abstract": "Large pre-trained language models reach stateof-the-art results on many different NLP tasks when fine-tuned individually; They also come with a significant memory and computational requirements, calling for methods to reduce model sizes (green AI). We propose a twostage model-compression method to reduce a model's inference time cost. We first decompose the matrices in the model into smaller matrices and then perform feature distillation on the internal representation to recover from the decomposition. This approach has the benefit of reducing the number of parameters while preserving much of the information within the model. We experimented on BERTbase model with the GLUE benchmark dataset and show that we can reduce the number of parameters by a factor of 0.4x, and increase inference speed by a factor of 1.45x, while maintaining a minimal loss in metric performance.",
+    "pdf_parse": {
+        "paper_id": "2020",
+        "_pdf_hash": "",
+        "abstract": [
+            {
+                "text": "Large pre-trained language models reach stateof-the-art results on many different NLP tasks when fine-tuned individually; They also come with a significant memory and computational requirements, calling for methods to reduce model sizes (green AI). We propose a twostage model-compression method to reduce a model's inference time cost. We first decompose the matrices in the model into smaller matrices and then perform feature distillation on the internal representation to recover from the decomposition. This approach has the benefit of reducing the number of parameters while preserving much of the information within the model. We experimented on BERTbase model with the GLUE benchmark dataset and show that we can reduce the number of parameters by a factor of 0.4x, and increase inference speed by a factor of 1.45x, while maintaining a minimal loss in metric performance.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            }
+        ],
+        "body_text": [
+            {
+                "text": "Deep learning models have been demonstrated to achieve state-of-the-art results, but require large parameter storage and computation. It's estimated that training a Transformer model with a neural architecture search has a CO 2 emissions equivalent to nearly five times the lifetime emissions of the average U.S. car, including its manufacturing (Strubell et al., 2019) . Alongside the increase in deep learning models complexity, in the NLP domain, there has been a shift in the NLP modeling paradigm from training a randomly initialized model to fine-tuning a large and computational heavy pre-trained language model (Howard and Ruder, 2018; Peters et al., 2018; Devlin et al., 2018; Radford, 2018; Radford et al., 2019; Dai et al., 2019; Yang et al., 2019; Lample and Conneau, 2019; Liu et al., 2019b; Raffel et al., 2019; Lan et al., 2019; Lewis et al., 2019) .",
+                "cite_spans": [
+                    {
+                        "start": 346,
+                        "end": 369,
+                        "text": "(Strubell et al., 2019)",
+                        "ref_id": "BIBREF26"
+                    },
+                    {
+                        "start": 619,
+                        "end": 643,
+                        "text": "(Howard and Ruder, 2018;",
+                        "ref_id": "BIBREF7"
+                    },
+                    {
+                        "start": 644,
+                        "end": 664,
+                        "text": "Peters et al., 2018;",
+                        "ref_id": "BIBREF19"
+                    },
+                    {
+                        "start": 665,
+                        "end": 685,
+                        "text": "Devlin et al., 2018;",
+                        "ref_id": "BIBREF3"
+                    },
+                    {
+                        "start": 686,
+                        "end": 700,
+                        "text": "Radford, 2018;",
+                        "ref_id": "BIBREF20"
+                    },
+                    {
+                        "start": 701,
+                        "end": 722,
+                        "text": "Radford et al., 2019;",
+                        "ref_id": "BIBREF21"
+                    },
+                    {
+                        "start": 723,
+                        "end": 740,
+                        "text": "Dai et al., 2019;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 741,
+                        "end": 759,
+                        "text": "Yang et al., 2019;",
+                        "ref_id": "BIBREF34"
+                    },
+                    {
+                        "start": 760,
+                        "end": 785,
+                        "text": "Lample and Conneau, 2019;",
+                        "ref_id": "BIBREF10"
+                    },
+                    {
+                        "start": 786,
+                        "end": 804,
+                        "text": "Liu et al., 2019b;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 805,
+                        "end": 825,
+                        "text": "Raffel et al., 2019;",
+                        "ref_id": "BIBREF22"
+                    },
+                    {
+                        "start": 826,
+                        "end": 843,
+                        "text": "Lan et al., 2019;",
+                        "ref_id": "BIBREF11"
+                    },
+                    {
+                        "start": 844,
+                        "end": 863,
+                        "text": "Lewis et al., 2019)",
+                        "ref_id": "BIBREF12"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "While re-using pre-trained models offsets the training costs, inference time costs of the finetuned models remain significant, and are showstoppers in many applications. The main challenge with pre-trained models is how can we reduce their size while saving the information contained within them. Recent work, approached this by keeping some of the layers while removing others (Sanh et al., 2019; Sun et al., 2019; Xu et al., 2020) . A main drawback of such approach is in its coarse-grained nature: removing entire layers might discard important information contained within the model, and working at the granularity of layers makes the trade-off between compression and accuracy of a model hard to control. Motivated by this, in this work we suggest a more finegrained approach which decomposes each matrix to two smaller matrices and then perform feature distillation on the internal representation to recover from the decomposition. This approach has the benefit of preserving much of the information while reducing the number of parameters. Alongside the advantage of preserving the information within each layer, there is also a memory flexibility advantage compared to removing entire layers; As a result of decomposing each matrix to two smaller matrices, we can store each of the two matrices in two different memory blocks. This has the benefit of distributing the model matrices in many small memory blocks, which is useful when working in shared CPU-based environments.",
+                "cite_spans": [
+                    {
+                        "start": 378,
+                        "end": 397,
+                        "text": "(Sanh et al., 2019;",
+                        "ref_id": "BIBREF23"
+                    },
+                    {
+                        "start": 398,
+                        "end": 415,
+                        "text": "Sun et al., 2019;",
+                        "ref_id": "BIBREF27"
+                    },
+                    {
+                        "start": 416,
+                        "end": 432,
+                        "text": "Xu et al., 2020)",
+                        "ref_id": "BIBREF33"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "We evaluated our approach on the General Language Understanding Evaluation (GLUE) benchmark dataset (Wang et al., 2018) and show that our approach is superior or competitive in the different GLUE tasks to previous approaches which remove entire layers. Furthermore, we study the effects of different base models to decompose and show the superiority of decomposing a fine-tuned model compared to a pre-trained model or a ran-domly initialized model. Finally, we demonstrate the trade-off between compression and accuracy of a model.",
+                "cite_spans": [
+                    {
+                        "start": 100,
+                        "end": 119,
+                        "text": "(Wang et al., 2018)",
+                        "ref_id": "BIBREF31"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "In the past year, there have been many attempts to compress transformer models involving pruning (McCarley, 2019; Guo et al., 2019; Wang et al., 2019; Michel et al., 2019; Voita et al., 2019; Gordon et al., 2020) , quantization (Zafrir et al., 2019; Shen et al., 2019) and distillation (Sanh et al., 2019; Zhao et al., 2019; Tang et al., 2019; Mukherjee and Awadallah, 2019; Sun et al., 2019; Liu et al., 2019a; Jiao et al., 2019; Izsak et al., 2019) . Specifically, works on compressing pretrained transformer language models focused on pruning layers. Sun et al. (2019) suggested to prune layers while distilling information from the unpruned model layers. Xu et al. (2020) proposed to gradually remove layers during training.",
+                "cite_spans": [
+                    {
+                        "start": 97,
+                        "end": 113,
+                        "text": "(McCarley, 2019;",
+                        "ref_id": "BIBREF16"
+                    },
+                    {
+                        "start": 114,
+                        "end": 131,
+                        "text": "Guo et al., 2019;",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 132,
+                        "end": 150,
+                        "text": "Wang et al., 2019;",
+                        "ref_id": "BIBREF32"
+                    },
+                    {
+                        "start": 151,
+                        "end": 171,
+                        "text": "Michel et al., 2019;",
+                        "ref_id": "BIBREF17"
+                    },
+                    {
+                        "start": 172,
+                        "end": 191,
+                        "text": "Voita et al., 2019;",
+                        "ref_id": "BIBREF30"
+                    },
+                    {
+                        "start": 192,
+                        "end": 212,
+                        "text": "Gordon et al., 2020)",
+                        "ref_id": "BIBREF4"
+                    },
+                    {
+                        "start": 228,
+                        "end": 249,
+                        "text": "(Zafrir et al., 2019;",
+                        "ref_id": "BIBREF35"
+                    },
+                    {
+                        "start": 250,
+                        "end": 268,
+                        "text": "Shen et al., 2019)",
+                        "ref_id": "BIBREF24"
+                    },
+                    {
+                        "start": 286,
+                        "end": 305,
+                        "text": "(Sanh et al., 2019;",
+                        "ref_id": "BIBREF23"
+                    },
+                    {
+                        "start": 306,
+                        "end": 324,
+                        "text": "Zhao et al., 2019;",
+                        "ref_id": "BIBREF36"
+                    },
+                    {
+                        "start": 325,
+                        "end": 343,
+                        "text": "Tang et al., 2019;",
+                        "ref_id": "BIBREF28"
+                    },
+                    {
+                        "start": 344,
+                        "end": 374,
+                        "text": "Mukherjee and Awadallah, 2019;",
+                        "ref_id": "BIBREF18"
+                    },
+                    {
+                        "start": 375,
+                        "end": 392,
+                        "text": "Sun et al., 2019;",
+                        "ref_id": "BIBREF27"
+                    },
+                    {
+                        "start": 393,
+                        "end": 411,
+                        "text": "Liu et al., 2019a;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 412,
+                        "end": 430,
+                        "text": "Jiao et al., 2019;",
+                        "ref_id": "BIBREF9"
+                    },
+                    {
+                        "start": 431,
+                        "end": 450,
+                        "text": "Izsak et al., 2019)",
+                        "ref_id": "BIBREF8"
+                    },
+                    {
+                        "start": 554,
+                        "end": 571,
+                        "text": "Sun et al. (2019)",
+                        "ref_id": "BIBREF27"
+                    },
+                    {
+                        "start": 659,
+                        "end": 675,
+                        "text": "Xu et al. (2020)",
+                        "ref_id": "BIBREF33"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "We also note that very recently a work similar to ours was uploaded to arxiv (Mao et al., 2020) . There are a few differences from their work to ours. Firstly, we distill different parts of the model (see Section 3 for details). Secondly, we focus on training the decomposed model and do not prune the model parameters. Thirdly, our base model, which is used for decomposition and as a teacher, is a fine-tuned model; This has the benefit of task-specific information as we show in our experiments in Section 4.2.",
+                "cite_spans": [
+                    {
+                        "start": 77,
+                        "end": 95,
+                        "text": "(Mao et al., 2020)",
+                        "ref_id": "BIBREF15"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "Our goal is to decompose each matrix W \u2208 R n\u00d7d as two smaller matrices, obtaining an approximated matrix W = AB, A \u2208 R n\u00d7r , B \u2208 R r\u00d7d , where r < nd n+d . We seek a decomposition s.t. W is close to W in the sense that d(W x, W x) is small for all x, where d is a distance metric between vectors. In practice, we require the condition to hold not for all x, but for vectors seen in a finite relevant sample (in our case, the training data). While one could start with random matrices and optimize the objective using gradient descent, we show that a two-staged approach performs better: we first decompose the matrices using SVD, obtaining A , B s.t. ||A B -W || 2 2 is small (SVD is guaranteed to produce the best rank-r approximation to W , (Stewart, 1991) ). We then use these matrices as initialization and optimize d(W x, W x) (feature distillation), while also optimizing for task loss. We show that this process works substantially better in practice. Our loss function is thus composed of three different objectives:",
+                "cite_spans": [
+                    {
+                        "start": 743,
+                        "end": 758,
+                        "text": "(Stewart, 1991)",
+                        "ref_id": "BIBREF25"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Method",
+                "sec_num": "3"
+            },
+            {
+                "text": "Cross Entropy Loss The cross entropy loss over an example x with label y is defined likewise: L CE = -log p s (y|x), where p s is the probability for label y given by the decomposed student model.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Method",
+                "sec_num": "3"
+            },
+            {
+                "text": "The goal of knowledge distillation is to imitate the output layer of a teacher model by a student model. The Knowledge Distillation Loss is defined likewise:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Knowledge Distillation Loss",
+                "sec_num": null
+            },
+            {
+                "text": "L KD = zs-z t T",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Knowledge Distillation Loss",
+                "sec_num": null
+            },
+            {
+                "text": "2 , where z s and z t are the logits of the decomposed and original models respectively and T is a temperature hyper-parameter.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Knowledge Distillation Loss",
+                "sec_num": null
+            },
+            {
+                "text": "Feature Distillation Loss The goal of feature distillation is to imitate the intermediate layers of a teacher model by a student model. we use the following intermediate representations to distill the knowledge from1 :",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Knowledge Distillation Loss",
+                "sec_num": null
+            },
+            {
+                "text": "\u2022 Query, Key and Value Layers -The dot product of a matrix of concatenated tokens representation vectors X by the query, key and value parameter matrices,",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Knowledge Distillation Loss",
+                "sec_num": null
+            },
+            {
+                "text": "Z q = X \u2022 W Q , Z k = X \u2022 W K , Z v = X \u2022 W V",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Knowledge Distillation Loss",
+                "sec_num": null
+            },
+            {
+                "text": "\u2022 Attention Matrix -The attention matrix probabilities.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Knowledge Distillation Loss",
+                "sec_num": null
+            },
+            {
+                "text": "Z att = sof tmax(Z q \u2022 Z T k )",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Knowledge Distillation Loss",
+                "sec_num": null
+            },
+            {
+                "text": "\u2022 Attention Heads -The output of the attention heads.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Knowledge Distillation Loss",
+                "sec_num": null
+            },
+            {
+                "text": "Z H = Z att \u2022 Z v",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Knowledge Distillation Loss",
+                "sec_num": null
+            },
+            {
+                "text": "\u2022 The Multihead Attention Layer Output -The dot product of the attention heads by the matrix",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Knowledge Distillation Loss",
+                "sec_num": null
+            },
+            {
+                "text": "W O . Z M H = Z H \u2022 W O",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Knowledge Distillation Loss",
+                "sec_num": null
+            },
+            {
+                "text": "\u2022 The first feed forward layer -The dot product of the multihead attention layer by the first feed forward layer.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Knowledge Distillation Loss",
+                "sec_num": null
+            },
+            {
+                "text": "Z f 1 = Z M H \u2022 W 1",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Knowledge Distillation Loss",
+                "sec_num": null
+            },
+            {
+                "text": "\u2022 The second feed forward layer -The dot product of the first feed forward layer by the second feed forward layer.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Knowledge Distillation Loss",
+                "sec_num": null
+            },
+            {
+                "text": "Z f 2 = Z f 1 \u2022 W 2",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Knowledge Distillation Loss",
+                "sec_num": null
+            },
+            {
+                "text": "We denote S i z and T i z as the intermediate representations which were described above of layer i for the decomposed student and original teacher models respectively. Our loss function then is defined by: L",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Knowledge Distillation Loss",
+                "sec_num": null
+            },
+            {
+                "text": "F D = i T i z ,S i z Tz,Sz T z -S z 2",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Knowledge Distillation Loss",
+                "sec_num": null
+            },
+            {
+                "text": "Full Objective Our loss function is then defined by a weighted combination of these three loss functions likewise:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Knowledge Distillation Loss",
+                "sec_num": null
+            },
+            {
+                "text": "L = \u03b1L CE + (1 - \u03b1)L KD +L F D where \u03b1 \u2208 [0, 1] is a chosen hyper- parameter.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Knowledge Distillation Loss",
+                "sec_num": null
+            },
+            {
+                "text": "We compare various variants of our compression method, corresponding to different subsets of our loss. All variants decompose the matrices using SVD, but differ in their objective functions. These correspond to the four last lines in Table 1 . Low Rank BERT Fine-tuning (LRBF) corresponds to L = L CE . LRBF+KD corresponds to L = \u03b1L CE + (1 -\u03b1)L KD . LRBF+FD corresponds to L = L CE +L F D , while LRBF+FD+KD corresponds to the complete objective. The other lines in the table correspond to uncompressed model (first line) and to baselines which prune layers and distill. Fine-tuning finetunes a six layered BERT model. Vanilla KD trains a six-layered BERT model with L = \u03b1L CE +(1-\u03b1)L KD . BERT-PKD trains a six layered BERT model with L = \u03b1L CE + (1 -\u03b1)L KD while also adding an L F D objective, but on the hidden states between every consecutive layer. BERT-of-Theseus fine-tunes BERT model while gradually pruning half of the layers. We chose this baselines for several reasons: like our method they result in a practical reduction of parameters;2 , they are task-specific;3 and they do not require the pretraining stage, which is expensive and not practical for most practitioners.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 240,
+                        "end": 241,
+                        "text": "1",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "4"
+            },
+            {
+                "text": "Datasets We evaluate our proposed approach on the General Language Understanding Evaluation (GLUE) benchmark (Wang et al., 2018) , a collection of diverse NLP tasks.",
+                "cite_spans": [
+                    {
+                        "start": 109,
+                        "end": 128,
+                        "text": "(Wang et al., 2018)",
+                        "ref_id": "BIBREF31"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "4"
+            },
+            {
+                "text": "Training Details We fine-tune a pre-trained BERT model (Devlin et al., 2018) for each task with a batch size of 8 and a learning rate of 2e-5 for 3 epochs with an early stop mechanism according to the validation set. We perform the matrix decomposition on every parametric weight matrix of the encoder (excluding the embedding matrix) in a fine-tuned model and train the decomposed model as the student model and the original fine-tuned model as the teacher. For each task we train for 3 epochs with an early stopping mechanism according to the task validation set, the maximum sequence length is 128 and we perform a grid search over the learning rates {2e -6 , 5e -6 , 2e -5 , 5e -5 , 2e -4 , 5e -4 } and 5 different seeds and choose the best model according to the validation set of each task. 4 For knowledge distillation hyper-parameters we used a temperature hyper-parameter T = 10 and \u03b1 = 0.7. 5",
+                "cite_spans": [
+                    {
+                        "start": 55,
+                        "end": 76,
+                        "text": "(Devlin et al., 2018)",
+                        "ref_id": "BIBREF3"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "4"
+            },
+            {
+                "text": "Table 1 compares the results for validation and test of other compression approaches which prune layers, along with low rank models which were finetuned and trained with one or more of the distillation objectives described in Section 3. As can be seen, Low Rank BERT Feature Distillation + KD and Low Rank BERT Feature Distillation surpass all of results of all methods in both validation and test sets except BERT-of-Theseus method in the test set, in which Low Rank BERT Feature Distillation + KD surpasses the results in 5 of the tasks and reach comparable results in 2 of the tasks. Also, as can be seen knowledge distillation alone is not sufficient to compensate for the decomposition, but it slightly improves the results when incorporating feature distillation alone.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 6,
+                        "end": 7,
+                        "text": "1",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Main Results",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "Effect of Base Model and Decomposition In this experiment we test the importance of the base model we use to decompose and use as a teacher. We compared between three types of distillation sources: fine-tuned teacher, pre-trained teacher and no teacher. Furthermore, we compared between three types of model initializations: a decomposed fine-tuned model, a decomposed pretrained model and a randomly initialized model with the same architecture as the decomposed models. The results are shown in Table 2 , on all tasks when training with no teacher distilla-Table 1 : Results on GLUE dev and test sets. Metrics are Accuracy (MNLI (average of MNLI match and MNLI mis-match), QNLI, RTE, SST-2), Avg of Accuracy and F1 (MRPC, QQP), Matthew's correlation (CoLA), Avg of Pearson and Spearman correlations (STS-B). BERT-base (Teacher) is our fine-tuned BERT model. The numbers for the 6 layered models are taken from (Xu et al., 2020) , Best results are indicated in Bold. tion, the results are best when decomposing a finetuned model and decomposing a pre-trained model is better than randomly initializing a model; This indicates that the decomposition saves the information within the model and when decomposing a fine-tuned model it saves some of the more task specific information. Furthermore, on all tasks and all initialization the best results are when using a fine-tuned model as a teacher. Compression vs. Performance Trade-off Our method requires to determine a rank for the compression. But can we achieve better results when choosing a higher rank? Can we choose a lower rank for smaller models and still achieve satisfactory results? To determine this we experimented on three different ranks. As shown in Table 3 , higher ranks achieve better results, while lower ranks achieve satisfactory results while compromising metric performance. ",
+                "cite_spans": [
+                    {
+                        "start": 912,
+                        "end": 929,
+                        "text": "(Xu et al., 2020)",
+                        "ref_id": "BIBREF33"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 503,
+                        "end": 504,
+                        "text": "2",
+                        "ref_id": "TABREF0"
+                    },
+                    {
+                        "start": 565,
+                        "end": 566,
+                        "text": "1",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 1722,
+                        "end": 1723,
+                        "text": "3",
+                        "ref_id": "TABREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Further Analysis",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "In this experiment we measured the average time in milliseconds it takes for BERT-base compared to its decomposed and six-layered counterparts to output predictions for a batch of samples with varying batch sizes. As shown in Figure 1 , we still gain a significant time performance improvement when running on both CPU and GPU architectures over a BERT-base model. Models that are decomposed to a rank r = 245 are about 1.45 faster than their uncompressed counterpart for batches larger than one when running on a GPU and around 1.2 -1.55 faster for batches 8, 16, 32, 64 when running on a CPU. Furthermore, higher ranks still benefit running time and lower ranks improve the running time further. Also, we note that although a six-layered BERT does achieve faster inference time, due to the coarse-grained compression, it losses more information contained within it and thus achieves inferior results; As shown in the results in Table 1, a six-layered model trained with distillation (e.g. BERT-PKD (Sun et al., 2019) ) achieves significantly lower results and the BERT-of-Theseus model, which does improve upon BERT-PKD, requires many training iterations to achieve this to overcome the loss of information when gradually removing entire layers, which result in higher training times.",
+                "cite_spans": [
+                    {
+                        "start": 1000,
+                        "end": 1018,
+                        "text": "(Sun et al., 2019)",
+                        "ref_id": "BIBREF27"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 233,
+                        "end": 234,
+                        "text": "1",
+                        "ref_id": "FIGREF2"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Run-time Savings",
+                "sec_num": null
+            },
+            {
+                "text": "We presented a way to compress pre-trained large language models fine-tuned for specific tasks, while preserving much of the information contained within them, by using matrix decomposition to two small matrices. For future work it might be interesting to combine this approach with another approach such as pruning or quantization to achieve smaller models.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusions",
+                "sec_num": "5"
+            },
+            {
+                "text": "We follow the notations ofVaswani et al. (2017) for the transformer parameters and omit biases for notation convenience.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "Unlike, e.g., pruning, which sets parameters to zero and requires specialized hardware to fully take advantage of.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "Unlike, e.g., DistillBERT which is meant to be run before fine-tuning.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "We detailed the changes we made to the original finetuning procedure, every other hyper-parameters which were not mentioned, is set as described in(Devlin et al., 2018).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "5 We chose those hyper-parameters from a grid search over T = {5, 10, 20} and \u03b1 = {0.2, 0.5, 0.7} on the MRPC validation set.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            }
+        ],
+        "back_matter": [
+            {
+                "text": "This project has received funding from the Europoean Research Council (ERC) under the Europoean Union's Horizon 2020 research and innovation programme, grant agreement No. 802774 (iEXTRACT) and was sponsored in part by an Intel AI grant to the Bar-Ilan University NLP lab.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Acknowledgements",
+                "sec_num": null
+            }
+        ],
+        "bib_entries": {
+            "BIBREF1": {
+                "ref_id": "b1",
+                "title": "Low Rank Approximated Models -65.2M Parameters (This Work) Low Rank BERT Fine-tuning",
+                "authors": [
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Hinton",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Layers Transformer",
+                "volume": "7",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Layers Transformer Models -66M Parameters Fine-tuning 43.4 41.5 80.1 80.1 86.0 83.1 86.9 86.7 87.8 78.7 62.1 63.6 89.6 90.7 81.9 81.1 77.2 75.7 Vanilla KD (Hinton et al., 2015) 45.1 42.9 80.1 80.0 86.2 83.4 88.0 88.3 88.1 79.5 64.9 64.7 90.5 91.5 84.9 81.2 78.5 76.4 BERT-PKD (Sun et al., 2019) 45.5 43.5 81.3 81.3 85.7 82.5 88.4 89.0 88.4 79.8 66.5 65.5 91.3 92.0 86.2 82.5 79.2 77.0 BERT-of-Theseus (Xu et al., 2020) 51.1 47.8 82.3 82.3 89.0 85.4 89.5 89.6 89.6 80.5 68.2 66.2 91.5 92.2 88.7 84.9 81.2 78.6 Low Rank Approximated Models -65.2M Parameters (This Work) Low Rank BERT Fine-tuning 41.0 40.5 82.9 82.3 82.4 79.8 89.4 88.8 89.0 79.5 65.0 60.4 91.3 92.0 87.0 81.2 78.5",
+                "links": null
+            },
+            "BIBREF2": {
+                "ref_id": "b2",
+                "title": "Transformer-xl: Attentive language models beyond a fixed-length context",
+                "authors": [
+                    {
+                        "first": "Zihang",
+                        "middle": [],
+                        "last": "References",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zhilin",
+                        "middle": [],
+                        "last": "Dai",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yiming",
+                        "middle": [],
+                        "last": "Yang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jaime",
+                        "middle": [
+                            "G"
+                        ],
+                        "last": "Yang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Quoc",
+                        "middle": [],
+                        "last": "Carbonell",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ruslan",
+                        "middle": [],
+                        "last": "Viet Le",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Salakhutdinov",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 57th Conference of the Association for Computational Linguistics, ACL 2019",
+                "volume": "8",
+                "issue": "",
+                "pages": "2978--2988",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Low Rank BERT Feature Distillation + KD 53.0 42.9 84.8 83.7 90.4 86.2 91.4 90.8 89.7 80.5 71.1 67.8 92.4 92.9 89.4 84.6 82.8 78.7 References Zihang Dai, Zhilin Yang, Yiming Yang, Jaime G. Car- bonell, Quoc Viet Le, and Ruslan Salakhutdinov. 2019. Transformer-xl: Attentive language models beyond a fixed-length context. In Proceedings of the 57th Conference of the Association for Compu- tational Linguistics, ACL 2019, Florence, Italy, July 28-August 2, 2019, Volume 1: Long Papers, pages 2978-2988.",
+                "links": null
+            },
+            "BIBREF3": {
+                "ref_id": "b3",
+                "title": "Bert: Pre-training of deep bidirectional transformers for language understanding",
+                "authors": [
+                    {
+                        "first": "Jacob",
+                        "middle": [],
+                        "last": "Devlin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ming-Wei",
+                        "middle": [],
+                        "last": "Chang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kenton",
+                        "middle": [],
+                        "last": "Lee",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kristina",
+                        "middle": [],
+                        "last": "Toutanova",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jacob Devlin, Ming-Wei Chang, Kenton Lee, and Kristina Toutanova. 2018. Bert: Pre-training of deep bidirectional transformers for language understand- ing. ArXiv, abs/1810.04805.",
+                "links": null
+            },
+            "BIBREF4": {
+                "ref_id": "b4",
+                "title": "Compressing BERT: studying the effects of weight pruning on transfer learning",
+                "authors": [
+                    {
+                        "first": "Mitchell",
+                        "middle": [
+                            "A"
+                        ],
+                        "last": "Gordon",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kevin",
+                        "middle": [],
+                        "last": "Duh",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nicholas",
+                        "middle": [],
+                        "last": "Andrews",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Mitchell A. Gordon, Kevin Duh, and Nicholas An- drews. 2020. Compressing BERT: studying the ef- fects of weight pruning on transfer learning. CoRR, abs/2002.08307.",
+                "links": null
+            },
+            "BIBREF5": {
+                "ref_id": "b5",
+                "title": "Reweighted proximal pruning for large-scale language representation",
+                "authors": [
+                    {
+                        "first": "Fu-Ming",
+                        "middle": [],
+                        "last": "Guo",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sijia",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Finlay",
+                        "middle": [
+                            "S"
+                        ],
+                        "last": "Mungall",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xue",
+                        "middle": [],
+                        "last": "Lin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yanzhi",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Fu-Ming Guo, Sijia Liu, Finlay S. Mungall, Xue Lin, and Yanzhi Wang. 2019. Reweighted proxi- mal pruning for large-scale language representation. CoRR, abs/1909.12486.",
+                "links": null
+            },
+            "BIBREF6": {
+                "ref_id": "b6",
+                "title": "Distilling the knowledge in a neural network",
+                "authors": [
+                    {
+                        "first": "Geoffrey",
+                        "middle": [
+                            "E"
+                        ],
+                        "last": "Hinton",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Oriol",
+                        "middle": [],
+                        "last": "Vinyals",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jeffrey",
+                        "middle": [],
+                        "last": "Dean",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Geoffrey E. Hinton, Oriol Vinyals, and Jeffrey Dean. 2015. Distilling the knowledge in a neural network. ArXiv, abs/1503.02531.",
+                "links": null
+            },
+            "BIBREF7": {
+                "ref_id": "b7",
+                "title": "Universal language model fine-tuning for text classification",
+                "authors": [
+                    {
+                        "first": "Jeremy",
+                        "middle": [],
+                        "last": "Howard",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sebastian",
+                        "middle": [],
+                        "last": "Ruder",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 56th Annual Meeting of the Association for Computational Linguistics, ACL 2018",
+                "volume": "1",
+                "issue": "",
+                "pages": "328--339",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/P18-1031"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Jeremy Howard and Sebastian Ruder. 2018. Universal language model fine-tuning for text classification. In Proceedings of the 56th Annual Meeting of the As- sociation for Computational Linguistics, ACL 2018, Melbourne, Australia, July 15-20, 2018, Volume 1: Long Papers, pages 328-339.",
+                "links": null
+            },
+            "BIBREF8": {
+                "ref_id": "b8",
+                "title": "Training compact models for low resource entity tagging using pre-trained language models",
+                "authors": [
+                    {
+                        "first": "Peter",
+                        "middle": [],
+                        "last": "Izsak",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Shira",
+                        "middle": [],
+                        "last": "Guskin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Moshe",
+                        "middle": [],
+                        "last": "Wasserblat",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Peter Izsak, Shira Guskin, and Moshe Wasserblat. 2019. Training compact models for low resource entity tagging using pre-trained language models. CoRR, abs/1910.06294.",
+                "links": null
+            },
+            "BIBREF9": {
+                "ref_id": "b9",
+                "title": "Tinybert: Distilling BERT for natural language understanding",
+                "authors": [
+                    {
+                        "first": "Xiaoqi",
+                        "middle": [],
+                        "last": "Jiao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yichun",
+                        "middle": [],
+                        "last": "Yin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Lifeng",
+                        "middle": [],
+                        "last": "Shang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xin",
+                        "middle": [],
+                        "last": "Jiang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xiao",
+                        "middle": [],
+                        "last": "Chen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Linlin",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Fang",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Qun",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Xiaoqi Jiao, Yichun Yin, Lifeng Shang, Xin Jiang, Xiao Chen, Linlin Li, Fang Wang, and Qun Liu. 2019. Tinybert: Distilling BERT for natural lan- guage understanding. CoRR, abs/1909.10351.",
+                "links": null
+            },
+            "BIBREF10": {
+                "ref_id": "b10",
+                "title": "Crosslingual language model pretraining",
+                "authors": [
+                    {
+                        "first": "Guillaume",
+                        "middle": [],
+                        "last": "Lample",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alexis",
+                        "middle": [],
+                        "last": "Conneau",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Guillaume Lample and Alexis Conneau. 2019. Cross- lingual language model pretraining.",
+                "links": null
+            },
+            "BIBREF11": {
+                "ref_id": "b11",
+                "title": "ALBERT: A lite BERT for selfsupervised learning of language representations",
+                "authors": [
+                    {
+                        "first": "Zhenzhong",
+                        "middle": [],
+                        "last": "Corr",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mingda",
+                        "middle": [],
+                        "last": "Lan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sebastian",
+                        "middle": [],
+                        "last": "Chen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kevin",
+                        "middle": [],
+                        "last": "Goodman",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Gimpel",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "CoRR, abs/1901.07291. Zhenzhong Lan, Mingda Chen, Sebastian Goodman, Kevin Gimpel, Piyush Sharma, and Radu Sori- cut. 2019. ALBERT: A lite BERT for self- supervised learning of language representations. CoRR, abs/1909.11942.",
+                "links": null
+            },
+            "BIBREF12": {
+                "ref_id": "b12",
+                "title": "BART: denoising sequence-to-sequence pretraining for natural language generation, translation, and comprehension",
+                "authors": [
+                    {
+                        "first": "Mike",
+                        "middle": [],
+                        "last": "Lewis",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yinhan",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Naman",
+                        "middle": [],
+                        "last": "Goyal ; Abdelrahman Mohamed",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Omer",
+                        "middle": [],
+                        "last": "Levy",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Veselin",
+                        "middle": [],
+                        "last": "Stoyanov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Luke",
+                        "middle": [],
+                        "last": "Zettlemoyer",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Mike Lewis, Yinhan Liu, Naman Goyal, Mar- jan Ghazvininejad, Abdelrahman Mohamed, Omer Levy, Veselin Stoyanov, and Luke Zettlemoyer. 2019. BART: denoising sequence-to-sequence pre- training for natural language generation, translation, and comprehension. CoRR, abs/1910.13461.",
+                "links": null
+            },
+            "BIBREF13": {
+                "ref_id": "b13",
+                "title": "Attentive student meets multi-task teacher: Improved knowledge distillation for pretrained models",
+                "authors": [
+                    {
+                        "first": "Linqing",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Huan",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jimmy",
+                        "middle": [],
+                        "last": "Lin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Richard",
+                        "middle": [],
+                        "last": "Socher",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Caiming",
+                        "middle": [],
+                        "last": "Xiong",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Linqing Liu, Huan Wang, Jimmy Lin, Richard Socher, and Caiming Xiong. 2019a. Attentive student meets multi-task teacher: Improved knowledge distillation for pretrained models. CoRR, abs/1911.03588.",
+                "links": null
+            },
+            "BIBREF14": {
+                "ref_id": "b14",
+                "title": "A robustly optimized BERT pretraining approach",
+                "authors": [
+                    {
+                        "first": "Yinhan",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Myle",
+                        "middle": [],
+                        "last": "Ott",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Naman",
+                        "middle": [],
+                        "last": "Goyal",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jingfei",
+                        "middle": [],
+                        "last": "Du",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mandar",
+                        "middle": [],
+                        "last": "Joshi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Danqi",
+                        "middle": [],
+                        "last": "Chen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Omer",
+                        "middle": [],
+                        "last": "Levy",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mike",
+                        "middle": [],
+                        "last": "Lewis",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Luke",
+                        "middle": [],
+                        "last": "Zettlemoyer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Veselin",
+                        "middle": [],
+                        "last": "Stoyanov",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Yinhan Liu, Myle Ott, Naman Goyal, Jingfei Du, Man- dar Joshi, Danqi Chen, Omer Levy, Mike Lewis, Luke Zettlemoyer, and Veselin Stoyanov. 2019b. Roberta: A robustly optimized BERT pretraining approach. CoRR, abs/1907.11692.",
+                "links": null
+            },
+            "BIBREF15": {
+                "ref_id": "b15",
+                "title": "Ladabert: Lightweight adaptation of BERT through hybrid model compression",
+                "authors": [
+                    {
+                        "first": "Yihuan",
+                        "middle": [],
+                        "last": "Mao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yujing",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chufan",
+                        "middle": [],
+                        "last": "Wu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chen",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yang",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yaming",
+                        "middle": [],
+                        "last": "Yang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Quanlu",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yunhai",
+                        "middle": [],
+                        "last": "Tong",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jing",
+                        "middle": [],
+                        "last": "Bai",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Yihuan Mao, Yujing Wang, Chufan Wu, Chen Zhang, Yang Wang, Yaming Yang, Quanlu Zhang, Yunhai Tong, and Jing Bai. 2020. Ladabert: Lightweight adaptation of BERT through hybrid model compres- sion. CoRR, abs/2004.04124.",
+                "links": null
+            },
+            "BIBREF16": {
+                "ref_id": "b16",
+                "title": "Pruning a bert-based question answering model",
+                "authors": [
+                    {
+                        "first": "J",
+                        "middle": [
+                            "S"
+                        ],
+                        "last": "Mccarley",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "J. S. McCarley. 2019. Pruning a bert-based question answering model. CoRR, abs/1910.06360.",
+                "links": null
+            },
+            "BIBREF17": {
+                "ref_id": "b17",
+                "title": "Are sixteen heads really better than one?",
+                "authors": [
+                    {
+                        "first": "Paul",
+                        "middle": [],
+                        "last": "Michel",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Omer",
+                        "middle": [],
+                        "last": "Levy",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Graham",
+                        "middle": [],
+                        "last": "Neubig",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Paul Michel, Omer Levy, and Graham Neubig. 2019. Are sixteen heads really better than one? CoRR, abs/1905.10650.",
+                "links": null
+            },
+            "BIBREF18": {
+                "ref_id": "b18",
+                "title": "Distilling transformers into simple neural networks with unlabeled transfer data",
+                "authors": [
+                    {
+                        "first": "Subhabrata",
+                        "middle": [],
+                        "last": "Mukherjee",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ahmed",
+                        "middle": [],
+                        "last": "Hassan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Awadallah",
+                        "middle": [],
+                        "last": "",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Subhabrata Mukherjee and Ahmed Hassan Awadal- lah. 2019. Distilling transformers into simple neu- ral networks with unlabeled transfer data. CoRR, abs/1910.01769.",
+                "links": null
+            },
+            "BIBREF19": {
+                "ref_id": "b19",
+                "title": "Deep contextualized word representations",
+                "authors": [
+                    {
+                        "first": "Matthew",
+                        "middle": [
+                            "E"
+                        ],
+                        "last": "Peters",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mark",
+                        "middle": [],
+                        "last": "Neumann",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mohit",
+                        "middle": [],
+                        "last": "Iyyer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Matt",
+                        "middle": [],
+                        "last": "Gardner",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [],
+                        "last": "Clark",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kenton",
+                        "middle": [],
+                        "last": "Lee",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Luke",
+                        "middle": [
+                            "S"
+                        ],
+                        "last": "Zettlemoyer",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Matthew E. Peters, Mark Neumann, Mohit Iyyer, Matt Gardner, Christopher Clark, Kenton Lee, and Luke S. Zettlemoyer. 2018. Deep contextualized word representations. ArXiv, abs/1802.05365.",
+                "links": null
+            },
+            "BIBREF20": {
+                "ref_id": "b20",
+                "title": "Improving language understanding by generative pre-training",
+                "authors": [
+                    {
+                        "first": "Alec",
+                        "middle": [],
+                        "last": "Radford",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Alec Radford. 2018. Improving language understand- ing by generative pre-training.",
+                "links": null
+            },
+            "BIBREF21": {
+                "ref_id": "b21",
+                "title": "Language models are unsupervised multitask learners",
+                "authors": [
+                    {
+                        "first": "Alec",
+                        "middle": [],
+                        "last": "Radford",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jeff",
+                        "middle": [],
+                        "last": "Wu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Rewon",
+                        "middle": [],
+                        "last": "Child",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "David",
+                        "middle": [],
+                        "last": "Luan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dario",
+                        "middle": [],
+                        "last": "Amodei",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ilya",
+                        "middle": [],
+                        "last": "Sutskever",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Alec Radford, Jeff Wu, Rewon Child, David Luan, Dario Amodei, and Ilya Sutskever. 2019. Language models are unsupervised multitask learners.",
+                "links": null
+            },
+            "BIBREF22": {
+                "ref_id": "b22",
+                "title": "Exploring the limits of transfer learning with a unified text-to-text transformer",
+                "authors": [
+                    {
+                        "first": "Colin",
+                        "middle": [],
+                        "last": "Raffel",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Noam",
+                        "middle": [],
+                        "last": "Shazeer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Adam",
+                        "middle": [],
+                        "last": "Roberts",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Katherine",
+                        "middle": [],
+                        "last": "Lee",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sharan",
+                        "middle": [],
+                        "last": "Narang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Michael",
+                        "middle": [],
+                        "last": "Matena",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yanqi",
+                        "middle": [],
+                        "last": "Zhou",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Wei",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Peter",
+                        "middle": [
+                            "J"
+                        ],
+                        "last": "Liu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Colin Raffel, Noam Shazeer, Adam Roberts, Katherine Lee, Sharan Narang, Michael Matena, Yanqi Zhou, Wei Li, and Peter J. Liu. 2019. Exploring the limits of transfer learning with a unified text-to-text trans- former. CoRR, abs/1910.10683.",
+                "links": null
+            },
+            "BIBREF23": {
+                "ref_id": "b23",
+                "title": "Distilbert, a distilled version of BERT: smaller, faster, cheaper and lighter",
+                "authors": [
+                    {
+                        "first": "Victor",
+                        "middle": [],
+                        "last": "Sanh",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Lysandre",
+                        "middle": [],
+                        "last": "Debut",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Julien",
+                        "middle": [],
+                        "last": "Chaumond",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Thomas",
+                        "middle": [],
+                        "last": "Wolf",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Victor Sanh, Lysandre Debut, Julien Chaumond, and Thomas Wolf. 2019. Distilbert, a distilled version of BERT: smaller, faster, cheaper and lighter. CoRR, abs/1910.01108.",
+                "links": null
+            },
+            "BIBREF24": {
+                "ref_id": "b24",
+                "title": "Q-BERT: hessian based ultra low precision quantization of BERT",
+                "authors": [
+                    {
+                        "first": "Sheng",
+                        "middle": [],
+                        "last": "Shen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zhen",
+                        "middle": [],
+                        "last": "Dong",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jiayu",
+                        "middle": [],
+                        "last": "Ye",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Linjian",
+                        "middle": [],
+                        "last": "Ma",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zhewei",
+                        "middle": [],
+                        "last": "Yao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Amir",
+                        "middle": [],
+                        "last": "Gholami",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Michael",
+                        "middle": [
+                            "W"
+                        ],
+                        "last": "Mahoney",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kurt",
+                        "middle": [],
+                        "last": "Keutzer",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Sheng Shen, Zhen Dong, Jiayu Ye, Linjian Ma, Zhewei Yao, Amir Gholami, Michael W. Mahoney, and Kurt Keutzer. 2019. Q-BERT: hessian based ul- tra low precision quantization of BERT. CoRR, abs/1909.05840.",
+                "links": null
+            },
+            "BIBREF25": {
+                "ref_id": "b25",
+                "title": "Perturbation theory for the singular value decomposition. SVD and Signal Processing, II: Algorithms, Analysis and Applications",
+                "authors": [
+                    {
+                        "first": "G",
+                        "middle": [
+                            "W"
+                        ],
+                        "last": "Stewart",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1991,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "99--109",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "G. W. Stewart. 1991. Perturbation theory for the sin- gular value decomposition. SVD and Signal Pro- cessing, II: Algorithms, Analysis and Applications, pages 99-109.",
+                "links": null
+            },
+            "BIBREF26": {
+                "ref_id": "b26",
+                "title": "Energy and policy considerations for deep learning in NLP",
+                "authors": [
+                    {
+                        "first": "Emma",
+                        "middle": [],
+                        "last": "Strubell",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ananya",
+                        "middle": [],
+                        "last": "Ganesh",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Andrew",
+                        "middle": [],
+                        "last": "Mccallum",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 57th Conference of the Association for Computational Linguistics, ACL 2019",
+                "volume": "1",
+                "issue": "",
+                "pages": "3645--3650",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/p19-1355"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Emma Strubell, Ananya Ganesh, and Andrew McCal- lum. 2019. Energy and policy considerations for deep learning in NLP. In Proceedings of the 57th Conference of the Association for Computational Linguistics, ACL 2019, Florence, Italy, July 28-Au- gust 2, 2019, Volume 1: Long Papers, pages 3645- 3650.",
+                "links": null
+            },
+            "BIBREF27": {
+                "ref_id": "b27",
+                "title": "Patient knowledge distillation for BERT model compression",
+                "authors": [
+                    {
+                        "first": "Siqi",
+                        "middle": [],
+                        "last": "Sun",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yu",
+                        "middle": [],
+                        "last": "Cheng",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zhe",
+                        "middle": [],
+                        "last": "Gan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jingjing",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/D19-1441"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Siqi Sun, Yu Cheng, Zhe Gan, and Jingjing Liu. 2019. Patient knowledge distillation for BERT model com- pression.",
+                "links": null
+            },
+            "BIBREF28": {
+                "ref_id": "b28",
+                "title": "Distilling taskspecific knowledge from BERT into simple neural networks",
+                "authors": [
+                    {
+                        "first": "Raphael",
+                        "middle": [],
+                        "last": "Tang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yao",
+                        "middle": [],
+                        "last": "Lu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Linqing",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Lili",
+                        "middle": [],
+                        "last": "Mou",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Olga",
+                        "middle": [],
+                        "last": "Vechtomova",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jimmy",
+                        "middle": [],
+                        "last": "Lin",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Raphael Tang, Yao Lu, Linqing Liu, Lili Mou, Olga Vechtomova, and Jimmy Lin. 2019. Distilling task- specific knowledge from BERT into simple neural networks. CoRR, abs/1903.12136.",
+                "links": null
+            },
+            "BIBREF29": {
+                "ref_id": "b29",
+                "title": "Attention is all you need",
+                "authors": [
+                    {
+                        "first": "Ashish",
+                        "middle": [],
+                        "last": "Vaswani",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Noam",
+                        "middle": [],
+                        "last": "Shazeer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Niki",
+                        "middle": [],
+                        "last": "Parmar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jakob",
+                        "middle": [],
+                        "last": "Uszkoreit",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Llion",
+                        "middle": [],
+                        "last": "Jones",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Aidan",
+                        "middle": [
+                            "N"
+                        ],
+                        "last": "Gomez",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Lukasz",
+                        "middle": [],
+                        "last": "Kaiser",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Illia",
+                        "middle": [],
+                        "last": "Polosukhin",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Advances in Neural Information Processing Systems 30: Annual Conference on Neural Information Processing Systems",
+                "volume": "",
+                "issue": "",
+                "pages": "5998--6008",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Lukasz Kaiser, and Illia Polosukhin. 2017. Attention is all you need. In Advances in Neural Information Pro- cessing Systems 30: Annual Conference on Neural Information Processing Systems 2017, 4-9 Decem- ber 2017, Long Beach, CA, USA, pages 5998-6008.",
+                "links": null
+            },
+            "BIBREF30": {
+                "ref_id": "b30",
+                "title": "Analyzing multi-head self-attention: Specialized heads do the heavy lifting, the rest can be pruned",
+                "authors": [
+                    {
+                        "first": "Elena",
+                        "middle": [],
+                        "last": "Voita",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "David",
+                        "middle": [],
+                        "last": "Talbot",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Fedor",
+                        "middle": [],
+                        "last": "Moiseev",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Rico",
+                        "middle": [],
+                        "last": "Sennrich",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ivan",
+                        "middle": [],
+                        "last": "Titov",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 57th Conference of the Association for Computational Linguistics, ACL 2019",
+                "volume": "1",
+                "issue": "",
+                "pages": "5797--5808",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Elena Voita, David Talbot, Fedor Moiseev, Rico Sen- nrich, and Ivan Titov. 2019. Analyzing multi-head self-attention: Specialized heads do the heavy lift- ing, the rest can be pruned. In Proceedings of the 57th Conference of the Association for Computa- tional Linguistics, ACL 2019, Florence, Italy, July 28-August 2, 2019, Volume 1: Long Papers, pages 5797-5808.",
+                "links": null
+            },
+            "BIBREF31": {
+                "ref_id": "b31",
+                "title": "GLUE: A multi-task benchmark and analysis platform for natural language understanding",
+                "authors": [
+                    {
+                        "first": "Alex",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Amanpreet",
+                        "middle": [],
+                        "last": "Singh",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Julian",
+                        "middle": [],
+                        "last": "Michael",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Felix",
+                        "middle": [],
+                        "last": "Hill",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Omer",
+                        "middle": [],
+                        "last": "Levy",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Samuel",
+                        "middle": [
+                            "R"
+                        ],
+                        "last": "Bowman",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the Workshop: Analyzing and Interpreting Neural Networks for NLP, BlackboxNLP@EMNLP 2018",
+                "volume": "",
+                "issue": "",
+                "pages": "353--355",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Alex Wang, Amanpreet Singh, Julian Michael, Fe- lix Hill, Omer Levy, and Samuel R. Bowman. 2018. GLUE: A multi-task benchmark and anal- ysis platform for natural language understand- ing. In Proceedings of the Workshop: Analyz- ing and Interpreting Neural Networks for NLP, BlackboxNLP@EMNLP 2018, Brussels, Belgium, November 1, 2018, pages 353-355.",
+                "links": null
+            },
+            "BIBREF32": {
+                "ref_id": "b32",
+                "title": "Structured pruning of large language models",
+                "authors": [
+                    {
+                        "first": "Ziheng",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jeremy",
+                        "middle": [],
+                        "last": "Wohlwend",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tao",
+                        "middle": [],
+                        "last": "Lei",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ziheng Wang, Jeremy Wohlwend, and Tao Lei. 2019. Structured pruning of large language models. CoRR, abs/1910.04732.",
+                "links": null
+            },
+            "BIBREF33": {
+                "ref_id": "b33",
+                "title": "Bert-of-theseus: Compressing BERT by progressive module replacing",
+                "authors": [
+                    {
+                        "first": "Canwen",
+                        "middle": [],
+                        "last": "Xu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Wangchunshu",
+                        "middle": [],
+                        "last": "Zhou",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tao",
+                        "middle": [],
+                        "last": "Ge",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Furu",
+                        "middle": [],
+                        "last": "Wei",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ming",
+                        "middle": [],
+                        "last": "Zhou",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Canwen Xu, Wangchunshu Zhou, Tao Ge, Furu Wei, and Ming Zhou. 2020. Bert-of-theseus: Compress- ing BERT by progressive module replacing. CoRR, abs/2002.02925.",
+                "links": null
+            },
+            "BIBREF34": {
+                "ref_id": "b34",
+                "title": "Xlnet: Generalized autoregressive pretraining for language understanding",
+                "authors": [
+                    {
+                        "first": "Zhilin",
+                        "middle": [],
+                        "last": "Yang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zihang",
+                        "middle": [],
+                        "last": "Dai",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yiming",
+                        "middle": [],
+                        "last": "Yang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jaime",
+                        "middle": [
+                            "G"
+                        ],
+                        "last": "Carbonell",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ruslan",
+                        "middle": [],
+                        "last": "Salakhutdinov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "V",
+                        "middle": [],
+                        "last": "Quoc",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Le",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Zhilin Yang, Zihang Dai, Yiming Yang, Jaime G. Carbonell, Ruslan Salakhutdinov, and Quoc V. Le. 2019. Xlnet: Generalized autoregressive pretraining for language understanding. CoRR, abs/1906.08237.",
+                "links": null
+            },
+            "BIBREF35": {
+                "ref_id": "b35",
+                "title": "Q8BERT: quantized 8bit BERT",
+                "authors": [
+                    {
+                        "first": "Ofir",
+                        "middle": [],
+                        "last": "Zafrir",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Guy",
+                        "middle": [],
+                        "last": "Boudoukh",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Peter",
+                        "middle": [],
+                        "last": "Izsak",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Moshe",
+                        "middle": [],
+                        "last": "Wasserblat",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ofir Zafrir, Guy Boudoukh, Peter Izsak, and Moshe Wasserblat. 2019. Q8BERT: quantized 8bit BERT. CoRR, abs/1910.06188.",
+                "links": null
+            },
+            "BIBREF36": {
+                "ref_id": "b36",
+                "title": "Extreme language model compression with optimal subwords and shared projections",
+                "authors": [
+                    {
+                        "first": "Sanqiang",
+                        "middle": [],
+                        "last": "Zhao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Raghav",
+                        "middle": [],
+                        "last": "Gupta",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yang",
+                        "middle": [],
+                        "last": "Song",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Denny",
+                        "middle": [],
+                        "last": "Zhou",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Sanqiang Zhao, Raghav Gupta, Yang Song, and Denny Zhou. 2019. Extreme language model compres- sion with optimal subwords and shared projections. CoRR, abs/1909.11687.",
+                "links": null
+            }
+        },
+        "ref_entries": {
+            "FIGREF0": {
+                "num": null,
+                "text": "48.7 \u00b1 2.4 47.5 \u00b1 0.7 40.1 \u00b1 0.6 88.5 \u00b1 0.5 85.8 \u00b1 0.5 81.6 \u00b1 1.3 91.8 \u00b1 0.4 91.3 \u00b1 0.5 90.9 \u00b1 0.4 Pre-trained 49.4 \u00b1 1.7 44.8 \u00b1 2.1 10.8 \u00b1 2.6 89.2 \u00b1 0.4 86.3 \u00b1 1.0 77.1 \u00b1 0.6 91.7 \u00b1 0.2 91.2 \u00b1 0.4 89.6 \u00b1 1.1 Random 3.6 \u00b1 5.1 0.0 \u00b1 0.0 0.6 \u00b1 0.6 75.9 \u00b1 1.1 75.3 \u00b1 0.7 75.0 \u00b1 0.4 88.2 \u00b1 0.5 87.2 \u00b1 0.7 81.2 \u00b1 0.5",
+                "uris": null,
+                "fig_num": null,
+                "type_str": "figure"
+            },
+            "FIGREF1": {
+                "num": null,
+                "text": "58.4 \u00b1 1.2 88.3 \u00b1 0.7 92.8 \u00b1 0.5 350 (82.6M) 57.7 \u00b1 0.9 88.9 \u00b1 0.7 92.0 \u00b1 0.5 245 (65.2M) 48.7 \u00b1 2.4 88.5 \u00b1 0.5 91.8 \u00b1 0.4 150 (49.4M) 38.7 \u00b1 1.6 87.8 \u00b1 0.6 91.3 \u00b1 0.4",
+                "uris": null,
+                "fig_num": null,
+                "type_str": "figure"
+            },
+            "FIGREF2": {
+                "num": null,
+                "text": "Figure 1: Average time in milliseconds to run a batch of samples from all of the GLUE tasks, when running on a Intel(R) Xeon(R) Platinum 8180 CPU @ 2.50GHz and on a single TITAN V 12GB GPU.",
+                "uris": null,
+                "fig_num": "1",
+                "type_str": "figure"
+            },
+            "TABREF0": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "Results on the dev set of CoLA, MRPC and SST-2 tasks with different initializations and different teachers. The results are averages and standard deviations of five runs with different seeds.",
+                "html": null,
+                "num": null
+            },
+            "TABREF1": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "Results on the dev set of CoLA, MRPC and SST-2 tasks with different ranks. The results are averages and standard deviations of five runs with different seeds.",
+                "html": null,
+                "num": null
+            }
+        }
+    }
+}

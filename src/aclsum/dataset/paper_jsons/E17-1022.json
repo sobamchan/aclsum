@@ -1,0 +1,2385 @@
+{
+    "paper_id": "E17-1022",
+    "header": {
+        "generated_with": "S2ORC 1.0.0",
+        "date_generated": "2023-06-16T12:17:09.282778Z"
+    },
+    "title": "Parsing Universal Dependencies without training",
+    "authors": [
+        {
+            "first": "H\u00e9ctor",
+            "middle": [],
+            "last": "Mart\u00ednez",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "INRIA",
+                "location": {
+                    "country": "France"
+                }
+            },
+            "email": "hector.martinez-alonso@inria.fr"
+        },
+        {
+            "first": "Alonso",
+            "middle": [
+                "\u2660"
+            ],
+            "last": "\u017deljko",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "IT University of Copenhagen",
+                "location": {
+                    "country": "Denmark"
+                }
+            },
+            "email": ""
+        },
+        {
+            "first": "Agi\u0107",
+            "middle": [
+                "\u2665"
+            ],
+            "last": "Barbara",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "University of Groningen",
+                "location": {
+                    "country": "The Netherlands"
+                }
+            },
+            "email": ""
+        },
+        {
+            "first": "Anders",
+            "middle": [],
+            "last": "S\u00f8gaard",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "University of Copenhagen",
+                "location": {
+                    "country": "Denmark"
+                }
+            },
+            "email": "soegaard@di.ku.dk"
+        }
+    ],
+    "year": "",
+    "venue": null,
+    "identifiers": {},
+    "abstract": "We propose UDP, the first training-free parser for Universal Dependencies (UD). Our algorithm is based on PageRank and a small set of head attachment rules. It features two-step decoding to guarantee that function words are attached as leaf nodes. The parser requires no training, and it is competitive with a delexicalized transfer system. UDP offers a linguistically sound unsupervised alternative to cross-lingual parsing for UD, which can be used as a baseline for such systems. The parser has very few parameters and is distinctly robust to domain change across languages.",
+    "pdf_parse": {
+        "paper_id": "E17-1022",
+        "_pdf_hash": "",
+        "abstract": [
+            {
+                "text": "We propose UDP, the first training-free parser for Universal Dependencies (UD). Our algorithm is based on PageRank and a small set of head attachment rules. It features two-step decoding to guarantee that function words are attached as leaf nodes. The parser requires no training, and it is competitive with a delexicalized transfer system. UDP offers a linguistically sound unsupervised alternative to cross-lingual parsing for UD, which can be used as a baseline for such systems. The parser has very few parameters and is distinctly robust to domain change across languages.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            }
+        ],
+        "body_text": [
+            {
+                "text": "Grammar induction and unsupervised dependency parsing are active fields of research in natural language processing (Klein and Manning, 2004; Gelling et al., 2012) . However, many data-driven approaches struggle with learning relations that match the conventions of the test data, e.g., Klein and Manning reported the tendency of their DMV parser to make determiners the heads of German nouns, which would not be an error if the test data used a DP analysis (Abney, 1987) . Even supervised transfer approaches (McDonald et al., 2011) suffer from target adaptation problems when facing word order differences.",
+                "cite_spans": [
+                    {
+                        "start": 115,
+                        "end": 140,
+                        "text": "(Klein and Manning, 2004;",
+                        "ref_id": "BIBREF15"
+                    },
+                    {
+                        "start": 141,
+                        "end": 162,
+                        "text": "Gelling et al., 2012)",
+                        "ref_id": "BIBREF9"
+                    },
+                    {
+                        "start": 286,
+                        "end": 291,
+                        "text": "Klein",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 457,
+                        "end": 470,
+                        "text": "(Abney, 1987)",
+                        "ref_id": "BIBREF0"
+                    },
+                    {
+                        "start": 509,
+                        "end": 532,
+                        "text": "(McDonald et al., 2011)",
+                        "ref_id": "BIBREF19"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "The Universal Dependencies (UD) project (Nivre et al., 2015; Nivre et al., 2016) offers a dependency formalism that aims at providing a consistent representation across languages, while enforcing a few hard constraints. The arrival of such treebanks, expanded and improved on a regular basis, provides a new milestone for crosslingual dependency parsing research (McDonald et al., 2013) . Furthermore, given that UD rests on a series of simple principles like the primacy of lexical heads, cf. Johannsen et al. (2015) for more details, we expect that such a formalism lends itself more naturally to a simple and linguistically sound rulebased approach to cross-lingual parsing. In this paper we present such an approach.",
+                "cite_spans": [
+                    {
+                        "start": 40,
+                        "end": 60,
+                        "text": "(Nivre et al., 2015;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 61,
+                        "end": 80,
+                        "text": "Nivre et al., 2016)",
+                        "ref_id": "BIBREF23"
+                    },
+                    {
+                        "start": 363,
+                        "end": 386,
+                        "text": "(McDonald et al., 2013)",
+                        "ref_id": "BIBREF20"
+                    },
+                    {
+                        "start": 494,
+                        "end": 517,
+                        "text": "Johannsen et al. (2015)",
+                        "ref_id": "BIBREF12"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Our system is a dependency parser that requires no training, and relies solely on explicit part-ofspeech (POS) constraints that UD imposes. In particular, UD prescribes that trees are single-rooted, and that function words like adpositions, auxiliaries, and determiners are always dependents of content words, while other formalisms might treat them as heads (De Marneffe et al., 2014) . We ascribe our work to the viewpoints of Bender (2009) about the incorporation of linguistic knowledge in language-independent systems.",
+                "cite_spans": [
+                    {
+                        "start": 359,
+                        "end": 385,
+                        "text": "(De Marneffe et al., 2014)",
+                        "ref_id": "BIBREF8"
+                    },
+                    {
+                        "start": 429,
+                        "end": 442,
+                        "text": "Bender (2009)",
+                        "ref_id": "BIBREF4"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "We introduce, to the best of our knowledge, the first unsupervised rule-based dependency parser for Universal Dependencies.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Contributions",
+                "sec_num": null
+            },
+            {
+                "text": "Our method goes substantially beyond the existing work on rule-aided unsupervised dependency parsing, specifically by: i) adapting the dependency head rules to UDcompliant POS relations, ii) incorporating the UD restriction of function words being leaves, iii) applying personalized PageRank to improve main predicate identification, and by iv) making the parsing entirely free of languagespecific parameters by estimating adposition attachment direction at runtime. We evaluate our system on 32 languages 1 in three setups, depending on the reliability of available POS tags, and compare to a multi-source delexi-calized transfer system. In addition, we evaluate the systems' sensitivity to domain change for a subset of UD languages for which domain information was retrievable. The results expose a solid and competitive system for all UD languages. Our unsupervised parser compares favorably to delexicalized parsing, while being more robust to domain change.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Contributions",
+                "sec_num": null
+            },
+            {
+                "text": "Cross-lingual learning Recent years have seen exciting developments in cross-lingual linguistic structure prediction based on transfer or projection of POS and dependencies (Das and Petrov, 2011; McDonald et al., 2011) . These works mainly use supervised learning and domain adaptation techniques for the target language.",
+                "cite_spans": [
+                    {
+                        "start": 173,
+                        "end": 195,
+                        "text": "(Das and Petrov, 2011;",
+                        "ref_id": "BIBREF7"
+                    },
+                    {
+                        "start": 196,
+                        "end": 218,
+                        "text": "McDonald et al., 2011)",
+                        "ref_id": "BIBREF19"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related work",
+                "sec_num": "2"
+            },
+            {
+                "text": "The first group of approaches deals with annotation projection (Yarowsky et al., 2001) , whereby parallel corpora are used to transfer annotations between resource-rich source languages and lowresource target languages. Projection relies on the availability and quality of parallel corpora, sourceside taggers and parsers, but also tokenizers, sentence aligners, and word aligners for sources and targets. Hwa et al. (2005) were the first to project syntactic dependencies, and Tiedemann et al. (2014; 2016) improved on their projection algorithm. Current state of the art in cross-lingual dependency parsing involves leveraging parallel corpora for annotation projection (Ma and Xia, 2014; Rasooli and Collins, 2015) .",
+                "cite_spans": [
+                    {
+                        "start": 63,
+                        "end": 86,
+                        "text": "(Yarowsky et al., 2001)",
+                        "ref_id": "BIBREF36"
+                    },
+                    {
+                        "start": 406,
+                        "end": 423,
+                        "text": "Hwa et al. (2005)",
+                        "ref_id": "BIBREF11"
+                    },
+                    {
+                        "start": 478,
+                        "end": 501,
+                        "text": "Tiedemann et al. (2014;",
+                        "ref_id": "BIBREF35"
+                    },
+                    {
+                        "start": 502,
+                        "end": 507,
+                        "text": "2016)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 672,
+                        "end": 690,
+                        "text": "(Ma and Xia, 2014;",
+                        "ref_id": "BIBREF17"
+                    },
+                    {
+                        "start": 691,
+                        "end": 717,
+                        "text": "Rasooli and Collins, 2015)",
+                        "ref_id": "BIBREF27"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related work",
+                "sec_num": "2"
+            },
+            {
+                "text": "The second group of approaches deals with transferring source parsing models to target languages. Zeman and Resnik (2008) were the first to introduce the idea of delexicalization: removing lexical features by training and cross-lingually applying parsers solely on POS sequences. S\u00f8gaard (2011) and McDonald et al. (2011) independently extended the approach by using multiple sources, requiring uniform POS and dependency representations (McDonald et al., 2013) .",
+                "cite_spans": [
+                    {
+                        "start": 98,
+                        "end": 121,
+                        "text": "Zeman and Resnik (2008)",
+                        "ref_id": "BIBREF37"
+                    },
+                    {
+                        "start": 280,
+                        "end": 298,
+                        "text": "S\u00f8gaard (2011) and",
+                        "ref_id": "BIBREF30"
+                    },
+                    {
+                        "start": 299,
+                        "end": 321,
+                        "text": "McDonald et al. (2011)",
+                        "ref_id": "BIBREF19"
+                    },
+                    {
+                        "start": 438,
+                        "end": 461,
+                        "text": "(McDonald et al., 2013)",
+                        "ref_id": "BIBREF20"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related work",
+                "sec_num": "2"
+            },
+            {
+                "text": "Both model transfer and annotation projection rely on a large number of presumptions to derive their competitive parsing models. By and large, these presumptions are unrealistic and exclusive to a group of very closely related, resource-rich Indo-European languages. Agi\u0107 et al. (2015; 2016) exposed some of these biases in their proposal for realistic cross-lingual tagging and parsing, as they emphasized the lack of perfect sentence-and word-splitting for truly low-resource languages. Further, Johannsen et al. (2016) introduced joint projection of POS and dependencies from multiple sources while sharing the outlook on bias removal in real-world multilingual processing.",
+                "cite_spans": [
+                    {
+                        "start": 267,
+                        "end": 285,
+                        "text": "Agi\u0107 et al. (2015;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 286,
+                        "end": 291,
+                        "text": "2016)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 498,
+                        "end": 521,
+                        "text": "Johannsen et al. (2016)",
+                        "ref_id": "BIBREF13"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related work",
+                "sec_num": "2"
+            },
+            {
+                "text": "Rule-based parsing Cross-lingual methods, realistic or not, depend entirely on the availability of data: for the sources, for the targets, or most often for both sets of languages. Moreover, they typically do not exploit constraints placed on linguistic structures through a formalism, and they do so by design.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related work",
+                "sec_num": "2"
+            },
+            {
+                "text": "With the emergence of UD as the practical standard for multilingual POS and syntactic dependency annotation, we argue for an approach that takes a fresh angle on both aspects. Specifically, we propose a parser that i) requires no training data, and in contrast ii) critically relies on exploiting the UD constraints.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related work",
+                "sec_num": "2"
+            },
+            {
+                "text": "These two characteristics make our parser unsupervised. Data-driven unsupervised dependency parsing is now a well-established discipline (Klein and Manning, 2004; Spitkovsky et al., 2010a; Spitkovsky et al., 2010b) . Still, the performance of these parsers falls far behind the approaches involving any sort of supervision.",
+                "cite_spans": [
+                    {
+                        "start": 137,
+                        "end": 162,
+                        "text": "(Klein and Manning, 2004;",
+                        "ref_id": "BIBREF15"
+                    },
+                    {
+                        "start": 163,
+                        "end": 188,
+                        "text": "Spitkovsky et al., 2010a;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 189,
+                        "end": 214,
+                        "text": "Spitkovsky et al., 2010b)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related work",
+                "sec_num": "2"
+            },
+            {
+                "text": "Our work builds on the line of research on ruleaided unsupervised dependency parsing by Gillenwater et al. (2010) and Naseem et al. (2010) , and also relates to S\u00f8gaard's (2012a; 2012b) work. Our parser, however, features two key differences: i) the usage of PageRank personalization (Lofgren, 2015) , and of ii) two-step decoding to treat content and function words differently according to the UD formalism.",
+                "cite_spans": [
+                    {
+                        "start": 88,
+                        "end": 113,
+                        "text": "Gillenwater et al. (2010)",
+                        "ref_id": "BIBREF10"
+                    },
+                    {
+                        "start": 118,
+                        "end": 138,
+                        "text": "Naseem et al. (2010)",
+                        "ref_id": "BIBREF21"
+                    },
+                    {
+                        "start": 161,
+                        "end": 178,
+                        "text": "S\u00f8gaard's (2012a;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 179,
+                        "end": 185,
+                        "text": "2012b)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 284,
+                        "end": 299,
+                        "text": "(Lofgren, 2015)",
+                        "ref_id": "BIBREF16"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related work",
+                "sec_num": "2"
+            },
+            {
+                "text": "Through these differences, even without any training data, we parse nearly as well as a delexicalized transfer parser, and with increased stability to domain change.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related work",
+                "sec_num": "2"
+            },
+            {
+                "text": "Our approach does not use any training or unlabeled data. We have used the English treebank during development to assess the contribution of individual head rules, and to tune PageRank parameters (Sec. 3.1) and function-word directionality (Sec. 3.2). Adposition direction is calculated on the fly at runtime. We refer henceforth to our UD parser as UDP.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Method",
+                "sec_num": "3"
+            },
+            {
+                "text": "Our system uses the PageRank (PR) algorithm (Page et al., 1999) to estimate the relevance of the content words of a sentence. PR uses a random walk to estimate which nodes in the graph are more likely to be visited often, and thus, it gives higher rank to nodes with more incoming edges, as well as to nodes connected to those. Using PR to score word relevance requires an effective graphbuilding strategy. We have experimented with the strategies by S\u00f8gaard (2012b) , such as words being connected to adjacent words, but our system fares best strictly using the dependency rules in Table 1 to build the graph. UD trees are often very flat, and a highly connected graph yields a PR distribution that is closer to uniform, thereby removing some of the difference of word relevance.",
+                "cite_spans": [
+                    {
+                        "start": 44,
+                        "end": 63,
+                        "text": "(Page et al., 1999)",
+                        "ref_id": "BIBREF24"
+                    },
+                    {
+                        "start": 451,
+                        "end": 466,
+                        "text": "S\u00f8gaard (2012b)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 589,
+                        "end": 590,
+                        "text": "1",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "PageRank setup",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "We build a multigraph of all words in the sentence covered by the head-dependent rules in Table 1, giving each word an incoming edge for each eligible dependent, i.e., ADV depends on ADJ and VERB. This strategy does not always yield connected graphs, and we use a teleport probability of 0.05 to ensure PR convergence.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "PageRank setup",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "Teleport probability is the probability that, in any iteration of the PR calculation, the next active node is randomly chosen, instead of being one of the adjacent nodes of the current active node. See Brin and Page (1998) for more details on teleport probability, where the authors refer to one minus teleport probability as damping factor.",
+                "cite_spans": [
+                    {
+                        "start": 202,
+                        "end": 222,
+                        "text": "Brin and Page (1998)",
+                        "ref_id": "BIBREF6"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "PageRank setup",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "We chose this value incrementally in intervals of 0.01 during development until we found the smallest value that guaranteed PR convergence. A high teleport probability is undesirable, because the resulting stationary distribution can be almost uniform. We did not have to re-adjust this value when running on the actual test data.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "PageRank setup",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "The main idea behind our personalized PR approach is the observation that ranking is only relevant for content words. 2 PR can incorporate a priori knowledge of the relevance of nodes by means of personalization, namely giving more weight to certain nodes.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "PageRank setup",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "Intuitively, the higher the rank of a word, the closer it should be to the root node, i.e., the main predicate of the sentence is the node that should have the highest PR, making it the dependent of the root node (Fig. 1 , lines 4-5). We use PR personalization to give 5 times more weight (over an 2 ADJ, NOUN, PROPN, and VERB mark content words.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 219,
+                        "end": 220,
+                        "text": "1",
+                        "ref_id": "FIGREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "PageRank setup",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "1: otherwise uniform distribution) to the node that is estimated to be main predicate, i.e., the first verb or the first content word if there are no verbs.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "PageRank setup",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "H = \u2205; D = \u2205 2: C = c1, ...cm ; F = f1, ...fm 3: for c \u2208 C do 4: if |H| = 0 then 5: h = root 6: else 7: h =argminj\u2208H {\u03b3(j, c) | \u03b4(j, c) \u2227 \u03ba(j, c)} 8: end if 9: H = H \u222a {c} 10: D = D \u222a {(h, c)} 11: end for 12: for f \u2208 F do 13: h =argminj\u2208H {\u03b3(j, f ) | \u03b4(j, f ) \u2227 \u03ba(j, f )} 14: D = D \u222a {(h, f )} 15: end for 16: return D",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "PageRank setup",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "Head direction is an important trait in dependency syntax (Tesni\u00e8re, 1959) . Indeed, the UD feature inventory contains a trait to distinguish the general adposition tag ADP in pre-and post-positions.",
+                "cite_spans": [
+                    {
+                        "start": 58,
+                        "end": 74,
+                        "text": "(Tesni\u00e8re, 1959)",
+                        "ref_id": "BIBREF33"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Head direction",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "Instead of relying on this feature from the treebanks, which is not always provided, we estimate the frequency of ADP-NOMINAL vs. NOMINAL-ADP bigrams. 3 We calculate this estimation directly on input data at runtime to keep the system training-free. Moreover, it requires very few examples to converge (10-15 sentences). If a language has more ADP-NOMINAL bigrams, we consider all its ADP to be prepositions (and thus dependent of elements at their right). Otherwise, we consider them postpositions.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Head direction",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "For other function words, we have determined on the English dev data whether to make them strictly right-or left-attaching, or to allow either direction. There, AUX, DET, and SCONJ are right-attaching, while CONJ and PUNCT are left-attaching. There are no direction constraints for the rest. Punctuation is a common source of parsing errors that has very little interest in this setup. While we do evaluate on all tokens including punctuation, we also apply a heuristic for the last token in a sentence; if it is a punctuation, we make it a dependent of the main predicate. Table 1 : UD dependency rules.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 574,
+                        "end": 581,
+                        "text": "Table 1",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Head direction",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "ADJ -\u2192 ADV NOUN -\u2192 ADJ, NOUN, PROPN NOUN -\u2192 ADP, DET, NUM PROPN -\u2192 ADJ, NOUN, PROPN PROPN -\u2192 ADP, DET, NUM VERB -\u2192 ADV, AUX, NOUN VERB -\u2192 PROPN, PRON, SCONJ",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Head direction",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "Fig. 1 shows the tree-decoding algorithm. It has two blocks, namely a first block (3-11) where we assign the head of content words according to their PageRank and the constraints of the dependency rules, and a second block (12-15) where we assign the head of function words according to their proximity, direction of attachment, and dependency rules. The algorithm requires:",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 5,
+                        "end": 6,
+                        "text": "1",
+                        "ref_id": "FIGREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Decoding",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "1. The PR-sorted list of content words C. 2. The set of function words F , sorting is irrelevant because function-head assignations are inter-independent. 3. A set H for the current possible heads, and a set D for the dependencies assigned at each iteration, which we represent as headdependent tuples (h, d). 4. A symbol root for the root node. 5. A function \u03b3(n, m) that gives the linear distance between two nodes. 6. A function \u03ba(h, d) that returns whether the dependency (h, d) has a valid attachment direction given the POS of the d (cf. Sec. 3.2). 7. A function \u03b4(h, d) that determines whether (h, d) is licensed by the rules in Table 1 .",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 642,
+                        "end": 643,
+                        "text": "1",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Decoding",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "The head assignations in lines 7 and 13 read as follow: the head h of a word (either c or f ) is the closest element of the current list of heads (H) that has the right direction (\u03ba) and respects the POSdependency rules (\u03b4). These assignations have a back-off option to ensure the final D is a tree. If the conditions determined by \u03ba and \u03b4 are too strict, i.e., if the set of possible heads is empty, we drop the \u03b4 head-rule constraint and recalculate the closest possible head that respects the directionality imposed by \u03ba. If the set is empty again, we drop both constraints and assign the closest head. Lines 4 and 5 enforce the single-root constraint. To enforce the leaf status of function nodes, the algorithm first attaches all content words (C), and then all function words (F ) in the second block where H is not updated, thereby ensuring leafness for all f \u2208 F . The order of head attachment is not monotonic wrt. PR between the first and second block, and can yield non-projectivities. Nevertheless, it still is a one-pass algorithm. Decoding runs in less than O(n 2 ), namely O(n \u00d7 |C|). However, running PR incurs the main computation cost.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Decoding",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "This section exemplifies a full run of UDP for the example sentence from the English test data: \"They also had a special connection to some extremists\".",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Parser run example",
+                "sec_num": "4"
+            },
+            {
+                "text": "Given an input sentence and its POS tags, we obtain rank of each word by building a graph using head rules and running PR on it. Table 2 provides the sentence, the POS of each word, the number of incoming edges for each word after building the graph with the head rules from Sec. 3.1, and the personalization vector for PR on this sentence. Note that all nodes have the same personalization weight, except the estimated main predicate, the verb \"had\". Table 2 : Words, POS, personalization, and incoming edges for the example sentence.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 135,
+                        "end": 136,
+                        "text": "2",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 458,
+                        "end": 459,
+                        "text": "2",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "PageRank",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "Table 4 shows the directed multigraph used for PR in detail. We can see, e.g., that the four incoming edges for the verb \"had\" from the two nouns, plus from the adverb \"also\" and the pronoun \"They\".",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 6,
+                        "end": 7,
+                        "text": "4",
+                        "ref_id": "TABREF2"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "PageRank",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "After running PR, we obtain the following ranking for content words: C = had,connection,extremists,special Even though the verb has four incoming edges and the nouns have five each, the personalization makes the verb the highest-ranked word.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "PageRank",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "root They also had a special connection to some extremists ",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "PageRank",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "Once C is calculated, we can follow the algorithm in Fig. 1 to obtain a dependency parse. The first four iterations calculate the head of content words following their PR, and the following iterations attach the function words in F . Finally, Fig. 2 shows the resulting dependency tree. Full lines are assigned in the first block (content dependents), dotted lines are assigned in the second block (function dependents). The edge labels indicate in which iteration the algorithm has assigned each dependency. Note that the algorithm is deterministic for a certain input POS sequence. Any 10-token sentence with the POS labels shown in Table 2 would yield the same dependency tree. 4 ",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 58,
+                        "end": 59,
+                        "text": "1",
+                        "ref_id": "FIGREF0"
+                    },
+                    {
+                        "start": 248,
+                        "end": 249,
+                        "text": "2",
+                        "ref_id": "FIGREF2"
+                    },
+                    {
+                        "start": 641,
+                        "end": 642,
+                        "text": "2",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Decoding",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "This section describes the data, metrics and comparison systems used to assess the performance of UDP. We evaluate on the test sections of the UD1.2 treebanks (Nivre et al., 2015) that contain word forms. If there is more than one treebank per language, we use the treebank that has the 4 The resulting trees always pass the validation script in github.com/UniversalDependencies/tools.",
+                "cite_spans": [
+                    {
+                        "start": 159,
+                        "end": 179,
+                        "text": "(Nivre et al., 2015)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "5"
+            },
+            {
+                "text": "They also had a special connection to some extremists canonical language name (e.g., Finnish instead of Finnish-FTB). We use standard unlabeled attachment score (UAS) and evaluate on all sentences of the canonical UD test sets.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "-\u2192",
+                "sec_num": null
+            },
+            {
+                "text": "They - \u2022 \u2022 also - \u2022 \u2022 had - a - \u2022 \u2022 special - \u2022 \u2022 connection \u2022 - \u2022 to \u2022 - \u2022 some \u2022 - \u2022 extremists \u2022 \u2022 -",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "-\u2192",
+                "sec_num": null
+            },
+            {
+                "text": "We compare our UDP system with the performance of a rule-based baseline that uses the head rules in Table 5 . The baseline identifies the first verb (or first content word if there are no verbs) as the main predicate, and assigns heads to all words according to the rules in Table 1 . We have selected the set of head rules to maximize precision on the development set, and they do not provide full coverage. The system makes any word not covered by the rules (e.g., a word with a POS such as X or SYM) either dependent of their left or right neighbor, according to the estimated runtime parameter. We report the best head direction and its score for each language in Table 5 . This baseline finds the head of each token based on its closest possible head, or on its immediate left or right neighbor if there is no head rule for the POS at hand, which means that this system does not necessarily yield well-formed tress. Each token receives a head, and while the structures are single-rooted, they are not necessarily connected. Note that we do not include results for the DMV model by Klein and Manning (2004) , as it has been outperformed by a system similar to ours (S\u00f8gaard, 2012b) . The usual adjacency baseline for unsupervised dependency parsing, where all words depend on their left or right neighbor, fares much worse than our baseline (20% UAS below on average) even with an oracle pick for the best per-language direction, and we do not report those scores.",
+                "cite_spans": [
+                    {
+                        "start": 1086,
+                        "end": 1110,
+                        "text": "Klein and Manning (2004)",
+                        "ref_id": "BIBREF15"
+                    },
+                    {
+                        "start": 1169,
+                        "end": 1185,
+                        "text": "(S\u00f8gaard, 2012b)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 106,
+                        "end": 107,
+                        "text": "5",
+                        "ref_id": "TABREF3"
+                    },
+                    {
+                        "start": 281,
+                        "end": 282,
+                        "text": "1",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 674,
+                        "end": 675,
+                        "text": "5",
+                        "ref_id": "TABREF3"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Baseline",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "Our system relies solely on POS tags. To estimate the quality degradation of our system under non-gold POS scenarios, we evaluate UDP on two alternative scenarios. The first is predicted POS (UDP P ), where we tag the respective test set with TnT (Brants, 2000) trained on each language's training set. The second is a naive typeconstrained two-POS tag scenario (UDP N ), and approximates a lower bound. We give each word either CONTENT or FUNCTION tag, depending on the word's frequency. The 100 most frequent words of the input test section receive the FUNC-TION tag.",
+                "cite_spans": [
+                    {
+                        "start": 247,
+                        "end": 261,
+                        "text": "(Brants, 2000)",
+                        "ref_id": "BIBREF5"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Evaluation setup",
+                "sec_num": "5.2"
+            },
+            {
+                "text": "Finally, we compare our parser UDP to a supervised cross-lingual system (MSD). It is a multisource delexicalized transfer parser, referred to as multi-dir in the original paper by McDonald et al. (2011) . For this baseline we train Tur-boParser (Martins et al., 2013) on a delexicalized training set of 20k sentences, sampled uniformly from the UD training data excluding the target language. MSD is a competitive and realistic baseline in cross-lingual transfer parsing work. This gives us an indication how our system compares to standard cross-lingual parsers.",
+                "cite_spans": [
+                    {
+                        "start": 180,
+                        "end": 202,
+                        "text": "McDonald et al. (2011)",
+                        "ref_id": "BIBREF19"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Evaluation setup",
+                "sec_num": "5.2"
+            },
+            {
+                "text": "Table 5 shows that UDP is a competitive system; because UDP G is remarkably close to the supervised MSD G system, with an average difference of 6.4%. Notably, UDP even outperforms MSD on one language (Hindi).",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 6,
+                        "end": 7,
+                        "text": "5",
+                        "ref_id": "TABREF3"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "5.3"
+            },
+            {
+                "text": "More interestingly, on the evaluation scenario with predicted POS we observe that our system drops only marginally (2.2%) compared to MSD (2.7%). In the least robust rule-based setup, the error propagation rate from POS to dependency would be doubled, as either a wrongly tagged head or dependent would break the dependency rules. However, with an average POS accuracy by TnT of 94.1%, the error propagation is 0.37, i.e, each POS error causes 0.37 additional dependency errors. In contrast, for MSD this error propagation is 0.46, thus higher. 5 For the extreme POS scenario, content vs. function POS (CF), the drop in performance for UDP is very large, but this might be too crude an evaluation setup. Nevertheless, UDP, the simple unsupervised system with PageRank, outperforms the adjacency baselines (BL) by \u223c4% on average on the two type-based naive POS tag scenario. This difference indicates that even with very deficient POS tags, UDP can provide better structures.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "5.3"
+            },
+            {
+                "text": "In this section we provide a further error analysis of the UDP parser. We examine the contribution to the overal results of using PageRank to score content words, the behavior of the system across different parts of speech, and we assess the robustness of UDP on text from different domains.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Discussion",
+                "sec_num": "6"
+            },
+            {
+                "text": "5 Err. prop. = (E(P arseP ) -E(P arseG))/E(P OSP ), where E(x) = 1 -Accuracy(x). ",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Discussion",
+                "sec_num": "6"
+            },
+            {
+                "text": "UDP depends on PageRank to score content words, and on two-step decoding to ensure the leaf status of function words. In this section we isolate the constribution of both parts. We do so by comparing the performance of BL, UDP, and UDP N oP R , a version of UDP where we disable PR and rank content words according to their reading order, i.e., the first word in the ranking is the first word to be read, regardless of the specific language's script direction. The baseline BL described in 5.1 already ensures function words are leaf nodes, because they have no listed dependent POS in the head rules. The task of the decoding steps is mainly to ensure the resulting structures are well-formed dependency trees.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "PageRank contribution",
+                "sec_num": "6.1"
+            },
+            {
+                "text": "If we measure the difference between UDP N oP R and BL, we see that UDP N oP R contributes with 4 UAS points on average over the baseline. Nevertheless, the baseline is oracle-informed about the language's best branching direction, a property that UDP does not have. Instead, the decoding step determines head direction as described in Section 3.2. Complementarily, we can measure the contribution of PR by observing the difference between regular UDP and UDP N oP R . The latter scores on average 9 UAS points lower than UDP. These 9 points are caused by the difference attachment of content words in the first decoding step.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "PageRank contribution",
+                "sec_num": "6.1"
+            },
+            {
+                "text": "UD is a constantly improving effort, and not all v1.2 treebanks have the same level of formalism compliance. Thus, the interpretation of, e.g., the AUX-VERB or DET-PRON distinctions might differ across treebanks. However, we ignore these differences in our analysis and consider all treebanks to be equally compliant.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Breakdown by POS",
+                "sec_num": "6.2"
+            },
+            {
+                "text": "The root accuracy scores oscillate around an average of 69%, with Arabic and Tamil (26%) and Estonian (93%) as outliers. Given the PR personalization (Sec. 3.1), UDP has a strong bias for choosing the first verb as main predicate. Without personalization, performance drops 2% on average. This difference is consistent even for verbfinal languages like Hindi, given that the main verb of a simple clause will be its only verb, regardless of where it appears. Moreover, using PR personalization makes the ranking calculations converge a whole order of magnitude faster.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Breakdown by POS",
+                "sec_num": "6.2"
+            },
+            {
+                "text": "The bigram heuristic to determine adposition direction succeeds at identifying the predominant pre-or postposition preference for all languages (average ADP UAS of 75%). The fixed direction for the other functional POS is largely effective, with few exceptions, e.g., DET is consistently right-attaching on all treebanks except Basque (average overall DET UAS of 84%, 32% for Basque). These alternations could also be estimated from the data in a manner similar to ADP. Our rules do not make nouns eligible heads for verbs. As a result, the system cannot infer relative clauses. We have excluded the NOUN \u2192 VERB rule during development because it makes the hierarchy between verbs and nouns less conclusive.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Breakdown by POS",
+                "sec_num": "6.2"
+            },
+            {
+                "text": "We have not excluded punctuation from the evaluation. Indeed, the UAS for the PUNCT is low (an average of 21%, standard deviation of 9.6), even lower than the otherwise problematic CONJ. Even though conjunctions are pervasive and identifying their scope is one of the usual challenges for parsers, the average UAS for CONJ is much larger (an average of 38%, standard deviation of 13.5) than for PUNCT. Both POS show large standard deviations, which indicates great variability. This variability can be caused by linguistic properties of the languages or evaluation datasets, but also by differences in annotation convention.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Breakdown by POS",
+                "sec_num": "6.2"
+            },
+            {
+                "text": "Models with fewer parameters are less likely to overfit for a certain dataset. In our case, a system with few, general rules is less likely to make attachment decisions that are very particular of a certain language or dataset. Plank and van Noord (2010) have shown that rule-based parsers can be more stable to domain shift. We explore if their finding holds for UDP as well, by testing on i) the UD development data as a readily available proxy for domain shift, and ii) manually curated domain splits of select UD test sets. ",
+                "cite_spans": [
+                    {
+                        "start": 228,
+                        "end": 254,
+                        "text": "Plank and van Noord (2010)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Cross-domain consistency",
+                "sec_num": "6.3"
+            },
+            {
+                "text": "We have used the English development data to choose which relations would be included as head rules in the final system (Table 1). It would be possible that some of the rules are indeed more befitting for the English data or for that particular section.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Development sets",
+                "sec_num": null
+            },
+            {
+                "text": "However, if we regard the results for UDP G in Table 5 , we can see that there are 24 languages (out of 32) for which the parser performs better than for English. This result indicates that the head rules are general enough to provide reasonable parses for languages other than the one chosen for development. If we run UDP G on the development sections for the other languages, we find the results are very consistent. Any language scores on average \u00b11 UAS with regards to the test section. There is no clear tendency for either section being easier to parse with UDP.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 53,
+                        "end": 54,
+                        "text": "5",
+                        "ref_id": "TABREF3"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Development sets",
+                "sec_num": null
+            },
+            {
+                "text": "To further assess the cross-domain robustness, we retrieved the domain (genre) splits from the test sections of the UD treebanks where the domain information is available as sentence metadata: from Bulgarian, Croatian, and Italian. We also include a UD-compliant Serbian dataset which is not included in the UD release but which is based on the same parallel corpus as Croatian and has the same domain splits (Agi\u0107 and Ljube\u0161i\u0107, 2015) . When averaging we pool Croatian and Serbian together as they come from the same dataset.",
+                "cite_spans": [
+                    {
+                        "start": 409,
+                        "end": 434,
+                        "text": "(Agi\u0107 and Ljube\u0161i\u0107, 2015)",
+                        "ref_id": "BIBREF2"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Cross-domain test sets",
+                "sec_num": null
+            },
+            {
+                "text": "For English, we have obtained the test data splits matching the sentences from the original distribution of the English Web Treebank. In addition to these already available datasets, we have annotated three different datasets to assess domain variation more extensively, namely the first 50 verses of the King James Bible, 50 sentences from a magazine, and 75 sentences from the test split in QuestionBank (Judge et al., 2006) . We include the third dataset to evaluate strictly on questions, which we could do already in Italian. While the answers domain in English is made up of text from the Yahoo! Answers forum, only one fourth of the sentences are questions. Note these three small datasets are not included in the results on the canonical test sections in Table 5 . Table 7 : Average language-wise domain evaluation. We report average UAS and standard deviation per language. The bottom row provides the average standard deviation for each system.",
+                "cite_spans": [
+                    {
+                        "start": 406,
+                        "end": 426,
+                        "text": "(Judge et al., 2006)",
+                        "ref_id": "BIBREF14"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 769,
+                        "end": 770,
+                        "text": "5",
+                        "ref_id": "TABREF3"
+                    },
+                    {
+                        "start": 779,
+                        "end": 780,
+                        "text": "7",
+                        "ref_id": "TABREF5"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Cross-domain test sets",
+                "sec_num": null
+            },
+            {
+                "text": "guages. We attribute this higher stability to UDP being developed to satisfy a set of general properties of the UD syntactic formalism, instead of being a data-driven method more sensitive to sampling bias. This holds for both the gold-POS and predicted-POS setup. The differences in standard deviation are unsurprisingly smaller in the predicted POS setup. In general, the rule-based UPD is less sensitive to domain shifts than the datadriven MSD counterpart, confirming earlier findings (Plank and van Noord, 2010) . Table 6 gives the detailed scores per language and domain. From the scores we can see that presidential bulletin, legal and weblogs are amongst the hardest domains to parse. However, the systems often do not agree on which domain is hardest, with the exception of Bulgarian bulletin. Interestingly, for the Italian data and some of the hardest domains UDP outperforms MSD, confirming that it is a robust baseline.",
+                "cite_spans": [
+                    {
+                        "start": 489,
+                        "end": 516,
+                        "text": "(Plank and van Noord, 2010)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 525,
+                        "end": 526,
+                        "text": "6",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Cross-domain test sets",
+                "sec_num": null
+            },
+            {
+                "text": "In order to assess how much information the simple principles in UDP provide, we measure how many gold-annotated sentences are necessary to reach its performance, that is, after which size the treebank provides enough information for training that goes beyond the simple linguistic principles outlined in Section 3.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Comparison to full supervision",
+                "sec_num": "6.4"
+            },
+            {
+                "text": "For this comparison we use a first-order nonprojective TurboParser (Martins et al., 2013) following the setup of Agi\u0107 et al. (2016) . The supervised parsers require around 100 sentences to reach UDP-comparable performance, namely a mean of 300 sentences and a median of 100 sentences, with Bulgarian (3k), Czech (1k), and German (1.5k) as outliers. The difference between mean and median shows there is great variance, while UDP provides very constant results, also in terms of POS and domain variation.",
+                "cite_spans": [
+                    {
+                        "start": 67,
+                        "end": 89,
+                        "text": "(Martins et al., 2013)",
+                        "ref_id": "BIBREF18"
+                    },
+                    {
+                        "start": 113,
+                        "end": 131,
+                        "text": "Agi\u0107 et al. (2016)",
+                        "ref_id": "BIBREF1"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Comparison to full supervision",
+                "sec_num": "6.4"
+            },
+            {
+                "text": "We have presented UDP, an unsupervised dependency parser for Universal Dependencies (UD) that makes use of personalized PageRank and a small set of head-dependent rules. The parser requires no training data and estimates adposition direction directly from the input.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion",
+                "sec_num": "7"
+            },
+            {
+                "text": "We achieve competitive performance on all but two UD languages, and even beat a multi-source delexicalized parser (MSD) on Hindi. We evaluated the parser on three POS setups and across domains. Our results show that UDP is less affected by deteriorating POS tags than MSD, and is more resilient to domain changes. Given how much of the overall dependency structure can be explained by this fairly system, we propose UDP as an additional UD parsing baseline. The parser, the in-house annotated test sets, and the domain data splits are made freely available. 6UD is a running project, and the guidelines are bound to evolve overtime. Indeed, the UD 2.0 guidelines have been recently released. UDP can be augmented with edge labeling for some deterministic labels like case or det. Some further constrains can be incorporated in UDP. Moreover, the parser makes no special treatment of multiword expression that would require a lexicon, coordinations or proper names. All these three kinds of structures have a flat tree where all words depend on the leftmost one. While coordination attachment is a classical problem in parsing and out of the scope of our work, a proper name sequence can be straightforwardly identified from the partof-speech tags, and it falls thus in the area of structures predictable using simple heuristics. Moreover, our use of PageRank could be expanded to directly score the potential dependency edges instead of words, e.g., by means of edge reification.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion",
+                "sec_num": "7"
+            },
+            {
+                "text": "Out of 33 languages in UD v1.2. We exclude Japanese because the treebank is distributed without word forms and hence we can not provide results on predicted POS.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "NOMINAL= {NOUN, PROPN, PRON}",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "https://github.com/hectormartinez/ud_ unsup_parser",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            }
+        ],
+        "back_matter": [
+            {
+                "text": "We thank the anonymous reviewers for their valuable feedback. H\u00e9ctor Mart\u00ednez Alonso is funded by the French DGA project VerDi. Barbara Plank thanks the Center for Information Technology of the University of Groningen for the HPC cluster. \u017deljko Agi\u0107 and Barbara Plank thank the Nvidia Corporation for supporting their research. Anders S\u00f8gaard is funded by the ERC Starting Grant LOWLANDS No. 313695.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Acknowledgments",
+                "sec_num": null
+            }
+        ],
+        "bib_entries": {
+            "BIBREF0": {
+                "ref_id": "b0",
+                "title": "The English noun phrase in its sentential aspect",
+                "authors": [
+                    {
+                        "first": "Steven",
+                        "middle": [],
+                        "last": "Paul",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Abney",
+                        "middle": [],
+                        "last": "",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1987,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Steven Paul Abney. 1987. The English noun phrase in its sentential aspect. Ph.D. thesis, Massachusetts Institute of Technology.",
+                "links": null
+            },
+            "BIBREF1": {
+                "ref_id": "b1",
+                "title": "Multilingual Projection for Parsing Truly Low-Resource Languages",
+                "authors": [
+                    {
+                        "first": "\u017deljko",
+                        "middle": [],
+                        "last": "Agi\u0107",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Anders",
+                        "middle": [],
+                        "last": "Johannsen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Barbara",
+                        "middle": [],
+                        "last": "Plank",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alonso",
+                        "middle": [],
+                        "last": "H\u00e9ctor",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Natalie",
+                        "middle": [],
+                        "last": "Mart\u00ednez",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Anders",
+                        "middle": [],
+                        "last": "Schluter",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "S\u00f8gaard",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Transactions of the Association for Computational Linguistics",
+                "volume": "4",
+                "issue": "",
+                "pages": "301--312",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "\u017deljko Agi\u0107, Anders Johannsen, Barbara Plank, H\u00e9c- tor Alonso Mart\u00ednez, Natalie Schluter, and Anders S\u00f8gaard. 2016. Multilingual Projection for Pars- ing Truly Low-Resource Languages. Transactions of the Association for Computational Linguistics, 4:301-312.",
+                "links": null
+            },
+            "BIBREF2": {
+                "ref_id": "b2",
+                "title": "Universal Dependencies for Croatian (that Work for Serbian, too)",
+                "authors": [
+                    {
+                        "first": "\u017deljko",
+                        "middle": [],
+                        "last": "Agi\u0107",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nikola",
+                        "middle": [],
+                        "last": "Ljube\u0161i\u0107",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Proceedings of the Sixth Workshop on Balto-Slavic Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "1--8",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "\u017deljko Agi\u0107 and Nikola Ljube\u0161i\u0107. 2015. Univer- sal Dependencies for Croatian (that Work for Ser- bian, too). In Proceedings of the Sixth Workshop on Balto-Slavic Natural Language Processing, pages 1-8, Hissar, Bulgaria.",
+                "links": null
+            },
+            "BIBREF3": {
+                "ref_id": "b3",
+                "title": "If All You Have is a Bit of the Bible: Learning POS Taggers for Truly Low-Resource Languages",
+                "authors": [
+                    {
+                        "first": "\u017deljko",
+                        "middle": [],
+                        "last": "Agi\u0107",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dirk",
+                        "middle": [],
+                        "last": "Hovy",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Anders",
+                        "middle": [],
+                        "last": "S\u00f8gaard",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Proceedings of ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "268--272",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "\u017deljko Agi\u0107, Dirk Hovy, and Anders S\u00f8gaard. 2015. If All You Have is a Bit of the Bible: Learning POS Taggers for Truly Low-Resource Languages. In Proceedings of ACL, pages 268-272, Beijing, China.",
+                "links": null
+            },
+            "BIBREF4": {
+                "ref_id": "b4",
+                "title": "Linguistically na\u00efve != language independent: Why NLP needs linguistic typology",
+                "authors": [
+                    {
+                        "first": "Emily",
+                        "middle": [
+                            "M"
+                        ],
+                        "last": "Bender",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "Proceedings of the EACL 2009 Workshop on the Interaction Between Linguistics and Computational Linguistics: Virtuous, Vicious or Vacuous?",
+                "volume": "",
+                "issue": "",
+                "pages": "26--32",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Emily M. Bender. 2009. Linguistically na\u00efve != lan- guage independent: Why NLP needs linguistic ty- pology. In Proceedings of the EACL 2009 Workshop on the Interaction Between Linguistics and Compu- tational Linguistics: Virtuous, Vicious or Vacuous?, pages 26-32, Athens, Greece.",
+                "links": null
+            },
+            "BIBREF5": {
+                "ref_id": "b5",
+                "title": "TnT -A Statistical Part-of-Speech Tagger",
+                "authors": [
+                    {
+                        "first": "Thorsten",
+                        "middle": [],
+                        "last": "Brants",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2000,
+                "venue": "Proceedings of the Sixth Conference on Applied Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "224--231",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Thorsten Brants. 2000. TnT -A Statistical Part-of- Speech Tagger. In Proceedings of the Sixth Con- ference on Applied Natural Language Processing, pages 224-231.",
+                "links": null
+            },
+            "BIBREF6": {
+                "ref_id": "b6",
+                "title": "The anatomy of a large-scale hypertextual web search engine. Computer networks and ISDN systems",
+                "authors": [
+                    {
+                        "first": "Sergey",
+                        "middle": [],
+                        "last": "Brin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Lawrence",
+                        "middle": [],
+                        "last": "Page",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1998,
+                "venue": "",
+                "volume": "30",
+                "issue": "",
+                "pages": "107--117",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Sergey Brin and Lawrence Page. 1998. The anatomy of a large-scale hypertextual web search engine. Computer networks and ISDN systems, 30(1):107- 117.",
+                "links": null
+            },
+            "BIBREF7": {
+                "ref_id": "b7",
+                "title": "Unsupervised Part-of-Speech Tagging with Bilingual Graph-Based Projections",
+                "authors": [
+                    {
+                        "first": "Dipanjan",
+                        "middle": [],
+                        "last": "Das",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Slav",
+                        "middle": [],
+                        "last": "Petrov",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2011,
+                "venue": "Proceedings of ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "600--609",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Dipanjan Das and Slav Petrov. 2011. Unsupervised Part-of-Speech Tagging with Bilingual Graph-Based Projections. In Proceedings of ACL, pages 600-609, Portland, Oregon, USA.",
+                "links": null
+            },
+            "BIBREF8": {
+                "ref_id": "b8",
+                "title": "Universal Stanford Dependencies: A Cross-Linguistic Typology",
+                "authors": [
+                    {
+                        "first": "Marie-Catherine",
+                        "middle": [],
+                        "last": "De Marneffe",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Timothy",
+                        "middle": [],
+                        "last": "Dozat",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Natalia",
+                        "middle": [],
+                        "last": "Silveira",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Katri",
+                        "middle": [],
+                        "last": "Haverinen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Filip",
+                        "middle": [],
+                        "last": "Ginter",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Joakim",
+                        "middle": [],
+                        "last": "Nivre",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [
+                            "D"
+                        ],
+                        "last": "Manning",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "Proceedings of LREC",
+                "volume": "",
+                "issue": "",
+                "pages": "4585--4592",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Marie-Catherine De Marneffe, Timothy Dozat, Na- talia Silveira, Katri Haverinen, Filip Ginter, Joakim Nivre, and Christopher D Manning. 2014. Univer- sal Stanford Dependencies: A Cross-Linguistic Ty- pology. In Proceedings of LREC, pages 4585-92, Reykjavik, Iceland.",
+                "links": null
+            },
+            "BIBREF9": {
+                "ref_id": "b9",
+                "title": "The Pascal Challenge on Grammar Induction",
+                "authors": [
+                    {
+                        "first": "Douwe",
+                        "middle": [],
+                        "last": "Gelling",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Trevor",
+                        "middle": [],
+                        "last": "Cohn",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Phil",
+                        "middle": [],
+                        "last": "Blunsom",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Joao",
+                        "middle": [],
+                        "last": "Gra\u00e7a",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2012,
+                "venue": "Proceedings of the NAACL-HLT Workshop on the Induction of Linguistic Structure",
+                "volume": "",
+                "issue": "",
+                "pages": "64--80",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Douwe Gelling, Trevor Cohn, Phil Blunsom, and Joao Gra\u00e7a. 2012. The Pascal Challenge on Grammar In- duction. In Proceedings of the NAACL-HLT Work- shop on the Induction of Linguistic Structure, pages 64-80, Montreal, Canada.",
+                "links": null
+            },
+            "BIBREF10": {
+                "ref_id": "b10",
+                "title": "Sparsity in Dependency Grammar Induction",
+                "authors": [
+                    {
+                        "first": "Jennifer",
+                        "middle": [],
+                        "last": "Gillenwater",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kuzman",
+                        "middle": [],
+                        "last": "Ganchev",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Joao",
+                        "middle": [],
+                        "last": "Gra\u00e7a",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Fernando",
+                        "middle": [],
+                        "last": "Pereira",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ben",
+                        "middle": [],
+                        "last": "Taskar",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2010,
+                "venue": "Proceedings of ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "194--199",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jennifer Gillenwater, Kuzman Ganchev, Joao Gra\u00e7a, Fernando Pereira, and Ben Taskar. 2010. Sparsity in Dependency Grammar Induction. In Proceedings of ACL, pages 194-199, Uppsala, Sweden.",
+                "links": null
+            },
+            "BIBREF11": {
+                "ref_id": "b11",
+                "title": "Bootstrapping Parsers via Syntactic Projection Across Parallel Texts",
+                "authors": [
+                    {
+                        "first": "Rebecca",
+                        "middle": [],
+                        "last": "Hwa",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Philip",
+                        "middle": [],
+                        "last": "Resnik",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Amy",
+                        "middle": [],
+                        "last": "Weinberg",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Clara",
+                        "middle": [],
+                        "last": "Cabezas",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Okan",
+                        "middle": [],
+                        "last": "Kolak",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2005,
+                "venue": "Natural Language Engineering",
+                "volume": "11",
+                "issue": "03",
+                "pages": "311--325",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Rebecca Hwa, Philip Resnik, Amy Weinberg, Clara Cabezas, and Okan Kolak. 2005. Bootstrap- ping Parsers via Syntactic Projection Across Parallel Texts. Natural Language Engineering, 11(03):311- 325.",
+                "links": null
+            },
+            "BIBREF12": {
+                "ref_id": "b12",
+                "title": "Universal dependencies for Danish",
+                "authors": [
+                    {
+                        "first": "Anders",
+                        "middle": [],
+                        "last": "Johannsen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "H\u00e9ctor Mart\u00ednez",
+                        "middle": [],
+                        "last": "Alonso",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Barbara",
+                        "middle": [],
+                        "last": "Plank",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Proceedings of The International Workshop on Treebanks and Linguistic Theories (TLT14)",
+                "volume": "",
+                "issue": "",
+                "pages": "157--167",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Anders Johannsen, H\u00e9ctor Mart\u00ednez Alonso, and Bar- bara Plank. 2015. Universal dependencies for Dan- ish. In Proceedings of The International Work- shop on Treebanks and Linguistic Theories (TLT14), pages 157-167, Warsaw, Poland.",
+                "links": null
+            },
+            "BIBREF13": {
+                "ref_id": "b13",
+                "title": "Joint Part-of-Speech and Dependency Projection from Multiple Sources",
+                "authors": [
+                    {
+                        "first": "Anders",
+                        "middle": [],
+                        "last": "Johannsen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "\u017deljko",
+                        "middle": [],
+                        "last": "Agi\u0107",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Anders",
+                        "middle": [],
+                        "last": "S\u00f8gaard",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Anders Johannsen, \u017deljko Agi\u0107, and Anders S\u00f8gaard. 2016. Joint Part-of-Speech and Dependency Projec- tion from Multiple Sources. In Proceedings of ACL.",
+                "links": null
+            },
+            "BIBREF14": {
+                "ref_id": "b14",
+                "title": "Questionbank: Creating a Corpus of Parse-Annotated Questions",
+                "authors": [
+                    {
+                        "first": "John",
+                        "middle": [],
+                        "last": "Judge",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Aoife",
+                        "middle": [],
+                        "last": "Cahill",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Josef",
+                        "middle": [],
+                        "last": "Van Genabith",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2006,
+                "venue": "Proceedings of ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "497--504",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "John Judge, Aoife Cahill, and Josef Van Genabith. 2006. Questionbank: Creating a Corpus of Parse- Annotated Questions. In Proceedings of ACL, pages 497-504, Sydney, Australia.",
+                "links": null
+            },
+            "BIBREF15": {
+                "ref_id": "b15",
+                "title": "Corpus-Based Induction of Syntactic Structure: Models of Dependency and Constituency",
+                "authors": [
+                    {
+                        "first": "Dan",
+                        "middle": [],
+                        "last": "Klein",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [],
+                        "last": "Manning",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2004,
+                "venue": "Proceedings of ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "478--485",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Dan Klein and Christopher Manning. 2004. Corpus- Based Induction of Syntactic Structure: Models of Dependency and Constituency. In Proceedings of ACL, pages 478-485, Barcelona, Spain.",
+                "links": null
+            },
+            "BIBREF16": {
+                "ref_id": "b16",
+                "title": "Efficient Algorithms for Personalized PageRank",
+                "authors": [
+                    {
+                        "first": "Peter",
+                        "middle": [],
+                        "last": "Lofgren",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Peter Lofgren. 2015. Efficient Algorithms for Person- alized PageRank. Ph.D. thesis, Stanford Computer Science.",
+                "links": null
+            },
+            "BIBREF17": {
+                "ref_id": "b17",
+                "title": "Unsupervised Dependency Parsing with Transferring Distribution via Parallel Guidance and Entropy Regularization",
+                "authors": [
+                    {
+                        "first": "Xuezhe",
+                        "middle": [],
+                        "last": "Ma",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Fei",
+                        "middle": [],
+                        "last": "Xia",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "Proceedings of ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "1337--1348",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Xuezhe Ma and Fei Xia. 2014. Unsupervised De- pendency Parsing with Transferring Distribution via Parallel Guidance and Entropy Regularization. In Proceedings of ACL, pages 1337-1348, Baltimore, Maryland, USA.",
+                "links": null
+            },
+            "BIBREF18": {
+                "ref_id": "b18",
+                "title": "Turning on the Turbo: Fast Third-Order Non-Projective Turbo Parsers",
+                "authors": [
+                    {
+                        "first": "F",
+                        "middle": [
+                            "T"
+                        ],
+                        "last": "Andr\u00e9",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Miguel",
+                        "middle": [],
+                        "last": "Martins",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Noah",
+                        "middle": [
+                            "A"
+                        ],
+                        "last": "Almeida",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Smith",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "Proceedings of ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "617--622",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Andr\u00e9 F. T. Martins, Miguel Almeida, and Noah A. Smith. 2013. Turning on the Turbo: Fast Third- Order Non-Projective Turbo Parsers. In Proceed- ings of ACL, pages 617-622, Sofia, Bulgaria.",
+                "links": null
+            },
+            "BIBREF19": {
+                "ref_id": "b19",
+                "title": "Multi-Source Transfer of Delexicalized Dependency Parsers",
+                "authors": [
+                    {
+                        "first": "Ryan",
+                        "middle": [],
+                        "last": "Mcdonald",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Slav",
+                        "middle": [],
+                        "last": "Petrov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Keith",
+                        "middle": [],
+                        "last": "Hall",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2011,
+                "venue": "Proceedings of EMNLP",
+                "volume": "",
+                "issue": "",
+                "pages": "62--72",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ryan McDonald, Slav Petrov, and Keith Hall. 2011. Multi-Source Transfer of Delexicalized Dependency Parsers. In Proceedings of EMNLP, pages 62-72, Edinburgh, Scotland, UK. Association for Compu- tational Linguistics.",
+                "links": null
+            },
+            "BIBREF20": {
+                "ref_id": "b20",
+                "title": "Universal Dependency Annotation for Multilingual Parsing",
+                "authors": [
+                    {
+                        "first": "Ryan",
+                        "middle": [],
+                        "last": "Mcdonald",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Joakim",
+                        "middle": [],
+                        "last": "Nivre",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yvonne",
+                        "middle": [],
+                        "last": "Quirmbach-Brundage",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yoav",
+                        "middle": [],
+                        "last": "Goldberg",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dipanjan",
+                        "middle": [],
+                        "last": "Das",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kuzman",
+                        "middle": [],
+                        "last": "Ganchev",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Keith",
+                        "middle": [],
+                        "last": "Hall",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Slav",
+                        "middle": [],
+                        "last": "Petrov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hao",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Oscar",
+                        "middle": [],
+                        "last": "T\u00e4ckstr\u00f6m",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Claudia",
+                        "middle": [],
+                        "last": "Bedini",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "Proceedings of ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "92--97",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ryan McDonald, Joakim Nivre, Yvonne Quirmbach- Brundage, Yoav Goldberg, Dipanjan Das, Kuz- man Ganchev, Keith Hall, Slav Petrov, Hao Zhang, Oscar T\u00e4ckstr\u00f6m, Claudia Bedini, N\u00faria Bertomeu Castell\u00f3, and Jungmee Lee. 2013. Universal Dependency Annotation for Multilingual Parsing. In Proceedings of ACL, pages 92-97, Sofia, Bulgaria.",
+                "links": null
+            },
+            "BIBREF21": {
+                "ref_id": "b21",
+                "title": "Using Universal Linguistic Knowledge to Guide Grammar Induction",
+                "authors": [
+                    {
+                        "first": "Tahira",
+                        "middle": [],
+                        "last": "Naseem",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Harr",
+                        "middle": [],
+                        "last": "Chen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Regina",
+                        "middle": [],
+                        "last": "Barzilay",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mark",
+                        "middle": [],
+                        "last": "Johnson",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2010,
+                "venue": "Proceedings of EMNLP",
+                "volume": "",
+                "issue": "",
+                "pages": "1234--1244",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Tahira Naseem, Harr Chen, Regina Barzilay, and Mark Johnson. 2010. Using Universal Linguistic Knowl- edge to Guide Grammar Induction. In Proceedings of EMNLP, pages 1234-1244, Cambridge, Mas- sachusetts, USA.",
+                "links": null
+            },
+            "BIBREF23": {
+                "ref_id": "b23",
+                "title": "Universal dependencies v1: A multilingual treebank collection",
+                "authors": [
+                    {
+                        "first": "Joakim",
+                        "middle": [],
+                        "last": "Nivre",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Marie-Catherine",
+                        "middle": [],
+                        "last": "De Marneffe",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Filip",
+                        "middle": [],
+                        "last": "Ginter",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yoav",
+                        "middle": [],
+                        "last": "Goldberg",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jan",
+                        "middle": [],
+                        "last": "Hajic",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [
+                            "D"
+                        ],
+                        "last": "Manning",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ryan",
+                        "middle": [],
+                        "last": "Mcdonald",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Slav",
+                        "middle": [],
+                        "last": "Petrov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sampo",
+                        "middle": [],
+                        "last": "Pyysalo",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Natalia",
+                        "middle": [],
+                        "last": "Silveira",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of LREC",
+                "volume": "",
+                "issue": "",
+                "pages": "1659--1666",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Joakim Nivre, Marie-Catherine de Marneffe, Filip Gin- ter, Yoav Goldberg, Jan Hajic, Christopher D Man- ning, Ryan McDonald, Slav Petrov, Sampo Pyysalo, Natalia Silveira, et al. 2016. Universal depen- dencies v1: A multilingual treebank collection. In Proceedings of LREC, pages 1659-1666, Portoro\u017e, Slovenia.",
+                "links": null
+            },
+            "BIBREF24": {
+                "ref_id": "b24",
+                "title": "The PageRank Citation Ranking: Bringing Order to the Web",
+                "authors": [
+                    {
+                        "first": "Lawrence",
+                        "middle": [],
+                        "last": "Page",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sergey",
+                        "middle": [],
+                        "last": "Brin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Rajeev",
+                        "middle": [],
+                        "last": "Motwani",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Terry",
+                        "middle": [],
+                        "last": "Winograd",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1999,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Lawrence Page, Sergey Brin, Rajeev Motwani, and Terry Winograd. 1999. The PageRank Citation Ranking: Bringing Order to the Web. Technical re- port, Stanford InfoLab.",
+                "links": null
+            },
+            "BIBREF26": {
+                "ref_id": "b26",
+                "title": "Grammar-Driven versus Data-Driven: Which Parsing System Is More Affected by Domain Shifts?",
+                "authors": [],
+                "year": null,
+                "venue": "Proceedings of the 2010 Workshop on NLP and Linguistics: Finding the Common Ground",
+                "volume": "",
+                "issue": "",
+                "pages": "25--33",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Grammar-Driven versus Data-Driven: Which Pars- ing System Is More Affected by Domain Shifts? In Proceedings of the 2010 Workshop on NLP and Lin- guistics: Finding the Common Ground, pages 25- 33, Uppsala, Sweden.",
+                "links": null
+            },
+            "BIBREF27": {
+                "ref_id": "b27",
+                "title": "Density-Driven Cross-Lingual Transfer of Dependency Parsers",
+                "authors": [
+                    {
+                        "first": "Mohammad",
+                        "middle": [],
+                        "last": "Sadegh",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Rasooli",
+                        "middle": [],
+                        "last": "",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Michael",
+                        "middle": [],
+                        "last": "Collins",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Proceedings of EMNLP",
+                "volume": "",
+                "issue": "",
+                "pages": "328--338",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Mohammad Sadegh Rasooli and Michael Collins. 2015. Density-Driven Cross-Lingual Transfer of Dependency Parsers. In Proceedings of EMNLP, pages 328-338, Lisbon, Portugal.",
+                "links": null
+            },
+            "BIBREF28": {
+                "ref_id": "b28",
+                "title": "From Baby Steps to Leapfrog: How Less is More in Unsupervised Dependency Parsing",
+                "authors": [
+                    {
+                        "first": "Valentin",
+                        "middle": [],
+                        "last": "Spitkovsky",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hiyan",
+                        "middle": [],
+                        "last": "Alshawi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Daniel",
+                        "middle": [],
+                        "last": "Jurafsky",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2010,
+                "venue": "Proceedings of NAACL",
+                "volume": "",
+                "issue": "",
+                "pages": "751--759",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Valentin Spitkovsky, Hiyan Alshawi, and Daniel Juraf- sky. 2010a. From Baby Steps to Leapfrog: How Less is More in Unsupervised Dependency Parsing. In Proceedings of NAACL, pages 751-759, Los An- geles, California, USA.",
+                "links": null
+            },
+            "BIBREF29": {
+                "ref_id": "b29",
+                "title": "Viterbi Training Improves Unsupervised Dependency Parsing",
+                "authors": [
+                    {
+                        "first": "Valentin",
+                        "middle": [],
+                        "last": "Spitkovsky",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hiyan",
+                        "middle": [],
+                        "last": "Alshawi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Daniel",
+                        "middle": [],
+                        "last": "Jurafsky",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [],
+                        "last": "Manning",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2010,
+                "venue": "Proceedings of CoNLL",
+                "volume": "",
+                "issue": "",
+                "pages": "9--17",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Valentin Spitkovsky, Hiyan Alshawi, Daniel Jurafsky, and Christopher Manning. 2010b. Viterbi Train- ing Improves Unsupervised Dependency Parsing. In Proceedings of CoNLL, pages 9-17, Uppsala, Swe- den.",
+                "links": null
+            },
+            "BIBREF30": {
+                "ref_id": "b30",
+                "title": "Data Point Selection for Cross-Language Adaptation of Dependency Parsers",
+                "authors": [
+                    {
+                        "first": "Anders",
+                        "middle": [],
+                        "last": "S\u00f8gaard",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2011,
+                "venue": "Proceedings of ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "682--686",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Anders S\u00f8gaard. 2011. Data Point Selection for Cross- Language Adaptation of Dependency Parsers. In Proceedings of ACL, pages 682-686, Portland, Ore- gon, USA.",
+                "links": null
+            },
+            "BIBREF31": {
+                "ref_id": "b31",
+                "title": "Two Baselines for Unsupervised Dependency Parsing",
+                "authors": [
+                    {
+                        "first": "Anders",
+                        "middle": [],
+                        "last": "S\u00f8gaard",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2012,
+                "venue": "Proceedings of the NAACL-HLT Workshop on the Induction of Linguistic Structure",
+                "volume": "",
+                "issue": "",
+                "pages": "81--83",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Anders S\u00f8gaard. 2012a. Two Baselines for Unsuper- vised Dependency Parsing. In Proceedings of the NAACL-HLT Workshop on the Induction of Linguis- tic Structure, pages 81-83, Montreal, Canada.",
+                "links": null
+            },
+            "BIBREF32": {
+                "ref_id": "b32",
+                "title": "Unsupervised dependency parsing without training",
+                "authors": [
+                    {
+                        "first": "Anders",
+                        "middle": [],
+                        "last": "S\u00f8gaard",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2012,
+                "venue": "Natural Language Engineering",
+                "volume": "18",
+                "issue": "02",
+                "pages": "187--203",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Anders S\u00f8gaard. 2012b. Unsupervised dependency parsing without training. Natural Language Engi- neering, 18(02):187-203.",
+                "links": null
+            },
+            "BIBREF33": {
+                "ref_id": "b33",
+                "title": "El\u00e9ments de Syntaxe Structurale",
+                "authors": [
+                    {
+                        "first": "Lucien",
+                        "middle": [],
+                        "last": "Tesni\u00e8re",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1959,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Lucien Tesni\u00e8re. 1959. El\u00e9ments de Syntaxe Struc- turale. Editions Klincksieck.",
+                "links": null
+            },
+            "BIBREF34": {
+                "ref_id": "b34",
+                "title": "Synthetic Treebanking for Cross-Lingual Dependency Parsing",
+                "authors": [
+                    {
+                        "first": "J\u00f6rg",
+                        "middle": [],
+                        "last": "Tiedemann",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "\u017deljko",
+                        "middle": [],
+                        "last": "Agi\u0107",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Journal of Artificial Intelligence Research",
+                "volume": "55",
+                "issue": "",
+                "pages": "209--248",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "J\u00f6rg Tiedemann and \u017deljko Agi\u0107. 2016. Synthetic Treebanking for Cross-Lingual Dependency Pars- ing. Journal of Artificial Intelligence Research, 55:209-248.",
+                "links": null
+            },
+            "BIBREF35": {
+                "ref_id": "b35",
+                "title": "Rediscovering Annotation Projection for Cross-Lingual Parser Induction",
+                "authors": [
+                    {
+                        "first": "J\u00f6rg",
+                        "middle": [],
+                        "last": "Tiedemann",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "Proceedings of COLING",
+                "volume": "",
+                "issue": "",
+                "pages": "1854--1864",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "J\u00f6rg Tiedemann. 2014. Rediscovering Annotation Projection for Cross-Lingual Parser Induction. In Proceedings of COLING, pages 1854-1864, Dublin, Ireland.",
+                "links": null
+            },
+            "BIBREF36": {
+                "ref_id": "b36",
+                "title": "Inducing Multilingual Text Analysis Tools via Robust Projection Across Aligned Corpora",
+                "authors": [
+                    {
+                        "first": "David",
+                        "middle": [],
+                        "last": "Yarowsky",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Grace",
+                        "middle": [],
+                        "last": "Ngai",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Richard",
+                        "middle": [],
+                        "last": "Wicentowski",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2001,
+                "venue": "Proceedings of HLT",
+                "volume": "",
+                "issue": "",
+                "pages": "200--207",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "David Yarowsky, Grace Ngai, and Richard Wicen- towski. 2001. Inducing Multilingual Text Analy- sis Tools via Robust Projection Across Aligned Cor- pora. In Proceedings of HLT, pages 200-207, San Diego, California, USA.",
+                "links": null
+            },
+            "BIBREF37": {
+                "ref_id": "b37",
+                "title": "Cross-Language Parser Adaptation Between Related Languages",
+                "authors": [
+                    {
+                        "first": "Daniel",
+                        "middle": [],
+                        "last": "Zeman",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Philip",
+                        "middle": [],
+                        "last": "Resnik",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2008,
+                "venue": "Proceedings of IJCNLP",
+                "volume": "",
+                "issue": "",
+                "pages": "35--42",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Daniel Zeman and Philip Resnik. 2008. Cross- Language Parser Adaptation Between Related Lan- guages. In Proceedings of IJCNLP, pages 35-42, Hyderabad, India.",
+                "links": null
+            }
+        },
+        "ref_entries": {
+            "FIGREF0": {
+                "num": null,
+                "text": "Figure 1: Two-step decoding algorithm for UDP.",
+                "uris": null,
+                "fig_num": "1",
+                "type_str": "figure"
+            },
+            "FIGREF2": {
+                "num": null,
+                "text": "Figure 2: Example dependency tree predicted by the algorithm.",
+                "uris": null,
+                "fig_num": "2",
+                "type_str": "figure"
+            },
+            "TABREF0": {
+                "content": "<table><tr><td>it</td><td>word</td><td>h</td><td>H</td></tr><tr><td>1</td><td>had</td><td>root</td><td>\u2205</td></tr><tr><td colspan=\"2\">2 connection</td><td>had</td><td>{had}</td></tr><tr><td colspan=\"2\">3 extremists</td><td>had</td><td>{had, connection}</td></tr><tr><td>4</td><td>special</td><td>connection</td><td>{had, connection, extremists}</td></tr><tr><td>5</td><td>They</td><td>had</td><td>{had, connection, extremists, special}</td></tr><tr><td>6</td><td>also</td><td>had</td><td>...</td></tr><tr><td>7</td><td>a</td><td>connection</td><td>...</td></tr><tr><td>8</td><td>to</td><td>extremists</td><td>...</td></tr><tr><td>9</td><td>some</td><td>extremists</td><td>...</td></tr></table>",
+                "type_str": "table",
+                "text": "Table3shows a trace of the algorithm, with C = had,connection,extremists,special and F = {They,also,a,to,some}.",
+                "html": null,
+                "num": null
+            },
+            "TABREF1": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "Algorithm trace for example sentence. it: iteration number, word: current word, H: set of possible heads.",
+                "html": null,
+                "num": null
+            },
+            "TABREF2": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "Matrix representation of the directed graph for the words in the sentence.",
+                "html": null,
+                "num": null
+            },
+            "TABREF3": {
+                "content": "<table><tr><td colspan=\"2\">Ancient Greek 42.2 L 43.4</td><td>48.6</td><td>46.5</td><td>41.6</td><td>27.0</td></tr><tr><td colspan=\"2\">Arabic 34.8 R 47.8</td><td>52.8</td><td>52.6</td><td>47.6</td><td>41.0</td></tr><tr><td colspan=\"2\">Basque 47.8 R 45.0</td><td>51.2</td><td>49.3</td><td>43.1</td><td>22.8</td></tr><tr><td colspan=\"2\">Bulgarian 54.9 R 70.5</td><td>78.7</td><td>76.6</td><td>68.1</td><td>27.1</td></tr><tr><td colspan=\"2\">Church Slavonic 53.8 L 59.2</td><td>61.8</td><td>59.8</td><td>59.2</td><td>35.2</td></tr><tr><td colspan=\"2\">Croatian 41.6 L 56.7</td><td>69.1</td><td>65.6</td><td>54.5</td><td>25.2</td></tr><tr><td colspan=\"2\">Czech 46.5 R 61.0</td><td>69.5</td><td>67.6</td><td>59.3</td><td>25.3</td></tr><tr><td colspan=\"2\">Danish 47.3 R 57.9</td><td>70.2</td><td>65.6</td><td>53.8</td><td>26.9</td></tr><tr><td colspan=\"2\">Dutch 36.1 L 49.5</td><td>57.0</td><td>59.2</td><td>50.0</td><td>24.1</td></tr><tr><td colspan=\"2\">English 46.2 R 53.0</td><td>62.1</td><td>59.9</td><td>51.4</td><td>27.9</td></tr><tr><td colspan=\"2\">Estonian 73.2 R 70.0</td><td>73.4</td><td>66.1</td><td>65.0</td><td>25.3</td></tr><tr><td colspan=\"2\">Finnish 43.8 R 45.1</td><td>52.9</td><td>50.4</td><td>43.1</td><td>21.6</td></tr><tr><td colspan=\"2\">French 47.1 R 64.5</td><td>72.7</td><td>70.6</td><td>62.1</td><td>36.3</td></tr><tr><td colspan=\"2\">German 48.2 R 60.6</td><td>66.9</td><td>62.5</td><td>57.0</td><td>24.2</td></tr><tr><td colspan=\"2\">Gothic 50.2 L 57.5</td><td>61.7</td><td>59.2</td><td>55.8</td><td>34.1</td></tr><tr><td colspan=\"2\">Greek 45.7 R 58.5</td><td>68.0</td><td>66.4</td><td>57.0</td><td>29.3</td></tr><tr><td colspan=\"2\">Hebrew 41.8 R 55.4</td><td>62.0</td><td>58.6</td><td>52.8</td><td>35.7</td></tr><tr><td colspan=\"2\">Hindi 43.9 R 46.3</td><td>34.6</td><td>34.5</td><td>45.7</td><td>27.0</td></tr><tr><td colspan=\"2\">Hungarian 53.1 R 56.7</td><td>58.4</td><td>56.8</td><td>54.8</td><td>22.7</td></tr><tr><td colspan=\"2\">Indonesian 44.6 L 60.6</td><td>63.6</td><td>61.0</td><td>58.4</td><td>35.3</td></tr><tr><td colspan=\"2\">Irish 47.5 R 56.6</td><td>62.5</td><td>61.3</td><td>53.9</td><td>35.8</td></tr><tr><td colspan=\"2\">Italian 50.6 R 69.4</td><td>77.1</td><td>75.2</td><td>67.9</td><td>37.6</td></tr><tr><td colspan=\"2\">Latin 49.4 L 56.2</td><td>59.8</td><td>54.9</td><td>52.4</td><td>37.1</td></tr><tr><td colspan=\"2\">Norwegian 49.1 R 61.7</td><td>70.8</td><td>67.3</td><td>58.6</td><td>29.8</td></tr><tr><td colspan=\"2\">Persian 37.8 L 55.7</td><td>57.8</td><td>55.6</td><td>53.6</td><td>33.9</td></tr><tr><td colspan=\"2\">Polish 60.8 R 68.4</td><td>75.6</td><td>71.7</td><td>65.7</td><td>34.6</td></tr><tr><td colspan=\"2\">Portuguese 45.8 R 65.7</td><td>72.8</td><td>71.4</td><td>64.9</td><td>33.5</td></tr><tr><td colspan=\"2\">Romanian 52.7 R 63.7</td><td>69.2</td><td>64.0</td><td>58.9</td><td>32.1</td></tr><tr><td colspan=\"2\">Slovene 50.6 R 63.6</td><td>74.7</td><td>71.0</td><td>56.0</td><td>24.3</td></tr><tr><td colspan=\"2\">Spanish 48.2 R 63.9</td><td>72.9</td><td>70.7</td><td>62.1</td><td>35.0</td></tr><tr><td colspan=\"2\">Swedish 52.4 R 62.8</td><td>72.2</td><td>67.2</td><td>58.5</td><td>25.3</td></tr><tr><td colspan=\"2\">Tamil 41.4 R 34.2</td><td>44.2</td><td>39.5</td><td>32.1</td><td>20.3</td></tr><tr><td>Average 47.8</td><td>57.5</td><td>63.9</td><td>61.2</td><td>55.3</td><td>29.9</td></tr></table>",
+                "type_str": "table",
+                "text": "Language BL G UDP G MSD G MSD P UDP P UDP N UAS for baseline with gold POS (BL",
+                "html": null,
+                "num": null
+            },
+            "TABREF4": {
+                "content": "<table><tr><td>Bulgarian bulletin</td><td>48.3 67.5</td><td>67.4</td><td>65.4</td><td>61.5</td></tr><tr><td>legal</td><td>47.9 76.9</td><td>69.2</td><td>73.0</td><td>68.6</td></tr><tr><td colspan=\"2\">literature 53.6 74.2</td><td>69.0</td><td>72.8</td><td>66.6</td></tr><tr><td>news</td><td>49.3 74.6</td><td>70.2</td><td>73.0</td><td>68.2</td></tr><tr><td>various</td><td>51.4 74.2</td><td>72.5</td><td>72.6</td><td>69.5</td></tr><tr><td>Croatian news</td><td>41.2 62.4</td><td>57.9</td><td>61.8</td><td>52.2</td></tr><tr><td>wiki</td><td>41.9 64.8</td><td>55.8</td><td>58.2</td><td>56.3</td></tr><tr><td>English answers</td><td>44.1 61.6</td><td>55.9</td><td>59.5</td><td>53.7</td></tr><tr><td>email</td><td>42.8 58.8</td><td>52.1</td><td>57.1</td><td>56.3</td></tr><tr><td>newsgroup</td><td>41.7 55.5</td><td>49.7</td><td>52.9</td><td>51.1</td></tr><tr><td>reviews</td><td>47.4 66.8</td><td>54.9</td><td>63.9</td><td>52.2</td></tr><tr><td>weblog</td><td>43.3 51.6</td><td>50.9</td><td>49.8</td><td>53.8</td></tr><tr><td>magazine \u2020</td><td>41.4 60.9</td><td>55.6</td><td>58.4</td><td>53.3</td></tr><tr><td>bible \u2020</td><td>38.4 56.2</td><td>56.2</td><td>56.8</td><td>48.6</td></tr><tr><td colspan=\"2\">questions \u2020 38.7 69.7</td><td>55.6</td><td>60.5</td><td>47.2</td></tr><tr><td>Italian europarl</td><td>50.8 64.1</td><td>70.6</td><td>62.7</td><td>69.7</td></tr><tr><td>legal</td><td>51.1 67.9</td><td>69.0</td><td>64.4</td><td>67.2</td></tr><tr><td>news</td><td>49.4 68.9</td><td>67.5</td><td>67.0</td><td>65.3</td></tr><tr><td>questions</td><td>48.7 80.0</td><td>77.0</td><td>79.1</td><td>76.1</td></tr><tr><td>various</td><td>49.7 67.8</td><td>69.0</td><td>65.3</td><td>67.6</td></tr><tr><td>wiki</td><td>51.8 71.2</td><td>68.1</td><td>70.3</td><td>66.6</td></tr><tr><td>Serbian news</td><td>42.8 68.0</td><td>58.8</td><td>65.6</td><td>53.3</td></tr><tr><td>wiki</td><td>42.4 68.9</td><td>58.8</td><td>62.8</td><td>55.8</td></tr><tr><td colspan=\"5\">Table 6: Evaluation across domains. UAS for</td></tr><tr><td colspan=\"5\">baseline with gold POS (BL G ), UDP with gold</td></tr><tr><td colspan=\"5\">POS (UDP G ) and predicted POS (UDP P ), and</td></tr><tr><td colspan=\"5\">multi-source delexicalized with gold and pre-</td></tr><tr><td colspan=\"5\">dicted POS (MSD G and MSD P ). English datasets</td></tr><tr><td colspan=\"5\">marked with  \u2020 are in-house annotated. Lowest re-</td></tr><tr><td colspan=\"5\">sults per language underlined. Bold: UDP outper-</td></tr><tr><td>forms MSD.</td><td/><td/><td/><td/></tr></table>",
+                "type_str": "table",
+                "text": "Language DomainBL G MSD G UDP G MSD P UDP P",
+                "html": null,
+                "num": null
+            },
+            "TABREF5": {
+                "content": "<table><tr><td>Language</td><td>BL G</td><td>MSD G</td><td>UDP G</td><td>MSD P</td><td>UDP P</td></tr><tr><td colspan=\"6\">Bulgarian 50.1\u00b12.4 73.5\u00b13.5 69.7\u00b11.8 71.3\u00b13.3 66.9\u00b13.2</td></tr><tr><td colspan=\"6\">Croatian+Serbian 42.1\u00b10.7 66.0\u00b13.0 57.8\u00b11.4 62.1\u00b13.0 54.4\u00b12.0</td></tr><tr><td colspan=\"6\">English 42.2\u00b12.8 60.1\u00b16.2 53.9\u00b12.5 57.3\u00b14.3 52.0\u00b13.3</td></tr><tr><td colspan=\"6\">Italian 50.3\u00b11.2 70.0\u00b15.4 70.1\u00b13.3 68.1\u00b16.0 68.7\u00b13.9</td></tr><tr><td>Average Std.</td><td>1.8</td><td>4.5</td><td>2.5</td><td>4.2</td><td>3.1</td></tr></table>",
+                "type_str": "table",
+                "text": "summarizes the per-language average score and standard deviation, as well as the macroaveraged standard deviation across languages. UDP has a much lower standard deviation across domains compared to MSD. This holds across lan-",
+                "html": null,
+                "num": null
+            }
+        }
+    }
+}

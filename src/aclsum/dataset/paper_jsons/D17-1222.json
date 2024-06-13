@@ -1,0 +1,2968 @@
+{
+    "paper_id": "D17-1222",
+    "header": {
+        "generated_with": "S2ORC 1.0.0",
+        "date_generated": "2023-06-16T11:56:03.979801Z"
+    },
+    "title": "Deep Recurrent Generative Decoder for Abstractive Text Summarization *",
+    "authors": [
+        {
+            "first": "Piji",
+            "middle": [],
+            "last": "Li",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "Key Laboratory on High Confidence Software Technologies (Sub-Lab, CUHK)",
+                "institution": "",
+                "location": {
+                    "country": "China"
+                }
+            },
+            "email": "pjli@se.cuhk.edu.hk"
+        },
+        {
+            "first": "Wai",
+            "middle": [],
+            "last": "Lam",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "Key Laboratory on High Confidence Software Technologies (Sub-Lab, CUHK)",
+                "institution": "",
+                "location": {
+                    "country": "China"
+                }
+            },
+            "email": "wlam@se.cuhk.edu.hk"
+        },
+        {
+            "first": "Lidong",
+            "middle": [],
+            "last": "Bing",
+            "suffix": "",
+            "affiliation": {},
+            "email": "lyndonbing@tencent.com"
+        },
+        {
+            "first": "Zihao",
+            "middle": [],
+            "last": "Wang",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "Key Laboratory on High Confidence Software Technologies (Sub-Lab, CUHK)",
+                "institution": "",
+                "location": {
+                    "country": "China"
+                }
+            },
+            "email": "zhwang@se.cuhk.edu.hk"
+        }
+    ],
+    "year": "",
+    "venue": null,
+    "identifiers": {},
+    "abstract": "We propose a new framework for abstractive text summarization based on a sequence-to-sequence oriented encoderdecoder model equipped with a deep recurrent generative decoder (DRGN). Latent structure information implied in the target summaries is learned based on a recurrent latent random model for improving the summarization quality. Neural variational inference is employed to address the intractable posterior inference for the recurrent latent variables. Abstractive summaries are generated based on both the generative latent variables and the discriminative deterministic states. Extensive experiments on some benchmark datasets in different languages show that DRGN achieves improvements over the state-ofthe-art methods.",
+    "pdf_parse": {
+        "paper_id": "D17-1222",
+        "_pdf_hash": "",
+        "abstract": [
+            {
+                "text": "We propose a new framework for abstractive text summarization based on a sequence-to-sequence oriented encoderdecoder model equipped with a deep recurrent generative decoder (DRGN). Latent structure information implied in the target summaries is learned based on a recurrent latent random model for improving the summarization quality. Neural variational inference is employed to address the intractable posterior inference for the recurrent latent variables. Abstractive summaries are generated based on both the generative latent variables and the discriminative deterministic states. Extensive experiments on some benchmark datasets in different languages show that DRGN achieves improvements over the state-ofthe-art methods.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            }
+        ],
+        "body_text": [
+            {
+                "text": "Automatic summarization is the process of automatically generating a summary that retains the most important content of the original text document (Edmundson, 1969; Luhn, 1958; Nenkova and McKeown, 2012) . Different from the common extraction-based and compression-based methods, abstraction-based methods aim at constructing new sentences as summaries, thus they require a deeper understanding of the text and the capability of generating new sentences, which provide an obvious advantage in improving the focus of a summary, reducing the redundancy, and keeping a good compression rate (Bing et al., 2015; Rush et al., 2015; Nallapati et al., 2016) . *",
+                "cite_spans": [
+                    {
+                        "start": 147,
+                        "end": 164,
+                        "text": "(Edmundson, 1969;",
+                        "ref_id": "BIBREF10"
+                    },
+                    {
+                        "start": 165,
+                        "end": 176,
+                        "text": "Luhn, 1958;",
+                        "ref_id": "BIBREF27"
+                    },
+                    {
+                        "start": 177,
+                        "end": 203,
+                        "text": "Nenkova and McKeown, 2012)",
+                        "ref_id": "BIBREF32"
+                    },
+                    {
+                        "start": 588,
+                        "end": 607,
+                        "text": "(Bing et al., 2015;",
+                        "ref_id": "BIBREF1"
+                    },
+                    {
+                        "start": 608,
+                        "end": 626,
+                        "text": "Rush et al., 2015;",
+                        "ref_id": "BIBREF34"
+                    },
+                    {
+                        "start": 627,
+                        "end": 650,
+                        "text": "Nallapati et al., 2016)",
+                        "ref_id": "BIBREF31"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "The work described in this paper is supported by a grant from the Grant Council of the Hong Kong Special Administrative Region, China (Project Code: 14203414). Some previous research works show that human-written summaries are more abstractive (Jing and McKeown, 2000) . Moreover, our investigation reveals that people may naturally follow some inherent structures when they write the abstractive summaries. To illustrate this observation, we show some examples in Figure 1 , which are some top story summaries or headlines from the channel \"Technology\" of CNN. After analyzing the summaries carefully, we can find some common structures from them, such as \"What\", \"What-Happened\" , \"Who Action What\", etc. For example, the summary \"Apple sues Qualcomm for nearly $1 billion\" can be structuralized as \"Who (Apple) Action (sues) What (Qualcomm)\". Similarly, the summaries \" [Twitter] [fixes] [botched @POTUS account transfer]\", \"[Uber] [to pay] [$20 million] for misleading drivers\", and \"[Bipartisan bill] aims to [reform] [H-1B visa system]\" also follow the structure of \"Who Action What\". The summary \"The emergence of the 'cyber cold war\"' matches with the structure of \"What\", and the summary \"St. Louis' public library computers hacked\" follows the structure of \"What-Happened\".",
+                "cite_spans": [
+                    {
+                        "start": 244,
+                        "end": 268,
+                        "text": "(Jing and McKeown, 2000)",
+                        "ref_id": "BIBREF18"
+                    },
+                    {
+                        "start": 873,
+                        "end": 882,
+                        "text": "[Twitter]",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 1014,
+                        "end": 1022,
+                        "text": "[reform]",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 472,
+                        "end": 473,
+                        "text": "1",
+                        "ref_id": "FIGREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Intuitively, if we can incorporate the latent structure information of summaries into the abstractive summarization model, it will improve the quality of the generated summaries. However, very few existing works specifically consider the latent structure information of summaries in their summarization models. Although a very popular neural network based sequence-to-sequence (seq2seq) framework has been proposed to tackle the abstractive summarization problem (Lopyrev, 2015; Rush et al., 2015; Nallapati et al., 2016) , the calculation of the internal decoding states is entirely deterministic. The deterministic transformations in these discriminative models lead to limitations on the representation ability of the latent structure information. Miao and Blunsom (2016) extended the seq2seq framework and proposed a generative model to capture the latent summary information, but they did not consider the recurrent dependencies in their generative model leading to limited representation ability.",
+                "cite_spans": [
+                    {
+                        "start": 463,
+                        "end": 478,
+                        "text": "(Lopyrev, 2015;",
+                        "ref_id": "BIBREF26"
+                    },
+                    {
+                        "start": 479,
+                        "end": 497,
+                        "text": "Rush et al., 2015;",
+                        "ref_id": "BIBREF34"
+                    },
+                    {
+                        "start": 498,
+                        "end": 521,
+                        "text": "Nallapati et al., 2016)",
+                        "ref_id": "BIBREF31"
+                    },
+                    {
+                        "start": 751,
+                        "end": 774,
+                        "text": "Miao and Blunsom (2016)",
+                        "ref_id": "BIBREF28"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "To tackle the above mentioned problems, we design a new framework based on sequenceto-sequence oriented encoder-decoder model equipped with a latent structure modeling component. We employ Variational Auto-Encoders (VAEs) (Kingma and Welling, 2013; Rezende et al., 2014) as the base model for our generative framework which can handle the inference problem associated with complex generative modeling. However, the standard framework of VAEs is not designed for sequence modeling related tasks. Inspired by (Chung et al., 2015) , we add historical dependencies on the latent variables of VAEs and propose a deep recurrent generative decoder (DRGD) for latent structure modeling.",
+                "cite_spans": [
+                    {
+                        "start": 222,
+                        "end": 248,
+                        "text": "(Kingma and Welling, 2013;",
+                        "ref_id": "BIBREF20"
+                    },
+                    {
+                        "start": 249,
+                        "end": 270,
+                        "text": "Rezende et al., 2014)",
+                        "ref_id": "BIBREF33"
+                    },
+                    {
+                        "start": 507,
+                        "end": 527,
+                        "text": "(Chung et al., 2015)",
+                        "ref_id": "BIBREF9"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Then the standard discriminative deterministic decoder and the recurrent generative decoder are integrated into a unified decoding framework. The target summaries will be decoded based on both the discriminative deterministic variables and the generative latent structural information. All the neural parameters are learned by back-propagation in an end-to-end training paradigm.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "The main contributions of our framework are summarized as follows: (1) We propose a sequence-to-sequence oriented encoder-decoder model equipped with a deep recurrent generative decoder (DRGD) to model and learn the latent structure information implied in the target summaries of the training data. Neural variational inference is employed to address the intractable posterior inference for the recurrent latent variables.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "(2) Both the generative latent structural information and the discriminative deterministic variables are jointly considered in the generation process of the abstractive summaries. (3) Experimental results on some benchmark datasets in different languages show that our framework achieves better performance than the state-of-the-art models.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Automatic summarization is the process of automatically generating a summary that retains the most important content of the original text document (Nenkova and McKeown, 2012) . Traditionally, the summarization methods can be classified into three categories: extraction-based methods (Erkan and Radev, 2004; Goldstein et al., 2000; Wan et al., 2007; Min et al., 2012; Nallapati et al., 2017; Cheng and Lapata, 2016; Cao et al., 2016; Song et al., 2017) , compression-based methods (Li et al., 2013; Wang et al., 2013; Li et al., 2015 Li et al., , 2017)) , and abstraction-based methods. In fact, previous investigations show that human-written summaries are more abstractive (Barzilay and McKeown, 2005; Bing et al., 2015) . Abstraction-based approaches can generate new sentences based on the facts from different source sentences. Barzilay and McKeown (2005) employed sentence fusion to generate a new sentence. Bing et al. (2015) proposed a more fine-grained fusion framework, where new sentences are generated by selecting and merging salient phrases. These methods can be regarded as a kind of indirect abstractive summarization, and complicated constraints are used to guarantee the linguistic quality.",
+                "cite_spans": [
+                    {
+                        "start": 147,
+                        "end": 174,
+                        "text": "(Nenkova and McKeown, 2012)",
+                        "ref_id": "BIBREF32"
+                    },
+                    {
+                        "start": 284,
+                        "end": 307,
+                        "text": "(Erkan and Radev, 2004;",
+                        "ref_id": "BIBREF12"
+                    },
+                    {
+                        "start": 308,
+                        "end": 331,
+                        "text": "Goldstein et al., 2000;",
+                        "ref_id": "BIBREF13"
+                    },
+                    {
+                        "start": 332,
+                        "end": 349,
+                        "text": "Wan et al., 2007;",
+                        "ref_id": "BIBREF38"
+                    },
+                    {
+                        "start": 350,
+                        "end": 367,
+                        "text": "Min et al., 2012;",
+                        "ref_id": "BIBREF29"
+                    },
+                    {
+                        "start": 368,
+                        "end": 391,
+                        "text": "Nallapati et al., 2017;",
+                        "ref_id": "BIBREF30"
+                    },
+                    {
+                        "start": 392,
+                        "end": 415,
+                        "text": "Cheng and Lapata, 2016;",
+                        "ref_id": "BIBREF6"
+                    },
+                    {
+                        "start": 416,
+                        "end": 433,
+                        "text": "Cao et al., 2016;",
+                        "ref_id": "BIBREF3"
+                    },
+                    {
+                        "start": 434,
+                        "end": 452,
+                        "text": "Song et al., 2017)",
+                        "ref_id": "BIBREF36"
+                    },
+                    {
+                        "start": 481,
+                        "end": 498,
+                        "text": "(Li et al., 2013;",
+                        "ref_id": "BIBREF22"
+                    },
+                    {
+                        "start": 499,
+                        "end": 517,
+                        "text": "Wang et al., 2013;",
+                        "ref_id": "BIBREF40"
+                    },
+                    {
+                        "start": 518,
+                        "end": 533,
+                        "text": "Li et al., 2015",
+                        "ref_id": "BIBREF1"
+                    },
+                    {
+                        "start": 534,
+                        "end": 553,
+                        "text": "Li et al., , 2017))",
+                        "ref_id": "BIBREF24"
+                    },
+                    {
+                        "start": 675,
+                        "end": 703,
+                        "text": "(Barzilay and McKeown, 2005;",
+                        "ref_id": "BIBREF0"
+                    },
+                    {
+                        "start": 704,
+                        "end": 722,
+                        "text": "Bing et al., 2015)",
+                        "ref_id": "BIBREF1"
+                    },
+                    {
+                        "start": 833,
+                        "end": 860,
+                        "text": "Barzilay and McKeown (2005)",
+                        "ref_id": "BIBREF0"
+                    },
+                    {
+                        "start": 914,
+                        "end": 932,
+                        "text": "Bing et al. (2015)",
+                        "ref_id": "BIBREF1"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Works",
+                "sec_num": "2"
+            },
+            {
+                "text": "Recently, some researchers employ neural network based framework to tackle the abstractive summarization problem. Rush et al. (2015) proposed a neural network based model with local attention modeling, which is trained on the Gigaword corpus, but combined with an additional loglinear extractive summarization model with handcrafted features. Gu et al. (2016) integrated a copying mechanism into a seq2seq framework to improve the quality of the generated summaries. Chen et al. (2016) proposed a new attention mechanism that not only considers the important source segments, but also distracts them in the decoding step in order to better grasp the overall meaning of input documents. Nallapati et al. (2016) utilized a trick to control the vocabulary size to improve the training efficiency. The calculations in these methods are all deterministic and the representation ability is limited. Miao and Blunsom (2016) extended the seq2seq framework and proposed a generative model to capture the latent summary information, but they do not consider the recurrent dependencies in their generative model leading to limited representation ability.",
+                "cite_spans": [
+                    {
+                        "start": 114,
+                        "end": 132,
+                        "text": "Rush et al. (2015)",
+                        "ref_id": "BIBREF34"
+                    },
+                    {
+                        "start": 343,
+                        "end": 359,
+                        "text": "Gu et al. (2016)",
+                        "ref_id": "BIBREF15"
+                    },
+                    {
+                        "start": 467,
+                        "end": 485,
+                        "text": "Chen et al. (2016)",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 686,
+                        "end": 709,
+                        "text": "Nallapati et al. (2016)",
+                        "ref_id": "BIBREF31"
+                    },
+                    {
+                        "start": 893,
+                        "end": 916,
+                        "text": "Miao and Blunsom (2016)",
+                        "ref_id": "BIBREF28"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Works",
+                "sec_num": "2"
+            },
+            {
+                "text": "Some research works employ topic models to capture the latent information from source documents or sentences. Wang et al. (2009) proposed a new Bayesian sentence-based topic model by making use of both the term-document and termsentence associations to improve the performance of sentence selection. Celikyilmaz and Hakkani-Tur (2010) estimated scores for sentences based on their latent characteristics using a hierarchical topic model, and trained a regression model to extract sentences. However, they only use the latent topic information to conduct the sentence salience estimation for extractive summarization. In contrast, our purpose is to model and learn the latent structure information from the target summaries and use it to enhance the performance of abstractive summarization.",
+                "cite_spans": [
+                    {
+                        "start": 110,
+                        "end": 128,
+                        "text": "Wang et al. (2009)",
+                        "ref_id": "BIBREF39"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Works",
+                "sec_num": "2"
+            },
+            {
+                "text": "3 Framework Description",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Works",
+                "sec_num": "2"
+            },
+            {
+                "text": "As shown in Figure 2 , the basic framework of our approach is a neural network based encoderdecoder framework for sequence-to-sequence learning. The input is a variable-length sequence X = {x 1 , x 2 , . . . , x m } representing the source text. The word embedding x t is initialized randomly and learned during the optimization process. The output is also a sequence Y = {y 1 , y 2 , . . . , y n }, which represents the generated abstractive summaries. Gated Recurrent Unit (GRU) (Cho et al., 2014) is employed as the basic sequence modeling component for the encoder and the decoder. For latent structure modeling, we add historical dependencies on the latent variables of Variational Auto-Encoders (VAEs) and propose a deep recurrent generative decoder (DRGD) to distill the complex latent structures implied in the target summaries of the training data. Finally, the abstractive summaries will be decoded out based on both the discriminative deterministic variables H and the generative latent structural information Z.",
+                "cite_spans": [
+                    {
+                        "start": 481,
+                        "end": 499,
+                        "text": "(Cho et al., 2014)",
+                        "ref_id": "BIBREF7"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 19,
+                        "end": 20,
+                        "text": "2",
+                        "ref_id": "FIGREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Overview",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "Assume that we have obtained the source text representation h e \u2208 R k h . The purpose of the decoder is to translate this source code h e into a series of hidden states {h d 1 , h d 2 , . . . , h d n }, and then revert these hidden states to an actual word sequence and generate the summary.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Recurrent Generative Decoder",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "For standard recurrent decoders, at each time step t, the hidden state h d t \u2208 R k h is calculated using the dependent input symbol y t-1 \u2208 R kw and the previous hidden state h d t-1 :",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Recurrent Generative Decoder",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "h d t = f (y t-1 , h d t-1 )",
+                        "eq_num": "(1)"
+                    }
+                ],
+                "section": "Recurrent Generative Decoder",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "where f (\u2022) is a recurrent neural network such as vanilla RNN, Long Short-Term Memory (LSTM) (Hochreiter and Schmidhuber, 1997) , and Gated Recurrent Unit (GRU) (Cho et al., 2014) . No matter which one we use for f (\u2022), the common transformation operation is as follows:",
+                "cite_spans": [
+                    {
+                        "start": 93,
+                        "end": 127,
+                        "text": "(Hochreiter and Schmidhuber, 1997)",
+                        "ref_id": "BIBREF16"
+                    },
+                    {
+                        "start": 161,
+                        "end": 179,
+                        "text": "(Cho et al., 2014)",
+                        "ref_id": "BIBREF7"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Recurrent Generative Decoder",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "h d t = g(W d yh y t-1 + W d hh h d t-1 + b d h )",
+                        "eq_num": "(2)"
+                    }
+                ],
+                "section": "Recurrent Generative Decoder",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "where W d yh \u2208 R k h \u00d7kw and W d hh \u2208 R k h \u00d7k h are the linear transformation matrices. b d h is the bias. k h is the dimension of the hidden layers, and k w is the dimension of the word embeddings. g(\u2022) is the non-linear activation function. From Equation 2, we can see that all the transformations are deterministic, which leads to a deterministic recurrent hidden state h d t . From our investigations, we find that the representational power of such deterministic variables are limited. Some more complex latent structures in the target summaries, such as the high-level syntactic features and latent topics, cannot be modeled effectively by the deterministic operations and variables.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Recurrent Generative Decoder",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "Recently, a generative model called Variational Auto-Encoders (VAEs) (Kingma and Welling, 2013; Rezende et al., 2014) shows strong capability in modeling latent random variables and improves the performance of tasks in different fields such as sentence generation (Bowman et al., 2016) and image generation (Gregor et al., 2015) . However, the standard VAEs is not designed for modeling sequence directly. Inspired by (Chung et al., 2015) , we extend the standard VAEs by introducing the historical latent variable dependencies to make it be capable of modeling sequence data. Our proposed latent structure modeling framework can be viewed as a sequence generative model which can be divided into two parts: inference (variational-encoder) and generation (variational-decoder). As shown in the decoder component of Figure 2 , the input of the original VAEs only contains the observed variable y t , and the variational-encoder can map it to a latent variable z \u2208 R kz , which can be used to reconstruct the original input. For the task of summarization, in the sequence decoder component, the previous latent structure information needs to be considered for constructing more effective representations for the generation of the next state.",
+                "cite_spans": [
+                    {
+                        "start": 69,
+                        "end": 95,
+                        "text": "(Kingma and Welling, 2013;",
+                        "ref_id": "BIBREF20"
+                    },
+                    {
+                        "start": 96,
+                        "end": 117,
+                        "text": "Rezende et al., 2014)",
+                        "ref_id": "BIBREF33"
+                    },
+                    {
+                        "start": 264,
+                        "end": 285,
+                        "text": "(Bowman et al., 2016)",
+                        "ref_id": "BIBREF2"
+                    },
+                    {
+                        "start": 307,
+                        "end": 328,
+                        "text": "(Gregor et al., 2015)",
+                        "ref_id": "BIBREF14"
+                    },
+                    {
+                        "start": 418,
+                        "end": 438,
+                        "text": "(Chung et al., 2015)",
+                        "ref_id": "BIBREF9"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 822,
+                        "end": 823,
+                        "text": "2",
+                        "ref_id": "FIGREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Recurrent Generative Decoder",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "For the inference stage, the variational-encoder can map the observed variable y <t and the previous latent structure information z <t to the posterior probability distribution of the latent structure variable p \u03b8 (z t |y <t , z <t ). It is obvious that this is a recurrent inference process in which z t contains the historical dynamic latent structure information. Compared with the variational inference process p \u03b8 (z t |y t ) of the typical VAEs model, the recurrent framework can extract more complex and effective latent structure features implied in the sequence data.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Recurrent Generative Decoder",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "For the generation process, based on the latent structure variable z t , the target word y t at the time step t is drawn from a conditional probability distribution p \u03b8 (y t |z t ). The target is to maximize the probability of each generated summary y = {y 1 , y 2 , . . . , y T } based on the generation process according to:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Recurrent Generative Decoder",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "p \u03b8 (y) = T t=1 p \u03b8 (y t |z t )p \u03b8 (z t )dz t (3)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Recurrent Generative Decoder",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "For the purpose of solving the intractable integral of the marginal likelihood as shown in Equation 3, a recognition model q \u03c6 (z t |y <t , z <t ) is introduced as an approximation to the intractable true posterior p \u03b8 (z t |y <t , z <t ). The recognition model parameters \u03c6 and the generative model parameters \u03b8 can be learned jointly. The aim is to reduce the Kulllback-Leibler divergence (KL) between q \u03c6 (z t |y <t , z <t ) and p \u03b8 (z t |y <t , z <t ):",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Recurrent Generative Decoder",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "D KL [q \u03c6 (z t |y <t , z <t ) p \u03b8 (z t |y <t , z <t )] = z q \u03c6 (z t |y <t , z <t ) log q \u03c6 (z t |y <t , z <t ) p \u03b8 (z t |y <t , z <t ) dz = E q \u03c6 (zt|y<t,z<t) [log q \u03c6 (z t |\u2022) -log p \u03b8 (z t |\u2022)]",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Recurrent Generative Decoder",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "where \u2022 denotes the conditional variables y <t and z <t . Bayes rule is applied to p \u03b8 (z t |y <t , z <t ), and we can extract log p \u03b8 (z) from the expectation, transfer the expectation term E q \u03c6 (zt|y<t,z<t) back to KL-divergence, and rearrange all the terms. Consequently the following holds:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Recurrent Generative Decoder",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "log p \u03b8 (y <t ) = D KL [q \u03c6 (z t |y <t , z <t ) p \u03b8 (z t |y <t , z <t )] + E q \u03c6 (zt|y<t,z<t) [log p \u03b8 (y <t |z t )] -D KL [q \u03c6 (z t |y <t , z <t ) p \u03b8 (z t )]",
+                        "eq_num": "(4)"
+                    }
+                ],
+                "section": "Recurrent Generative Decoder",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "Let L(\u03b8, \u03c6; y) represent the last two terms from the right part of Equation 4:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Recurrent Generative Decoder",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "L(\u03b8, \u03d5; y) = E q \u03c6 (zt|y<t,z<t) T t=1 log p \u03b8 (y t |z t ) -D KL [q \u03c6 (z t |y <t , z <t ) p \u03b8 (z t )]",
+                        "eq_num": "(5)"
+                    }
+                ],
+                "section": "Recurrent Generative Decoder",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "Since the first KL-divergence term of Equation 4is non-negative, we have log p \u03b8 (y <t ) \u2265 L(\u03b8, \u03c6; y) meaning that L(\u03b8, \u03c6; y) is a lower bound (the objective to be maximized) on the marginal likelihood. In order to differentiate and optimize the lower bound L(\u03b8, \u03c6; y), following the core idea of VAEs, we use a neural network framework for the probabilistic encoder q \u03c6 (z t |y <t , z <t ) for better approximation.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Recurrent Generative Decoder",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "We also design a neural network based framework to conduct the variational inference and generation for the recurrent generative decoder component similar to some design in previous works (Kingma and Welling, 2013; Rezende et al., 2014; Gregor et al., 2015) . The encoder component and the decoder component are integrated into a unified abstractive summarization framework. Considering that GRU has comparable performance but with less parameters and more efficient computation, we employ GRU as the basic recurrent model which updates the variables according to the following operations:",
+                "cite_spans": [
+                    {
+                        "start": 188,
+                        "end": 214,
+                        "text": "(Kingma and Welling, 2013;",
+                        "ref_id": "BIBREF20"
+                    },
+                    {
+                        "start": 215,
+                        "end": 236,
+                        "text": "Rezende et al., 2014;",
+                        "ref_id": "BIBREF33"
+                    },
+                    {
+                        "start": 237,
+                        "end": 257,
+                        "text": "Gregor et al., 2015)",
+                        "ref_id": "BIBREF14"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstractive Summary Generation",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "r t = \u03c3(W xr x t + W hr h t-1 + b r ) z t = \u03c3(W xz x t + W hz h t-1 + b z ) g t = tanh(W xh x t + W hh (r t h t-1 ) + b h ) h t = z t h t-1 + (1 -z t ) g t",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstractive Summary Generation",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "where r t is the reset gate, z t is the update gate. denotes the element-wise multiplication. tanh is the hyperbolic tangent activation function.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstractive Summary Generation",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "As shown in the left block of Figure 2 , the encoder is designed based on bidirectional recurrent neural networks. Let x t be the word embedding vector of the t-th word in the source sequence. GRU maps x t and the previous hidden state h t-1 to the current hidden state h t in feed-forward direction and back-forward direction respectively:",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 37,
+                        "end": 38,
+                        "text": "2",
+                        "ref_id": "FIGREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Abstractive Summary Generation",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "h t = GRU (x t , h t-1 ) h t = GRU (x t , h t-1 )",
+                        "eq_num": "(6)"
+                    }
+                ],
+                "section": "Abstractive Summary Generation",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "Then the final hidden state h e t \u2208 R 2k h is concatenated using the hidden states from the two directions: h e t = h t || h. As shown in the middle block of Figure 2 , the decoder consists of two components: discriminative deterministic decoding and generative latent structure modeling.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 165,
+                        "end": 166,
+                        "text": "2",
+                        "ref_id": "FIGREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Abstractive Summary Generation",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "The discriminative deterministic decoding is an improved attention modeling based recurrent sequence decoder. The first hidden state h d 1 is initialized using the average of all the source input states:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstractive Summary Generation",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "h d 1 = 1 T e T e",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstractive Summary Generation",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "t=1 h e t , where h e t is the source input hidden state. T e is the input sequence length.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstractive Summary Generation",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "The deterministic decoder hidden state h d t is calculated using two layers of GRUs. On the first layer, the hidden state is calculated only using the current input word embedding y t-1 and the previous hidden state h d 1 t-1 :",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstractive Summary Generation",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "h d 1 t = GRU 1 (y t-1 , h d 1 t-1 )",
+                        "eq_num": "(7)"
+                    }
+                ],
+                "section": "Abstractive Summary Generation",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "where the superscript d 1 denotes the first decoder GRU layer. Then the attention weights at the time step t are calculated based on the relationship of h d 1 t and all the source hidden states {h e t }. Let a i,j be the attention weight between h d 1 i and h e j , which can be calculated using the following formulation:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstractive Summary Generation",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "a i,j = exp(e i,j",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstractive Summary Generation",
+                "sec_num": "3.3"
+            },
+            {
+                "text": ")",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstractive Summary Generation",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "T e j =1 exp(e i,j ) e i,j = v T tanh(W d hh h d 1 i + W e hh h e j + b a )",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstractive Summary Generation",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "where",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstractive Summary Generation",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "W d hh \u2208 R k h \u00d7k h , W e hh \u2208 R k h \u00d72k h , b a \u2208 R k h , and v \u2208 R k h .",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstractive Summary Generation",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "The attention context is obtained by the weighted linear combination of all the source hidden states:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstractive Summary Generation",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "c t = T e j =1 a t,j h e j (8)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstractive Summary Generation",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "The final deterministic hidden state h d 2 t is the output of the second decoder GRU layer, jointly considering the word y t-1 , the previous hidden state h d 2 t-1 , and the attention context c t :",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstractive Summary Generation",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "h d 2 t = GRU 2 (y t-1 , h d 2 t-1 , c t ) (9)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstractive Summary Generation",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "For the component of recurrent generative model, inspired by some ideas in previous works (Kingma and Welling, 2013; Rezende et al., 2014; Gregor et al., 2015) , we assume that both the prior and posterior of the latent variables are Gaussian, i.e., p \u03b8 (z t ) = N (0, I) and q \u03c6 (z t |y <t , z <t ) = N (z t ; \u00b5, \u03c3 2 I), where \u00b5 and \u03c3 denote the variational mean and standard deviation respectively, which can be calculated via a multilayer perceptron. Precisely, given the word embedding y t-1 , the previous latent structure variable z t-1 , and the previous deterministic hidden state h d t-1 , we first project it to a new hidden space:",
+                "cite_spans": [
+                    {
+                        "start": 90,
+                        "end": 116,
+                        "text": "(Kingma and Welling, 2013;",
+                        "ref_id": "BIBREF20"
+                    },
+                    {
+                        "start": 117,
+                        "end": 138,
+                        "text": "Rezende et al., 2014;",
+                        "ref_id": "BIBREF33"
+                    },
+                    {
+                        "start": 139,
+                        "end": 159,
+                        "text": "Gregor et al., 2015)",
+                        "ref_id": "BIBREF14"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstractive Summary Generation",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "h ez t = g(W ez yh y t-1 +W ez zh z t-1 +W ez hh h d t-1 +b ez h )",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstractive Summary Generation",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "where",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstractive Summary Generation",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "W ez yh \u2208 R k h \u00d7kw , W ez zh \u2208 R k h \u00d7kz , W ez hh \u2208 R k h \u00d7k h , and b ez h \u2208 R k h .",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstractive Summary Generation",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "g is the sigmoid activation function: \u03c3(x) = 1/(1 + e -x ). Then the Gaussian parameters \u00b5 t \u2208 R kz and \u03c3 t \u2208 R kz can be obtained via a linear transformation based on h ez t :",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstractive Summary Generation",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "\u00b5 t = W ez h\u00b5 h ez t + b ez \u00b5 log(\u03c3 2 t ) = W h\u03c3 h ez t + b ez \u03c3 (10)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstractive Summary Generation",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "The latent structure variable z t \u2208 R kz can be calculated using the reparameterization trick:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstractive Summary Generation",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "\u03b5 \u223c N (0, I), z t = \u00b5 t + \u03c3 t \u2297 \u03b5 (11)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstractive Summary Generation",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "where \u03b5 \u2208 R kz is an auxiliary noise variable. The process of inference for finding z t based on neural networks can be teated as a variational encoding process.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstractive Summary Generation",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "To generate summaries precisely, we first integrate the recurrent generative decoding component with the discriminative deterministic decoding component, and map the latent structure variable z t and the deterministic decoding hidden state h d2 t to a new hidden variable:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstractive Summary Generation",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "h dy t = tanh(W dy zh z t + W dz hh h d 2 t + b dy h ) (12)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstractive Summary Generation",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "Given the combined decoding state h dy t at the time t, the probability of generating any target word y t is given as follows:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstractive Summary Generation",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "y t = \u03c2(W d hy h dy t + b d hy ) (",
+                        "eq_num": "13"
+                    }
+                ],
+                "section": "Abstractive Summary Generation",
+                "sec_num": "3.3"
+            },
+            {
+                "text": ")",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstractive Summary Generation",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "where W d hy \u2208 R ky\u00d7k h and b d hy \u2208 R ky . \u03c2(\u2022) is the softmax function. Finally, we use a beam search algorithm (Koehn, 2004) for decoding and generating the best summary.",
+                "cite_spans": [
+                    {
+                        "start": 114,
+                        "end": 127,
+                        "text": "(Koehn, 2004)",
+                        "ref_id": "BIBREF21"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstractive Summary Generation",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "Although the proposed model contains a recurrent generative decoder, the whole framework is fully differentiable. As shown in Section 3.3, both the recurrent deterministic decoder and the recurrent generative decoder are designed based on neural networks. Therefore, all the parameters in our model can be optimized in an end-to-end paradigm using back-propagation. We use {X} N and {Y } N to denote the training source and target sequence. Generally, the objective of our framework consists of two terms. One term is the negative loglikelihood of the generated summaries, and the other one is the variational lower bound L(\u03b8, \u03c6; Y ) mentioned in Equation 5. Since the variational lower bound L(\u03b8, \u03c6; Y ) also contains a likelihood term, we can merge it with the likelihood term of summaries. The final objective function, which needs to be minimized, is formulated as follows:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Learning",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "J = 1 N N n=1 T t=1 -log p(y (n) t |y (n) <t , X (n) ) +DKL q \u03c6 (z (n) t |y (n) <t , z (n) <t ) p \u03b8 (z (n) t )",
+                        "eq_num": "(14)"
+                    }
+                ],
+                "section": "Learning",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "4 Experimental Setup",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Learning",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "We train and evaluate our framework on three popular datasets. Gigawords is an English sentence summarization dataset prepared based on Annotated Gigawords1 by extracting the first sentence from articles with the headline to form a sourcesummary pair. We directly download the prepared dataset used in (Rush et al., 2015) . It roughly contains 3.8M training pairs, 190K validation pairs, and 2,000 test pairs. DUC-2004 2 is another English dataset only used for testing in our experiments. It contains 500 documents. Each document contains 4 model summaries written by experts. The length of the summary is limited to 75 bytes.",
+                "cite_spans": [
+                    {
+                        "start": 302,
+                        "end": 321,
+                        "text": "(Rush et al., 2015)",
+                        "ref_id": "BIBREF34"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Datesets",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "LCSTS is a large-scale Chinese short text summarization dataset, consisting of pairs of (short text, summary) collected from Sina Weibo3 (Hu et al., 2015) . We take Part-I as the training set, Part-II as the development set, and Part-III as the test set.",
+                "cite_spans": [
+                    {
+                        "start": 137,
+                        "end": 154,
+                        "text": "(Hu et al., 2015)",
+                        "ref_id": "BIBREF17"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Datesets",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "There is a score in range 1 \u223c 5 labeled by human to indicate how relevant an article and its summary is. We only reserve those pairs with scores no less than 3. The size of the three sets are 2.4M, 8.7k, and 725 respectively. In our experiments, we only take Chinese character sequence as input, without performing word segmentation.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Datesets",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "We use ROUGE score (Lin, 2004) as our evaluation metric with standard options. The basic idea of ROUGE is to count the number of overlapping units between generated summaries and the reference summaries, such as overlapped n-grams, word sequences, and word pairs. F-measures of ROUGE-1 (R-1), ROUGE-2 (R-2), ROUGE-L (R-L) and ROUGE-SU4 (R-SU4) are reported.",
+                "cite_spans": [
+                    {
+                        "start": 19,
+                        "end": 30,
+                        "text": "(Lin, 2004)",
+                        "ref_id": "BIBREF25"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Evaluation Metrics",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "We compare our model with some baselines and state-of-the-art methods. Because the datasets are quite standard, so we just extract the results from their papers. Therefore the baseline methods on different datasets may be slightly different.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Comparative Methods",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "\u2022 TOPIARY (Zajic et al., 2004) is the best on DUC2004 Task-1 for compressive text summarization. It combines a system using linguistic based transformations and an unsupervised topic detection algorithm for compressive text summarization.",
+                "cite_spans": [
+                    {
+                        "start": 10,
+                        "end": 30,
+                        "text": "(Zajic et al., 2004)",
+                        "ref_id": "BIBREF41"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Comparative Methods",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "\u2022 MOSES+ (Rush et al., 2015) uses a phrasebased statistical machine translation system trained on Gigaword to produce summaries. It also augments the phrase table with \"deletion\" rulesto improve the baseline performance, and MERT is also used to improve the quality of generated summaries.",
+                "cite_spans": [
+                    {
+                        "start": 9,
+                        "end": 28,
+                        "text": "(Rush et al., 2015)",
+                        "ref_id": "BIBREF34"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Comparative Methods",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "\u2022 ABS and ABS+ (Rush et al., 2015) are both the neural network based models with local attention modeling for abstractive sentence summarization. ABS+ is trained on the Gigaword corpus, but combined with an additional log-linear extractive summarization model with handcrafted features.",
+                "cite_spans": [
+                    {
+                        "start": 15,
+                        "end": 34,
+                        "text": "(Rush et al., 2015)",
+                        "ref_id": "BIBREF34"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Comparative Methods",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "\u2022 RNN and RNN-context (Hu et al., 2015) are two seq2seq architectures. RNN-context integrates attention mechanism to model the context.",
+                "cite_spans": [
+                    {
+                        "start": 22,
+                        "end": 39,
+                        "text": "(Hu et al., 2015)",
+                        "ref_id": "BIBREF17"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Comparative Methods",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "\u2022 CopyNet (Gu et al., 2016) integrates a copying mechanism into the sequence-tosequence framework.",
+                "cite_spans": [
+                    {
+                        "start": 10,
+                        "end": 27,
+                        "text": "(Gu et al., 2016)",
+                        "ref_id": "BIBREF15"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Comparative Methods",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "\u2022 RNN-distract (Chen et al., 2016) uses a new attention mechanism by distracting the historical attention in the decoding steps.",
+                "cite_spans": [
+                    {
+                        "start": 15,
+                        "end": 34,
+                        "text": "(Chen et al., 2016)",
+                        "ref_id": "BIBREF5"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Comparative Methods",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "\u2022 RAS-LSTM and RAS-Elman (Chopra et al., 2016) both consider words and word positions as input and use convolutional encoders to handle the source information. For the attention based sequence decoding process, RAS-Elman selects Elman RNN (Elman, 1990) as decoder, and RAS-LSTM selects Long Short-Term Memory architecture (Hochreiter and Schmidhuber, 1997) .",
+                "cite_spans": [
+                    {
+                        "start": 25,
+                        "end": 46,
+                        "text": "(Chopra et al., 2016)",
+                        "ref_id": "BIBREF8"
+                    },
+                    {
+                        "start": 239,
+                        "end": 252,
+                        "text": "(Elman, 1990)",
+                        "ref_id": "BIBREF11"
+                    },
+                    {
+                        "start": 322,
+                        "end": 356,
+                        "text": "(Hochreiter and Schmidhuber, 1997)",
+                        "ref_id": "BIBREF16"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Comparative Methods",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "\u2022 LenEmb (Kikuchi et al., 2016) uses a mechanism to control the summary length by considering the length embedding vector as the input.",
+                "cite_spans": [
+                    {
+                        "start": 9,
+                        "end": 31,
+                        "text": "(Kikuchi et al., 2016)",
+                        "ref_id": "BIBREF19"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Comparative Methods",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "\u2022 ASC+FSC 1 (Miao and Blunsom, 2016 ) uses a generative model with attention mechanism to conduct the sentence compression problem. The model first draws a latent summary sentence from a background language model, and then subsequently draws the observed sentence conditioned on this latent summary.",
+                "cite_spans": [
+                    {
+                        "start": 12,
+                        "end": 35,
+                        "text": "(Miao and Blunsom, 2016",
+                        "ref_id": "BIBREF28"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Comparative Methods",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "\u2022 lvt2k-1sent and lvt5k-1sent (Nallapati et al., 2016) utilize a trick to control the vocabulary size to improve the training efficiency.",
+                "cite_spans": [
+                    {
+                        "start": 30,
+                        "end": 54,
+                        "text": "(Nallapati et al., 2016)",
+                        "ref_id": "BIBREF31"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Comparative Methods",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "For the experiments on the English dataset Gigawords, we set the dimension of word embeddings to 300, and the dimension of hidden states and latent variables to 500. The maximum length of documents and summaries is 100 and 50 respectively. The batch size of mini-batch training is 256. For DUC-2004, the maximum length of summaries is 75 bytes. For the dataset of LCSTS, the dimension of word embeddings is 350. We also set the dimension of hidden states and latent variables to 500. The maximum length of documents and summaries is 120 and 25 respectively, and the batch size is also 256. The beam size of the decoder was set to be 10. Adadelta (Schmidhuber, 2015) with hyperparameter \u03c1 = 0.95 and = 1e -6 is used for gradient based optimization. Our neural network based framework is implemented using Theano (Theano Development Team, 2016). We first depict the performance of our model DRGD by comparing to the standard decoders (StanD) of our own implementation. The comparison results on the validation datasets of Gigawords and LCSTS are shown in Table 1 . From the results we can see that our proposed generative decoders DRGD can obtain obvious improvements on abstractive summarization than the standard decoders. Actually, the performance of the standard The results on the English datasets of Gigawords and DUC-2004 are shown in Table 2 and Table 3 respectively. Our model DRGD achieves the best summarization performance on all the ROUGE metrics. Although ASC+FSC 1 also uses a generative method to model the latent summary variables, the representation ability is limited and it cannot bring in noticeable improvements. It is worth noting that the methods lvt2k-1sent and lvt5k-1sent (Nallapati et al., 2016) utilize linguistic features such as parts-of-speech tags, namedentity tags, and TF and IDF statistics of the words as part of the document representation. In fact, extracting all such features is a time consuming work, especially on large-scale datasets such as Gigawords. lvt2k and lvt5k are not end-to-end style models and are more complicated than our model in practical applications.",
+                "cite_spans": [
+                    {
+                        "start": 646,
+                        "end": 665,
+                        "text": "(Schmidhuber, 2015)",
+                        "ref_id": "BIBREF35"
+                    },
+                    {
+                        "start": 1697,
+                        "end": 1721,
+                        "text": "(Nallapati et al., 2016)",
+                        "ref_id": "BIBREF31"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 1059,
+                        "end": 1060,
+                        "text": "1",
+                        "ref_id": "TABREF0"
+                    },
+                    {
+                        "start": 1346,
+                        "end": 1347,
+                        "text": "2",
+                        "ref_id": "TABREF1"
+                    },
+                    {
+                        "start": 1358,
+                        "end": 1359,
+                        "text": "3",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Experimental Settings",
+                "sec_num": "4.4"
+            },
+            {
+                "text": "The results on the Chinese dataset LCSTS are shown in Table 4 . Our model DRGD also achieves the best performance. Although CopyNet employs a copying mechanism to improve the summary quality and RNN-distract considers attention information diversity in their decoders, our model is still better than those two methods demonstrating that the latent structure information learned from target summaries indeed plays a role in abstractive summarization. We also believe that integrating the copying mechanism and coverage diversity in our framework will further improve the summarization performance.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 60,
+                        "end": 61,
+                        "text": "4",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "ROUGE Evaluation",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "In order to analyze the reasons of improving the performance, we compare the generated summaries by DRGD and the standard decoders StanD used in some other works such as (Chopra et al., 2016) . The source texts, golden summaries, and the generated summaries are shown in Table 5 . From the cases we can observe that DRGD can indeed capture some latent structures which are consistent with the golden summaries. For example, our result for S(1) \"Wuhan wins men's soccer title at Chinese city games\" matches the \"Who Action What\" structure. However, the standard decoder StanD ignores the latent structures and generates some loose sentences, such as the results for S(1) \"Results of men's volleyball at Chinese city games\" does not catch the main points. The reason is that the recurrent variational auto-encoders used in our framework have better representation ability and can capture more effective and complicated latent structures from the sequence data. Therefore, the summaries generated by DRGD have consistent latent structures with the ground truth, leading to a better ROUGE evaluation.",
+                "cite_spans": [
+                    {
+                        "start": 170,
+                        "end": 191,
+                        "text": "(Chopra et al., 2016)",
+                        "ref_id": "BIBREF8"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 277,
+                        "end": 278,
+                        "text": "5",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Summary Case Analysis",
+                "sec_num": "5.2"
+            },
+            {
+                "text": "We propose a deep recurrent generative decoder (DRGD) to improve the abstractive summarization performance. The model is a sequenceto-sequence oriented encoder-decoder framework equipped with a latent structure modeling component. Abstractive summaries are generated based on both the latent variables and the deterministic states. Extensive experiments on benchmark",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusions",
+                "sec_num": "6"
+            },
+            {
+                "text": "https://catalog.ldc.upenn.edu/ldc2012t21",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "http://duc.nist.gov/duc2004",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "http://www.weibo.com",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            }
+        ],
+        "back_matter": [
+            {
+                "text": "Table 5 : Examples of the generated summaries.S(1): hosts wuhan won the men 's soccer title by beating beijing shunyi #-# here at the #th chinese city games on friday. Golden: hosts wuhan wins men 's soccer title at chinese city games. StanD: results of men 's volleyball at chinese city games. DRGD: wuhan wins men 's soccer title at chinese city games. S(2): UNK and the china meteorological administration tuesday signed an agreement here on long -and short-term cooperation in projects involving meteorological satellites and satellite meteorology. Golden: UNK china to cooperate in meteorology. StanD: weather forecast for major chinese cities. DRGD: china to cooperate in meteorological satellites. S(3): the rand gained ground against the dollar at the opening here wednesday , to #.# to the greenback from #.# at the close tuesday. Golden: rand gains ground. StanD: rand slightly higher against dollar. DRGD: rand gains ground against dollar. S(4): new zealand women are having more children and the country 's birth rate reached its highest level in ## years , statistics new zealand said on wednesday. Golden: new zealand birth rate reaches ##year high. StanD: new zealand women are having more children birth rate hits highest level in ## years. DRGD: new zealand 's birth rate hits ##year high.datasets show that DRGD achieves improvements over the state-of-the-art methods.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 6,
+                        "end": 7,
+                        "text": "5",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "annex",
+                "sec_num": null
+            }
+        ],
+        "bib_entries": {
+            "BIBREF0": {
+                "ref_id": "b0",
+                "title": "Sentence fusion for multidocument news summarization",
+                "authors": [
+                    {
+                        "first": "Regina",
+                        "middle": [],
+                        "last": "Barzilay",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kathleen",
+                        "middle": [
+                            "R"
+                        ],
+                        "last": "Mckeown",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2005,
+                "venue": "Computational Linguistics",
+                "volume": "31",
+                "issue": "3",
+                "pages": "297--328",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Regina Barzilay and Kathleen R McKeown. 2005. Sentence fusion for multidocument news summa- rization. Computational Linguistics, 31(3):297- 328.",
+                "links": null
+            },
+            "BIBREF1": {
+                "ref_id": "b1",
+                "title": "Abstractive multidocument summarization via phrase selection and merging",
+                "authors": [
+                    {
+                        "first": "Lidong",
+                        "middle": [],
+                        "last": "Bing",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Piji",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yi",
+                        "middle": [],
+                        "last": "Liao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Wai",
+                        "middle": [],
+                        "last": "Lam",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Weiwei",
+                        "middle": [],
+                        "last": "Guo",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Rebecca",
+                        "middle": [],
+                        "last": "Passonneau",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "1587--1597",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Lidong Bing, Piji Li, Yi Liao, Wai Lam, Weiwei Guo, and Rebecca Passonneau. 2015. Abstractive multi- document summarization via phrase selection and merging. In ACL, pages 1587-1597.",
+                "links": null
+            },
+            "BIBREF2": {
+                "ref_id": "b2",
+                "title": "Generating sentences from a continuous space",
+                "authors": [
+                    {
+                        "first": "Luke",
+                        "middle": [],
+                        "last": "Samuel R Bowman",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Oriol",
+                        "middle": [],
+                        "last": "Vilnis",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Andrew",
+                        "middle": [
+                            "M"
+                        ],
+                        "last": "Vinyals",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Rafal",
+                        "middle": [],
+                        "last": "Dai",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Samy",
+                        "middle": [],
+                        "last": "Jozefowicz",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Bengio",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "CoNLL",
+                "volume": "",
+                "issue": "",
+                "pages": "10--21",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Samuel R Bowman, Luke Vilnis, Oriol Vinyals, An- drew M Dai, Rafal Jozefowicz, and Samy Ben- gio. 2016. Generating sentences from a continuous space. CoNLL, pages 10-21.",
+                "links": null
+            },
+            "BIBREF3": {
+                "ref_id": "b3",
+                "title": "Attsum: Joint learning of focusing and summarization with neural attention",
+                "authors": [
+                    {
+                        "first": "Ziqiang",
+                        "middle": [],
+                        "last": "Cao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Wenjie",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sujian",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Furu",
+                        "middle": [],
+                        "last": "Wei",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yanran",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "COLING",
+                "volume": "",
+                "issue": "",
+                "pages": "547--556",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ziqiang Cao, Wenjie Li, Sujian Li, Furu Wei, and Yan- ran Li. 2016. Attsum: Joint learning of focusing and summarization with neural attention. COLING, pages 547-556.",
+                "links": null
+            },
+            "BIBREF4": {
+                "ref_id": "b4",
+                "title": "A hybrid hierarchical model for multi-document summarization",
+                "authors": [
+                    {
+                        "first": "Asli",
+                        "middle": [],
+                        "last": "Celikyilmaz",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dilek",
+                        "middle": [],
+                        "last": "Hakkani-Tur",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2010,
+                "venue": "ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "815--824",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Asli Celikyilmaz and Dilek Hakkani-Tur. 2010. A hy- brid hierarchical model for multi-document summa- rization. In ACL, pages 815-824.",
+                "links": null
+            },
+            "BIBREF5": {
+                "ref_id": "b5",
+                "title": "Distraction-based neural networks for document summarization",
+                "authors": [
+                    {
+                        "first": "Qian",
+                        "middle": [],
+                        "last": "Chen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xiaodan",
+                        "middle": [],
+                        "last": "Zhu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zhenhua",
+                        "middle": [],
+                        "last": "Ling",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Si",
+                        "middle": [],
+                        "last": "Wei",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hui",
+                        "middle": [],
+                        "last": "Jiang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "IJCAI",
+                "volume": "",
+                "issue": "",
+                "pages": "2754--2760",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Qian Chen, Xiaodan Zhu, Zhenhua Ling, Si Wei, and Hui Jiang. 2016. Distraction-based neural net- works for document summarization. In IJCAI, pages 2754-2760.",
+                "links": null
+            },
+            "BIBREF6": {
+                "ref_id": "b6",
+                "title": "Neural summarization by extracting sentences and words",
+                "authors": [
+                    {
+                        "first": "Jianpeng",
+                        "middle": [],
+                        "last": "Cheng",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mirella",
+                        "middle": [],
+                        "last": "Lapata",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "484--494",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jianpeng Cheng and Mirella Lapata. 2016. Neural summarization by extracting sentences and words. In ACL, pages 484-494.",
+                "links": null
+            },
+            "BIBREF7": {
+                "ref_id": "b7",
+                "title": "Learning phrase representations using rnn encoder-decoder for statistical machine translation",
+                "authors": [
+                    {
+                        "first": "Kyunghyun",
+                        "middle": [],
+                        "last": "Cho",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Bart",
+                        "middle": [],
+                        "last": "Van Merri\u00ebnboer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Caglar",
+                        "middle": [],
+                        "last": "Gulcehre",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dzmitry",
+                        "middle": [],
+                        "last": "Bahdanau",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Fethi",
+                        "middle": [],
+                        "last": "Bougares",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Holger",
+                        "middle": [],
+                        "last": "Schwenk",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yoshua",
+                        "middle": [],
+                        "last": "Bengio",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "EMNLP",
+                "volume": "",
+                "issue": "",
+                "pages": "1724--1734",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Kyunghyun Cho, Bart Van Merri\u00ebnboer, Caglar Gul- cehre, Dzmitry Bahdanau, Fethi Bougares, Holger Schwenk, and Yoshua Bengio. 2014. Learning phrase representations using rnn encoder-decoder for statistical machine translation. In EMNLP, pages 1724-1734.",
+                "links": null
+            },
+            "BIBREF8": {
+                "ref_id": "b8",
+                "title": "Abstractive sentence summarization with attentive recurrent neural networks",
+                "authors": [
+                    {
+                        "first": "Sumit",
+                        "middle": [],
+                        "last": "Chopra",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Michael",
+                        "middle": [],
+                        "last": "Auli",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alexander",
+                        "middle": [
+                            "M"
+                        ],
+                        "last": "Rush",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Harvard",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "NAACL-HLT",
+                "volume": "",
+                "issue": "",
+                "pages": "93--98",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Sumit Chopra, Michael Auli, Alexander M Rush, and SEAS Harvard. 2016. Abstractive sentence sum- marization with attentive recurrent neural networks. NAACL-HLT, pages 93-98.",
+                "links": null
+            },
+            "BIBREF9": {
+                "ref_id": "b9",
+                "title": "A recurrent latent variable model for sequential data",
+                "authors": [
+                    {
+                        "first": "Junyoung",
+                        "middle": [],
+                        "last": "Chung",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kyle",
+                        "middle": [],
+                        "last": "Kastner",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Laurent",
+                        "middle": [],
+                        "last": "Dinh",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kratarth",
+                        "middle": [],
+                        "last": "Goel",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Aaron",
+                        "middle": [
+                            "C"
+                        ],
+                        "last": "Courville",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yoshua",
+                        "middle": [],
+                        "last": "Bengio",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "NIPS",
+                "volume": "",
+                "issue": "",
+                "pages": "2980--2988",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Junyoung Chung, Kyle Kastner, Laurent Dinh, Kratarth Goel, Aaron C Courville, and Yoshua Bengio. 2015. A recurrent latent variable model for sequential data. In NIPS, pages 2980-2988.",
+                "links": null
+            },
+            "BIBREF10": {
+                "ref_id": "b10",
+                "title": "New methods in automatic extracting",
+                "authors": [
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Harold P Edmundson",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1969,
+                "venue": "Journal of the ACM (JACM)",
+                "volume": "16",
+                "issue": "2",
+                "pages": "264--285",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Harold P Edmundson. 1969. New methods in au- tomatic extracting. Journal of the ACM (JACM), 16(2):264-285.",
+                "links": null
+            },
+            "BIBREF11": {
+                "ref_id": "b11",
+                "title": "Finding structure in time",
+                "authors": [
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Jeffrey L Elman",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1990,
+                "venue": "Cognitive science",
+                "volume": "14",
+                "issue": "2",
+                "pages": "179--211",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jeffrey L Elman. 1990. Finding structure in time. Cog- nitive science, 14(2):179-211.",
+                "links": null
+            },
+            "BIBREF12": {
+                "ref_id": "b12",
+                "title": "Lexrank: Graph-based lexical centrality as salience in text summarization",
+                "authors": [
+                    {
+                        "first": "G\u00fcnes",
+                        "middle": [],
+                        "last": "Erkan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Dragomir R Radev",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2004,
+                "venue": "Journal of Artificial Intelligence Research",
+                "volume": "22",
+                "issue": "",
+                "pages": "457--479",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "G\u00fcnes Erkan and Dragomir R Radev. 2004. Lexrank: Graph-based lexical centrality as salience in text summarization. Journal of Artificial Intelligence Research, 22:457-479.",
+                "links": null
+            },
+            "BIBREF13": {
+                "ref_id": "b13",
+                "title": "Multi-document summarization by sentence extraction",
+                "authors": [
+                    {
+                        "first": "Jade",
+                        "middle": [],
+                        "last": "Goldstein",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Vibhu",
+                        "middle": [],
+                        "last": "Mittal",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jaime",
+                        "middle": [],
+                        "last": "Carbonell",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mark",
+                        "middle": [],
+                        "last": "Kantrowitz",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2000,
+                "venue": "NAACL-ANLPWorkshop",
+                "volume": "",
+                "issue": "",
+                "pages": "40--48",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jade Goldstein, Vibhu Mittal, Jaime Carbonell, and Mark Kantrowitz. 2000. Multi-document sum- marization by sentence extraction. In NAACL- ANLPWorkshop, pages 40-48.",
+                "links": null
+            },
+            "BIBREF14": {
+                "ref_id": "b14",
+                "title": "Draw: A recurrent neural network for image generation",
+                "authors": [
+                    {
+                        "first": "Karol",
+                        "middle": [],
+                        "last": "Gregor",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ivo",
+                        "middle": [],
+                        "last": "Danihelka",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "ICML",
+                "volume": "",
+                "issue": "",
+                "pages": "1462--1471",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Karol Gregor, Ivo Danihelka, Alex Graves, Danilo Rezende, and Daan Wierstra. 2015. Draw: A recur- rent neural network for image generation. In ICML, pages 1462-1471.",
+                "links": null
+            },
+            "BIBREF15": {
+                "ref_id": "b15",
+                "title": "Incorporating copying mechanism in sequence-to-sequence learning",
+                "authors": [
+                    {
+                        "first": "Jiatao",
+                        "middle": [],
+                        "last": "Gu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zhengdong",
+                        "middle": [],
+                        "last": "Lu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hang",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "O",
+                        "middle": [
+                            "K"
+                        ],
+                        "last": "Victor",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "1631--1640",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jiatao Gu, Zhengdong Lu, Hang Li, and Victor OK Li. 2016. Incorporating copying mechanism in sequence-to-sequence learning. In ACL, pages 1631-1640.",
+                "links": null
+            },
+            "BIBREF16": {
+                "ref_id": "b16",
+                "title": "Long short-term memory",
+                "authors": [
+                    {
+                        "first": "Sepp",
+                        "middle": [],
+                        "last": "Hochreiter",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "J\u00fcrgen",
+                        "middle": [],
+                        "last": "Schmidhuber",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1997,
+                "venue": "Neural computation",
+                "volume": "9",
+                "issue": "8",
+                "pages": "1735--1780",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Sepp Hochreiter and J\u00fcrgen Schmidhuber. 1997. Long short-term memory. Neural computation, 9(8):1735-1780.",
+                "links": null
+            },
+            "BIBREF17": {
+                "ref_id": "b17",
+                "title": "Lcsts: A large scale chinese short text summarization dataset",
+                "authors": [
+                    {
+                        "first": "Baotian",
+                        "middle": [],
+                        "last": "Hu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Qingcai",
+                        "middle": [],
+                        "last": "Chen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Fangze",
+                        "middle": [],
+                        "last": "Zhu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "EMNLP",
+                "volume": "",
+                "issue": "",
+                "pages": "1962--1972",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Baotian Hu, Qingcai Chen, and Fangze Zhu. 2015. Lc- sts: A large scale chinese short text summarization dataset. In EMNLP, pages 1962-1972.",
+                "links": null
+            },
+            "BIBREF18": {
+                "ref_id": "b18",
+                "title": "Cut and paste based text summarization",
+                "authors": [
+                    {
+                        "first": "Hongyan",
+                        "middle": [],
+                        "last": "Jing",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kathleen",
+                        "middle": [
+                            "R"
+                        ],
+                        "last": "Mckeown",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2000,
+                "venue": "NAACL",
+                "volume": "",
+                "issue": "",
+                "pages": "178--185",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Hongyan Jing and Kathleen R McKeown. 2000. Cut and paste based text summarization. In NAACL, pages 178-185.",
+                "links": null
+            },
+            "BIBREF19": {
+                "ref_id": "b19",
+                "title": "Controlling output length in neural encoder-decoders",
+                "authors": [
+                    {
+                        "first": "Yuta",
+                        "middle": [],
+                        "last": "Kikuchi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Graham",
+                        "middle": [],
+                        "last": "Neubig",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ryohei",
+                        "middle": [],
+                        "last": "Sasano",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hiroya",
+                        "middle": [],
+                        "last": "Takamura",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Manabu",
+                        "middle": [],
+                        "last": "Okumura",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "EMNLP",
+                "volume": "",
+                "issue": "",
+                "pages": "1328--1338",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Yuta Kikuchi, Graham Neubig, Ryohei Sasano, Hiroya Takamura, and Manabu Okumura. 2016. Control- ling output length in neural encoder-decoders. In EMNLP, pages 1328-1338.",
+                "links": null
+            },
+            "BIBREF20": {
+                "ref_id": "b20",
+                "title": "Autoencoding variational bayes",
+                "authors": [
+                    {
+                        "first": "P",
+                        "middle": [],
+                        "last": "Diederik",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Max",
+                        "middle": [],
+                        "last": "Kingma",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Welling",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1312.6114"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Diederik P Kingma and Max Welling. 2013. Auto- encoding variational bayes. arXiv preprint arXiv:1312.6114.",
+                "links": null
+            },
+            "BIBREF21": {
+                "ref_id": "b21",
+                "title": "Pharaoh: a beam search decoder for phrase-based statistical machine translation models",
+                "authors": [
+                    {
+                        "first": "Philipp",
+                        "middle": [],
+                        "last": "Koehn",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2004,
+                "venue": "Conference of the Association for Machine Translation in the Americas",
+                "volume": "",
+                "issue": "",
+                "pages": "115--124",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Philipp Koehn. 2004. Pharaoh: a beam search de- coder for phrase-based statistical machine transla- tion models. In Conference of the Association for Machine Translation in the Americas, pages 115- 124. Springer.",
+                "links": null
+            },
+            "BIBREF22": {
+                "ref_id": "b22",
+                "title": "Document summarization via guided sentence compression",
+                "authors": [
+                    {
+                        "first": "Chen",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Fei",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Fuliang",
+                        "middle": [],
+                        "last": "Weng",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yang",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "EMNLP",
+                "volume": "",
+                "issue": "",
+                "pages": "490--500",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Chen Li, Fei Liu, Fuliang Weng, and Yang Liu. 2013. Document summarization via guided sentence com- pression. In EMNLP, pages 490-500.",
+                "links": null
+            },
+            "BIBREF23": {
+                "ref_id": "b23",
+                "title": "Reader-aware multi-document summarization via sparse coding",
+                "authors": [
+                    {
+                        "first": "Piji",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Lidong",
+                        "middle": [],
+                        "last": "Bing",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Wai",
+                        "middle": [],
+                        "last": "Lam",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hang",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yi",
+                        "middle": [],
+                        "last": "Liao",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "IJCAI",
+                "volume": "",
+                "issue": "",
+                "pages": "1270--1276",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Piji Li, Lidong Bing, Wai Lam, Hang Li, and Yi Liao. 2015. Reader-aware multi-document summariza- tion via sparse coding. In IJCAI, pages 1270-1276.",
+                "links": null
+            },
+            "BIBREF24": {
+                "ref_id": "b24",
+                "title": "Salience estimation via variational auto-encoders for multi-document summarization",
+                "authors": [
+                    {
+                        "first": "Piji",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zihao",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Wai",
+                        "middle": [],
+                        "last": "Lam",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zhaochun",
+                        "middle": [],
+                        "last": "Ren",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Lidong",
+                        "middle": [],
+                        "last": "Bing",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "AAAI",
+                "volume": "",
+                "issue": "",
+                "pages": "3497--3503",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Piji Li, Zihao Wang, Wai Lam, Zhaochun Ren, and Lidong Bing. 2017. Salience estimation via vari- ational auto-encoders for multi-document summa- rization. In AAAI, pages 3497-3503.",
+                "links": null
+            },
+            "BIBREF25": {
+                "ref_id": "b25",
+                "title": "Rouge: A package for automatic evaluation of summaries",
+                "authors": [
+                    {
+                        "first": "Chin-Yew",
+                        "middle": [],
+                        "last": "Lin",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2004,
+                "venue": "Text summarization branches out: Proceedings of the ACL-04 workshop",
+                "volume": "8",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Chin-Yew Lin. 2004. Rouge: A package for auto- matic evaluation of summaries. In Text summariza- tion branches out: Proceedings of the ACL-04 work- shop, volume 8.",
+                "links": null
+            },
+            "BIBREF26": {
+                "ref_id": "b26",
+                "title": "Generating news headlines with recurrent neural networks",
+                "authors": [
+                    {
+                        "first": "Konstantin",
+                        "middle": [],
+                        "last": "Lopyrev",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1512.01712"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Konstantin Lopyrev. 2015. Generating news head- lines with recurrent neural networks. arXiv preprint arXiv:1512.01712.",
+                "links": null
+            },
+            "BIBREF27": {
+                "ref_id": "b27",
+                "title": "The automatic creation of literature abstracts",
+                "authors": [
+                    {
+                        "first": "Hans",
+                        "middle": [],
+                        "last": "Peter",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Luhn",
+                        "middle": [],
+                        "last": "",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1958,
+                "venue": "IBM Journal of research and development",
+                "volume": "2",
+                "issue": "2",
+                "pages": "159--165",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Hans Peter Luhn. 1958. The automatic creation of lit- erature abstracts. IBM Journal of research and de- velopment, 2(2):159-165.",
+                "links": null
+            },
+            "BIBREF28": {
+                "ref_id": "b28",
+                "title": "Language as a latent variable: Discrete generative models for sentence compression",
+                "authors": [
+                    {
+                        "first": "Yishu",
+                        "middle": [],
+                        "last": "Miao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Phil",
+                        "middle": [],
+                        "last": "Blunsom",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "EMNLP",
+                "volume": "",
+                "issue": "",
+                "pages": "319--328",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Yishu Miao and Phil Blunsom. 2016. Language as a latent variable: Discrete generative models for sen- tence compression. In EMNLP, pages 319-328.",
+                "links": null
+            },
+            "BIBREF29": {
+                "ref_id": "b29",
+                "title": "Exploiting category-specific information for multidocument summarization",
+                "authors": [
+                    {
+                        "first": "Ziheng",
+                        "middle": [],
+                        "last": "Lin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Min",
+                        "middle": [],
+                        "last": "",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yen",
+                        "middle": [
+                            "Kan"
+                        ],
+                        "last": "Chew",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Lim",
+                        "middle": [],
+                        "last": "Tan",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2012,
+                "venue": "COLING",
+                "volume": "",
+                "issue": "",
+                "pages": "2903--2108",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ziheng Lin Min, Yen Kan Chew, and Lim Tan. 2012. Exploiting category-specific information for multi- document summarization. COLING, pages 2903- 2108.",
+                "links": null
+            },
+            "BIBREF30": {
+                "ref_id": "b30",
+                "title": "Summarunner: A recurrent neural network based sequence model for extractive summarization of documents",
+                "authors": [
+                    {
+                        "first": "Ramesh",
+                        "middle": [],
+                        "last": "Nallapati",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Feifei",
+                        "middle": [],
+                        "last": "Zhai",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Bowen",
+                        "middle": [],
+                        "last": "Zhou",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "AAAI",
+                "volume": "",
+                "issue": "",
+                "pages": "3075--3081",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ramesh Nallapati, Feifei Zhai, and Bowen Zhou. 2017. Summarunner: A recurrent neural network based se- quence model for extractive summarization of docu- ments. In AAAI, pages 3075-3081.",
+                "links": null
+            },
+            "BIBREF31": {
+                "ref_id": "b31",
+                "title": "Abstractive text summarization using sequence-to-sequence rnns and beyond",
+                "authors": [
+                    {
+                        "first": "Ramesh",
+                        "middle": [],
+                        "last": "Nallapati",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Bowen",
+                        "middle": [],
+                        "last": "Zhou",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Caglar",
+                        "middle": [],
+                        "last": "Gulcehre",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Bing",
+                        "middle": [],
+                        "last": "Xiang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1602.06023"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Ramesh Nallapati, Bowen Zhou, Caglar Gulcehre, Bing Xiang, et al. 2016. Abstractive text summa- rization using sequence-to-sequence rnns and be- yond. arXiv preprint arXiv:1602.06023.",
+                "links": null
+            },
+            "BIBREF32": {
+                "ref_id": "b32",
+                "title": "A survey of text summarization techniques",
+                "authors": [
+                    {
+                        "first": "Ani",
+                        "middle": [],
+                        "last": "Nenkova",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kathleen",
+                        "middle": [],
+                        "last": "Mckeown",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2012,
+                "venue": "Mining Text Data",
+                "volume": "",
+                "issue": "",
+                "pages": "43--76",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ani Nenkova and Kathleen McKeown. 2012. A survey of text summarization techniques. In Mining Text Data, pages 43-76. Springer.",
+                "links": null
+            },
+            "BIBREF33": {
+                "ref_id": "b33",
+                "title": "Stochastic backpropagation and approximate inference in deep generative models",
+                "authors": [
+                    {
+                        "first": "Danilo",
+                        "middle": [],
+                        "last": "Jimenez Rezende",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Shakir",
+                        "middle": [],
+                        "last": "Mohamed",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Daan",
+                        "middle": [],
+                        "last": "Wierstra",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "ICML",
+                "volume": "",
+                "issue": "",
+                "pages": "1278--1286",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Danilo Jimenez Rezende, Shakir Mohamed, and Daan Wierstra. 2014. Stochastic backpropagation and ap- proximate inference in deep generative models. In ICML, pages 1278-1286.",
+                "links": null
+            },
+            "BIBREF34": {
+                "ref_id": "b34",
+                "title": "A neural attention model for abstractive sentence summarization",
+                "authors": [
+                    {
+                        "first": "Sumit",
+                        "middle": [],
+                        "last": "Alexander M Rush",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jason",
+                        "middle": [],
+                        "last": "Chopra",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Weston",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "EMNLP",
+                "volume": "",
+                "issue": "",
+                "pages": "379--389",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Alexander M Rush, Sumit Chopra, and Jason Weston. 2015. A neural attention model for abstractive sen- tence summarization. In EMNLP, pages 379-389.",
+                "links": null
+            },
+            "BIBREF35": {
+                "ref_id": "b35",
+                "title": "Deep learning in neural networks: An overview",
+                "authors": [
+                    {
+                        "first": "J\u00fcrgen",
+                        "middle": [],
+                        "last": "Schmidhuber",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Neural Networks",
+                "volume": "61",
+                "issue": "",
+                "pages": "85--117",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "J\u00fcrgen Schmidhuber. 2015. Deep learning in neural networks: An overview. Neural Networks, 61:85- 117.",
+                "links": null
+            },
+            "BIBREF36": {
+                "ref_id": "b36",
+                "title": "Summarizing answers in non-factoid community question-answering",
+                "authors": [
+                    {
+                        "first": "Hongya",
+                        "middle": [],
+                        "last": "Song",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zhaochun",
+                        "middle": [],
+                        "last": "Ren",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Piji",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Shangsong",
+                        "middle": [],
+                        "last": "Liang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jun",
+                        "middle": [],
+                        "last": "Ma",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Maarten",
+                        "middle": [],
+                        "last": "De Rijke",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "WSDM",
+                "volume": "",
+                "issue": "",
+                "pages": "405--414",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Hongya Song, Zhaochun Ren, Piji Li, Shangsong Liang, Jun Ma, and Maarten de Rijke. 2017. Summarizing answers in non-factoid community question-answering. In WSDM, pages 405-414.",
+                "links": null
+            },
+            "BIBREF37": {
+                "ref_id": "b37",
+                "title": "Theano: A Python framework for fast computation of mathematical expressions",
+                "authors": [],
+                "year": 2016,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Theano Development Team. 2016. Theano: A Python framework for fast computation of mathematical ex- pressions. arXiv e-prints, abs/1605.02688.",
+                "links": null
+            },
+            "BIBREF38": {
+                "ref_id": "b38",
+                "title": "Manifold-ranking based topic-focused multidocument summarization",
+                "authors": [
+                    {
+                        "first": "Xiaojun",
+                        "middle": [],
+                        "last": "Wan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jianwu",
+                        "middle": [],
+                        "last": "Yang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jianguo",
+                        "middle": [],
+                        "last": "Xiao",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2007,
+                "venue": "IJCAI",
+                "volume": "7",
+                "issue": "",
+                "pages": "2903--2908",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Xiaojun Wan, Jianwu Yang, and Jianguo Xiao. 2007. Manifold-ranking based topic-focused multi- document summarization. In IJCAI, volume 7, pages 2903-2908.",
+                "links": null
+            },
+            "BIBREF39": {
+                "ref_id": "b39",
+                "title": "Multi-document summarization using sentence-based topic models",
+                "authors": [
+                    {
+                        "first": "Dingding",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Shenghuo",
+                        "middle": [],
+                        "last": "Zhu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tao",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yihong",
+                        "middle": [],
+                        "last": "Gong",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "ACL-IJCNLP",
+                "volume": "",
+                "issue": "",
+                "pages": "297--300",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Dingding Wang, Shenghuo Zhu, Tao Li, and Yihong Gong. 2009. Multi-document summarization us- ing sentence-based topic models. In ACL-IJCNLP, pages 297-300.",
+                "links": null
+            },
+            "BIBREF40": {
+                "ref_id": "b40",
+                "title": "A sentence compression based framework to query-focused multidocument summarization",
+                "authors": [
+                    {
+                        "first": "Lu",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hema",
+                        "middle": [],
+                        "last": "Raghavan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Vittorio",
+                        "middle": [],
+                        "last": "Castelli",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Radu",
+                        "middle": [],
+                        "last": "Florian",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Claire",
+                        "middle": [],
+                        "last": "Cardie",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "1384--1394",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Lu Wang, Hema Raghavan, Vittorio Castelli, Radu Flo- rian, and Claire Cardie. 2013. A sentence com- pression based framework to query-focused multi- document summarization. In ACL, pages 1384- 1394.",
+                "links": null
+            },
+            "BIBREF41": {
+                "ref_id": "b41",
+                "title": "Bbn/umd at duc-2004: Topiary",
+                "authors": [
+                    {
+                        "first": "David",
+                        "middle": [],
+                        "last": "Zajic",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Bonnie",
+                        "middle": [],
+                        "last": "Dorr",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Richard",
+                        "middle": [],
+                        "last": "Schwartz",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2004,
+                "venue": "HLT-NAACL",
+                "volume": "",
+                "issue": "",
+                "pages": "112--119",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "David Zajic, Bonnie Dorr, and Richard Schwartz. 2004. Bbn/umd at duc-2004: Topiary. In HLT-NAACL, pages 112-119.",
+                "links": null
+            }
+        },
+        "ref_entries": {
+            "FIGREF0": {
+                "num": null,
+                "text": "Figure 1: Headlines of the top stories from the channel \"Technology\" of CNN.",
+                "uris": null,
+                "fig_num": "1",
+                "type_str": "figure"
+            },
+            "FIGREF1": {
+                "num": null,
+                "text": "Figure 2: Our deep recurrent generative decoder (DRGD) for latent structure modeling.",
+                "uris": null,
+                "fig_num": "2",
+                "type_str": "figure"
+            },
+            "TABREF0": {
+                "content": "<table><tr><td colspan=\"2\">Dataset System R-1</td><td>R-2</td><td>R-L</td></tr><tr><td>GIGA</td><td colspan=\"3\">StanD 32.69 15.29 30.60</td></tr><tr><td/><td colspan=\"3\">DRGD 36.25 17.61 33.55</td></tr><tr><td>LCSTS</td><td colspan=\"3\">StanD 33.88 21.49 31.05</td></tr><tr><td/><td colspan=\"3\">DRGD 36.71 24.00 34.10</td></tr></table>",
+                "type_str": "table",
+                "text": "ROUGE-F1 on validation sets",
+                "html": null,
+                "num": null
+            },
+            "TABREF1": {
+                "content": "<table><tr><td>System</td><td>R-1</td><td>R-2</td><td>R-L</td></tr><tr><td>ABS</td><td colspan=\"3\">29.55 11.32 26.42</td></tr><tr><td>ABS+</td><td colspan=\"3\">29.78 11.89 26.97</td></tr><tr><td>RAS-LSTM</td><td colspan=\"3\">32.55 14.70 30.03</td></tr><tr><td>RAS-Elman</td><td colspan=\"3\">33.78 15.97 31.15</td></tr><tr><td>ASC + FSC 1</td><td colspan=\"3\">34.17 15.94 31.92</td></tr><tr><td>lvt2k-1sent</td><td colspan=\"3\">32.67 15.59 30.64</td></tr><tr><td>lvt5k-1sent</td><td colspan=\"3\">35.30 16.64 32.62</td></tr><tr><td>DRGD</td><td colspan=\"3\">36.27 17.57 33.62</td></tr><tr><td colspan=\"4\">Table 3: ROUGE-Recall on DUC2004</td></tr><tr><td>System</td><td>R-1</td><td>R-2</td><td>R-L</td></tr><tr><td>TOPIARY</td><td colspan=\"3\">25.12 6.46 20.12</td></tr><tr><td>MOSES+</td><td colspan=\"3\">26.50 8.13 22.85</td></tr><tr><td>ABS</td><td colspan=\"3\">26.55 7.06 22.05</td></tr><tr><td>ABS+</td><td colspan=\"3\">28.18 8.49 23.81</td></tr><tr><td>RAS-Elman</td><td colspan=\"3\">28.97 8.26 24.06</td></tr><tr><td>RAS-LSTM</td><td colspan=\"3\">27.41 7.69 23.06</td></tr><tr><td>LenEmb</td><td colspan=\"3\">26.73 8.39 23.88</td></tr><tr><td>lvt2k-1sen</td><td colspan=\"3\">28.35 9.46 24.59</td></tr><tr><td>lvt5k-1sen</td><td colspan=\"3\">28.61 9.42 25.24</td></tr><tr><td>DRGD</td><td colspan=\"3\">31.79 10.75 27.48</td></tr><tr><td colspan=\"4\">Table 4: ROUGE-F1 on LCSTS</td></tr><tr><td>System</td><td>R-1</td><td>R-2</td><td>R-L</td></tr><tr><td>RNN</td><td colspan=\"3\">21.50 8.90 18.60</td></tr><tr><td>RNN-context</td><td colspan=\"3\">29.90 17.40 27.20</td></tr><tr><td>CopyNet</td><td colspan=\"3\">34.40 21.60 31.30</td></tr><tr><td>RNN-distract</td><td colspan=\"3\">35.20 22.60 32.50</td></tr><tr><td>DRGD</td><td colspan=\"3\">36.99 24.15 34.21</td></tr><tr><td colspan=\"4\">decoders is similar with those mentioned popular</td></tr><tr><td>baseline methods.</td><td/><td/><td/></tr></table>",
+                "type_str": "table",
+                "text": "ROUGE-F1 on Gigawords",
+                "html": null,
+                "num": null
+            }
+        }
+    }
+}

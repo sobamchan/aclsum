@@ -1,0 +1,2180 @@
+{
+    "paper_id": "D14-1082",
+    "header": {
+        "generated_with": "S2ORC 1.0.0",
+        "date_generated": "2023-06-16T12:33:22.587958Z"
+    },
+    "title": "A Fast and Accurate Dependency Parser using Neural Networks",
+    "authors": [
+        {
+            "first": "Danqi",
+            "middle": [],
+            "last": "Chen",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "Stanford University",
+                "location": {}
+            },
+            "email": ""
+        },
+        {
+            "first": "Christopher",
+            "middle": [
+                "D"
+            ],
+            "last": "Manning",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "Stanford University",
+                "location": {}
+            },
+            "email": "manning@stanford.edu"
+        }
+    ],
+    "year": "",
+    "venue": null,
+    "identifiers": {},
+    "abstract": "Almost all current dependency parsers classify based on millions of sparse indicator features. Not only do these features generalize poorly, but the cost of feature computation restricts parsing speed significantly. In this work, we propose a novel way of learning a neural network classifier for use in a greedy, transition-based dependency parser. Because this classifier learns and uses just a small number of dense features, it can work very fast, while achieving an about 2% improvement in unlabeled and labeled attachment scores on both English and Chinese datasets. Concretely, our parser is able to parse more than 1000 sentences per second at 92.2% unlabeled attachment score on the English Penn Treebank.",
+    "pdf_parse": {
+        "paper_id": "D14-1082",
+        "_pdf_hash": "",
+        "abstract": [
+            {
+                "text": "Almost all current dependency parsers classify based on millions of sparse indicator features. Not only do these features generalize poorly, but the cost of feature computation restricts parsing speed significantly. In this work, we propose a novel way of learning a neural network classifier for use in a greedy, transition-based dependency parser. Because this classifier learns and uses just a small number of dense features, it can work very fast, while achieving an about 2% improvement in unlabeled and labeled attachment scores on both English and Chinese datasets. Concretely, our parser is able to parse more than 1000 sentences per second at 92.2% unlabeled attachment score on the English Penn Treebank.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            }
+        ],
+        "body_text": [
+            {
+                "text": "In recent years, enormous parsing success has been achieved by the use of feature-based discriminative dependency parsers (K\u00fcbler et al., 2009) . In particular, for practical applications, the speed of the subclass of transition-based dependency parsers has been very appealing.",
+                "cite_spans": [
+                    {
+                        "start": 122,
+                        "end": 143,
+                        "text": "(K\u00fcbler et al., 2009)",
+                        "ref_id": "BIBREF15"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "However, these parsers are not perfect. First, from a statistical perspective, these parsers suffer from the use of millions of mainly poorly estimated feature weights. While in aggregate both lexicalized features and higher-order interaction term features are very important in improving the performance of these systems, nevertheless, there is insufficient data to correctly weight most such features. For this reason, techniques for introducing higher-support features such as word class features have also been very successful in improving parsing performance (Koo et al., 2008) . Second, almost all existing parsers rely on a manually designed set of feature templates, which require a lot of expertise and are usually incomplete. Third, the use of many feature templates cause a less studied problem: in modern dependency parsers, most of the runtime is consumed not by the core parsing algorithm but in the feature extraction step (He et al., 2013) . For instance, Bohnet (2010) reports that his baseline parser spends 99% of its time doing feature extraction, despite that being done in standard efficient ways.",
+                "cite_spans": [
+                    {
+                        "start": 564,
+                        "end": 582,
+                        "text": "(Koo et al., 2008)",
+                        "ref_id": "BIBREF14"
+                    },
+                    {
+                        "start": 938,
+                        "end": 955,
+                        "text": "(He et al., 2013)",
+                        "ref_id": "BIBREF8"
+                    },
+                    {
+                        "start": 972,
+                        "end": 985,
+                        "text": "Bohnet (2010)",
+                        "ref_id": "BIBREF0"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "In this work, we address all of these problems by using dense features in place of the sparse indicator features. This is inspired by the recent success of distributed word representations in many NLP tasks, e.g., POS tagging (Collobert et al., 2011) , machine translation (Devlin et al., 2014) , and constituency parsing (Socher et al., 2013) . Low-dimensional, dense word embeddings can effectively alleviate sparsity by sharing statistical strength between similar words, and can provide us a good starting point to construct features of words and their interactions.",
+                "cite_spans": [
+                    {
+                        "start": 226,
+                        "end": 250,
+                        "text": "(Collobert et al., 2011)",
+                        "ref_id": "BIBREF1"
+                    },
+                    {
+                        "start": 273,
+                        "end": 294,
+                        "text": "(Devlin et al., 2014)",
+                        "ref_id": "BIBREF4"
+                    },
+                    {
+                        "start": 322,
+                        "end": 343,
+                        "text": "(Socher et al., 2013)",
+                        "ref_id": "BIBREF21"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Nevertheless, there remain challenging problems of how to encode all the available information from the configuration and how to model higher-order features based on the dense representations. In this paper, we train a neural network classifier to make parsing decisions within a transition-based dependency parser. The neural network learns compact dense vector representations of words, part-of-speech (POS) tags, and dependency labels. This results in a fast, compact classifier, which uses only 200 learned dense features while yielding good gains in parsing accuracy and speed on two languages (English and Chinese) and two different dependency representations (CoNLL and Stanford dependencies). The main contributions of this work are: (i) showing the usefulness of dense representations that are learned within the parsing task, (ii) developing a neural network architecture that gives good accuracy and speed, and (iii) introducing a novel acti-vation function for the neural network that better captures higher-order interaction features.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Transition-based dependency parsing aims to predict a transition sequence from an initial configuration to some terminal configuration, which derives a target dependency parse tree, as shown in Figure 1 . In this paper, we examine only greedy parsing, which uses a classifier to predict the correct transition based on features extracted from the configuration. This class of parsers is of great interest because of their efficiency, although they tend to perform slightly worse than the searchbased parsers because of subsequent error propagation. However, our greedy parser can achieve comparable accuracy with a very good speed. 1As the basis of our parser, we employ the arc-standard system (Nivre, 2004) , one of the most popular transition systems. In the arcstandard system, a configuration c = (s, b, A) consists of a stack s, a buffer b, and a set of dependency arcs A. The initial configuration for a sentence w 1 , . . . , w n is s",
+                "cite_spans": [
+                    {
+                        "start": 695,
+                        "end": 708,
+                        "text": "(Nivre, 2004)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 201,
+                        "end": 202,
+                        "text": "1",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Transition-based Dependency Parsing",
+                "sec_num": "2"
+            },
+            {
+                "text": "= [ROOT], b = [w 1 , . . . , w n ], A = \u2205. A configuration c is termi- nal if",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Transition-based Dependency Parsing",
+                "sec_num": "2"
+            },
+            {
+                "text": "the buffer is empty and the stack contains the single node ROOT, and the parse tree is given by A c . Denoting s i (i = 1, 2, . . .) as the i th top element on the stack, and b i (i = 1, 2, . . .) as the i th element on the buffer, the arc-standard system defines three types of transitions:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Transition-based Dependency Parsing",
+                "sec_num": "2"
+            },
+            {
+                "text": "\u2022 LEFT-ARC(l): adds an arc s 1 \u2192 s 2 with label l and removes s 2 from the stack. Precondition: |s| \u2265 2.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Transition-based Dependency Parsing",
+                "sec_num": "2"
+            },
+            {
+                "text": "\u2022 RIGHT-ARC(l): adds an arc s 2 \u2192 s 1 with label l and removes s 1 from the stack. Precondition: |s| \u2265 2.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Transition-based Dependency Parsing",
+                "sec_num": "2"
+            },
+            {
+                "text": "\u2022 SHIFT: moves b 1 from the buffer to the stack. Precondition: |b| \u2265 1.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Transition-based Dependency Parsing",
+                "sec_num": "2"
+            },
+            {
+                "text": "In the labeled version of parsing, there are in total |T | = 2N l + 1 transitions, where N l is number of different arc labels. Figure 1 illustrates an example of one transition sequence from the initial configuration to a terminal one.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 135,
+                        "end": 136,
+                        "text": "1",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Transition-based Dependency Parsing",
+                "sec_num": "2"
+            },
+            {
+                "text": "The essential goal of a greedy parser is to predict a correct transition from ",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Transition-based Dependency Parsing",
+                "sec_num": "2"
+            },
+            {
+                "text": "s 2 .t \u2022 s 1 .t \u2022 b 1 .t; s 2 .t \u2022 s 1 .t \u2022 lc 1 (s 1 ).t; s 2 .t \u2022 s 1 .t \u2022 rc 1 (s 1 ).t; s 2 .t \u2022 s 1 .t \u2022 lc 1 (s 2 ).t; s 2 .t \u2022 s 1 .t \u2022 rc 1 (s 2 ).t; s 2 .t \u2022 s 1 .w \u2022 rc 1 (s 2 ).t; s 2 .t \u2022 s 1 .w \u2022 lc 1 (s 1 ).t; s 2 .t \u2022 s 1 .w \u2022 b 1 .t",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Transition-based Dependency Parsing",
+                "sec_num": "2"
+            },
+            {
+                "text": "Table 1 : The feature templates used for analysis. lc 1 (s i ) and rc 1 (s i ) denote the leftmost and rightmost children of s i , w denotes word, t denotes POS tag.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 6,
+                        "end": 7,
+                        "text": "1",
+                        "ref_id": "TABREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Transition-based Dependency Parsing",
+                "sec_num": "2"
+            },
+            {
+                "text": "given configuration. Information that can be obtained from one configuration includes: (1) all the words and their corresponding POS tags (e.g., has / VBZ); (2) the head of a word and its label (e.g., nsubj, dobj) if applicable; (3) the position of a word on the stack/buffer or whether it has already been removed from the stack.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Transition-based Dependency Parsing",
+                "sec_num": "2"
+            },
+            {
+                "text": "Conventional approaches extract indicator features such as the conjunction of 1 \u223c 3 elements from the stack/buffer using their words, POS tags or arc labels. Table 1 lists a typical set of feature templates chosen from the ones of (Huang et al., 2009; Zhang and Nivre, 2011) .2 These features suffer from the following problems:",
+                "cite_spans": [
+                    {
+                        "start": 231,
+                        "end": 251,
+                        "text": "(Huang et al., 2009;",
+                        "ref_id": "BIBREF11"
+                    },
+                    {
+                        "start": 252,
+                        "end": 274,
+                        "text": "Zhang and Nivre, 2011)",
+                        "ref_id": "BIBREF28"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Transition-based Dependency Parsing",
+                "sec_num": "2"
+            },
+            {
+                "text": "\u2022 Sparsity. The features, especially lexicalized features are highly sparse, and this is a common problem in many NLP tasks. The situation is severe in dependency parsing, because it depends critically on word-to-word interactions and thus the high-order features.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Transition-based Dependency Parsing",
+                "sec_num": "2"
+            },
+            {
+                "text": "To give a better understanding, we perform a feature analysis using the features in So far, we have discussed preliminaries of transition-based dependency parsing and existing problems of sparse indicator features. In the following sections, we will elaborate our neural network model for learning dense features along with experimental evaluations that prove its efficiency.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Transition-based Dependency Parsing",
+                "sec_num": "2"
+            },
+            {
+                "text": "In this section, we first present our neural network model and its main components. Later, we give details of training and speedup of parsing process.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Neural Network Based Parser",
+                "sec_num": "3"
+            },
+            {
+                "text": "Figure 2 describes our neural network architecture. First, as usual word embeddings, we represent each word as a d-dimensional vector e w i \u2208 R d and the full embedding matrix is E w \u2208 R d\u00d7Nw where N w is the dictionary size. Meanwhile, we also map POS tags and arc labels to a ddimensional vector space, where e t i , e l j \u2208 R d are the representations of i th POS tag and j th arc label. Correspondingly, the POS and label embedding matrices are E t \u2208 R d\u00d7Nt and E l \u2208 R d\u00d7N l where N t and N l are the number of distinct POS tags and arc labels.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "We choose a set of elements based on the stack / buffer positions for each type of information (word, POS or label), which might be useful for our predictions. We denote the sets as S w , S t , S l respectively. For example, given the configuration in Figure 2 and S We build a standard neural network with one hidden layer, where the corresponding embeddings of our chosen elements from S w , S t , S l will be added to the input layer. Denoting n w , n t , n l as the number of chosen elements of each type, we add x w = [e w w 1 ; e w w 2 ; . . . e w wn w ] to the input layer, where S w = {w 1 , . . . , w nw }. Similarly, we add the POS tag features x t and arc label features x l to the input layer.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 259,
+                        "end": 260,
+                        "text": "2",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 265,
+                        "end": 266,
+                        "text": "S",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Model",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "t = \u2022 \u2022 \u2022 \u2022 \u2022 \u2022 \u2022 \u2022 \u2022 \u2022 \u2022 \u2022 Input layer: [x w , x t , x l ] Hidden layer: h = (W w 1 x w + W t 1 x t + W l 1 x l + b 1 ) 3 Softmax layer: p = softmax(W 2 h)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "We map the input layer to a hidden layer with d h nodes through a cube activation function:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "h = (W w 1 x w + W t 1 x t + W l 1 x l + b 1 ) 3 where W w 1 \u2208 R d h \u00d7(d\u2022nw) , W t 1 \u2208 R d h \u00d7(d\u2022nt) , W l 1 \u2208 R d h \u00d7(d\u2022n l )",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model",
+                "sec_num": "3.1"
+            },
+            {
+                "text": ", and b 1 \u2208 R d h is the bias. A softmax layer is finally added on the top of the hidden layer for modeling multi-class prob-",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "abilities p = softmax(W 2 h), where W 2 \u2208 R |T |\u00d7d h .",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "To our best knowledge, this is the first attempt to introduce POS tag and arc label embeddings instead of discrete representations.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "POS and label embeddings",
+                "sec_num": null
+            },
+            {
+                "text": "Although the POS tags P = {NN, NNP, NNS, DT, JJ, . . .} (for English) and arc labels L = {amod, tmod, nsubj, csubj, dobj, . . .} (for Stanford Dependencies on English) are relatively small discrete sets, they still exhibit many semantical similarities like words. For example, NN (singular noun) should be closer to NNS (plural noun) than DT (determiner), and amod (adjective modifier) should be closer to num (numeric modifier) than nsubj (nominal subject). We expect these semantic meanings to be effectively captured by the dense representations.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "POS and label embeddings",
+                "sec_num": null
+            },
+            {
+                "text": "As stated above, we introduce a novel activation function: cube g(x) = x 3 in our model instead of the commonly used tanh or sigmoid functions (Figure 3 ).",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 151,
+                        "end": 152,
+                        "text": "3",
+                        "ref_id": "FIGREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Cube activation function",
+                "sec_num": null
+            },
+            {
+                "text": "Intuitively, every hidden unit is computed by a (non-linear) mapping on a weighted sum of input units plus a bias. Using g(x) = x 3 can model the product terms of x i x j x k for any three different elements at the input layer directly:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Cube activation function",
+                "sec_num": null
+            },
+            {
+                "text": "g(w 1 x 1 + . . . + w m x m + b) = i,j,k (w i w j w k )x i x j x k + i,j",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Cube activation function",
+                "sec_num": null
+            },
+            {
+                "text": "b(w i w j )x i x j . . . In our case, x i , x j , x k could come from different dimensions of three embeddings. We believe that this better captures the interaction of three ele-ments, which is a very desired property of dependency parsing.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Cube activation function",
+                "sec_num": null
+            },
+            {
+                "text": "Experimental results also verify the success of the cube activation function empirically (see more comparisons in Section 4). However, the expressive power of this activation function is still open to investigate theoretically.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Cube activation function",
+                "sec_num": null
+            },
+            {
+                "text": "The choice of S w , S t , S l Following (Zhang and Nivre, 2011) , we pick a rich set of elements for our final parser. In detail, S w contains n w = 18 elements: (1) The top 3 words on the stack and buffer:",
+                "cite_spans": [
+                    {
+                        "start": 40,
+                        "end": 63,
+                        "text": "(Zhang and Nivre, 2011)",
+                        "ref_id": "BIBREF28"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Cube activation function",
+                "sec_num": null
+            },
+            {
+                "text": "s 1 , s 2 , s 3 , b 1 , b 2 , b 3 ;",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Cube activation function",
+                "sec_num": null
+            },
+            {
+                "text": "(2) The first and second leftmost / rightmost children of the top two words on the stack:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Cube activation function",
+                "sec_num": null
+            },
+            {
+                "text": "lc 1 (s i ), rc 1 (s i ), lc 2 (s i ), rc 2 (s i ), i = 1, 2. (3)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Cube activation function",
+                "sec_num": null
+            },
+            {
+                "text": "The leftmost of leftmost / rightmost of rightmost children of the top two words on the stack:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Cube activation function",
+                "sec_num": null
+            },
+            {
+                "text": "lc 1 (lc 1 (s i )), rc 1 (rc 1 (s i )), i = 1, 2.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Cube activation function",
+                "sec_num": null
+            },
+            {
+                "text": "We use the corresponding POS tags for S t (n t = 18), and the corresponding arc labels of words excluding those 6 words on the stack/buffer for S l (n l = 12). A good advantage of our parser is that we can add a rich set of elements cheaply, instead of hand-crafting many more indicator features.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Cube activation function",
+                "sec_num": null
+            },
+            {
+                "text": "We first generate training examples {(c i , t i )} m i=1 from the training sentences and their gold parse trees using a \"shortest stack\" oracle which always prefers LEFT-ARC l over SHIFT, where c i is a configuration, t i \u2208 T is the oracle transition.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "The final training objective is to minimize the cross-entropy loss, plus a l 2 -regularization term:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "L(\u03b8) = - i log p t i + \u03bb 2 \u03b8 2",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "where \u03b8 is the set of all parameters",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "{W w 1 , W t 1 , W l 1 , b 1 , W 2 , E w , E t , E l }.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "A slight variation is that we compute the softmax probabilities only among the feasible transitions in practice.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "For initialization of parameters, we use pretrained word embeddings to initialize E w and use random initialization within (-0.01, 0.01) for E t and E l . Concretely, we use the pre-trained word embeddings from (Collobert et al., 2011) for English (#dictionary = 130,000, coverage = 72.7%), and our trained 50-dimensional word2vec embeddings (Mikolov et al., 2013) on Wikipedia and Gigaword corpus for Chinese (#dictionary = 285,791, coverage = 79.0%). We will also compare with random initialization of E w in Section 4. The training error derivatives will be backpropagated to these embeddings during the training process.",
+                "cite_spans": [
+                    {
+                        "start": 211,
+                        "end": 235,
+                        "text": "(Collobert et al., 2011)",
+                        "ref_id": "BIBREF1"
+                    },
+                    {
+                        "start": 342,
+                        "end": 364,
+                        "text": "(Mikolov et al., 2013)",
+                        "ref_id": "BIBREF19"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "We use mini-batched AdaGrad (Duchi et al., 2011) for optimization and also apply a dropout (Hinton et al., 2012) with 0.5 rate. The parameters which achieve the best unlabeled attachment score on the development set will be chosen for final evaluation.",
+                "cite_spans": [
+                    {
+                        "start": 28,
+                        "end": 48,
+                        "text": "(Duchi et al., 2011)",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 91,
+                        "end": 112,
+                        "text": "(Hinton et al., 2012)",
+                        "ref_id": "BIBREF10"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "We perform greedy decoding in parsing. At each step, we extract all the corresponding word, POS and label embeddings from the current configuration c, compute the hidden layer h(c) \u2208 R d h , and pick the transition with the highest score: t = arg max t is feasible W 2 (t, \u2022)h(c), and then execute c \u2192 t(c).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Parsing",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "Comparing with indicator features, our parser does not need to compute conjunction features and look them up in a huge feature table, and thus greatly reduces feature generation time. Instead, it involves many matrix addition and multiplication operations. To further speed up the parsing time, we apply a pre-computation trick, similar to (Devlin et al., 2014) . For each position chosen from S w , we pre-compute matrix multiplications for most top frequent 10, 000 words. Thus, computing the hidden layer only requires looking up the table for these frequent words, and adding the d h -dimensional vector. Similarly, we also precompute matrix computations for all positions and all POS tags and arc labels. We only use this optimization in the neural network parser, but it is only feasible for a parser like the neural network parser which uses a small number of features. In practice, this pre-computation step increases the speed of our parser 8 \u223c 10 times.",
+                "cite_spans": [
+                    {
+                        "start": 340,
+                        "end": 361,
+                        "text": "(Devlin et al., 2014)",
+                        "ref_id": "BIBREF4"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Parsing",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "We conduct our experiments on the English Penn Treebank (PTB) and the Chinese Penn Treebank (CTB) datasets.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Datasets",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "For English, we follow the standard splits of For Chinese, we adopt the same split of CTB5 as described in (Zhang and Clark, 2008) . Dependencies are converted using the Penn2Malt tool 5 with the head-finding rules of (Zhang and Clark, 2008) . And following (Zhang and Clark, 2008; Zhang and Nivre, 2011) , we use gold segmentation and POS tags for the input.",
+                "cite_spans": [
+                    {
+                        "start": 107,
+                        "end": 130,
+                        "text": "(Zhang and Clark, 2008)",
+                        "ref_id": "BIBREF27"
+                    },
+                    {
+                        "start": 218,
+                        "end": 241,
+                        "text": "(Zhang and Clark, 2008)",
+                        "ref_id": "BIBREF27"
+                    },
+                    {
+                        "start": 258,
+                        "end": 281,
+                        "text": "(Zhang and Clark, 2008;",
+                        "ref_id": "BIBREF27"
+                    },
+                    {
+                        "start": 282,
+                        "end": 304,
+                        "text": "Zhang and Nivre, 2011)",
+                        "ref_id": "BIBREF28"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Datasets",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "Table 3 gives statistics of the three datasets. 6 In particular, over 99% of the trees are projective in all datasets.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 6,
+                        "end": 7,
+                        "text": "3",
+                        "ref_id": "TABREF4"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Datasets",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "The following hyper-parameters are used in all experiments: embedding size d = 50, hidden layer size h = 200, regularization parameter \u03bb = 10 -8 , initial learning rate of Adagrad \u03b1 = 0.01.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "To situate the performance of our parser, we first make a comparison with our own implementation of greedy arc-eager and arc-standard parsers. These parsers are trained with structured averaged perceptron using the \"early-update\" strategy. The feature templates of (Zhang and Nivre, 2011) are used for the arc-eager system, and they are also adapted to the arc-standard system. 7 Furthermore, we also compare our parser with two popular, off-the-shelf parsers: Malt-Parser -a greedy transition-based dependency parser (Nivre et al., 2006) , 8 and MSTParser -3 http://nlp.cs.lth.se/software/treebank converter/ 4 http://nlp.stanford.edu/software/lex-parser.shtml 5 http://stp.lingfil.uu.se/ nivre/research/Penn2Malt.html 6 Pennconverter and Stanford dependencies generate slightly different tokenization, e.g., Pennconverter splits the token WCRS\\/Boston NNP into three tokens WCRS NNP / CC Boston NNP.",
+                "cite_spans": [
+                    {
+                        "start": 265,
+                        "end": 288,
+                        "text": "(Zhang and Nivre, 2011)",
+                        "ref_id": "BIBREF28"
+                    },
+                    {
+                        "start": 518,
+                        "end": 538,
+                        "text": "(Nivre et al., 2006)",
+                        "ref_id": "BIBREF20"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "7 Since arc-standard is bottom-up, we remove all features using the head of stack elements, and also add the right child features of the first stack element.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "8 http://www.maltparser.org/ a first-order graph-based parser (McDonald and Pereira, 2006) .9 In this comparison, for Malt-Parser, we select stackproj (arc-standard) and nivreeager (arc-eager) as parsing algorithms, and liblinear (Fan et al., 2008) for optimization. 10For MSTParser, we use default options. On all datasets, we report unlabeled attachment scores (UAS) and labeled attachment scores (LAS) and punctuation is excluded in all evaluation metrics.11 Our parser and the baseline arcstandard and arc-eager parsers are all implemented in Java. The parsing speeds are measured on an Intel Core i7 2.7GHz CPU with 16GB RAM and the runtime does not include pre-computation or parameter loading time.",
+                "cite_spans": [
+                    {
+                        "start": 62,
+                        "end": 90,
+                        "text": "(McDonald and Pereira, 2006)",
+                        "ref_id": "BIBREF18"
+                    },
+                    {
+                        "start": 230,
+                        "end": 248,
+                        "text": "(Fan et al., 2008)",
+                        "ref_id": "BIBREF6"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "Table 4 , Table 5 and parser even surpasses MaltParser using liblinear, which is known to be highly optimized, while our parser achieves much better accuracy. Also, despite the fact that the graph-based MST-Parser achieves a similar result to ours on PTB (CoNLL dependencies), our parser is nearly 100 times faster. In particular, our transition-based parser has a great advantage in LAS, especially for the fine-grained label set of Stanford dependencies.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 6,
+                        "end": 7,
+                        "text": "4",
+                        "ref_id": "TABREF5"
+                    },
+                    {
+                        "start": 16,
+                        "end": 17,
+                        "text": "5",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "Herein, we examine components that account for the performance of our parser.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Effects of Parser Components",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "We compare our cube activation function (x 3 ) with two widely used non-linear functions: tanh ( e x -e -x e x +e -x ), sigmoid ( 1 1+e -x ), and also the identity function (x), as shown in Figure 4 (left).",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 197,
+                        "end": 198,
+                        "text": "4",
+                        "ref_id": "FIGREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Cube activation function",
+                "sec_num": null
+            },
+            {
+                "text": "In short, cube outperforms all other activation functions significantly and identity works the worst. Concretely, cube can achieve 0.8% \u223c 1.2% improvement in UAS over tanh and other functions, thus verifying the effectiveness of the cube activation function empirically.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Cube activation function",
+                "sec_num": null
+            },
+            {
+                "text": "We further analyze the influence of using pretrained word embeddings for initialization. Figure 4 (middle) shows that using pre-trained word embeddings can obtain around 0.7% improvement on PTB and 1.7% improvement on CTB, compared with using random initialization within (-0.01, 0.01). On the one hand, the pre-trained word embeddings of Chinese appear more useful than those of English; on the other hand, our model is still able to achieve comparable accuracy without the help of pre-trained word embeddings.",
+                "cite_spans": [
+                    {
+                        "start": 89,
+                        "end": 106,
+                        "text": "Figure 4 (middle)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Initialization of pre-trained word embeddings",
+                "sec_num": null
+            },
+            {
+                "text": "As shown in Figure 4 (right), POS embeddings yield around 1.7% improvement on PTB and nearly 10% improvement on CTB and the label embeddings yield a much smaller 0.3% and 1.4% improvement respectively.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 19,
+                        "end": 20,
+                        "text": "4",
+                        "ref_id": "FIGREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "POS tag and arc label embeddings",
+                "sec_num": null
+            },
+            {
+                "text": "However, we can obtain little gain from label embeddings when the POS embeddings are present. This may be because the POS tags of two tokens already capture most of the label information between them.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "POS tag and arc label embeddings",
+                "sec_num": null
+            },
+            {
+                "text": "Last but not least, we will examine the parameters we have learned, and hope to investigate what these dense features capture. We use the weights learned from the English Penn Treebank using Stanford dependencies for analysis.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model Analysis",
+                "sec_num": "4.4"
+            },
+            {
+                "text": "What do E t , E l capture?",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model Analysis",
+                "sec_num": "4.4"
+            },
+            {
+                "text": "We first introduced E t and E l as the dense representations of all POS tags and arc labels, and we wonder whether these embeddings could carry some semantic information.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model Analysis",
+                "sec_num": "4.4"
+            },
+            {
+                "text": "Figure 5 presents t-SNE visualizations (van der Maaten and Hinton, 2008) of these embeddings. It clearly shows that these embeddings effectively exhibit the similarities between POS tags or arc labels. For instance, the three adjective POS tags JJ, JJR, JJS have very close embeddings, and also the three labels representing clausal complements acomp, ccomp, xcomp are grouped together.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 7,
+                        "end": 8,
+                        "text": "5",
+                        "ref_id": "FIGREF3"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Model Analysis",
+                "sec_num": "4.4"
+            },
+            {
+                "text": "Since these embeddings can effectively encode the semantic regularities, we believe that they can be also used as alternative features of POS tags (or arc labels) in other NLP tasks, and help boost the performance.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model Analysis",
+                "sec_num": "4.4"
+            },
+            {
+                "text": "What do W w 1 , W t 1 , W l 1 capture? Knowing that E t and E l (as well as the word embeddings E w ) can capture semantic information very well, next we hope to investigate what each feature in the hidden layer has really learned.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model Analysis",
+                "sec_num": "4.4"
+            },
+            {
+                "text": "Since we currently only have h = 200 learned dense features, we wonder if it is sufficient to learn the word conjunctions as sparse indicator features, or even more. We examine the weights",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model Analysis",
+                "sec_num": "4.4"
+            },
+            {
+                "text": "W w 1 (k, \u2022) \u2208 R d\u2022nw , W t 1 (k, \u2022) \u2208 R d\u2022nt , W l 1 (k, \u2022) \u2208 R d\u2022n l",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model Analysis",
+                "sec_num": "4.4"
+            },
+            {
+                "text": "for each hidden unit k, and reshape them to d \u00d7 n t , d \u00d7 n w , d \u00d7 n l matrices, such that the weights of each column corresponds to the embeddings of one specific element (e.g., s 1 .t).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model Analysis",
+                "sec_num": "4.4"
+            },
+            {
+                "text": "We pick the weights with absolute value > 0.2, and visualize them for each feature. Figure 6 gives the visualization of three sampled features, and it exhibits many interesting phenomena:",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 91,
+                        "end": 92,
+                        "text": "6",
+                        "ref_id": "FIGREF4"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Model Analysis",
+                "sec_num": "4.4"
+            },
+            {
+                "text": "\u2022 Different features have varied distributions of the weights. However, most of the discriminative weights come from W t 1 (the middle zone in Figure 6 ), and this further justifies the importance of POS tags in dependency parsing.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 150,
+                        "end": 151,
+                        "text": "6",
+                        "ref_id": "FIGREF4"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Model Analysis",
+                "sec_num": "4.4"
+            },
+            {
+                "text": "\u2022 We carefully examine many of the h = 200 features, and find that they actually encode very different views of information. For the three sampled features in Figure 6 , the largest weights are dominated by:",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 166,
+                        "end": 167,
+                        "text": "6",
+                        "ref_id": "FIGREF4"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Model Analysis",
+                "sec_num": "4.4"
+            },
+            {
+                "text": "- These features all seem very plausible, as observed in the experiments on indicator feature systems. Thus our model is able to automatically identify the most useful information for predictions, instead of hand-crafting them as indicator features.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model Analysis",
+                "sec_num": "4.4"
+            },
+            {
+                "text": "\u2022 More importantly, we can extract features regarding the conjunctions of more than 3 elements easily, and also those not presented in the indicator feature systems. For example, the 3rd feature above captures the conjunction of words and POS tags of s 1 , the tag of its leftmost child, and also the label between them, while this information is not encoded in the original feature templates of (Zhang and Nivre, 2011) .",
+                "cite_spans": [
+                    {
+                        "start": 396,
+                        "end": 419,
+                        "text": "(Zhang and Nivre, 2011)",
+                        "ref_id": "BIBREF28"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model Analysis",
+                "sec_num": "4.4"
+            },
+            {
+                "text": "There have been several lines of earlier work in using neural networks for parsing which have points of overlap but also major differences from our work here. One big difference is that much early work uses localist one-hot word representations rather than the distributed representations of modern work. (Mayberry III and Miikkulainen, 1999) explored a shift reduce constituency parser with one-hot word representations and did subsequent parsing work in (Mayberry III and Miikkulainen, 2005) . (Henderson, 2004) was the first to attempt to use neural networks in a broad-coverage Penn Treebank parser, using a simple synchrony network to predict parse decisions in a constituency parser. More recently, (Titov and Henderson, 2007) applied Incremental Sigmoid Belief Networks to constituency parsing and then (Garg and Henderson, 2011) extended this work to transition-based dependency parsers using a Temporal Restricted Boltzman Machine. These are very different neural network architectures, and are much less scalable and in practice a restricted vocabulary was used to make the architecture practical.",
+                "cite_spans": [
+                    {
+                        "start": 456,
+                        "end": 493,
+                        "text": "(Mayberry III and Miikkulainen, 2005)",
+                        "ref_id": "BIBREF17"
+                    },
+                    {
+                        "start": 496,
+                        "end": 513,
+                        "text": "(Henderson, 2004)",
+                        "ref_id": "BIBREF9"
+                    },
+                    {
+                        "start": 705,
+                        "end": 732,
+                        "text": "(Titov and Henderson, 2007)",
+                        "ref_id": "BIBREF24"
+                    },
+                    {
+                        "start": 810,
+                        "end": 836,
+                        "text": "(Garg and Henderson, 2011)",
+                        "ref_id": "BIBREF7"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "5"
+            },
+            {
+                "text": "There have been a number of recent uses of deep learning for constituency parsing (Collobert, 2011; Socher et al., 2013) . (Socher et al., 2014) has also built models over dependency representations but this work has not attempted to learn neural networks for dependency parsing.",
+                "cite_spans": [
+                    {
+                        "start": 82,
+                        "end": 99,
+                        "text": "(Collobert, 2011;",
+                        "ref_id": "BIBREF2"
+                    },
+                    {
+                        "start": 100,
+                        "end": 120,
+                        "text": "Socher et al., 2013)",
+                        "ref_id": "BIBREF21"
+                    },
+                    {
+                        "start": 123,
+                        "end": 144,
+                        "text": "(Socher et al., 2014)",
+                        "ref_id": "BIBREF22"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "5"
+            },
+            {
+                "text": "Most recently, (Stenetorp, 2013) attempted to build recursive neural networks for transitionbased dependency parsing, however the empirical performance of his model is still unsatisfactory.",
+                "cite_spans": [
+                    {
+                        "start": 15,
+                        "end": 32,
+                        "text": "(Stenetorp, 2013)",
+                        "ref_id": "BIBREF23"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "5"
+            },
+            {
+                "text": "We have presented a novel dependency parser using neural networks. Experimental evaluations show that our parser outperforms other greedy parsers using sparse indicator features in both accuracy and speed. This is achieved by representing all words, POS tags and arc labels as dense vectors, and modeling their interactions through a novel cube activation function. Our model only relies on dense features, and is able to automatically learn the most useful feature conjunctions for making predictions.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion",
+                "sec_num": "6"
+            },
+            {
+                "text": "An interesting line of future work is to combine our neural network based classifier with searchbased models to further improve accuracy. Also, there is still room for improvement in our architecture, such as better capturing word conjunctions, or adding richer features (e.g., distance, valency).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion",
+                "sec_num": "6"
+            },
+            {
+                "text": "Additionally, our parser can be naturally incorporated with beam search, but we leave this to future work.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "We exclude sophisticated features using labels, distance, valency and third-order features in this analysis, but we will include all of them in the final evaluation.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "http://www.seas.upenn.edu/ strctlrn/MSTParser/ MSTParser.html",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "We do not compare with libsvm optimization, which is known to be sightly more accurate, but orders of magnitude slower(Kong and Smith, 2014).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "A token is a punctuation if its gold POS tag is {\" \" : , .} for English and PU for Chinese.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            }
+        ],
+        "back_matter": [
+            {
+                "text": "Stanford University gratefully acknowledges the support of the Defense Advanced Research Projects Agency (DARPA) Deep Exploration and Filtering of Text (DEFT) Program under Air Force Research Laboratory (AFRL) contract no. FA8750-13-2-0040 and the Defense Threat Reduction Agency (DTRA) under Air Force Research Laboratory (AFRL) contract no. FA8650-10-C-7020. Any opinions, findings, and conclusion or recommendations expressed in this material are those of the authors and do not necessarily reflect the view of the DARPA, AFRL, or the US government.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Acknowledgments",
+                "sec_num": null
+            }
+        ],
+        "bib_entries": {
+            "BIBREF0": {
+                "ref_id": "b0",
+                "title": "Very high accuracy and fast dependency parsing is not a contradiction",
+                "authors": [
+                    {
+                        "first": "Bernd",
+                        "middle": [],
+                        "last": "Bohnet",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2010,
+                "venue": "Coling",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Bernd Bohnet. 2010. Very high accuracy and fast de- pendency parsing is not a contradiction. In Coling.",
+                "links": null
+            },
+            "BIBREF1": {
+                "ref_id": "b1",
+                "title": "Natural language processing (almost) from scratch",
+                "authors": [
+                    {
+                        "first": "Ronan",
+                        "middle": [],
+                        "last": "Collobert",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jason",
+                        "middle": [],
+                        "last": "Weston",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "L\u00e9on",
+                        "middle": [],
+                        "last": "Bottou",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Michael",
+                        "middle": [],
+                        "last": "Karlen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Koray",
+                        "middle": [],
+                        "last": "Kavukcuoglu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Pavel",
+                        "middle": [],
+                        "last": "Kuksa",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2011,
+                "venue": "Journal of Machine Learning Research",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ronan Collobert, Jason Weston, L\u00e9on Bottou, Michael Karlen, Koray Kavukcuoglu, and Pavel Kuksa. 2011. Natural language processing (almost) from scratch. Journal of Machine Learning Research.",
+                "links": null
+            },
+            "BIBREF2": {
+                "ref_id": "b2",
+                "title": "Deep learning for efficient discriminative parsing",
+                "authors": [
+                    {
+                        "first": "Ronan",
+                        "middle": [],
+                        "last": "Collobert",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2011,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ronan Collobert. 2011. Deep learning for efficient discriminative parsing. In AISTATS.",
+                "links": null
+            },
+            "BIBREF3": {
+                "ref_id": "b3",
+                "title": "Generating typed dependency parses from phrase structure parses",
+                "authors": [
+                    {
+                        "first": "Marie-Catherine",
+                        "middle": [],
+                        "last": "De Marneffe",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Bill",
+                        "middle": [],
+                        "last": "Maccartney",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [
+                            "D"
+                        ],
+                        "last": "Manning",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2006,
+                "venue": "LREC",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Marie-Catherine de Marneffe, Bill MacCartney, and Christopher D. Manning. 2006. Generating typed dependency parses from phrase structure parses. In LREC.",
+                "links": null
+            },
+            "BIBREF4": {
+                "ref_id": "b4",
+                "title": "Fast and robust neural network joint models for statistical machine translation",
+                "authors": [
+                    {
+                        "first": "Jacob",
+                        "middle": [],
+                        "last": "Devlin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Rabih",
+                        "middle": [],
+                        "last": "Zbib",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zhongqiang",
+                        "middle": [],
+                        "last": "Huang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Thomas",
+                        "middle": [],
+                        "last": "Lamar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Richard",
+                        "middle": [],
+                        "last": "Schwartz",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "John",
+                        "middle": [],
+                        "last": "Makhoul",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jacob Devlin, Rabih Zbib, Zhongqiang Huang, Thomas Lamar, Richard Schwartz, and John Makhoul. 2014. Fast and robust neural network joint models for sta- tistical machine translation. In ACL.",
+                "links": null
+            },
+            "BIBREF5": {
+                "ref_id": "b5",
+                "title": "Adaptive subgradient methods for online learning and stochastic optimization",
+                "authors": [
+                    {
+                        "first": "John",
+                        "middle": [],
+                        "last": "Duchi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Elad",
+                        "middle": [],
+                        "last": "Hazan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yoram",
+                        "middle": [],
+                        "last": "Singer",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2011,
+                "venue": "The Journal of Machine Learning Research",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "John Duchi, Elad Hazan, and Yoram Singer. 2011. Adaptive subgradient methods for online learning and stochastic optimization. The Journal of Ma- chine Learning Research.",
+                "links": null
+            },
+            "BIBREF6": {
+                "ref_id": "b6",
+                "title": "Liblinear: A library for large linear classification",
+                "authors": [
+                    {
+                        "first": "Rong-En",
+                        "middle": [],
+                        "last": "Fan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kai-Wei",
+                        "middle": [],
+                        "last": "Chang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Cho-Jui",
+                        "middle": [],
+                        "last": "Hsieh",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xiang-Rui",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chih-Jen",
+                        "middle": [],
+                        "last": "Lin",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2008,
+                "venue": "The Journal of Machine Learning Research",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Rong-En Fan, Kai-Wei Chang, Cho-Jui Hsieh, Xiang- Rui Wang, and Chih-Jen Lin. 2008. Liblinear: A library for large linear classification. The Journal of Machine Learning Research.",
+                "links": null
+            },
+            "BIBREF7": {
+                "ref_id": "b7",
+                "title": "Temporal restricted boltzmann machines for dependency parsing",
+                "authors": [
+                    {
+                        "first": "Nikhil",
+                        "middle": [],
+                        "last": "Garg",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "James",
+                        "middle": [],
+                        "last": "Henderson",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2011,
+                "venue": "ACL-HLT",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Nikhil Garg and James Henderson. 2011. Temporal restricted boltzmann machines for dependency pars- ing. In ACL-HLT.",
+                "links": null
+            },
+            "BIBREF8": {
+                "ref_id": "b8",
+                "title": "Dynamic feature selection for dependency parsing",
+                "authors": [
+                    {
+                        "first": "He",
+                        "middle": [],
+                        "last": "He",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hal",
+                        "middle": [],
+                        "last": "Daum\u00e9",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Iii",
+                        "middle": [],
+                        "last": "",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jason",
+                        "middle": [],
+                        "last": "Eisner",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "EMNLP",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "He He, Hal Daum\u00e9 III, and Jason Eisner. 2013. Dy- namic feature selection for dependency parsing. In EMNLP.",
+                "links": null
+            },
+            "BIBREF9": {
+                "ref_id": "b9",
+                "title": "Discriminative training of a neural network statistical parser",
+                "authors": [
+                    {
+                        "first": "James",
+                        "middle": [],
+                        "last": "Henderson",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2004,
+                "venue": "ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "James Henderson. 2004. Discriminative training of a neural network statistical parser. In ACL.",
+                "links": null
+            },
+            "BIBREF10": {
+                "ref_id": "b10",
+                "title": "Improving neural networks by preventing co-adaptation of feature detectors",
+                "authors": [
+                    {
+                        "first": "Geoffrey",
+                        "middle": [
+                            "E"
+                        ],
+                        "last": "Hinton",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nitish",
+                        "middle": [],
+                        "last": "Srivastava",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alex",
+                        "middle": [],
+                        "last": "Krizhevsky",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ilya",
+                        "middle": [],
+                        "last": "Sutskever",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ruslan",
+                        "middle": [],
+                        "last": "Salakhutdinov",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2012,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Geoffrey E. Hinton, Nitish Srivastava, Alex Krizhevsky, Ilya Sutskever, and Ruslan Salakhut- dinov. 2012. Improving neural networks by preventing co-adaptation of feature detectors. CoRR, abs/1207.0580.",
+                "links": null
+            },
+            "BIBREF11": {
+                "ref_id": "b11",
+                "title": "Bilingually-constrained (monolingual) shift-reduce parsing",
+                "authors": [
+                    {
+                        "first": "Liang",
+                        "middle": [],
+                        "last": "Huang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Wenbin",
+                        "middle": [],
+                        "last": "Jiang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Qun",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "EMNLP",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Liang Huang, Wenbin Jiang, and Qun Liu. 2009. Bilingually-constrained (monolingual) shift-reduce parsing. In EMNLP.",
+                "links": null
+            },
+            "BIBREF12": {
+                "ref_id": "b12",
+                "title": "Extended constituent-to-dependency conversion for english",
+                "authors": [
+                    {
+                        "first": "Richard",
+                        "middle": [],
+                        "last": "Johansson",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Pierre",
+                        "middle": [],
+                        "last": "Nugues",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2007,
+                "venue": "Proceedings of NODALIDA",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Richard Johansson and Pierre Nugues. 2007. Ex- tended constituent-to-dependency conversion for en- glish. In Proceedings of NODALIDA, Tartu, Estonia.",
+                "links": null
+            },
+            "BIBREF13": {
+                "ref_id": "b13",
+                "title": "An empirical comparison of parsing methods for Stanford dependencies",
+                "authors": [
+                    {
+                        "first": "Lingpeng",
+                        "middle": [],
+                        "last": "Kong",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Noah",
+                        "middle": [
+                            "A"
+                        ],
+                        "last": "Smith",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Lingpeng Kong and Noah A. Smith. 2014. An em- pirical comparison of parsing methods for Stanford dependencies. CoRR, abs/1404.4314.",
+                "links": null
+            },
+            "BIBREF14": {
+                "ref_id": "b14",
+                "title": "Simple semi-supervised dependency parsing",
+                "authors": [
+                    {
+                        "first": "Terry",
+                        "middle": [],
+                        "last": "Koo",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xavier",
+                        "middle": [],
+                        "last": "Carreras",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Michael",
+                        "middle": [],
+                        "last": "Collins",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2008,
+                "venue": "ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Terry Koo, Xavier Carreras, and Michael Collins. 2008. Simple semi-supervised dependency parsing. In ACL.",
+                "links": null
+            },
+            "BIBREF15": {
+                "ref_id": "b15",
+                "title": "Dependency Parsing. Synthesis Lectures on Human Language Technologies",
+                "authors": [
+                    {
+                        "first": "Sandra",
+                        "middle": [],
+                        "last": "K\u00fcbler",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ryan",
+                        "middle": [],
+                        "last": "Mcdonald",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Joakim",
+                        "middle": [],
+                        "last": "Nivre",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Sandra K\u00fcbler, Ryan McDonald, and Joakim Nivre. 2009. Dependency Parsing. Synthesis Lectures on Human Language Technologies. Morgan & Clay- pool.",
+                "links": null
+            },
+            "BIBREF16": {
+                "ref_id": "b16",
+                "title": "Sardsrn: A neural network shift-reduce parser",
+                "authors": [
+                    {
+                        "first": "R",
+                        "middle": [],
+                        "last": "Marshall",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Iii",
+                        "middle": [],
+                        "last": "Mayberry",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Risto",
+                        "middle": [],
+                        "last": "Miikkulainen",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1999,
+                "venue": "IJCAI",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Marshall R. Mayberry III and Risto Miikkulainen. 1999. Sardsrn: A neural network shift-reduce parser. In IJCAI.",
+                "links": null
+            },
+            "BIBREF17": {
+                "ref_id": "b17",
+                "title": "Broad-coverage parsing with neural networks",
+                "authors": [
+                    {
+                        "first": "R",
+                        "middle": [],
+                        "last": "Marshall",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Iii",
+                        "middle": [],
+                        "last": "Mayberry",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Risto",
+                        "middle": [],
+                        "last": "Miikkulainen",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2005,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Marshall R. Mayberry III and Risto Miikkulainen. 2005. Broad-coverage parsing with neural net- works. Neural Processing Letters.",
+                "links": null
+            },
+            "BIBREF18": {
+                "ref_id": "b18",
+                "title": "Online learning of approximate dependency parsing algorithms",
+                "authors": [
+                    {
+                        "first": "Ryan",
+                        "middle": [],
+                        "last": "Mcdonald",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Fernando",
+                        "middle": [],
+                        "last": "Pereira",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2006,
+                "venue": "EACL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ryan McDonald and Fernando Pereira. 2006. Online learning of approximate dependency parsing algo- rithms. In EACL.",
+                "links": null
+            },
+            "BIBREF19": {
+                "ref_id": "b19",
+                "title": "Distributed representations of words and phrases and their compositionality",
+                "authors": [
+                    {
+                        "first": "Tomas",
+                        "middle": [],
+                        "last": "Mikolov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ilya",
+                        "middle": [],
+                        "last": "Sutskever",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kai",
+                        "middle": [],
+                        "last": "Chen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Greg",
+                        "middle": [
+                            "S"
+                        ],
+                        "last": "Corrado",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jeff",
+                        "middle": [],
+                        "last": "Dean",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "NIPS",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Tomas Mikolov, Ilya Sutskever, Kai Chen, Greg S Cor- rado, and Jeff Dean. 2013. Distributed representa- tions of words and phrases and their compositional- ity. In NIPS.",
+                "links": null
+            },
+            "BIBREF20": {
+                "ref_id": "b20",
+                "title": "Maltparser: A data-driven parser-generator for dependency parsing",
+                "authors": [
+                    {
+                        "first": "Joakim",
+                        "middle": [],
+                        "last": "Nivre",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Johan",
+                        "middle": [],
+                        "last": "Hall",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jens",
+                        "middle": [],
+                        "last": "Nilsson",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2006,
+                "venue": "LREC",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Joakim Nivre, Johan Hall, and Jens Nilsson. 2006. Maltparser: A data-driven parser-generator for de- pendency parsing. In LREC.",
+                "links": null
+            },
+            "BIBREF21": {
+                "ref_id": "b21",
+                "title": "Parsing with compositional vector grammars",
+                "authors": [
+                    {
+                        "first": "Richard",
+                        "middle": [],
+                        "last": "Socher",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "John",
+                        "middle": [],
+                        "last": "Bauer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [
+                            "D"
+                        ],
+                        "last": "Manning",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Andrew",
+                        "middle": [
+                            "Y"
+                        ],
+                        "last": "Ng",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Richard Socher, John Bauer, Christopher D Manning, and Andrew Y Ng. 2013. Parsing with composi- tional vector grammars. In ACL.",
+                "links": null
+            },
+            "BIBREF22": {
+                "ref_id": "b22",
+                "title": "Grounded compositional semantics for finding and describing images with sentences",
+                "authors": [
+                    {
+                        "first": "Richard",
+                        "middle": [],
+                        "last": "Socher",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Andrej",
+                        "middle": [],
+                        "last": "Karpathy",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Quoc",
+                        "middle": [
+                            "V"
+                        ],
+                        "last": "Le",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [
+                            "D"
+                        ],
+                        "last": "Manning",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Andrew",
+                        "middle": [
+                            "Y"
+                        ],
+                        "last": "Ng",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Richard Socher, Andrej Karpathy, Quoc V. Le, Christo- pher D. Manning, and Andrew Y. Ng. 2014. Grounded compositional semantics for finding and describing images with sentences. TACL.",
+                "links": null
+            },
+            "BIBREF23": {
+                "ref_id": "b23",
+                "title": "Transition-based dependency parsing using recursive neural networks",
+                "authors": [
+                    {
+                        "first": "Pontus",
+                        "middle": [],
+                        "last": "Stenetorp",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "NIPS Workshop on Deep Learning",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Pontus Stenetorp. 2013. Transition-based dependency parsing using recursive neural networks. In NIPS Workshop on Deep Learning.",
+                "links": null
+            },
+            "BIBREF24": {
+                "ref_id": "b24",
+                "title": "Fast and robust multilingual dependency parsing with a generative latent variable model",
+                "authors": [
+                    {
+                        "first": "Ivan",
+                        "middle": [],
+                        "last": "Titov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "James",
+                        "middle": [],
+                        "last": "Henderson",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2007,
+                "venue": "EMNLP-CoNLL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ivan Titov and James Henderson. 2007. Fast and ro- bust multilingual dependency parsing with a gener- ative latent variable model. In EMNLP-CoNLL.",
+                "links": null
+            },
+            "BIBREF25": {
+                "ref_id": "b25",
+                "title": "Feature-rich part-ofspeech tagging with a cyclic dependency network",
+                "authors": [
+                    {
+                        "first": "Kristina",
+                        "middle": [],
+                        "last": "Toutanova",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dan",
+                        "middle": [],
+                        "last": "Klein",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [
+                            "D"
+                        ],
+                        "last": "Manning",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yoram",
+                        "middle": [],
+                        "last": "Singer",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2003,
+                "venue": "NAACL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Kristina Toutanova, Dan Klein, Christopher D. Man- ning, and Yoram Singer. 2003. Feature-rich part-of- speech tagging with a cyclic dependency network. In NAACL.",
+                "links": null
+            },
+            "BIBREF26": {
+                "ref_id": "b26",
+                "title": "Visualizing data using t-SNE",
+                "authors": [
+                    {
+                        "first": "Laurens",
+                        "middle": [],
+                        "last": "Van Der Maaten",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Geoffrey",
+                        "middle": [],
+                        "last": "Hinton",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2008,
+                "venue": "The Journal of Machine Learning Research",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Laurens van der Maaten and Geoffrey Hinton. 2008. Visualizing data using t-SNE. The Journal of Ma- chine Learning Research.",
+                "links": null
+            },
+            "BIBREF27": {
+                "ref_id": "b27",
+                "title": "A tale of two parsers: Investigating and combining graphbased and transition-based dependency parsing using beam-search",
+                "authors": [
+                    {
+                        "first": "Yue",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Stephen",
+                        "middle": [],
+                        "last": "Clark",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2008,
+                "venue": "EMNLP",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Yue Zhang and Stephen Clark. 2008. A tale of two parsers: Investigating and combining graph- based and transition-based dependency parsing us- ing beam-search. In EMNLP.",
+                "links": null
+            },
+            "BIBREF28": {
+                "ref_id": "b28",
+                "title": "Transition-based dependency parsing with rich non-local features",
+                "authors": [
+                    {
+                        "first": "Yue",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Joakim",
+                        "middle": [],
+                        "last": "Nivre",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2011,
+                "venue": "ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Yue Zhang and Joakim Nivre. 2011. Transition-based dependency parsing with rich non-local features. In ACL.",
+                "links": null
+            }
+        },
+        "ref_entries": {
+            "FIGREF0": {
+                "num": null,
+                "text": "Figure 3: Different activation functions used in neural networks.",
+                "uris": null,
+                "fig_num": "3",
+                "type_str": "figure"
+            },
+            "FIGREF1": {
+                "num": null,
+                "text": "Figure 4: Effects of different parser components. Left: comparison of different activation functions. Middle: comparison of pre-trained word vectors and random initialization. Right: effects of POS and label embeddings.",
+                "uris": null,
+                "fig_num": "4",
+                "type_str": "figure"
+            },
+            "FIGREF3": {
+                "num": null,
+                "text": "Figure 5: t-SNE visualization of POS and label embeddings.",
+                "uris": null,
+                "fig_num": "5",
+                "type_str": "figure"
+            },
+            "FIGREF4": {
+                "num": null,
+                "text": "Figure6: Three sampled features. In each feature, each row denotes a dimension of embeddings and each column denotes a chosen element, e.g., s 1 .t or lc(s 1 ).w, and the parameters are divided into 3 zones, corresponding to W w 1 (k, :) (left), W t 1 (k, :) (middle) and W l 1 (k, :) (right). White and black dots denote the most positive weights and most negative weights respectively.",
+                "uris": null,
+                "fig_num": "6",
+                "type_str": "figure"
+            },
+            "TABREF0": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "T , based on one Single-word features (9) s 1 .w; s 1 .t; s 1 .wt; s 2 .w; s 2 .t; s 2 .wt; b 1 .w; b 1 .t; b 1 .wt Word-pair features (8) s 1 .wt \u2022 s 2 .wt; s 1 .wt \u2022 s 2 .w; s 1 .wts 2 .t; s 1 .w \u2022 s 2 .wt; s 1 .t \u2022 s 2 .wt; s 1 .w \u2022 s 2 .w s 1 .t \u2022 s 2 .t; s 1 .t \u2022 b 1 .t Three-word feaures (8)",
+                "html": null,
+                "num": null
+            },
+            "TABREF1": {
+                "content": "<table><tr><td>on the English Penn Treebank (CoNLL rep-</td></tr><tr><td>resentations). The results given in Table 2</td></tr><tr><td>demonstrate that: (1) lexicalized features are</td></tr><tr><td>indispensable; (2) Not only are the word-pair</td></tr><tr><td>features (especially s 1 and s 2 ) vital for pre-</td></tr><tr><td>dictions, the three-word conjunctions (e.g.,</td></tr><tr><td>{s 2 , s 1 , b 1 }, {s 2 , lc 1 (s 1 ), s 1 }) are also very</td></tr><tr><td>important.</td></tr></table>",
+                "type_str": "table",
+                "text": "",
+                "html": null,
+                "num": null
+            },
+            "TABREF2": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "Performance of different feature sets.",
+                "html": null,
+                "num": null
+            },
+            "TABREF4": {
+                "content": "<table><tr><td>PTB3, using sections 2-21 for training, section</td></tr><tr><td>22 as development set and 23 as test set. We</td></tr><tr><td>adopt two different dependency representations:</td></tr><tr><td>CoNLL Syntactic Dependencies (CD) (Johansson</td></tr></table>",
+                "type_str": "table",
+                "text": "Data Statistics. \"Projective\" is the percentage of projective trees on the training set.",
+                "html": null,
+                "num": null
+            },
+            "TABREF5": {
+                "content": "<table><tr><td>Parser</td><td colspan=\"2\">Dev UAS LAS UAS LAS (sent/s) Test Speed</td></tr><tr><td>standard</td><td>89.9 88.7 89.7 88.3</td><td>51</td></tr><tr><td>eager</td><td>90.3 89.2 89.9 88.6</td><td>63</td></tr><tr><td>Malt:sp</td><td>90.0 88.8 89.9 88.5</td><td>560</td></tr><tr><td colspan=\"2\">Malt:eager 90.1 88.9 90.1 88.7</td><td>535</td></tr><tr><td colspan=\"2\">MSTParser 92.1 90.8 92.0 90.5</td><td>12</td></tr><tr><td colspan=\"3\">Our parser 92.2 91.0 92.0 90.7 1013</td></tr><tr><td colspan=\"3\">Clearly, our parser is superior in terms of both</td></tr><tr><td colspan=\"3\">accuracy and speed. Comparing with the base-</td></tr><tr><td colspan=\"3\">lines of arc-eager and arc-standard parsers, our</td></tr><tr><td colspan=\"3\">parser achieves around 2% improvement in UAS</td></tr><tr><td colspan=\"3\">and LAS on all datasets, while running about 20</td></tr><tr><td>times faster.</td><td/><td/></tr><tr><td colspan=\"3\">It is worth noting that the efficiency of our</td></tr></table>",
+                "type_str": "table",
+                "text": "Table 6 show the comparison of accuracy and parsing speed on PTB (CoNLL dependencies), PTB (Stanford dependencies) and CTB respectively. Accuracy and parsing speed on PTB + CoNLL dependencies.",
+                "html": null,
+                "num": null
+            },
+            "TABREF6": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "Accuracy and parsing speed on CTB.",
+                "html": null,
+                "num": null
+            }
+        }
+    }
+}

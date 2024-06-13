@@ -1,0 +1,2753 @@
+{
+    "paper_id": "2021",
+    "header": {
+        "generated_with": "S2ORC 1.0.0",
+        "date_generated": "2023-06-16T12:01:50.632162Z"
+    },
+    "title": "Identifying Named Entities as they are Typed",
+    "authors": [
+        {
+            "first": "Ravneet",
+            "middle": [
+                "Singh"
+            ],
+            "last": "Arora",
+            "suffix": "",
+            "affiliation": {},
+            "email": "rarora62@bloomberg.net"
+        },
+        {
+            "first": "Chen-Tse",
+            "middle": [],
+            "last": "Tsai",
+            "suffix": "",
+            "affiliation": {},
+            "email": ""
+        },
+        {
+            "first": "Daniel",
+            "middle": [],
+            "last": "Preot \u00b8iuc-Pietro",
+            "suffix": "",
+            "affiliation": {},
+            "email": ""
+        }
+    ],
+    "year": "",
+    "venue": null,
+    "identifiers": {},
+    "abstract": "Identifying named entities in written text is an essential component of the text processing pipeline used in applications such as text editors to gain a better understanding of the semantics of the text. However, the typical experimental setup for evaluating Named Entity Recognition (NER) systems is not directly applicable to systems that process text in real time as the text is being typed. Evaluation is performed on a sentence level assuming the end-user is willing to wait until the entire sentence is typed for entities to be identified and further linked to identifiers or coreferenced. We introduce a novel experimental setup for NER systems for applications where decisions about named entity boundaries need to be performed in an online fashion. We study how state-of-the-art methods perform under this setup in multiple languages and propose adaptations to these models to suit this new experimental setup. Experimental results show that the best systems that are evaluated on each token after its typed, reach performance within 1-5 F 1 points of systems that are evaluated at the end of the sentence. These show that entity recognition can be performed in this setup and open up the development of other NLP tools in a similar setup.",
+    "pdf_parse": {
+        "paper_id": "2021",
+        "_pdf_hash": "",
+        "abstract": [
+            {
+                "text": "Identifying named entities in written text is an essential component of the text processing pipeline used in applications such as text editors to gain a better understanding of the semantics of the text. However, the typical experimental setup for evaluating Named Entity Recognition (NER) systems is not directly applicable to systems that process text in real time as the text is being typed. Evaluation is performed on a sentence level assuming the end-user is willing to wait until the entire sentence is typed for entities to be identified and further linked to identifiers or coreferenced. We introduce a novel experimental setup for NER systems for applications where decisions about named entity boundaries need to be performed in an online fashion. We study how state-of-the-art methods perform under this setup in multiple languages and propose adaptations to these models to suit this new experimental setup. Experimental results show that the best systems that are evaluated on each token after its typed, reach performance within 1-5 F 1 points of systems that are evaluated at the end of the sentence. These show that entity recognition can be performed in this setup and open up the development of other NLP tools in a similar setup.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            }
+        ],
+        "body_text": [
+            {
+                "text": "Automatically identifying named entities such as organizations, people and locations is a key component in processing written text as it aids with understanding the semantics of the text. Named entity recognition is used as a pre-processing step to subsequent tasks such as linking named entities to concepts in a knowledge graph, identifying the salience of an entity to the text, identifying coreferential mentions, computing sentiment towards an entity, in question answering or for extracting relations. Figure 1 : An example of the proposed task and evaluation setup. After the word 'Foreign' is typed, the model immediately predicts an NER label for this word, only using left context ('A spokesman for') and the word itself. The prediction is then compared against the gold label to compute token-level F 1 score. This token's prediction will not be changed, even if the model's internal prediction for it can be revised later as more tokens are typed.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 515,
+                        "end": 516,
+                        "text": "1",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Identifying named entities as they are typed benefits any system that processes text on the fly. Examples of such applications include: a) News editorswhere named entities can be highlighted, suggested (auto-completion), co-referenced or linked as the editor is typing; b) auto-correct -where named entities that are just typed are less likely to need correction as they may come from a different language or be out-of-vocabulary (OOV); c) simultaneous machine translation -where translation of OOV named entities requires different approaches; d) live speech-to-text (e.g., TV shows) -where named entities are more likely to be OOV, hence the transcription should focus more on the phonetic transcription rather than on n-gram language modelling. This paper introduces a novel experimental setup of Named Entity Recognition systems illustrated in Figure 1 . In this setup, inference about the span and type of named entities is performed for each token, immediately after it was typed. The sentence level tag sequence is composed through appending all individual token predictions as they were made. The current named entity recognition systems that are trained and evaluated to predict full sentences are likely to under-perform in this experimental setup as they: expect that right context is available, are faced with unseen types of inputs in the form of truncated sentences and can not reconcile the final sentence-level tag sequence across the entire sentence as the result may not be a valid sequence.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 855,
+                        "end": 856,
+                        "text": "1",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "The goal of this study is to present a comprehensive analysis of the task of NER in the as-you-type scenario, with the following contributions: a) A novel experimental setup for conducting named entity recognition experiments, denoted as the as-you-type scenario; b) Experiments with state-of-the-art sentence-level approaches to named entity recognition in the as-you-type setup across three languages, which indicate a 1-5 F 1 points decrease compared to sentence-level inference; c) Tailored methods for as-you-type entity recognition models which reduce the gap to entire sentence-level inference by 9-23% compared to regular approaches; d) An extensive analysis of existing data sets in the context of this task and model error analysis, which highlight future modelling opportunities.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Named Entity Recognition is most commonly treated as a sequence labelling problem, where a prediction of whether a token is an entity and its type is done jointly for all tokens in the sentence. Over the past recent years, the dominant approach is based on recurrent neural networks, such as LSTMs (Hochreiter and Schmidhuber, 1997) . These architectures use a stacked bi-directional LSTM units to transform the word-level features into distributions over named entity tags (Huang et al., 2015) . Usually, an additional Conditional Random Field (CRF) (Lafferty et al., 2001) is used on the BiLSTM output in order to take into better model neighbouring tags. The tokens inputs are represented using one or a concatenation of pretrained static word embeddings such as GloVe (Ma and Hovy, 2016) , contextual word embeddings (Peters et al., 2018; Akbik et al., 2018; Devlin et al., 2019) , pooled contextual word embeddings (Akbik et al., 2019b) or character embeddings trained using BiLSTMs (Lample et al., 2016) or CNNs (Ma and Hovy, 2016; Chiu and Nichols, 2016) .",
+                "cite_spans": [
+                    {
+                        "start": 298,
+                        "end": 332,
+                        "text": "(Hochreiter and Schmidhuber, 1997)",
+                        "ref_id": "BIBREF20"
+                    },
+                    {
+                        "start": 474,
+                        "end": 494,
+                        "text": "(Huang et al., 2015)",
+                        "ref_id": "BIBREF21"
+                    },
+                    {
+                        "start": 551,
+                        "end": 574,
+                        "text": "(Lafferty et al., 2001)",
+                        "ref_id": "BIBREF22"
+                    },
+                    {
+                        "start": 772,
+                        "end": 791,
+                        "text": "(Ma and Hovy, 2016)",
+                        "ref_id": "BIBREF25"
+                    },
+                    {
+                        "start": 821,
+                        "end": 842,
+                        "text": "(Peters et al., 2018;",
+                        "ref_id": "BIBREF30"
+                    },
+                    {
+                        "start": 843,
+                        "end": 862,
+                        "text": "Akbik et al., 2018;",
+                        "ref_id": "BIBREF2"
+                    },
+                    {
+                        "start": 863,
+                        "end": 883,
+                        "text": "Devlin et al., 2019)",
+                        "ref_id": "BIBREF12"
+                    },
+                    {
+                        "start": 920,
+                        "end": 941,
+                        "text": "(Akbik et al., 2019b)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 988,
+                        "end": 1009,
+                        "text": "(Lample et al., 2016)",
+                        "ref_id": "BIBREF23"
+                    },
+                    {
+                        "start": 1018,
+                        "end": 1037,
+                        "text": "(Ma and Hovy, 2016;",
+                        "ref_id": "BIBREF25"
+                    },
+                    {
+                        "start": 1038,
+                        "end": 1061,
+                        "text": "Chiu and Nichols, 2016)",
+                        "ref_id": "BIBREF9"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "In addition to research on improving the performance of the NER model, other experimental setups have been proposed for this task. These include domain adaptation, where a model trained on data from a source domain is used to tag data from a different target domain (Guo et al., 2009; Greenberg et al., 2018; Wang et al., 2020) , temporal drift, where a model is tested on data from future time intervals (Derczynski et al., 2016; Rijhwani and Preotiuc-Pietro, 2020) , cross-lingual modelling where models trained in one language are adapted to other languages (Tsai et al., 2016; Ni et al., 2017; Xie et al., 2018) , identifying nested entities (Alex et al., 2007; Lu and Roth, 2015) or high-precision NER models (Arora et al., 2019) .",
+                "cite_spans": [
+                    {
+                        "start": 266,
+                        "end": 284,
+                        "text": "(Guo et al., 2009;",
+                        "ref_id": "BIBREF19"
+                    },
+                    {
+                        "start": 285,
+                        "end": 308,
+                        "text": "Greenberg et al., 2018;",
+                        "ref_id": "BIBREF15"
+                    },
+                    {
+                        "start": 309,
+                        "end": 327,
+                        "text": "Wang et al., 2020)",
+                        "ref_id": "BIBREF37"
+                    },
+                    {
+                        "start": 405,
+                        "end": 430,
+                        "text": "(Derczynski et al., 2016;",
+                        "ref_id": "BIBREF11"
+                    },
+                    {
+                        "start": 431,
+                        "end": 466,
+                        "text": "Rijhwani and Preotiuc-Pietro, 2020)",
+                        "ref_id": "BIBREF32"
+                    },
+                    {
+                        "start": 561,
+                        "end": 580,
+                        "text": "(Tsai et al., 2016;",
+                        "ref_id": "BIBREF35"
+                    },
+                    {
+                        "start": 581,
+                        "end": 597,
+                        "text": "Ni et al., 2017;",
+                        "ref_id": "BIBREF27"
+                    },
+                    {
+                        "start": 598,
+                        "end": 615,
+                        "text": "Xie et al., 2018)",
+                        "ref_id": "BIBREF38"
+                    },
+                    {
+                        "start": 646,
+                        "end": 665,
+                        "text": "(Alex et al., 2007;",
+                        "ref_id": "BIBREF3"
+                    },
+                    {
+                        "start": 666,
+                        "end": 684,
+                        "text": "Lu and Roth, 2015)",
+                        "ref_id": "BIBREF24"
+                    },
+                    {
+                        "start": 714,
+                        "end": 734,
+                        "text": "(Arora et al., 2019)",
+                        "ref_id": "BIBREF5"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "However, all these experimental setups assume that training is done over full length sentences. Perhaps the most related experimental setup to the one we propose for the task of entity recognition is the task of simultaneous machine translation. In this setup, the task is to generate an automatic translation in a target language as the text is being processed in the source language. The goal of the task is to produce a translation that is as accurate as possible while limiting the delay as compared to the input. Initial approaches involved identifying translatable segments and translating these independently (F\u00fcgen et al., 2007; Bangalore et al., 2012; Fujita et al., 2013) or by learning where to segment in order to optimize the system's performance (Oda et al., 2014) . More recent approaches involve learning training an agent, usually using reinforcement learning, that makes a set of decisions of whether to should wait for another word from the input or write a token to the output (Gu et al., 2017) . Other operations are shown to help, including predicting the verb (Grissom II et al., 2014) or the next word (Alinejad et al., 2018) , better decoding with partial information (Cho and Esipova, 2016) , and connecting the machine translation system to the agent's decisions (Gu et al., 2017) .",
+                "cite_spans": [
+                    {
+                        "start": 616,
+                        "end": 636,
+                        "text": "(F\u00fcgen et al., 2007;",
+                        "ref_id": "BIBREF13"
+                    },
+                    {
+                        "start": 637,
+                        "end": 660,
+                        "text": "Bangalore et al., 2012;",
+                        "ref_id": "BIBREF6"
+                    },
+                    {
+                        "start": 661,
+                        "end": 681,
+                        "text": "Fujita et al., 2013)",
+                        "ref_id": "BIBREF14"
+                    },
+                    {
+                        "start": 760,
+                        "end": 778,
+                        "text": "(Oda et al., 2014)",
+                        "ref_id": "BIBREF28"
+                    },
+                    {
+                        "start": 997,
+                        "end": 1014,
+                        "text": "(Gu et al., 2017)",
+                        "ref_id": "BIBREF17"
+                    },
+                    {
+                        "start": 1083,
+                        "end": 1108,
+                        "text": "(Grissom II et al., 2014)",
+                        "ref_id": "BIBREF16"
+                    },
+                    {
+                        "start": 1126,
+                        "end": 1149,
+                        "text": "(Alinejad et al., 2018)",
+                        "ref_id": "BIBREF4"
+                    },
+                    {
+                        "start": 1193,
+                        "end": 1216,
+                        "text": "(Cho and Esipova, 2016)",
+                        "ref_id": "BIBREF10"
+                    },
+                    {
+                        "start": 1290,
+                        "end": 1307,
+                        "text": "(Gu et al., 2017)",
+                        "ref_id": "BIBREF17"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "Our experimental setup is different as we do not want to wait for another input token before we make a prediction about the named entity. We analyze the impact a delay has, albeit our experimental setup does not aim to combine quality and delay. The challenges are related, as the input may contain important cues for the translation or named entity decision after the current token or towards the end of the sentence, such as the verb in verb-final (SOV) languages such as German (Grissom II et al., 2014) . The proposed as-you-type NER model can be useful to improve simultaneous machine translation.",
+                "cite_spans": [
+                    {
+                        "start": 481,
+                        "end": 506,
+                        "text": "(Grissom II et al., 2014)",
+                        "ref_id": "BIBREF16"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "We propose a new experimental setup for the standard task of Named Entity Recognition that would best suit real-time applications that need to process text in an online fashion.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experimental Setup",
+                "sec_num": "3"
+            },
+            {
+                "text": "In the regular NER experimental setup, a model is presented with a sequence of inputs X = {x 1 , x 2 , ..., x n } and it outputs a sequence of labels Y = {y 1 , y 2 , ..., y n } where y i \u2208 K = {O} + E \u00d7 T , where E are the set of entity types and T is the entity tag representation. Throughout the rest of the paper, we use the BIO tagging scheme (T = {B, I}), as this is arguably the most popular and differences in results between this tagging scheme and others, such as the BILOU scheme, are very small in practice (Ratinov and Roth, 2009) . The types of entities we consider are E = {ORG, PER, LOC, MISC}.",
+                "cite_spans": [
+                    {
+                        "start": 519,
+                        "end": 543,
+                        "text": "(Ratinov and Roth, 2009)",
+                        "ref_id": "BIBREF31"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experimental Setup",
+                "sec_num": "3"
+            },
+            {
+                "text": "The as-you-type named entity recognition setup assumes that the editor writing the text X = {x 1 , x 2 , ..., x n } needs each label prediction y i right after the corresponding token x i was typed. In this case, the information available for predicting y i is only the sub-sequence X 1,i = {x 1 , x 2 , ..., x i }. The sequence Y = {y 1 , y 2 , ..., y n } is obtained by concatenating the individual y i predictions made for each token. Token-level micro F 1 score is used as the metric in our experiments. The evaluation process is illustrated in Figure 1 .",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 556,
+                        "end": 557,
+                        "text": "1",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Experimental Setup",
+                "sec_num": "3"
+            },
+            {
+                "text": "This setup presents the model with several challenges. First, the model has no access to right context when making the prediction for each tag. However, this information is available in training. Secondly, the output sequence may contain invalid sequences of tags. For example, in the output sequence, B-ORG could be followed by I-LOC if the model decided to revise its predictions based on new information, but the evaluation setup prevents the model from revising the previous wrongly predicted tag (i.e. B-ORG). Lastly, sequences and sentences of the same length are likely to be qualitatively different and the model might need to adapt in training in order to account for these differences.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experimental Setup",
+                "sec_num": "3"
+            },
+            {
+                "text": "We note that this experimental setup can further be extended to account for delays in prediction, to trade-off between delays and quality or to predict entities before they are typed.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experimental Setup",
+                "sec_num": "3"
+            },
+            {
+                "text": "We test our methods on three different data sets covering three different languages. We use the data sets released as part of CoNLL shared tasks in 2002 for Spanish (Tjong Kim Sang, 2002) 1 and in 2003 for English and German (Tjong Kim Sang and De Meulder, 2003) . 2 The data sets contain four types of named entities: persons, locations, organizations and names of miscellaneous entities that do not belong to the previous three types. We use the standard train, dev and test splits defined for these data sets.",
+                "cite_spans": [
+                    {
+                        "start": 165,
+                        "end": 187,
+                        "text": "(Tjong Kim Sang, 2002)",
+                        "ref_id": "BIBREF33"
+                    },
+                    {
+                        "start": 225,
+                        "end": 262,
+                        "text": "(Tjong Kim Sang and De Meulder, 2003)",
+                        "ref_id": "BIBREF34"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Data",
+                "sec_num": "4"
+            },
+            {
+                "text": "We chose these data sets as they are arguably the most popular data sets for performing named entity recognition and are regularly used as benchmarks for this task. We use the data sets in different languages in order to compare the impact of the language on the experimental results, identify if the commonalities and peculiarities for performing asyou-type entity recognition in different languages and draw more robust conclusions regarding our task setup.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Data",
+                "sec_num": "4"
+            },
+            {
+                "text": "We perform a quantitative analysis of the data sets in order to develop some intuitions about the data in the context of the as-you-type experimental setup. Sentence Length and Tag Distribution First, we study the distribution of sentence lengths. Figure 2 shows that for English, most sentences are very short (under 10 tokens) and the most frequent sentence length is two. These are expected to pose problems in the as-you-type scenario, as the context is limited. German sentences are slightly longer, while the Spanish sentences are longest, except for a spike of sentences of length one.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 255,
+                        "end": 256,
+                        "text": "2",
+                        "ref_id": "FIGREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Data Analysis",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "Figure 3 shows the distribution of entity types in sentences of varying lengths for English. For clarity, we remove MISC tags from this plot as these are infrequent. We observe there are major differences in tag distributions, especially shorter sentences (<5 tokens) containing both more entity tags as well as different tag distributions. For example, almost 30% of locations (B-LOC or I-LOC) are in sentences of length two, which are the most frequent in the English data, while in longer sentences, these are around 5%. Organizations are most frequent in sentences of length between 4 and 7 tokens, while persons are most frequent in sentences longer than 7 tokens. Token Position and Tag Distribution To further investigate the positional bias of different tags, Fig- 1 https://www.clips.uantwerpen.be/conll2002/ner/ 2 https://www.clips.uantwerpen.be/conll2003/ner/ ure 4 shows the distribution of tags in the k-th token of the sentence. We observe that the first tokens of a sentence are much more likely to contain entities. The first position is most likely to be an ORG, with PER being the most frequent in the second to fourth positions, followed by LOC being the most prevalent for the next position, with PER again most frequent in further positions. These observations are likely to complicate the as-you-type inference for named entities, as a higher proportion of tokens will have to be inferred with no or little right context. Comparing Figures 3 and 4 shows that the model will be faced with different tag distributions when inferring the tag for the k-th token in a truncated sentence then to what it has observed in sentences of length k, which provides an intuition for our modelling strategies.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 7,
+                        "end": 8,
+                        "text": "3",
+                        "ref_id": "FIGREF1"
+                    },
+                    {
+                        "start": 773,
+                        "end": 774,
+                        "text": "1",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 1462,
+                        "end": 1463,
+                        "text": "3",
+                        "ref_id": "FIGREF1"
+                    },
+                    {
+                        "start": 1468,
+                        "end": 1469,
+                        "text": "4",
+                        "ref_id": "FIGREF2"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Data Analysis",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "This section describes the methods used to perform named entity recognition in the as-you-type scenario. We use a base neural architecture that achieves state-of-the-art performance on the standard sentence-level NER task. We study its performance and observe the impact of different variants of the architecture in the as-you-type scenario. Following, we propose changes to the model to adapt to the as-you-type setup. We use the Flair package to conduct our experiments (Akbik et al., 2019a) . 3 Implementation details and hyperparameter choices for all models are listed in the Appendix.",
+                "cite_spans": [
+                    {
+                        "start": 472,
+                        "end": 493,
+                        "text": "(Akbik et al., 2019a)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Methods",
+                "sec_num": "5"
+            },
+            {
+                "text": "We adopt the BiLSTM-CRF model proposed in (Huang et al., 2015) with the addition of character representation (Lample et al., 2016; Ma and Hovy, 2016) . In this architecture, the word representations are fed into a bi-directional LSTM, and then the concatenated forward and backward vectors are passed through one layer of feed-forward neural network to produce a |K| dimensional output for each word, where each value represents a score associated with each label. Finally, a Conditional Random Field (CRF) layer is applied to make a global decision for the entire sentence. This has the role of reconciling the independent predictions and modeling the constraints in the output space (e.g. I-PER can not follow B-ORG).",
+                "cite_spans": [
+                    {
+                        "start": 42,
+                        "end": 62,
+                        "text": "(Huang et al., 2015)",
+                        "ref_id": "BIBREF21"
+                    },
+                    {
+                        "start": 109,
+                        "end": 130,
+                        "text": "(Lample et al., 2016;",
+                        "ref_id": "BIBREF23"
+                    },
+                    {
+                        "start": 131,
+                        "end": 149,
+                        "text": "Ma and Hovy, 2016)",
+                        "ref_id": "BIBREF25"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Base Architecture",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "We start with studying different variants of the base neural architecture for the as-you-type scenario.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Architecture Variants",
+                "sec_num": "5.2"
+            },
+            {
+                "text": "The key challenge in the as-you-type setting is that the model is not presented with the future or right context (words after the current word) at test time. A natural idea is to remove information from this context during training as well. The variants we consider are based on changing the following three modeling components Embeddings We first study the impact of different ways in which input tokens are represented. Pretrained word embeddings obtained state-of-the-art performance on the NER task when they were introduced (Lample et al., 2016) . These representations are used to initialize the word embeddings, are then fine-tuned on the training data and are concatenated with a character-level representation of the word obtained using BiLSTMs initialized with random character embeddings.",
+                "cite_spans": [
+                    {
+                        "start": 529,
+                        "end": 550,
+                        "text": "(Lample et al., 2016)",
+                        "ref_id": "BIBREF23"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Architecture Variants",
+                "sec_num": "5.2"
+            },
+            {
+                "text": "Contextual word embeddings extend this concept to obtain different word representations for the same token in based on its context. In the standard sentence-level evaluation, contextual word embeddings were shown to obtain 2-3 F 1 points improvement on the English CoNLL data set (Peters et al., 2018; Akbik et al., 2018; Devlin et al., 2019) . Without right context, the quality of word representations could be more crucial than in the standard setting. In this study, we test the performance of using classic embeddings -GloVe embeddings for English (Pennington et al., 2014) and FastText embeddings (Bojanowski et al., 2017) for German and Spanish as well as the character based contextual Flair embeddings, which achieve stateof-the-art performance on the English and German CoNLL data sets (Akbik et al., 2018) . We also experimented with contextual ELMO embeddings (Peters et al., 2018) which showed slightly lower performance when compared to the Flair embeddings and hence only Flair numbers are reported due to space limitations.",
+                "cite_spans": [
+                    {
+                        "start": 280,
+                        "end": 301,
+                        "text": "(Peters et al., 2018;",
+                        "ref_id": "BIBREF30"
+                    },
+                    {
+                        "start": 302,
+                        "end": 321,
+                        "text": "Akbik et al., 2018;",
+                        "ref_id": "BIBREF2"
+                    },
+                    {
+                        "start": 322,
+                        "end": 342,
+                        "text": "Devlin et al., 2019)",
+                        "ref_id": "BIBREF12"
+                    },
+                    {
+                        "start": 553,
+                        "end": 578,
+                        "text": "(Pennington et al., 2014)",
+                        "ref_id": "BIBREF29"
+                    },
+                    {
+                        "start": 603,
+                        "end": 628,
+                        "text": "(Bojanowski et al., 2017)",
+                        "ref_id": "BIBREF8"
+                    },
+                    {
+                        "start": 796,
+                        "end": 816,
+                        "text": "(Akbik et al., 2018)",
+                        "ref_id": "BIBREF2"
+                    },
+                    {
+                        "start": 872,
+                        "end": 893,
+                        "text": "(Peters et al., 2018)",
+                        "ref_id": "BIBREF30"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Architecture Variants",
+                "sec_num": "5.2"
+            },
+            {
+                "text": "However, contextual embeddings are trained with right context available. We experiment with removing this dependency from the trained embeddings and observe if this improves the performance in the as-you-type setting, as the test scenario is more similar to the training one. We note that right context is never observed in inference beyond the current token such that there is no leakage of information. BiLSTM Bidirectional LSTM stacks two recurrent neural networks: one starts from the beginning of the sentence, and another starts from the end of the sentence. This performs better than the unidirectional variant on sentence-level experiments and shows that both types of context (left and right) are important for identifying and typing entity mentions. In the as-you-type setting, we compare unidirectional LSTM modelling left context with the bidirectional LSTM model that models both types of contexts in training. Conditional Random Field The CRF assigns labels for words in a sentence jointly, ensuring label assignments are coherent. When running inference in the as-you-type setting, the model often sees truncated sentences which, as shown in Section 4 may have different label distributions. This discrepancy between training and test sequences may degrade the usefulness of the CRF. We experiment to see if and how the CRF is useful in the as-youtype scenario.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Architecture Variants",
+                "sec_num": "5.2"
+            },
+            {
+                "text": "The as-you-type experimental setup presents the model with a new type of evaluation, which does not correspond to the one used in training. We thus propose the following approaches to bridge the gap between the setup and how the model is trained.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model Adaptations for the As-you-type Setup",
+                "sec_num": "5.3"
+            },
+            {
+                "text": "The model only observes the partial backward context for the tokens in the sequence during the asyou-type inference. In training, since the model has access to the entire sequence, it is likely that the model becomes too dependent on the presence and reliability of the backward features, especially for predicting the initial tokens.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Weighted Loss",
+                "sec_num": "5.3.1"
+            },
+            {
+                "text": "In order to bias the model to be more robust to the absence or unreliable backward context, we design a new loss function that combines the original BiLSTM-CRF loss with the loss from the unidirectional LSTM features. From the latter loss, we also remove the influence of CRF as it also captures signal from the right context and, for contextual embeddings, remove the backward embeddings from the input to the LSTM. The resulting loss is:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Weighted Loss",
+                "sec_num": "5.3.1"
+            },
+            {
+                "text": "L weighted = L BiLSTM-CRF + w * L LSTM-NoCRF",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Weighted Loss",
+                "sec_num": "5.3.1"
+            },
+            {
+                "text": "where w is a weight treated as a hyper-parameter in our experiments.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Weighted Loss",
+                "sec_num": "5.3.1"
+            },
+            {
+                "text": "The final token in a training sequence is treated in a special way in the base model. First, a stop tag is regularly used to capture the information associated with a the last token in the sequence. Secondly, the backward features for the final token in a sequence are not observed, as there is no right context, so these are initialized with a random vector. While both are useful in the regular setup as it captures a consistent pattern the final words follow, this does not hold for the as-you-type setup, where each token in a sequence will be the final token for its prediction, as partial sequences are observed.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Final Token Representation",
+                "sec_num": "5.3.2"
+            },
+            {
+                "text": "We thus assume these choices add noise in our setup, thus we both remove the stop tag together with any transition scores to it during training and evaluation and remove the backward feature of the last token and initialize it with a zero vector.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Final Token Representation",
+                "sec_num": "5.3.2"
+            },
+            {
+                "text": "The previous approach relied on the intuition of learning the trade-off between forward and backward features in order to better adapt to the inference setup. However, this trade-off is likely impacted by the position of the token in the sequence.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Feature Weighting",
+                "sec_num": "5.3.3"
+            },
+            {
+                "text": "Thus, we explore a technique similar to (Moon et al., 2018 ) that allows the model to learn the importance of backward features based on the position of tokens. The is illustrated in Figure 5 . We implement this using position based attention weights. We apply these weights before combining the forward and backward features (instead of concatenating) from the LSTMs as follows:",
+                "cite_spans": [
+                    {
+                        "start": 40,
+                        "end": 58,
+                        "text": "(Moon et al., 2018",
+                        "ref_id": "BIBREF26"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 190,
+                        "end": 191,
+                        "text": "5",
+                        "ref_id": "FIGREF3"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Feature Weighting",
+                "sec_num": "5.3.3"
+            },
+            {
+                "text": "h t = h f t + a t * h b t",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Feature Weighting",
+                "sec_num": "5.3.3"
+            },
+            {
+                "text": "where t is the position of the token, h f t and h b t are forward and backward LSTM features at t, h t is the new output feature at t and a t is the attention weight for the backward features at position t. The attention weights a t are computed as follows:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Feature Weighting",
+                "sec_num": "5.3.3"
+            },
+            {
+                "text": "u t = [h f t ; h b t ; p t ]; a t = \u03c3(W.u t + b)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Feature Weighting",
+                "sec_num": "5.3.3"
+            },
+            {
+                "text": "At every position t, the feature vector is calculated by concatenating the forward, backward and the positional embedding for that token. Attention weight a t is calculated by applying attention weight matrix W followed by the sigma activation. We do not apply a t for forward features since they are always complete and reliable even for partial sentences.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Feature Weighting",
+                "sec_num": "5.3.3"
+            },
+            {
+                "text": "We follow the structure of positional embeddings introduced in (Vaswani et al., 2017) and defined as:",
+                "cite_spans": [
+                    {
+                        "start": 63,
+                        "end": 85,
+                        "text": "(Vaswani et al., 2017)",
+                        "ref_id": "BIBREF36"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Feature Weighting",
+                "sec_num": "5.3.3"
+            },
+            {
+                "text": "p 2i t = sin( t 10000 2i/d ); p 2i+1 t = cos( t 10000 2i/d )",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Feature Weighting",
+                "sec_num": "5.3.3"
+            },
+            {
+                "text": "where d is the size of positional embedding, i is the dimension and t is the position. The values in a positional embedding are sin and cosine functions whose period is 10000 2i/d * 2\u03c0. Positional sinusoidal embedding allows to encode longer sequences that are not present in training.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Feature Weighting",
+                "sec_num": "5.3.3"
+            },
+            {
+                "text": "Since the right hand side context decreases as we move from left to right of a sequence in training, we would like our attention weights to consider how far a token lies from the final token in a sequence. To achieve this, we calculate position index of tokens from the end of the sentence which makes sure that a token lying at the final position always receives an index of 0, producing the same positional embedding and the input to attention weights does not fluctuate from one sequence to another.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Feature Weighting",
+                "sec_num": "5.3.3"
+            },
+            {
+                "text": "We perform a similar operation using attention at the embedding stage to trade-off between backward and forward contextual token representations. The input embeddings are calculated as follows:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Embedding Weighting",
+                "sec_num": "5.3.4"
+            },
+            {
+                "text": "x ",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Embedding Weighting",
+                "sec_num": "5.3.4"
+            },
+            {
+                "text": "We present the experimental results of the various NER models in the as-you-type setup, contrasting them with the regular sentence-level setup. All models are trained using the standard splits for the CoNLL data sets. The evaluation metric is tokenlevel micro F 1 , as this is reflective of our evaluation setup where each token is evaluated separately.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "6"
+            },
+            {
+                "text": "The top section of Table 1 shows the results of the different variants of the base architecture in Section 5.2. The overall performance drop in the as-you-type setup compared to the sentence-level setup ranges from 4.80 F1 for English to only 1.53 F1 for Spanish when comparing the best performing models. This is expected, as the as-you-type scenario is more challenging, especially for English where our data analysis from Section 4.1 showed that tokens are more prevalent in short sentences which are overall more frequent. For Spanish, where the performance difference is smallest, is where we have on average the longest sentences and in which left context alone is in most cases enough to make the correct inference. We note that in all three data sets, the best results in the as-you-type setting are obtained by matching the training setup to that of testing by only keeping a uni-directional LSTM that processes the text left to right and Flair embeddings only trained using left context. Flair embeddings trained only using left context are in all cases better than the bidirectional ones, which is natural as those embeddings would conflate information that is not available in inference. Uni-directional LSTMs perform overall better than bi-directional LSTMs by an average of a few percentage points as bi-directional LSTMs are likely learning information that will not be available in testing.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 25,
+                        "end": 26,
+                        "text": "1",
+                        "ref_id": "TABREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "6"
+            },
+            {
+                "text": "Adding the CRF hurts performance in all except one case when holding everything else constant, sometimes by wide margins (e.g. 5.3 F1 drop on Spanish with Flair forward embeddings and unidirectional LSTM). We attribute this to the mismatch between the structure of the sequences in the training data containing only full sentences, when compared to truncated sentences which can be observed by comparing Figures 3 to Figures 4 .",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 412,
+                        "end": 426,
+                        "text": "3 to Figures 4",
+                        "ref_id": "FIGREF2"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "6"
+            },
+            {
+                "text": "The bottom section of Table 1 shows the results of our as-you-type adaptation strategies. All proposed methods are added on top of each other in order to study their individual contributions. For brevity, we only present the results of using Flair forward and backward embeddings as these performed best.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 28,
+                        "end": 29,
+                        "text": "1",
+                        "ref_id": "TABREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "6"
+            },
+            {
+                "text": "The changes to the last token representation and weighted loss improves on the regular bidirectional LSTM model by a substantial margin, adding between 0.45 for Spanish up to 4.25 F1 on English on the as-you type setup performance. We also notice that the sentence-level evaluation is near to the regular model performance (-0.39 for German to +0.05 for Spanish), showing that the weighted loss is able to achieve a good compromise between the representations.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "6"
+            },
+            {
+                "text": "Adding the feature weighting based on position marginally improves performance, between 0.02 on German to 0.21 on English. However, the weighting through attention is more effective at the embedding level improving on the previous model by between 0.19 F1 on English to 1.01 F1 on German. Overall, our as-you-type adaptation methods improve on the best variation of the base architecture on English (+0.45 F1) and German (+0.83 F1). The model is competitive on Spanish (-0.12 F1) to the Flair forward unidirectional LSTM with no CRF, albeit this is likely driven by the very long average sentence length in the Spanish data set (see Figure 2 ). Overall, the improvements represent between 9.3% -23% error reduction when comparing to the best as-you-type and sentence level setups.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 640,
+                        "end": 641,
+                        "text": "2",
+                        "ref_id": "FIGREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "6"
+            },
+            {
+                "text": "We highlight that an additional benefit of the proposed adaptation methods is that the model retains high performance on the sentence-level setup, in contrast with the Flair forward uni-directional LSTM, which performs between 1.89 (Spanish) and 4.34 (English) worse on the sentence-level.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "6"
+            },
+            {
+                "text": "Finally, the results of our proposed model are actually marginally better than the state-of-the-art approach of BiLSTM+CRF using Flair embeddings on German (+0.45 F1) and Spanish (+0.73 F1), albeit this was not the original goal of our additions. This highlights that the proposed modelling ideas are more generally beneficial as they push the model to learn more robust representations.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "6"
+            },
+            {
+                "text": "Finally, we perform error analysis to identify the limitations of our approaches.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Error Analysis",
+                "sec_num": "7"
+            },
+            {
+                "text": "We first study prediction difference between asyou-type and sentence-level setup. Figure 6 shows the confusion matrix on the English data set. Both models are BiLSTM-CRF with Flair embeddings, but the as-you-type model is trained with the best setting from Table 1 . We can see that most confusions are between LOC and ORG: 7.9% of I-ORG tokens in the full-sentence setting are classified as I-LOC in the as-you-type setting, and 7.6% of B-ORG tokens are classified as B-LOC. Without right context, it is very challenging to distinguish these two types. For example, the data set contains many sport teams that contain location name tokens. Another noticeable difference is that the as-you-type model makes more O predictions. For instance, 5.8% of B-MISC are classified as O. This can be due to the limited availability of cues for identifying entities when right context is missing.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 89,
+                        "end": 90,
+                        "text": "6",
+                        "ref_id": "FIGREF4"
+                    },
+                    {
+                        "start": 263,
+                        "end": 264,
+                        "text": "1",
+                        "ref_id": "TABREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Confusion Matrix",
+                "sec_num": "7.1"
+            },
+            {
+                "text": "We expect that the size of the context impacts the quality of the inference more acutely in the as-youtype scenario when compared to the sentence-level setup. Figure 7 plots the predictive performance of three English models across each token's position. This confirms our intuition that the as-you-type setup especially impacts prediction on the first tokens in a sentence, which are more entity rich as shown in Section 4.1. However, we see that there is still a difference compared to the standard NER setup (blue curve) across all positions, confirming that indeed the right context can add more information regardless of the position of the token. The plot also highlights the performance gains of our adaptation methods at the first tokens when compared with the BiLSTM-CRF model evaluated in the as-you-type setting (orange curve).",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 166,
+                        "end": 167,
+                        "text": "7",
+                        "ref_id": "FIGREF5"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Positional Prediction",
+                "sec_num": "7.2"
+            },
+            {
+                "text": "Based on the previous results and examples, we want to study the impact of delaying the entity decision by one token. This would account for cases where the first entity word is ambiguous and also reduce the number of invalid sequences that can be produced by the as-you-type inference. For example, in the case of the 'Zimbabwe Open' entity, if the model predicted the tag of the token 'Zimbabwe' as B-LOC and after seeing the next token ('Open'), it revises this token's prediction as I-MISC, it is unable to change the B-LOC tagging, thus creating an invalid sequence, but still obtains partial credit on the token F 1 score. Delaying the decision of the first token could have allowed the model to correct its decision for the first token ('Zimbabwe') to B-MISC, resulting in a valid and more accurate sequence.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Delayed Entity Prediction",
+                "sec_num": "7.3"
+            },
+            {
+                "text": "We study the possibility of delaying the prediction of a single token (not multiple tokens) by using a threshold on the tag output. Table 2 shows the results of several threshold values and their impact on the total F 1 .",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 138,
+                        "end": 139,
+                        "text": "2",
+                        "ref_id": "TABREF2"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Delayed Entity Prediction",
+                "sec_num": "7.3"
+            },
+            {
+                "text": "We observe that if we delay prediction by one token for all tokens (Thr = 1.0), the performance is very close to the best full-sentence model, obtaining an error reduction rate of 64% (1.55 compared to 4.35) for English. Moreover, we can obtain a 50% reduction rate by only delaying the decision on 3.25% of the tokens if the downstream application deems this acceptable. These results highlight the importance of the immediate right context.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Delayed Entity Prediction",
+                "sec_num": "7.3"
+            },
+            {
+                "text": "Named entity recognition combines two different components: entity detection -identifying the named entity spans -and typing -identifying entity types. We study the impact of typing in the asyou-type setup by removing the typing information from the output labels (E = {ENT}), thus reducing the output space to K = {B-ENT, I-ENT, O}.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Untyped Entity Detection",
+                "sec_num": "8"
+            },
+            {
+                "text": "Results using the best as-you-type models with and without as-you-type adaptations are shown in Table 3 . Comparing with the numbers in Table 1 , the untyped F 1 score of as-you-type setting is much closer to the standard sentence-level evaluation, being within 1 point of F 1 for all languages. This highlights that the challenging part of the as-youtype setting is entity typing. For example, 'Zimbabwe' is a location on its own, but 'Zimbabwe Open' is an event (MISC entity type) while 'West' is usually indicative of a first location token (e.g. 'West Pacific'), but can also refer to an organization (e.g. 'West Indies' when referencing the cricket team). The proposed technique results are in this case less conclusive, which is somewhat expected as the differences in entity frequencies between full sentences and truncated sentences are smaller.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 102,
+                        "end": 103,
+                        "text": "3",
+                        "ref_id": "TABREF3"
+                    },
+                    {
+                        "start": 142,
+                        "end": 143,
+                        "text": "1",
+                        "ref_id": "TABREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Untyped Entity Detection",
+                "sec_num": "8"
+            },
+            {
+                "text": "This paper introduced and motivated the as-youtype experimental setup for the popular NER task. We presented results across three different languages, which show the extent to which sentencelevel state-of-the-art models degrade in this setup. Through insights gained from data analysis, we proposed modelling improvements to further reduce the gap to the regular sentence-level performance. Our error analysis highlights the cases that pose challenges to the as-you-type scenario and uncovers insights into way to further improve the modelling of this task. This setup is tailored for end-applications such as text editors, speech-to-text, machine translation, auto-completion, or auto-correct. For text editors, the editor would be able to receive suggestions for entities inline, right after they type the entity, which can further be coupled with a linking algorithm. This would increase the user experience and efficiency of the editor, as they can make selections about entities inline (similar to a phone's autocorrect), rather than having to go back over the entire sentence after it was completed.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusions",
+                "sec_num": "9"
+            },
+            {
+                "text": "Another avenue of future work would be to couple the NER as-you-type with ASR data and using methods that adapt NER to noisy ASR input (Benton and Dredze, 2015) for building an end-to-end live speech to entities system. ",
+                "cite_spans": [
+                    {
+                        "start": 135,
+                        "end": 160,
+                        "text": "(Benton and Dredze, 2015)",
+                        "ref_id": "BIBREF7"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusions",
+                "sec_num": "9"
+            },
+            {
+                "text": "https://github.com/zalandoresearch/ flair",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            }
+        ],
+        "back_matter": [
+            {
+                "text": "We would like to thank Leslie Barrett, Mayank Kulkarni, Amanda Stent, Umut Topkara and the other members of the Bloomberg AI group. They provided invaluable feedback on the experiments and the paper.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Acknowledgements",
+                "sec_num": null
+            },
+            {
+                "text": "To train our models we use Stochastic Gradient Descent with a learning rate of 0.1 and mini batch size of 32. The LSTM model includes 1 layer of LSTM with hidden state size 256. We also employ a dropout of 0.5 for the LSTM layer. For the positional embeddings, the dimension d is set as 100 for feature weighting and 1000 for embedding weighting. We tried different dimensions between 100 and 2000. w for weighted loss is identified as 1.5 for English and 1 for German and Spanish from the dev set. For W we considered values between 0 and 2. All the models are trained for 70 epochs and the best model is selected based on the token-level F-1 score 4 on dev set. We perform manual hyperparameter selection and the final performance is reported based on the 5-10 runs of the best hyperparameter setting.We use Flair's standard settings for English.All the models are trained on nvidia GPU and overall training for 70 epochs takes around 5-6 hours. This run-time complexity is very close to the complexity achieved by the the Flair implementation for standard NER training.Numbers reported in (Akbik et al., 2018) are generated by training models on combined train and dev sets, hence they are higher than the numbers we report when training only on the training data. We also report token-level F1, rather than entitylevel F1, which leads to results that are not directly comparable with (Akbik et al., 2018) .",
+                "cite_spans": [
+                    {
+                        "start": 1092,
+                        "end": 1112,
+                        "text": "(Akbik et al., 2018)",
+                        "ref_id": "BIBREF2"
+                    },
+                    {
+                        "start": 1388,
+                        "end": 1408,
+                        "text": "(Akbik et al., 2018)",
+                        "ref_id": "BIBREF2"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "A.1 Implementation and Hyperparameters",
+                "sec_num": null
+            },
+            {
+                "text": "To better understand the impact of positional attention weights, we visualize and compare the feature-4 https://sklearn-crfsuite.readthedocs. io/en/latest/tutorial.html#evaluation level attention weights for different tokens on a few hand-picked English sentences. Figure 8 highlights tokens using different color intensities. Higher intensity represents a larger weight value and hence a stronger influence of backward context. First, it is evident that tokens in the first position rely more heavily on backward features in the absence of any forward context, which is further reflected in the higher attention weights achieved by these tokens. Moreover, first tokens of multi-token entities such as Persons ('Nabil Abu Rdainah'), Organizations ('NY Rangers') and Events ('Zimbabwe Open') are assigned larger weights due to a high influence of immediate next tokens. Also, quite often the last token in the sentences are weighted lower which can be attributed to the positional information captured by the attention weights.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 272,
+                        "end": 273,
+                        "text": "8",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "A.2 Visualization of Attention Weights",
+                "sec_num": null
+            },
+            {
+                "text": "To facilitate reproducibility of results, Table 4 reports the development set performance of the base model (Bi-LSTM CRF Flair) and the proposed model for both as-you-type and sentence level setups.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 48,
+                        "end": 49,
+                        "text": "4",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "A.3 Performance on Dev Set",
+                "sec_num": null
+            },
+            {
+                "text": "Table 5 lists different trainable parameters used in the model along with their sizes.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 6,
+                        "end": 7,
+                        "text": "5",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "A.4 Parameters",
+                "sec_num": null
+            }
+        ],
+        "bib_entries": {
+            "BIBREF0": {
+                "ref_id": "b0",
+                "title": "FLAIR: An easy-to-use framework for state-of-theart NLP",
+                "authors": [
+                    {
+                        "first": "Alan",
+                        "middle": [],
+                        "last": "Akbik",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tanja",
+                        "middle": [],
+                        "last": "Bergmann",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Duncan",
+                        "middle": [],
+                        "last": "Blythe",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kashif",
+                        "middle": [],
+                        "last": "Rasul",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Stefan",
+                        "middle": [],
+                        "last": "Schweter",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Roland",
+                        "middle": [],
+                        "last": "Vollgraf",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics (Demonstrations)",
+                "volume": "",
+                "issue": "",
+                "pages": "54--59",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/N19-4010"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Alan Akbik, Tanja Bergmann, Duncan Blythe, Kashif Rasul, Stefan Schweter, and Roland Vollgraf. 2019a. FLAIR: An easy-to-use framework for state-of-the- art NLP. In Proceedings of the 2019 Confer- ence of the North American Chapter of the Associa- tion for Computational Linguistics (Demonstrations), pages 54-59, Minneapolis, Minnesota. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF1": {
+                "ref_id": "b1",
+                "title": "Pooled contextualized embeddings for named entity recognition",
+                "authors": [
+                    {
+                        "first": "Alan",
+                        "middle": [],
+                        "last": "Akbik",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tanja",
+                        "middle": [],
+                        "last": "Bergmann",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Roland",
+                        "middle": [],
+                        "last": "Vollgraf",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies",
+                "volume": "1",
+                "issue": "",
+                "pages": "724--728",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/N19-1078"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Alan Akbik, Tanja Bergmann, and Roland Vollgraf. 2019b. Pooled contextualized embeddings for named entity recognition. In Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Hu- man Language Technologies, Volume 1 (Long and Short Papers), pages 724-728, Minneapolis, Min- nesota. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF2": {
+                "ref_id": "b2",
+                "title": "Contextual string embeddings for sequence labeling",
+                "authors": [
+                    {
+                        "first": "Alan",
+                        "middle": [],
+                        "last": "Akbik",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Duncan",
+                        "middle": [],
+                        "last": "Blythe",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Roland",
+                        "middle": [],
+                        "last": "Vollgraf",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 27th International Conference on Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "1638--1649",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Alan Akbik, Duncan Blythe, and Roland Vollgraf. 2018. Contextual string embeddings for sequence la- beling. In Proceedings of the 27th International Con- ference on Computational Linguistics, pages 1638- 1649, Santa Fe, New Mexico, USA. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF3": {
+                "ref_id": "b3",
+                "title": "Recognising nested named entities in biomedical text",
+                "authors": [
+                    {
+                        "first": "Beatrice",
+                        "middle": [],
+                        "last": "Alex",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Barry",
+                        "middle": [],
+                        "last": "Haddow",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Claire",
+                        "middle": [],
+                        "last": "Grover",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2007,
+                "venue": "Biological, translational, and clinical language processing",
+                "volume": "",
+                "issue": "",
+                "pages": "65--72",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Beatrice Alex, Barry Haddow, and Claire Grover. 2007. Recognising nested named entities in biomedical text. In Biological, translational, and clinical language processing, pages 65-72, Prague, Czech Republic. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF4": {
+                "ref_id": "b4",
+                "title": "Prediction improves simultaneous neural machine translation",
+                "authors": [
+                    {
+                        "first": "Ashkan",
+                        "middle": [],
+                        "last": "Alinejad",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Maryam",
+                        "middle": [],
+                        "last": "Siahbani",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Anoop",
+                        "middle": [],
+                        "last": "Sarkar",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "3022--3027",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/D18-1337"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Ashkan Alinejad, Maryam Siahbani, and Anoop Sarkar. 2018. Prediction improves simultaneous neural ma- chine translation. In Proceedings of the 2018 Confer- ence on Empirical Methods in Natural Language Pro- cessing, pages 3022-3027, Brussels, Belgium. Asso- ciation for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF5": {
+                "ref_id": "b5",
+                "title": "A semi-Markov structured support vector machine model for high-precision named entity recognition",
+                "authors": [
+                    {
+                        "first": "Ravneet",
+                        "middle": [],
+                        "last": "Arora",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chen-Tse",
+                        "middle": [],
+                        "last": "Tsai",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ketevan",
+                        "middle": [],
+                        "last": "Tsereteli",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Prabhanjan",
+                        "middle": [],
+                        "last": "Kambadur",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yi",
+                        "middle": [],
+                        "last": "Yang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "5862--5866",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/P19-1587"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Ravneet Arora, Chen-Tse Tsai, Ketevan Tsereteli, Prab- hanjan Kambadur, and Yi Yang. 2019. A semi- Markov structured support vector machine model for high-precision named entity recognition. In Pro- ceedings of the 57th Annual Meeting of the Asso- ciation for Computational Linguistics, pages 5862- 5866, Florence, Italy. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF6": {
+                "ref_id": "b6",
+                "title": "Real-time incremental speech-to-speech translation of dialogs",
+                "authors": [
+                    {
+                        "first": "Srinivas",
+                        "middle": [],
+                        "last": "Bangalore",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Vivek",
+                        "middle": [],
+                        "last": "Kumar Rangarajan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Prakash",
+                        "middle": [],
+                        "last": "Sridhar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ladan",
+                        "middle": [],
+                        "last": "Kolan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Aura",
+                        "middle": [],
+                        "last": "Golipour",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Jimenez",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2012,
+                "venue": "Proceedings of the 2012 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies",
+                "volume": "",
+                "issue": "",
+                "pages": "437--445",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Srinivas Bangalore, Vivek Kumar Rangarajan Sridhar, Prakash Kolan, Ladan Golipour, and Aura Jimenez. 2012. Real-time incremental speech-to-speech trans- lation of dialogs. In Proceedings of the 2012 Con- ference of the North American Chapter of the As- sociation for Computational Linguistics: Human Language Technologies, pages 437-445, Montr\u00e9al, Canada. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF7": {
+                "ref_id": "b7",
+                "title": "Entity linking for spoken language",
+                "authors": [
+                    {
+                        "first": "Adrian",
+                        "middle": [],
+                        "last": "Benton",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mark",
+                        "middle": [],
+                        "last": "Dredze",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Proceedings of the 2015 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies",
+                "volume": "",
+                "issue": "",
+                "pages": "225--230",
+                "other_ids": {
+                    "DOI": [
+                        "10.3115/v1/N15-1024"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Adrian Benton and Mark Dredze. 2015. Entity link- ing for spoken language. In Proceedings of the 2015 Conference of the North American Chapter of the Association for Computational Linguistics: Hu- man Language Technologies, pages 225-230, Den- ver, Colorado. Association for Computational Lin- guistics.",
+                "links": null
+            },
+            "BIBREF8": {
+                "ref_id": "b8",
+                "title": "Enriching word vectors with subword information",
+                "authors": [
+                    {
+                        "first": "Piotr",
+                        "middle": [],
+                        "last": "Bojanowski",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Edouard",
+                        "middle": [],
+                        "last": "Grave",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Armand",
+                        "middle": [],
+                        "last": "Joulin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tomas",
+                        "middle": [],
+                        "last": "Mikolov",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Transactions of the Association for Computational Linguistics",
+                "volume": "5",
+                "issue": "",
+                "pages": "135--146",
+                "other_ids": {
+                    "DOI": [
+                        "10.1162/tacl_a_00051"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Piotr Bojanowski, Edouard Grave, Armand Joulin, and Tomas Mikolov. 2017. Enriching word vectors with subword information. Transactions of the Associa- tion for Computational Linguistics, 5:135-146.",
+                "links": null
+            },
+            "BIBREF9": {
+                "ref_id": "b9",
+                "title": "Named entity recognition with bidirectional LSTM-CNNs",
+                "authors": [
+                    {
+                        "first": "P",
+                        "middle": [
+                            "C"
+                        ],
+                        "last": "Jason",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Eric",
+                        "middle": [],
+                        "last": "Chiu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Nichols",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Transactions of the Association for Computational Linguistics",
+                "volume": "4",
+                "issue": "",
+                "pages": "357--370",
+                "other_ids": {
+                    "DOI": [
+                        "10.1162/tacl_a_00104"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Jason P.C. Chiu and Eric Nichols. 2016. Named entity recognition with bidirectional LSTM-CNNs. Trans- actions of the Association for Computational Linguis- tics, 4:357-370.",
+                "links": null
+            },
+            "BIBREF10": {
+                "ref_id": "b10",
+                "title": "Can neural machine translation do simultaneous translation",
+                "authors": [
+                    {
+                        "first": "Kyunghyun",
+                        "middle": [],
+                        "last": "Cho",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Masha",
+                        "middle": [],
+                        "last": "Esipova",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1606.02012"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Kyunghyun Cho and Masha Esipova. 2016. Can neu- ral machine translation do simultaneous translation? arXiv preprint arXiv:1606.02012.",
+                "links": null
+            },
+            "BIBREF11": {
+                "ref_id": "b11",
+                "title": "Broad Twitter corpus: A diverse named entity recognition resource",
+                "authors": [
+                    {
+                        "first": "Leon",
+                        "middle": [],
+                        "last": "Derczynski",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kalina",
+                        "middle": [],
+                        "last": "Bontcheva",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ian",
+                        "middle": [],
+                        "last": "Roberts",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of COLING 2016, the 26th International Conference on Computational Linguistics: Technical Papers",
+                "volume": "",
+                "issue": "",
+                "pages": "1169--1179",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Leon Derczynski, Kalina Bontcheva, and Ian Roberts. 2016. Broad Twitter corpus: A diverse named en- tity recognition resource. In Proceedings of COLING 2016, the 26th International Conference on Compu- tational Linguistics: Technical Papers, pages 1169- 1179, Osaka, Japan. The COLING 2016 Organizing Committee.",
+                "links": null
+            },
+            "BIBREF12": {
+                "ref_id": "b12",
+                "title": "BERT: Pre-training of deep bidirectional transformers for language understanding",
+                "authors": [
+                    {
+                        "first": "Jacob",
+                        "middle": [],
+                        "last": "Devlin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ming-Wei",
+                        "middle": [],
+                        "last": "Chang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kenton",
+                        "middle": [],
+                        "last": "Lee",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kristina",
+                        "middle": [],
+                        "last": "Toutanova",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies",
+                "volume": "1",
+                "issue": "",
+                "pages": "4171--4186",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/N19-1423"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Jacob Devlin, Ming-Wei Chang, Kenton Lee, and Kristina Toutanova. 2019. BERT: Pre-training of deep bidirectional transformers for language under- standing. In Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Tech- nologies, Volume 1 (Long and Short Papers), pages 4171-4186, Minneapolis, Minnesota. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF13": {
+                "ref_id": "b13",
+                "title": "Simultaneous translation of lectures and speeches",
+                "authors": [
+                    {
+                        "first": "Christian",
+                        "middle": [],
+                        "last": "F\u00fcgen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alex",
+                        "middle": [],
+                        "last": "Waibel",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Muntsin",
+                        "middle": [],
+                        "last": "Kolss",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2007,
+                "venue": "Machine Translation",
+                "volume": "21",
+                "issue": "4",
+                "pages": "209--252",
+                "other_ids": {
+                    "DOI": [
+                        "10.1007/s10590-008-9047-0"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Christian F\u00fcgen, Alex Waibel, and Muntsin Kolss. 2007. Simultaneous translation of lectures and speeches. Machine Translation, 21(4):209-252.",
+                "links": null
+            },
+            "BIBREF14": {
+                "ref_id": "b14",
+                "title": "Simple, lexicalized choice of translation timing for simultaneous speech translation",
+                "authors": [
+                    {
+                        "first": "Tomoki",
+                        "middle": [],
+                        "last": "Fujita",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Graham",
+                        "middle": [],
+                        "last": "Neubig",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sakriani",
+                        "middle": [],
+                        "last": "Sakti",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tomoki",
+                        "middle": [],
+                        "last": "Toda",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Satoshi",
+                        "middle": [],
+                        "last": "Nakamura",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "INTERSPEECH",
+                "volume": "",
+                "issue": "",
+                "pages": "3487--3491",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Tomoki Fujita, Graham Neubig, Sakriani Sakti, Tomoki Toda, and Satoshi Nakamura. 2013. Simple, lexicalized choice of translation timing for simulta- neous speech translation. In INTERSPEECH, pages 3487-3491.",
+                "links": null
+            },
+            "BIBREF15": {
+                "ref_id": "b15",
+                "title": "Marginal likelihood training of BiLSTM-CRF for biomedical named entity recognition from disjoint label sets",
+                "authors": [
+                    {
+                        "first": "Nathan",
+                        "middle": [],
+                        "last": "Greenberg",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Trapit",
+                        "middle": [],
+                        "last": "Bansal",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Patrick",
+                        "middle": [],
+                        "last": "Verga",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Andrew",
+                        "middle": [],
+                        "last": "Mccallum",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "2824--2829",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/D18-1306"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Nathan Greenberg, Trapit Bansal, Patrick Verga, and Andrew McCallum. 2018. Marginal likelihood train- ing of BiLSTM-CRF for biomedical named entity recognition from disjoint label sets. In Proceedings of the 2018 Conference on Empirical Methods in Nat- ural Language Processing, pages 2824-2829, Brus- sels, Belgium. Association for Computational Lin- guistics.",
+                "links": null
+            },
+            "BIBREF16": {
+                "ref_id": "b16",
+                "title": "Don't until the final verb wait: Reinforcement learning for simultaneous machine translation",
+                "authors": [
+                    {
+                        "first": "Alvin",
+                        "middle": [],
+                        "last": "Grissom",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "I",
+                        "middle": [
+                            "I"
+                        ],
+                        "last": "",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "He",
+                        "middle": [],
+                        "last": "He",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jordan",
+                        "middle": [],
+                        "last": "Boyd-Graber",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "John",
+                        "middle": [],
+                        "last": "Morgan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hal",
+                        "middle": [],
+                        "last": "Daum\u00e9",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Iii",
+                        "middle": [],
+                        "last": "",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "Proceedings of the 2014 Conference on Empirical Methods in Natural Language Processing (EMNLP)",
+                "volume": "",
+                "issue": "",
+                "pages": "1342--1352",
+                "other_ids": {
+                    "DOI": [
+                        "10.3115/v1/D14-1140"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Alvin Grissom II, He He, Jordan Boyd-Graber, John Morgan, and Hal Daum\u00e9 III. 2014. Don't until the final verb wait: Reinforcement learning for simul- taneous machine translation. In Proceedings of the 2014 Conference on Empirical Methods in Natural Language Processing (EMNLP), pages 1342-1352, Doha, Qatar. Association for Computational Linguis- tics.",
+                "links": null
+            },
+            "BIBREF17": {
+                "ref_id": "b17",
+                "title": "Learning to translate in real-time with neural machine translation",
+                "authors": [
+                    {
+                        "first": "Jiatao",
+                        "middle": [],
+                        "last": "Gu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Graham",
+                        "middle": [],
+                        "last": "Neubig",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kyunghyun",
+                        "middle": [],
+                        "last": "Cho",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "O",
+                        "middle": [
+                            "K"
+                        ],
+                        "last": "Victor",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Proceedings of the 15th Conference of the European Chapter",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jiatao Gu, Graham Neubig, Kyunghyun Cho, and Vic- tor O.K. Li. 2017. Learning to translate in real-time with neural machine translation. In Proceedings of the 15th Conference of the European Chapter of the Association for Computational Linguistics: Volume",
+                "links": null
+            },
+            "BIBREF18": {
+                "ref_id": "b18",
+                "title": "Long Papers",
+                "authors": [],
+                "year": null,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "1053--1062",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Long Papers, pages 1053-1062, Valencia, Spain. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF19": {
+                "ref_id": "b19",
+                "title": "Domain adaptation with latent semantic association for named entity recognition",
+                "authors": [
+                    {
+                        "first": "Honglei",
+                        "middle": [],
+                        "last": "Guo",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Huijia",
+                        "middle": [],
+                        "last": "Zhu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zhili",
+                        "middle": [],
+                        "last": "Guo",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xiaoxun",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xian",
+                        "middle": [],
+                        "last": "Wu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zhong",
+                        "middle": [],
+                        "last": "Su",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "Proceedings of Human Language Technologies: The 2009 Annual Conference of the North American Chapter of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "281--289",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Honglei Guo, Huijia Zhu, Zhili Guo, Xiaoxun Zhang, Xian Wu, and Zhong Su. 2009. Domain adapta- tion with latent semantic association for named en- tity recognition. In Proceedings of Human Language Technologies: The 2009 Annual Conference of the North American Chapter of the Association for Com- putational Linguistics, pages 281-289, Boulder, Col- orado. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF20": {
+                "ref_id": "b20",
+                "title": "Long short-term memory",
+                "authors": [
+                    {
+                        "first": "Sepp",
+                        "middle": [],
+                        "last": "Hochreiter",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "J\u00fcrgen",
+                        "middle": [],
+                        "last": "Schmidhuber",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1997,
+                "venue": "Neural computation",
+                "volume": "9",
+                "issue": "8",
+                "pages": "1735--1780",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Sepp Hochreiter and J\u00fcrgen Schmidhuber. 1997. Long short-term memory. Neural computation, 9(8):1735- 1780.",
+                "links": null
+            },
+            "BIBREF21": {
+                "ref_id": "b21",
+                "title": "Bidirectional LSTM-CRF models for sequence tagging",
+                "authors": [
+                    {
+                        "first": "Zhiheng",
+                        "middle": [],
+                        "last": "Huang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Wei",
+                        "middle": [],
+                        "last": "Xu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kai",
+                        "middle": [],
+                        "last": "Yu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1508.01991"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Zhiheng Huang, Wei Xu, and Kai Yu. 2015. Bidi- rectional LSTM-CRF models for sequence tagging. arXiv preprint arXiv:1508.01991.",
+                "links": null
+            },
+            "BIBREF22": {
+                "ref_id": "b22",
+                "title": "Conditional random fields: Probabilistic models for segmenting and labeling sequence data",
+                "authors": [
+                    {
+                        "first": "John",
+                        "middle": [
+                            "D"
+                        ],
+                        "last": "Lafferty",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Andrew",
+                        "middle": [],
+                        "last": "Mccallum",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Fernando",
+                        "middle": [
+                            "C N"
+                        ],
+                        "last": "Pereira",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2001,
+                "venue": "Proceedings of the Eighteenth International Conference on Machine Learning",
+                "volume": "",
+                "issue": "",
+                "pages": "282--289",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "John D. Lafferty, Andrew McCallum, and Fernando C. N. Pereira. 2001. Conditional random fields: Probabilistic models for segmenting and labeling se- quence data. In Proceedings of the Eighteenth In- ternational Conference on Machine Learning, pages 282-289.",
+                "links": null
+            },
+            "BIBREF23": {
+                "ref_id": "b23",
+                "title": "Neural architectures for named entity recognition",
+                "authors": [
+                    {
+                        "first": "Guillaume",
+                        "middle": [],
+                        "last": "Lample",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Miguel",
+                        "middle": [],
+                        "last": "Ballesteros",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sandeep",
+                        "middle": [],
+                        "last": "Subramanian",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kazuya",
+                        "middle": [],
+                        "last": "Kawakami",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chris",
+                        "middle": [],
+                        "last": "Dyer",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of the 2016 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies",
+                "volume": "",
+                "issue": "",
+                "pages": "260--270",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/N16-1030"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Guillaume Lample, Miguel Ballesteros, Sandeep Sub- ramanian, Kazuya Kawakami, and Chris Dyer. 2016. Neural architectures for named entity recognition. In Proceedings of the 2016 Conference of the North American Chapter of the Association for Computa- tional Linguistics: Human Language Technologies, pages 260-270, San Diego, California. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF24": {
+                "ref_id": "b24",
+                "title": "Joint mention extraction and classification with mention hypergraphs",
+                "authors": [
+                    {
+                        "first": "Wei",
+                        "middle": [],
+                        "last": "Lu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dan",
+                        "middle": [],
+                        "last": "Roth",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Proceedings of the 2015 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "857--867",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/D15-1102"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Wei Lu and Dan Roth. 2015. Joint mention extraction and classification with mention hypergraphs. In Pro- ceedings of the 2015 Conference on Empirical Meth- ods in Natural Language Processing, pages 857-867, Lisbon, Portugal. Association for Computational Lin- guistics.",
+                "links": null
+            },
+            "BIBREF25": {
+                "ref_id": "b25",
+                "title": "End-to-end sequence labeling via bi-directional LSTM-CNNs-CRF",
+                "authors": [
+                    {
+                        "first": "Xuezhe",
+                        "middle": [],
+                        "last": "Ma",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Eduard",
+                        "middle": [],
+                        "last": "Hovy",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of the 54th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "1064--1074",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/P16-1101"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Xuezhe Ma and Eduard Hovy. 2016. End-to-end sequence labeling via bi-directional LSTM-CNNs- CRF. In Proceedings of the 54th Annual Meeting of the Association for Computational Linguistics (Vol- ume 1: Long Papers), pages 1064-1074, Berlin, Ger- many. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF26": {
+                "ref_id": "b26",
+                "title": "Multimodal named entity disambiguation for noisy social media posts",
+                "authors": [
+                    {
+                        "first": "Seungwhan",
+                        "middle": [],
+                        "last": "Moon",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Leonardo",
+                        "middle": [],
+                        "last": "Neves",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Vitor",
+                        "middle": [],
+                        "last": "Carvalho",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 56th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "1",
+                "issue": "",
+                "pages": "2000--2008",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/P18-1186"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Seungwhan Moon, Leonardo Neves, and Vitor Car- valho. 2018. Multimodal named entity disambigua- tion for noisy social media posts. In Proceedings of the 56th Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers), pages 2000-2008, Melbourne, Australia. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF27": {
+                "ref_id": "b27",
+                "title": "Weakly supervised cross-lingual named entity recognition via effective annotation and representation projection",
+                "authors": [
+                    {
+                        "first": "Jian",
+                        "middle": [],
+                        "last": "Ni",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Georgiana",
+                        "middle": [],
+                        "last": "Dinu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Radu",
+                        "middle": [],
+                        "last": "Florian",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1707.02483"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Jian Ni, Georgiana Dinu, and Radu Florian. 2017. Weakly supervised cross-lingual named entity recog- nition via effective annotation and representation pro- jection. arXiv preprint arXiv:1707.02483.",
+                "links": null
+            },
+            "BIBREF28": {
+                "ref_id": "b28",
+                "title": "Optimizing segmentation strategies for simultaneous speech translation",
+                "authors": [
+                    {
+                        "first": "Yusuke",
+                        "middle": [],
+                        "last": "Oda",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Graham",
+                        "middle": [],
+                        "last": "Neubig",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sakriani",
+                        "middle": [],
+                        "last": "Sakti",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tomoki",
+                        "middle": [],
+                        "last": "Toda",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Satoshi",
+                        "middle": [],
+                        "last": "Nakamura",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "Proceedings of the 52nd Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "551--556",
+                "other_ids": {
+                    "DOI": [
+                        "10.3115/v1/P14-2090"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Yusuke Oda, Graham Neubig, Sakriani Sakti, Tomoki Toda, and Satoshi Nakamura. 2014. Optimizing seg- mentation strategies for simultaneous speech transla- tion. In Proceedings of the 52nd Annual Meeting of the Association for Computational Linguistics (Vol- ume 2: Short Papers), pages 551-556, Baltimore, Maryland. Association for Computational Linguis- tics.",
+                "links": null
+            },
+            "BIBREF29": {
+                "ref_id": "b29",
+                "title": "GloVe: Global vectors for word representation",
+                "authors": [
+                    {
+                        "first": "Jeffrey",
+                        "middle": [],
+                        "last": "Pennington",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Richard",
+                        "middle": [],
+                        "last": "Socher",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [],
+                        "last": "Manning",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "Proceedings of the 2014 Conference on Empirical Methods in Natural Language Processing (EMNLP)",
+                "volume": "",
+                "issue": "",
+                "pages": "1532--1543",
+                "other_ids": {
+                    "DOI": [
+                        "10.3115/v1/D14-1162"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Jeffrey Pennington, Richard Socher, and Christopher Manning. 2014. GloVe: Global vectors for word rep- resentation. In Proceedings of the 2014 Conference on Empirical Methods in Natural Language Process- ing (EMNLP), pages 1532-1543, Doha, Qatar. Asso- ciation for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF30": {
+                "ref_id": "b30",
+                "title": "Deep contextualized word representations",
+                "authors": [
+                    {
+                        "first": "Matthew",
+                        "middle": [],
+                        "last": "Peters",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mark",
+                        "middle": [],
+                        "last": "Neumann",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mohit",
+                        "middle": [],
+                        "last": "Iyyer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Matt",
+                        "middle": [],
+                        "last": "Gardner",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [],
+                        "last": "Clark",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kenton",
+                        "middle": [],
+                        "last": "Lee",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Luke",
+                        "middle": [],
+                        "last": "Zettlemoyer",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 2018 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies",
+                "volume": "1",
+                "issue": "",
+                "pages": "2227--2237",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/N18-1202"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Matthew Peters, Mark Neumann, Mohit Iyyer, Matt Gardner, Christopher Clark, Kenton Lee, and Luke Zettlemoyer. 2018. Deep contextualized word repre- sentations. In Proceedings of the 2018 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Tech- nologies, Volume 1 (Long Papers), pages 2227-2237, New Orleans, Louisiana. Association for Computa- tional Linguistics.",
+                "links": null
+            },
+            "BIBREF31": {
+                "ref_id": "b31",
+                "title": "Design challenges and misconceptions in named entity recognition",
+                "authors": [
+                    {
+                        "first": "Lev",
+                        "middle": [],
+                        "last": "Ratinov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dan",
+                        "middle": [],
+                        "last": "Roth",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "Proceedings of the Thirteenth Conference on Computational Natural Language Learning (CoNLL-2009)",
+                "volume": "",
+                "issue": "",
+                "pages": "147--155",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Lev Ratinov and Dan Roth. 2009. Design challenges and misconceptions in named entity recognition. In Proceedings of the Thirteenth Conference on Compu- tational Natural Language Learning (CoNLL-2009), pages 147-155, Boulder, Colorado. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF32": {
+                "ref_id": "b32",
+                "title": "Temporally-informed analysis of named entity recognition",
+                "authors": [
+                    {
+                        "first": "Shruti",
+                        "middle": [],
+                        "last": "Rijhwani",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Daniel",
+                        "middle": [],
+                        "last": "Preotiuc-Pietro",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "7605--7617",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/2020.acl-main.680"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Shruti Rijhwani and Daniel Preotiuc-Pietro. 2020. Temporally-informed analysis of named entity recog- nition. In Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics, pages 7605-7617, Online. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF33": {
+                "ref_id": "b33",
+                "title": "Introduction to the CoNLL-2002 shared task: Language-independent named entity recognition",
+                "authors": [
+                    {
+                        "first": "Erik",
+                        "middle": [
+                            "F"
+                        ],
+                        "last": "Tjong",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kim",
+                        "middle": [],
+                        "last": "Sang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2002,
+                "venue": "COLING-02: The 6th Conference on Natural Language Learning",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Erik F. Tjong Kim Sang. 2002. Introduction to the CoNLL-2002 shared task: Language-independent named entity recognition. In COLING-02: The 6th Conference on Natural Language Learning 2002 (CoNLL-2002).",
+                "links": null
+            },
+            "BIBREF34": {
+                "ref_id": "b34",
+                "title": "Introduction to the CoNLL-2003 shared task: Language-independent named entity recognition",
+                "authors": [
+                    {
+                        "first": "Erik",
+                        "middle": [
+                            "F"
+                        ],
+                        "last": "Tjong",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kim",
+                        "middle": [],
+                        "last": "Sang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Fien",
+                        "middle": [],
+                        "last": "De",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Meulder",
+                        "middle": [],
+                        "last": "",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2003,
+                "venue": "Proceedings of the Seventh Conference on Natural Language Learning at HLT-NAACL 2003",
+                "volume": "",
+                "issue": "",
+                "pages": "142--147",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Erik F. Tjong Kim Sang and Fien De Meulder. 2003. Introduction to the CoNLL-2003 shared task: Language-independent named entity recognition. In Proceedings of the Seventh Conference on Natu- ral Language Learning at HLT-NAACL 2003, pages 142-147.",
+                "links": null
+            },
+            "BIBREF35": {
+                "ref_id": "b35",
+                "title": "Cross-lingual named entity recognition via wikification",
+                "authors": [
+                    {
+                        "first": "Chen-Tse",
+                        "middle": [],
+                        "last": "Tsai",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Stephen",
+                        "middle": [],
+                        "last": "Mayhew",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dan",
+                        "middle": [],
+                        "last": "Roth",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of The 20th SIGNLL Conference on Computational Natural Language Learning",
+                "volume": "",
+                "issue": "",
+                "pages": "219--228",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/K16-1022"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Chen-Tse Tsai, Stephen Mayhew, and Dan Roth. 2016. Cross-lingual named entity recognition via wikifica- tion. In Proceedings of The 20th SIGNLL Confer- ence on Computational Natural Language Learning, pages 219-228, Berlin, Germany. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF36": {
+                "ref_id": "b36",
+                "title": "Attention is all you need",
+                "authors": [
+                    {
+                        "first": "Ashish",
+                        "middle": [],
+                        "last": "Vaswani",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Noam",
+                        "middle": [],
+                        "last": "Shazeer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Niki",
+                        "middle": [],
+                        "last": "Parmar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jakob",
+                        "middle": [],
+                        "last": "Uszkoreit",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Llion",
+                        "middle": [],
+                        "last": "Jones",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Aidan",
+                        "middle": [
+                            "N"
+                        ],
+                        "last": "Gomez",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Illia",
+                        "middle": [],
+                        "last": "Kaiser",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Polosukhin",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Proceedings of the 31st International Conference on Neural Information Processing Systems, NIPS'17",
+                "volume": "",
+                "issue": "",
+                "pages": "6000--6010",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, undefine- dukasz Kaiser, and Illia Polosukhin. 2017. Attention is all you need. In Proceedings of the 31st Interna- tional Conference on Neural Information Processing Systems, NIPS'17, page 6000-6010, Red Hook, NY, USA. Curran Associates Inc.",
+                "links": null
+            },
+            "BIBREF37": {
+                "ref_id": "b37",
+                "title": "Multi-domain named entity recognition with genre-aware and agnostic inference",
+                "authors": [
+                    {
+                        "first": "Jing",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mayank",
+                        "middle": [],
+                        "last": "Kulkarni",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Daniel",
+                        "middle": [],
+                        "last": "Preotiuc-Pietro",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "8476--8488",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/2020.acl-main.750"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Jing Wang, Mayank Kulkarni, and Daniel Preotiuc- Pietro. 2020. Multi-domain named entity recogni- tion with genre-aware and agnostic inference. In Proceedings of the 58th Annual Meeting of the Asso- ciation for Computational Linguistics, pages 8476- 8488, Online. Association for Computational Lin- guistics.",
+                "links": null
+            },
+            "BIBREF38": {
+                "ref_id": "b38",
+                "title": "Neural crosslingual named entity recognition with minimal resources",
+                "authors": [
+                    {
+                        "first": "Jiateng",
+                        "middle": [],
+                        "last": "Xie",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zhilin",
+                        "middle": [],
+                        "last": "Yang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Graham",
+                        "middle": [],
+                        "last": "Neubig",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Noah",
+                        "middle": [
+                            "A"
+                        ],
+                        "last": "Smith",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jaime",
+                        "middle": [],
+                        "last": "Carbonell",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "369--379",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/D18-1034"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Jiateng Xie, Zhilin Yang, Graham Neubig, Noah A. Smith, and Jaime Carbonell. 2018. Neural cross- lingual named entity recognition with minimal re- sources. In Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing, pages 369-379, Brussels, Belgium. Association for Computational Linguistics.",
+                "links": null
+            }
+        },
+        "ref_entries": {
+            "FIGREF0": {
+                "num": null,
+                "text": "Figure 2: Distribution of sentence lengths.",
+                "uris": null,
+                "fig_num": "2",
+                "type_str": "figure"
+            },
+            "FIGREF1": {
+                "num": null,
+                "text": "Figure 3: Distribution of entity types in terms of sentence length in the English CoNLL data set.",
+                "uris": null,
+                "fig_num": "3",
+                "type_str": "figure"
+            },
+            "FIGREF2": {
+                "num": null,
+                "text": "Figure 4: Distribution of entity types at each token position in the English CoNLL data set. B and I tags are merged for the same entity types and removed MISC tags as infrequent for clarity. O tag frequency can be inferred from the rest.",
+                "uris": null,
+                "fig_num": "4",
+                "type_str": "figure"
+            },
+            "FIGREF3": {
+                "num": null,
+                "text": "Figure 5: Architecture diagram highlighting the proposed feature weighting method described in Section 5.3.3",
+                "uris": null,
+                "fig_num": "5",
+                "type_str": "figure"
+            },
+            "FIGREF4": {
+                "num": null,
+                "text": "Figure 6: Confusion matrix of tag type prediction when comparing the best as-you-type and sentencelevel models.",
+                "uris": null,
+                "fig_num": "6",
+                "type_str": "figure"
+            },
+            "FIGREF5": {
+                "num": null,
+                "text": "Figure 7: F 1 scores at various token positions averaged across all the sentences in the English data set. The overall performance of each model is listed in the legend.",
+                "uris": null,
+                "fig_num": "7",
+                "type_str": "figure"
+            },
+            "FIGREF6": {
+                "num": null,
+                "text": "Figure 8: Sample attention weights from the English CoNLL Data Set.",
+                "uris": null,
+                "fig_num": "8",
+                "type_str": "figure"
+            },
+            "TABREF0": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "where e w are the classical word embeddings and e f , e b are Flair forward and backward embeddings. An architecture diagram is presented in the Appendix.",
+                "html": null,
+                "num": null
+            },
+            "TABREF1": {
+                "content": "<table><tr><td/><td/><td/><td>English</td><td/><td>German</td><td/><td>Spanish</td></tr><tr><td colspan=\"2\">Embedding LSTM</td><td>CRF</td><td colspan=\"6\">As-you-type Sentence As-you-type Sentence As-you-type Sentence</td></tr><tr><td/><td/><td/><td>83.27</td><td>90.97</td><td>72.20</td><td>78.67</td><td>67.56</td><td>80.40</td></tr><tr><td>Classic</td><td>\u2192</td><td/><td>85.12 79.06</td><td>88.99 86.87</td><td>70.54 73.49</td><td>77.21 77.89</td><td>64.84 74.61</td><td>80.28 80.74</td></tr><tr><td/><td>\u2192</td><td/><td>83.75</td><td>83.27</td><td>75.73</td><td>75.73</td><td>77.30</td><td>77.30</td></tr><tr><td/><td/><td/><td>84.15</td><td>92.75</td><td>79.79</td><td>84.32</td><td>81.80</td><td>89.43</td></tr><tr><td>Flair ( )</td><td>\u2192</td><td/><td>84.82 84.50</td><td>91.63 92.23</td><td>79.98 79.84</td><td>84.11 83.73</td><td>82.23 85.37</td><td>88.82 88.80</td></tr><tr><td/><td>\u2192</td><td/><td>85.87</td><td>90.73</td><td>80.50</td><td>82.74</td><td>85.32</td><td>89.06</td></tr><tr><td/><td/><td/><td>85.60</td><td>92.19</td><td>79.21</td><td>82.94</td><td>81.61</td><td>88.76</td></tr><tr><td>Flair (\u2192)</td><td>\u2192</td><td/><td>86.92 85.13</td><td>90.36 91.76</td><td>78.34 79.30</td><td>81.99 81.88</td><td>82.60 86.79</td><td>88.21 88.83</td></tr><tr><td/><td>\u2192</td><td/><td>87.95</td><td>87.95</td><td>80.79</td><td>80.79</td><td>87.90</td><td>87.90</td></tr><tr><td colspan=\"3\">Adaptations for the as-you-type setup</td><td/><td/><td/><td/><td/></tr><tr><td/><td colspan=\"2\">Weighted Loss</td><td>87.77</td><td>92.46</td><td>80.39</td><td>83.71</td><td>84.13</td><td>89.48</td></tr><tr><td>Flair ( )</td><td colspan=\"2\">+ Final Token Rep + Feature weighting</td><td>88.00 88.21</td><td>92.40 92.24</td><td>80.59 80.61</td><td>83.71 84.16</td><td>87.23 87.38</td><td>89.48 89.23</td></tr><tr><td/><td colspan=\"2\">+ Embedding weighting</td><td>88.40</td><td>92.29</td><td>81.62</td><td>84.77</td><td>87.72</td><td>89.79</td></tr></table>",
+                "type_str": "table",
+                "text": "Evaluation results of LSTM-based NER models in the as-you-type and sentence-level evaluation setups as measured using token-level micro F 1 . Arrows indicate if uni-(\u2192) or bi-directional ( ) training is used. Models with the best results across their setup are in bold. Best results within the class of methods are underlined. For classic word embeddings, we use GloVe for English, and FastText for German and Spanish. Results are averaged across three runs.",
+                "html": null,
+                "num": null
+            },
+            "TABREF2": {
+                "content": "<table><tr><td/><td colspan=\"2\">English</td><td colspan=\"2\">German</td><td colspan=\"2\">Spanish</td></tr><tr><td>Thr.</td><td>Tok%</td><td>F1</td><td>Tok%</td><td>F1</td><td>Tok%</td><td>F1</td></tr><tr><td>0</td><td>0%</td><td>88.4</td><td colspan=\"2\">0% 81.62</td><td colspan=\"2\">0% 87.72</td></tr><tr><td>0.6</td><td colspan=\"6\">0.77% 89.18 0.97% 82.65 0.66% 88.20</td></tr><tr><td>0.7</td><td colspan=\"6\">1.28% 89.56 1.65% 83.09 1.15% 88.47</td></tr><tr><td>0.8</td><td colspan=\"6\">2.17% 90.05 2.43% 83.74 1.80% 88.66</td></tr><tr><td>0.9</td><td colspan=\"6\">3.25% 90.53 3.61% 84.01 2.80% 88.64</td></tr><tr><td>1.0</td><td colspan=\"2\">100% 91.20</td><td colspan=\"2\">100% 84.22</td><td colspan=\"2\">100% 88.91</td></tr><tr><td colspan=\"3\">Full sentence 92.75</td><td/><td>84.32</td><td/><td>89.43</td></tr></table>",
+                "type_str": "table",
+                "text": "Results of the proposed wait-one policy. If the probability of prediction is less than or equal to the given threshold (Thr. column), we wait for one more token and predict again. The column Tok% indicates percentage of tokens which have a delayed prediction. The best performing model in the as-you-type setup is used. The performance of the best full-sentence model is listed in the last row for comparison purposes.",
+                "html": null,
+                "num": null
+            },
+            "TABREF3": {
+                "content": "<table><tr><td/><td>Sentence</td><td/><td>As-you-type</td></tr><tr><td/><td/><td colspan=\"2\">Original Embedding weighting</td></tr><tr><td>English</td><td>97.49</td><td>97.11</td><td>97.09</td></tr><tr><td>German</td><td>91.37</td><td>89.29</td><td>89.49</td></tr><tr><td>Spanish</td><td>97.70</td><td>97.05</td><td>96.96</td></tr></table>",
+                "type_str": "table",
+                "text": "Entity identification performance. The four entity types are collapsed into one type when computing token-level F 1 scores. The model for \"Embedding weighting\" is BiLSTM-CRF with bidirectional Flair embeddings for all three languages. For the \"Original\" setting, we use forward LSTM with forward Flair embeddings.",
+                "html": null,
+                "num": null
+            },
+            "TABREF4": {
+                "content": "<table><tr><td/><td>English</td><td/><td>German</td><td/><td>Spanish</td><td/></tr><tr><td>Model</td><td colspan=\"6\">As-you-type Sentence As-you-type Sentence As-you-type Sentence</td></tr><tr><td>Base Model</td><td>88.16</td><td>96.08</td><td>82.74</td><td>86.48</td><td>81.34</td><td>87.54</td></tr><tr><td>Proposed Model</td><td>92.54</td><td>96.43</td><td>83.71</td><td>86.69</td><td>85.75</td><td>87.78</td></tr><tr><td/><td/><td>Parameter</td><td/><td>Size</td><td/><td/></tr><tr><td/><td colspan=\"3\">GloVe Embedding Dimension (English)</td><td>100</td><td/><td/></tr><tr><td/><td colspan=\"3\">Fast-text Embedding Dimension (Spanish, German)</td><td>300</td><td/><td/></tr><tr><td/><td>Flair Embedding Size</td><td/><td/><td>2,000</td><td/><td/></tr><tr><td/><td colspan=\"3\">Feature-Level Positional Embedding Size</td><td>100</td><td/><td/></tr><tr><td/><td colspan=\"3\">Embedding-Level Positional Embedding Size</td><td>1,000</td><td/><td/></tr><tr><td/><td>LSTM output size</td><td/><td/><td>100</td><td/><td/></tr><tr><td/><td>Bi-Directional LSTM</td><td/><td/><td colspan=\"2\">1,680,800</td><td/></tr><tr><td/><td>Linear Output Layer</td><td/><td/><td colspan=\"2\">200 * 9</td><td/></tr><tr><td/><td colspan=\"2\">CRF Transition Matrix</td><td/><td>6 * 6</td><td/><td/></tr><tr><td/><td colspan=\"2\">Feature Level Attention Matrix (W )</td><td/><td colspan=\"2\">300*1</td><td/></tr><tr><td/><td colspan=\"3\">Embedding Level Attention Matrix (We) (English)</td><td colspan=\"2\">5,100 * 1 + 1</td><td/></tr><tr><td/><td colspan=\"5\">Embedding Level Attention Matrix (We) (Spanish, German) 5,300 * 1 + 1</td><td/></tr></table>",
+                "type_str": "table",
+                "text": "Performance on Conll Dev set for both Bi-LSTM-CRF Flair and the proposed final model",
+                "html": null,
+                "num": null
+            },
+            "TABREF5": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "Number of parameters for different components of our models. When not explicitly mentioned, parameters are for models in all three languages.",
+                "html": null,
+                "num": null
+            }
+        }
+    }
+}

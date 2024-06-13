@@ -1,0 +1,1589 @@
+{
+    "paper_id": "D16-1135",
+    "header": {
+        "generated_with": "S2ORC 1.0.0",
+        "date_generated": "2023-06-16T12:00:29.595214Z"
+    },
+    "title": "Improving Multilingual Named Entity Recognition with Wikipedia Entity Type Mapping",
+    "authors": [
+        {
+            "first": "Jian",
+            "middle": [],
+            "last": "Ni",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "IBM T. J. Watson Research",
+                "location": {
+                    "addrLine": "1101 Kitchawan Road",
+                    "postCode": "10598",
+                    "settlement": "Yorktown Heights",
+                    "region": "NY",
+                    "country": "USA"
+                }
+            },
+            "email": ""
+        },
+        {
+            "first": "Radu",
+            "middle": [],
+            "last": "Florian",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "IBM T. J. Watson Research",
+                "location": {
+                    "addrLine": "1101 Kitchawan Road",
+                    "postCode": "10598",
+                    "settlement": "Yorktown Heights",
+                    "region": "NY",
+                    "country": "USA"
+                }
+            },
+            "email": "raduf@us.ibm.com"
+        }
+    ],
+    "year": "",
+    "venue": null,
+    "identifiers": {},
+    "abstract": "The state-of-the-art named entity recognition (NER) systems are statistical machine learning models that have strong generalization capability (i.e., can recognize unseen entities that do not appear in training data) based on lexical and contextual information. However, such a model could still make mistakes if its features favor a wrong entity type. In this paper, we utilize Wikipedia as an open knowledge base to improve multilingual NER systems. Central to our approach is the construction of high-accuracy, highcoverage multilingual Wikipedia entity type mappings. These mappings are built from weakly annotated data and can be extended to new languages with no human annotation or language-dependent knowledge involved. Based on these mappings, we develop several approaches to improve an NER system. We evaluate the performance of the approaches via experiments on NER systems trained for 6 languages. Experimental results show that the proposed approaches are effective in improving the accuracy of such systems on unseen entities, especially when a system is applied to a new domain or it is trained with little training data (up to 18.3 F 1 score improvement).",
+    "pdf_parse": {
+        "paper_id": "D16-1135",
+        "_pdf_hash": "",
+        "abstract": [
+            {
+                "text": "The state-of-the-art named entity recognition (NER) systems are statistical machine learning models that have strong generalization capability (i.e., can recognize unseen entities that do not appear in training data) based on lexical and contextual information. However, such a model could still make mistakes if its features favor a wrong entity type. In this paper, we utilize Wikipedia as an open knowledge base to improve multilingual NER systems. Central to our approach is the construction of high-accuracy, highcoverage multilingual Wikipedia entity type mappings. These mappings are built from weakly annotated data and can be extended to new languages with no human annotation or language-dependent knowledge involved. Based on these mappings, we develop several approaches to improve an NER system. We evaluate the performance of the approaches via experiments on NER systems trained for 6 languages. Experimental results show that the proposed approaches are effective in improving the accuracy of such systems on unseen entities, especially when a system is applied to a new domain or it is trained with little training data (up to 18.3 F 1 score improvement).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            }
+        ],
+        "body_text": [
+            {
+                "text": "Named entity recognition (NER) is an important NLP task that automatically detects entities in text and classifies them into pre-defined entity types such as persons, organizations, geopolitical entities, locations, events, etc. NER is a fundamental component of many information extraction and knowledge discovery applications, including relation extraction, entity linking, question answering and data mining.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "The state-of-the-art NER systems are usually statistical machine learning models that are trained with human-annotated data. Popular models include maximum entropy Markov models (MEMM) (McCallum et al., 2000) , conditional random fields (CRF) (Lafferty et al., 2001) and neural networks (Collobert et al., 2011; Lample et al., 2016) . Such models have strong generalization capability to recognize unseen entities1 based on lexical and contextual information (features). However, a model could still make mistakes if its features favor a wrong entity type, which happens more frequently for unseen entities as we have observed in our experiments.",
+                "cite_spans": [
+                    {
+                        "start": 185,
+                        "end": 208,
+                        "text": "(McCallum et al., 2000)",
+                        "ref_id": "BIBREF8"
+                    },
+                    {
+                        "start": 243,
+                        "end": 266,
+                        "text": "(Lafferty et al., 2001)",
+                        "ref_id": "BIBREF6"
+                    },
+                    {
+                        "start": 287,
+                        "end": 311,
+                        "text": "(Collobert et al., 2011;",
+                        "ref_id": "BIBREF0"
+                    },
+                    {
+                        "start": 312,
+                        "end": 332,
+                        "text": "Lample et al., 2016)",
+                        "ref_id": "BIBREF7"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Wikipedia is an open-access, free-content Internet encyclopedia, which has become the de facto on-line source for general reference. A Wikipedia page about an entity normally includes both structured information and unstructured text information, and such information can be used to help determine the entity type of the referred entity.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "So far there are two classes of approaches that exploit Wikipedia to improve NER. The first class of approaches use Wikipedia to generate features for NER systems, e.g., (Kazama and Torisawa, 2007; Ratinov and Roth, 2009; Radford et al., 2015) . Kazama and Torisawa (2007) try to find the Wikipedia entity for each candidate word sequence and then extract a category label from the first sentence of the Wikipedia entity page. A part-of-speech (POS) tagger is used to extract the category label features in the training and decoding phase. Ratinov and Roth (2009) aggregate several Wikipedia categories into higher-level concept and build a gazetteer on top of it. The two approaches were shown to be able to improve an English NER system. Both approaches, however, are language-dependent because (Kazama and Torisawa, 2007) requires a POS tagger and (Ratinov and Roth, 2009) requires manual category aggregation by inspection of the annotation guidelines and the training set. Radford et al. (2015) assume that document-specific knowledge base (e.g., Wikipedia) tags for each document are provided, and they use those tags to build gazetteer type features for improving an English NER system.",
+                "cite_spans": [
+                    {
+                        "start": 170,
+                        "end": 197,
+                        "text": "(Kazama and Torisawa, 2007;",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 198,
+                        "end": 221,
+                        "text": "Ratinov and Roth, 2009;",
+                        "ref_id": "BIBREF11"
+                    },
+                    {
+                        "start": 222,
+                        "end": 243,
+                        "text": "Radford et al., 2015)",
+                        "ref_id": "BIBREF10"
+                    },
+                    {
+                        "start": 246,
+                        "end": 272,
+                        "text": "Kazama and Torisawa (2007)",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 540,
+                        "end": 563,
+                        "text": "Ratinov and Roth (2009)",
+                        "ref_id": "BIBREF11"
+                    },
+                    {
+                        "start": 797,
+                        "end": 824,
+                        "text": "(Kazama and Torisawa, 2007)",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 851,
+                        "end": 875,
+                        "text": "(Ratinov and Roth, 2009)",
+                        "ref_id": "BIBREF11"
+                    },
+                    {
+                        "start": 978,
+                        "end": 999,
+                        "text": "Radford et al. (2015)",
+                        "ref_id": "BIBREF10"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "The second class of approaches use Wikipedia to generate weakly annotated data for training multilingual NER systems, e.g., (Richman and Schone, 2008; Nothman et al., 2013) . The motivation is that annotating multilingual NER data by human is both expensive and time-consuming. Richman and Schone (2008) utilize the category information of Wikipedia to determine the entity type of an entity based on manually constructed rules (e.g., category phrase \"Living People\" is mapped to entity type PERSON). Such a rule-based entity type mapping is limited both in accuracy and coverage, e.g., (Toral and Muoz, 2006) . Nothman et al. (2013) train a Wikipedia entity type classifier using human-annotated Wikipedia pages. Such a supervised-learning based approach has better accuracy and coverage, e.g., (Dakka and Cucerzan, 2008) . A number of heuristic rules are developed in both works to label the Wikipedia text to create weakly annotated NER training data. The NER systems trained with the weakly annotated data may achieve similar accuracy compared with systems trained with little human-annotated data (e.g., up to 40K tokens as in (Richman and Schone, 2008) ), but they are still significantly worse than well-trained systems (e.g., a drop of 23.9 F 1 score on the CoNLL data and a drop of 19.6 F 1 score on the BBN data as in (Nothman et al., 2013) ).",
+                "cite_spans": [
+                    {
+                        "start": 124,
+                        "end": 150,
+                        "text": "(Richman and Schone, 2008;",
+                        "ref_id": "BIBREF12"
+                    },
+                    {
+                        "start": 151,
+                        "end": 172,
+                        "text": "Nothman et al., 2013)",
+                        "ref_id": "BIBREF9"
+                    },
+                    {
+                        "start": 278,
+                        "end": 303,
+                        "text": "Richman and Schone (2008)",
+                        "ref_id": "BIBREF12"
+                    },
+                    {
+                        "start": 587,
+                        "end": 609,
+                        "text": "(Toral and Muoz, 2006)",
+                        "ref_id": "BIBREF16"
+                    },
+                    {
+                        "start": 612,
+                        "end": 633,
+                        "text": "Nothman et al. (2013)",
+                        "ref_id": "BIBREF9"
+                    },
+                    {
+                        "start": 796,
+                        "end": 822,
+                        "text": "(Dakka and Cucerzan, 2008)",
+                        "ref_id": "BIBREF1"
+                    },
+                    {
+                        "start": 1132,
+                        "end": 1158,
+                        "text": "(Richman and Schone, 2008)",
+                        "ref_id": "BIBREF12"
+                    },
+                    {
+                        "start": 1328,
+                        "end": 1350,
+                        "text": "(Nothman et al., 2013)",
+                        "ref_id": "BIBREF9"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "In this paper, we propose a new class of approaches that utilize Wikipedia to improve multilingual NER systems. Central to our approaches is the construction of high-accuracy, high-coverage multilingual Wikipedia entity type mappings. We use weakly annotated data to train an English Wikipedia entity type classifier, as opposed to using humanannotated data as in (Dakka and Cucerzan, 2008; Nothman et al., 2013) . The accuracy of the classifier is further improved via self-training. We apply the classifier on all the English Wikipedia pages and construct an English Wikipedia entity type mapping that includes entities with high classification confidence scores. To build multilingual Wikipedia entity type mappings, we generate weakly annotated classifier training data for another language via projection using the inter-language links of Wikipedia. This approach requires no human annotation or language-dependent knowledge, and thus can be easily applied to new languages.",
+                "cite_spans": [
+                    {
+                        "start": 364,
+                        "end": 390,
+                        "text": "(Dakka and Cucerzan, 2008;",
+                        "ref_id": "BIBREF1"
+                    },
+                    {
+                        "start": 391,
+                        "end": 412,
+                        "text": "Nothman et al., 2013)",
+                        "ref_id": "BIBREF9"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Our goal is to utilize the Wikipedia entity type mappings to improve NER systems. A natural approach is to use a mapping to create dictionary type features for training an NER system. In addition, we develop several other approaches. The first approach applies an entity type mapping as a decoding constraint for an NER system. The second approach uses a mapping to post-process the output of an NER system. We also design a robust joint approach that combines the decoding constraint approach and the post-processing approach in a smart way. We evaluate the performance of the Wikipediabased approaches on NER systems trained for 6 languages. We find that when a system is well trained (e.g., with 200K to 300K tokens of human-annotated data), the dictionary feature approach achieves the best improvement over the baseline system; while when a system is trained with little human-annotated training data (e.g., 20K to 30K tokens), a more aggressive decoding constraint approach achieves the best improvement. In both scenarios, the Wikipediabased approaches are effective in improving the accuracy on unseen entities, especially when a system is applied to a new domain (3.6 F 1 score improvement on political party articles/English NER) or it is trained with little training data (18.3 F 1 score improvement on Japanese NER).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "We organize the paper as follows. We describe how to build English Wikipedia entity type mapping in Section 2 and extend it to multilingual mappings in Section 3. We present several Wikipedia-based approaches for improving NER systems in Section 4 and evaluate their performance in Section 5. We conclude the paper in Section 6.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "In this section, we focus on English Wikipedia. We divide Wikipedia pages into two types:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "English Wikipedia Entity Type Mapping",
+                "sec_num": "2"
+            },
+            {
+                "text": "\u2022 Entity pages that describe an entity or object, either a named entity such as \"Michael Jordan\" or a common entity such as \"Basketball.\"",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "English Wikipedia Entity Type Mapping",
+                "sec_num": "2"
+            },
+            {
+                "text": "\u2022 Non-entity pages that do not describe a certain entity, including disambiguation pages, redirection pages, list pages, etc.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "English Wikipedia Entity Type Mapping",
+                "sec_num": "2"
+            },
+            {
+                "text": "We have developed an in-house English NER system (Florian et al., 2004) . The system has 51 entity types, and the main motivation of deploying such a fine-grained entity type set is to build cognitive question answering applications on top of the NER system. An important check for a question answering system is the capability to detect whether a particular answer matches the expected type derived from the question. The entity type system used in this paper has been engineered to cover many of the frequent types that are targeted by naturallyphrased questions (such as PERSON, ORGANIZA-TION, GPE, TITLEWORK, FACILITY, EVENT, DATE, TIME, LOCATION, etc), and it was created over a long period of time, being updated as more types were found to be useful for question answering, and to improve inter-annotator consistency.",
+                "cite_spans": [
+                    {
+                        "start": 49,
+                        "end": 71,
+                        "text": "(Florian et al., 2004)",
+                        "ref_id": "BIBREF2"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "English Wikipedia Entity Type Mapping",
+                "sec_num": "2"
+            },
+            {
+                "text": "We want to classify Wikipedia pages into one of the entity types used in the NER system. For nonentity pages and entity pages describing common entities, we assign them with a new type OTHER.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "English Wikipedia Entity Type Mapping",
+                "sec_num": "2"
+            },
+            {
+                "text": "We build maximum entropy classifiers (Nigam et al., 1999) for Wikipedia entity type classification. We use both structured information and unstructured information of a Wikipedia page as features.",
+                "cite_spans": [
+                    {
+                        "start": 37,
+                        "end": 57,
+                        "text": "(Nigam et al., 1999)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Features",
+                "sec_num": "2.1.1"
+            },
+            {
+                "text": "Each Wikipedia page has a unique title. The title of an entity page is usually the name of the entity, and may include auxiliary information in a bracket to distinguish entities with the same name. We use both the entity name and auxiliary information in a bracket (if any) of a Wikipedia title as features because each could provide useful information for entity type classification. For example, based on the word \"Prize\" in the title \"Nobel Prize\" or the word \"Awards\" in the title \"Academy Awards\", one can infer that the entity type is AWARD. Likewise, the auxiliary information \"company\" in the title \"Jordan (company)\" indicates that the entity is an ORGA-NIZATION, and the auxiliary information \"film\" in the title \"Alien (film)\" indicates that the entity is a TITLEWORK.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Features",
+                "sec_num": "2.1.1"
+            },
+            {
+                "text": "The text in a Wikipedia page of an entity provides rich information about the entity. A person can usually correctly infer the entity type by reading the first few sentences of the text in a Wikipedia page. Using more sentences provides additional information about the entity which might be helpful, but it is also more likely to introduce noisy information which could affect the classification accuracy adversely. Therefore, we use the first 200 tokens of the text in a Wikipedia page and create n-gram word features out of them. We have also found that including additional n-gram word features of the first sentence in a Wikipedia page results in a better classification accuracy.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Features",
+                "sec_num": "2.1.1"
+            },
+            {
+                "text": "Most Wikipedia pages also have a structured table called infobox, which is placed on the right top of a page. An infobox contains attribute-value pairs, often providing summary information about an entity. The attributes in an infobox could be particularly useful for entity type classification. For example, the attribute \"Born\" in an infobox provides strong evidence that the corresponding entity is a PERSON; and the attribute \"Headquarters\" implies that the corresponding entity is an ORGANIZATION. We include the infobox attributes as classifier features.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Features",
+                "sec_num": "2.1.1"
+            },
+            {
+                "text": "Entity linking (EL) or entity disambiguation is the task of determining the identities of entities mentioned in text, by linking each entity to an entry (if exists) in an open knowledge base such as Wikipedia (Han et al., 2011; Hoffart et al., 2011) . We apply an EL system (Sil and Florian, 2014) to generate training data for Wikipedia entity type classification as follows: if a named entity in our NER training data with entity type T is linked to a Wikipedia page, that page will be labeled with entity type T . Similarly, we apply the EL system to generate a set of test data by linking named entities in our NER test data to Wikipedia pages. The English Wikipedia snapshot Notice that the automatically generated classifier training and test data are weakly labeled since the EL system may link an entity to a wrong Wikipedia page and thus the entity type assigned to that page could be wrong. Since the test data is crucial for evaluating the classification accuracy, we manually corrected the output.",
+                "cite_spans": [
+                    {
+                        "start": 209,
+                        "end": 227,
+                        "text": "(Han et al., 2011;",
+                        "ref_id": "BIBREF3"
+                    },
+                    {
+                        "start": 228,
+                        "end": 249,
+                        "text": "Hoffart et al., 2011)",
+                        "ref_id": "BIBREF4"
+                    },
+                    {
+                        "start": 274,
+                        "end": 297,
+                        "text": "(Sil and Florian, 2014)",
+                        "ref_id": "BIBREF13"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training and Test Data",
+                "sec_num": "2.1.2"
+            },
+            {
+                "text": "To evaluate the prediction power of different types of features, we train a number of classifiers using only title features, only infobox features, only text features, and all features respectively. We show the F 1 score of the classifiers on different entity types in Table 1 . ALL is the overall performance, and PER (PERSON), ORG (ORGANIZATION), GPE, TITL (TITLEWORK), FAC (FACILITY) are the top five most frequently entity types in the test data.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 275,
+                        "end": 276,
+                        "text": "1",
+                        "ref_id": "TABREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Classifier Performance",
+                "sec_num": "2.1.3"
+            },
+            {
+                "text": "From Table 1 , we can see that text features are the most important features for classifying Wikipedia pages, since the classifier trained with only text features achieves an overall F 1 score of 87.2, which is better than the classifier trained with either title or infobox features alone. Nevertheless, both infobox and title features provide additional useful information for entity type classification, and the classifier trained with all the features achieves an overall F 1 score of 90.1. classification accuracy.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 11,
+                        "end": 12,
+                        "text": "1",
+                        "ref_id": "TABREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Classifier Performance",
+                "sec_num": "2.1.3"
+            },
+            {
+                "text": "We first apply a standard self-training approach. The classifier trained with the initial training data is used to decode (i.e., classify) all the unlabeled Wikipedia pages to predict their entity types with confidence scores. We add the self-decoded Wikipedia pages with high confidence scores to the training data and train a new classifier. Via experiments a threshold of 0.9 is used to sort out highconfident self-decoded examples. The F 1 score of the new classifier is improved to 91.1, as shown in Table 2 .",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 511,
+                        "end": 512,
+                        "text": "2",
+                        "ref_id": "TABREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Improvement via",
+                "sec_num": "2.1.4"
+            },
+            {
+                "text": "Under the standard approach, about 2.3M selfdecoded examples are added, the size of which is about 500 times of the size of the original training data. The errors of the original classifier could be amplified with such a big increase of the training size with so many self-decoded examples.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Improvement via",
+                "sec_num": "2.1.4"
+            },
+            {
+                "text": "To address this issue, we have developed a sampling-based self-training approach. Instead of adding all the self-decoded examples with confidence scores greater than or equal to 0.9, we do a random sampling of those high-confident examples. We use a sampling probability p(e) = q \u2022c(e), where q is a sampling ratio parameter and c(e) is the confidence score of example e. Under this approach, examples with higher confidence scores are more likely to be selected, while the total number of selected examples is controlled by the sampling ratio q. Via experiments we found that a small sampling ratio like q = 0.01 yields good improvement (although the improvement is not sensitive to q). As shown in Table 2 , the classification accuracy under the sampling-based approach is further improved to 91.8 F 1 score (the improvement is calculated by averaging over 5 random samples with q = 0.01).",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 706,
+                        "end": 707,
+                        "text": "2",
+                        "ref_id": "TABREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Improvement via",
+                "sec_num": "2.1.4"
+            },
+            {
+                "text": "We construct an English Wikipedia entity type mapping by applying the English Wikipedia entity type classifier on all the English Wikipedia pages (\u223c4.6M). Each entry of the mapping includes an entity name (which is extracted from the title of a Wikipedia page) and the associated entity type with confidence score (which is determined by the classifier). We denote the English Wikipedia entity type mapping that includes all the pages by English-Wiki-Mapping.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Wikipedia Entity Type Mapping",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "To build a high-accuracy mapping, one may want to include only entities with confidence scores greater than or equal to a threshold t in the mapping, and we denote such a mapping by English-Wiki-Mapping(t). Notice that a mapping with a higher t will have more accurate entity types for its entities, but it will include fewer entities. Therefore, there is a trade-off between accuracy and coverage of the mapping, which can be tuned by the confidence threshold t. There are about 2.9M entities in English-Wiki-Mapping(0.9), which covers about 63% of all the English Wikipedia pages.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Wikipedia Entity Type Mapping",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "We have also found that the length of an entity name (i.e., number of words in an entity name) also plays an important role for determining which entities should be included in the mapping for improving an NER system. Therefore, we use English-Wiki-Mapping(t, i) to denote the English Wikipedia entity type mapping that includes all the entities with confidence scores greater than or equal to t and at least i words in their names. English-Wiki-Mapping(0.9,2) covers about 55% of all the English Wikipedia pages, and English-Wiki-Mapping(0.9,3) covers about 25% of all the English Wikipedia pages.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Wikipedia Entity Type Mapping",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "Based on the English Wikipedia entity type mapping, we want to build high-accuracy, high-coverage Wikipedia entity type mappings for other languages with minimum human annotation and languagedependent knowledge involved. We utilize the interlanguage links of Wikipedia, which are the links between one entity's pages in different languages.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Multilingual Wikipedia Entity Type Mapping",
+                "sec_num": "3"
+            },
+            {
+                "text": "The inter-language links between English Wikipedia pages and Wikipedia pages of another language provide useful information for this task. Suppose we want to build a Wikipedia entity type mapping for a new language, and we use Portuguese as an example. A direct approach is projection using the inter-language links between English and Portuguese Wikipedia pages: for each Portuguese Wikipedia page that has an inter-language link to an English Wikipedia page, we project the entity type of the English Wikipedia page (determined by the English entity type mapping) to the Portuguese Wikipedia page. The rationale is that both the English and Portuguese pages are describing the same entity, even probably with different spelling (e.g., United States in English vs. Estados Unidos in Portuguese), the entity type of that entity does not change from one language to another.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Multilingual Wikipedia Entity Type Mapping",
+                "sec_num": "3"
+            },
+            {
+                "text": "However, the main limitation of the direct projection approach is coverage. Only a fraction of all the Portuguese Wikipedia pages have inter-language links to English Wikipedia pages, and among those pages only a subset of them have classified entity types with confidence scores high enough (e.g., at least 0.9). For example, projecting English-Wiki-Mapping(0.9) to Portuguese Wikipedia returns 143K pages, which covers only 15% of all the Portuguese Wikipedia pages (around 920K in total).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Multilingual Wikipedia Entity Type Mapping",
+                "sec_num": "3"
+            },
+            {
+                "text": "We apply an alternative approach, which uses the 143K Portuguese Wikipedia pages (acquired by projection from English-Wiki-Mapping(0.9)) as weakly annotated training data to train a Portuguese Wikipedia entity type classifier. For feature engineering purpose, we also project the English Wikipedia entity type classifier training and test data (as described in Section 2.1.2) to Portuguese Wikipedia pages via inter-language links, and this produces 1,190 Portuguese Wikipedia pages which are used as the test data. Pages in the test data set are excluded from the 143K training data set.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Multilingual Wikipedia Entity Type Mapping",
+                "sec_num": "3"
+            },
+            {
+                "text": "We use similar features (title, infobox and text) as for the English classifiers to train the Portuguese classifiers. Again we find that the classifier trained with all the features achieves the best accuracy of 86.3 F 1 score. Notice that this is an approximated evaluation because the pages in the test data set are labeled via projection and not by human.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Multilingual Wikipedia Entity Type Mapping",
+                "sec_num": "3"
+            },
+            {
+                "text": "We build Portuguese Wikipedia entity type mappings by applying the Portuguese Wikipedia entity type classifier on all the Portuguese Wikipedia pages. We use Portuguese-Wiki-Mapping(t) to denote the mapping that includes entities with confidence scores greater than or equal to a thresh-old t. There are 525K entities in Portuguese-Wiki-Mapping(0.9), which covers about 57% of all the Portuguese Wikipedia pages, a significant improvement of coverage compared to the direct projection approach (15%).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Multilingual Wikipedia Entity Type Mapping",
+                "sec_num": "3"
+            },
+            {
+                "text": "The main advantage of our approach is that no human annotation or language-dependent knowledge is required, so it can be easily applied to a new language. We have applied this approach to build high-accuracy, high-coverage Wikipedia entity type mappings for several new languages including Portuguese, Japanese, Spanish, Dutch and German.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Multilingual Wikipedia Entity Type Mapping",
+                "sec_num": "3"
+            },
+            {
+                "text": "We have developed several approaches that utilize the Wikipedia entity type mappings to improve NER systems. Let M be a Wikipedia entity type mapping. For an entity name x, let M(x) denote the set of possible entity types for x determined by the mapping. If an entity name x is in the mapping, then M(x) includes at least one entity type, i.e., |M(x)| \u2265 1, where |M(x)| is the cardinality of M(x). Otherwise if an entity name x is not in the mapping, then M(x) = \u2205 is the empty set and |M(x)| = 0.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Improving NER Systems",
+                "sec_num": "4"
+            },
+            {
+                "text": "The first approach is to use a Wikipedia entity type mapping M as a decoding constraint for an NER system. Under this approach, the mapping is applied as a constraint during the decoding procedure: if a sequence of words in the text form an entity name x that is included in the mapping, i.e., |M(x)| \u2265 1, then the sequence of words will be identified as an entity, and its entity type is determined by the decoding algorithm while being constrained to one of the entity types in M(x).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Improving NER Systems",
+                "sec_num": "4"
+            },
+            {
+                "text": "The second approach is to use a Wikipedia entity type mapping M to post-process the output of an NER system. Under this approach, the mapping is applied after the decoding procedure: if the name of a system entity x is in the mapping and the entity type for that entity name is unique based on the mapping, i.e., |M(x)| = 1, then its entity type will be determined by the unique entity type in M(x).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Improving NER Systems",
+                "sec_num": "4"
+            },
+            {
+                "text": "The decoding constraint approach is more aggressive than the post-processing approach, because it may create new entities and change entity boundaries. This approach is more reliable for entities with longer names. Via experiments we find that using Wiki-Mapping(0.9,2) or Wiki-Mapping(0.9,3) achieves the best improvement under the decoding constraint approach. Remember Wiki-Mapping(t, i) includes all the entities with confidence scores at least t and at least i words in their names.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Improving NER Systems",
+                "sec_num": "4"
+            },
+            {
+                "text": "In contrast, the post-processing approach is a more conservative approach since it relies on the system entity boundaries and only changes their entity types if determined by the mapping, so it will not create new entities. Via experiments we find that using Wiki-Mapping(0.9,2) achieves the best improvement under the post-processing approach.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Improving NER Systems",
+                "sec_num": "4"
+            },
+            {
+                "text": "Based on the observation that the decoding constraint approach is more reliable for longer entities while the post-processing approach can better handle short entities, we have designed a joint approach that combines the two approaches as follows: it first applies Wiki-Mapping(0.9,3) as a decoding constraint for an NER system to produce system entities, and then applies Wiki-Mapping(0.9,2) to post-process the system output. The joint approach combines the advantages of both approaches and achieves robust performance in our experiments.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Improving NER Systems",
+                "sec_num": "4"
+            },
+            {
+                "text": "Finally, we can use a Wikipedia entity type mapping to create dictionary features for training an NER system. The idea of using Wikipedia to create training features was explored before, e.g., (Kazama and Torisawa, 2007; Ratinov and Roth, 2009; Radford et al., 2015) . The difference between our approach and the previous approaches is how the features are created: we first build high-accuracy, high-coverage multilingual Wikipedia entity type mappings and then use the mappings to generate dictionary features. Via experiments we find that using Wiki-Mapping(0.9,1) or Wiki-Mapping(0.9,2) achieves the best improvement under the dictionary feature approach.",
+                "cite_spans": [
+                    {
+                        "start": 193,
+                        "end": 220,
+                        "text": "(Kazama and Torisawa, 2007;",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 221,
+                        "end": 244,
+                        "text": "Ratinov and Roth, 2009;",
+                        "ref_id": "BIBREF11"
+                    },
+                    {
+                        "start": 245,
+                        "end": 266,
+                        "text": "Radford et al., 2015)",
+                        "ref_id": "BIBREF10"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Improving NER Systems",
+                "sec_num": "4"
+            },
+            {
+                "text": "In this section, we evaluate the effectiveness of the proposed Wikipedia-based approaches via experiments on NER systems trained for 6 languages: English, Portuguese, Japanese, Spanish, Dutch and German. For each language, we compare the baseline NER system with the following approaches:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "5"
+            },
+            {
+                "text": "\u2022 DC(i): the decoding constraint approach with mapping Language-Wiki-Mapping(0.9,i).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "5"
+            },
+            {
+                "text": "\u2022 PP(i): the post-processing approach with mapping Language-Wiki-Mapping(0.9,i).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "5"
+            },
+            {
+                "text": "\u2022 Joint: the joint approach that combines DC(3) and PP(2).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "5"
+            },
+            {
+                "text": "\u2022 DF(i): the dictionary feature approach with mapping Language-Wiki-Mapping(0.9,i).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "5"
+            },
+            {
+                "text": "To evaluate the generalization capability of an NER system, we compute the F 1 score on the unseen entities (Unseen) as well as on all the entities (All) in a test data set.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "5"
+            },
+            {
+                "text": "The baseline English NER system is a CRF model trained with 328K tokens of human-annotated news articles. It uses standard NER features in the literature including n-gram word features, word type features, prefix and suffix features, Brown cluster type features, gazetteer features, document-level cache features, etc.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "English",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "We have two human-annotated test data sets: the first set, Test (News), consists of 40K tokens of human-annotated news articles; and the second set, Test (Political), consists of 77K tokens of humanannotated political party articles from Wikipedia. The results are shown in Table 3 .",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 280,
+                        "end": 281,
+                        "text": "3",
+                        "ref_id": "TABREF2"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "English",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "For Test (News) which is in the same domain as the training data, the baseline system achieves 88.2 F 1 score on all the entities, and a relatively low F 1 score of 78.7 on the unseen entities (38% of all the entities are unseen entities). The dictionary feature approach DF(2) achieves the highest F 1 scores among the Wikipedia-based approaches. It improves the baseline system by 1.2 F 1 score on all the entities and by 3.1 F 1 score on the unseen entities. The joint approach achieves the second highest F 1 scores. It improves the baseline by 0.7 F 1 score on all the entities and by 2.0 F 1 score on the unseen entities.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "English",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "For Test (Political) which is in a different domain from the training data, the fraction of unseen entities increases to 84%. In this case, the F 1 score of the baseline system drops to 64.1, and the Wikipediabased approaches demonstrate larger improvements. For example, DF(2) improves the baseline system by 2.7 F 1 score on all the entities and by 3.6 F 1 score on the unseen entities. score among all approaches in a column is shown in bold).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "English",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "For Portuguese, we have applied a semi-supervised learning approach to build the baseline NER system.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Portuguese",
+                "sec_num": "5.2"
+            },
+            {
+                "text": "The training data set includes 31K tokens of humanannotated news articles, and 2M tokens of weakly annotated data. The weakly annotated data is generated as follows. We have a large number of parallel sentences between English and Portuguese news articles. We apply the English NER system on the English sentences and project the entity type tags to the Portuguese sentences via alignments between the English and Portuguese sentences.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Portuguese",
+                "sec_num": "5.2"
+            },
+            {
+                "text": "The baseline NER system is an MEMM model (CRF cannot handle such a big size of training data, since our NER system has 51 entity types, and the number of features and training time of CRF grow at least quadratically in the number of entity types). The test data set consists of 34K tokens of humanannotated Portuguese news articles.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Portuguese",
+                "sec_num": "5.2"
+            },
+            {
+                "text": "The results are shown in Table 4 . Because the system is trained with little human-annotated training data, the performance of the baseline system achieves only 60.1 F 1 score on all the entities and 50.2 F 1 score on the unseen entities (80% of all the entities). In this case, the more aggressive decoding constraint approach DC(2) achieves the best improvement among the Wikipedia-based approaches, which improves the baseline by 5.9 F 1 score on all the entities and by 8.6 F 1 score on the unseen entities. The joint approach improves the baseline by 3.0 F 1 score on all the entities and by 4.3 F 1 score on the unseen entities. ",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 31,
+                        "end": 32,
+                        "text": "4",
+                        "ref_id": "TABREF3"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Portuguese",
+                "sec_num": "5.2"
+            },
+            {
+                "text": "For Japanese, the baseline NER system is an MEMM model trained with 20K tokens of humanannotated news articles and 2.1M tokens of weakly annotated data. The weakly annotated data was generated using similar steps as for the Portuguese NER system. The test data set consists of 22K tokens of human-annotated Japanese news articles.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Japanese",
+                "sec_num": "5.3"
+            },
+            {
+                "text": "The results are shown in Table 5 . Again, in this low-resource case, DC(2) achieves the best improvement among the Wikipedia-based approaches. It improves the baseline by 9.0 F 1 score on all the entities and by 18.3 F 1 score on the unseen entities (59% of all the entities). The joint approach improves the baseline by 4.8 F 1 score on all the entities and by 9.6 F 1 score on the unseen entities.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 31,
+                        "end": 32,
+                        "text": "5",
+                        "ref_id": "TABREF4"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Japanese",
+                "sec_num": "5.3"
+            },
+            {
+                "text": "We also evaluate the Wikipedia-based approaches on Spanish, Dutch and German NER systems trained with the CoNLL data sets (Tjong Kim Sang, 2002; Tjong Kim Sang and De Meulder, 2003) .",
+                "cite_spans": [
+                    {
+                        "start": 122,
+                        "end": 144,
+                        "text": "(Tjong Kim Sang, 2002;",
+                        "ref_id": "BIBREF15"
+                    },
+                    {
+                        "start": 145,
+                        "end": 181,
+                        "text": "Tjong Kim Sang and De Meulder, 2003)",
+                        "ref_id": "BIBREF14"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Spanish, Dutch and German",
+                "sec_num": "5.4"
+            },
+            {
+                "text": "There are only 4 entity types in the CoNLL data: PER (person), ORG (organization), LOC (location), MISC (miscellaneous names). Accordingly, we have trained a CoNLL-style Wikipedia entity type classifier that produces the CoNLL entity types. The training data for the classifier is generated by using the CoNLL English training data set and the AIDA-YAGO2 data set that provides the Wikipedia titles for the named entities in the CoNLL English data set (Hoffart et al., 2011) . Applying the classifier on all the English Wikipedia pages, we construct a CoNLL-style English Wikipedia entity type mapping. We then build CoNLL-style Wikipedia entity type mappings for Spanish, Dutch and German using steps as described in Section 3.",
+                "cite_spans": [
+                    {
+                        "start": 452,
+                        "end": 474,
+                        "text": "(Hoffart et al., 2011)",
+                        "ref_id": "BIBREF4"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Spanish, Dutch and German",
+                "sec_num": "5.4"
+            },
+            {
+                "text": "For each of the three languages, the baseline NER system is a CRF model trained with humanannotated news data (\u223c200K tokens), and there are two test data sets, TestA and TestB, that are also human-annotated news data (ranging from 40K to 70K tokens). The results are shown in Table 6 . For Dutch and German, DF(1) achieves the best improvement among the Wikipedia-based approaches. For Spanish, the joint approach achieves the best improvement among the Wikipedia-based approaches. Again, in all cases, the Wikipedia-based approaches demonstrate larger improvements (ranging from 1.0 to 3.4 F 1 score) on the unseen entities.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 282,
+                        "end": 283,
+                        "text": "6",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Spanish, Dutch and German",
+                "sec_num": "5.4"
+            },
+            {
+                "text": "From the experimental results, we have the following observations:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Discussion",
+                "sec_num": "5.5"
+            },
+            {
+                "text": "\u2022 NER systems are more likely to make mistakes on unseen entities. In all cases, the F 1 score of an NER system on all the entities is always higher than the F 1 score on the unseen entities.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Discussion",
+                "sec_num": "5.5"
+            },
+            {
+                "text": "\u2022 The Wikipedia-based approaches are effective in improving the generalization capability of NER systems (i.e., improving the accuracy on unseen entities), especially when a system is applied to a new domain (3.6 F 1 score improvement on political party articles/English NER) or it is trained with little human-annotated training data (18.3 F 1 score improvement on Japanese NER).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Discussion",
+                "sec_num": "5.5"
+            },
+            {
+                "text": "\u2022 In the low-resource scenario where an NER",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Discussion",
+                "sec_num": "5.5"
+            },
+            {
+                "text": "\u2022 In the rich-resource scenario where an NER system is well trained (e.g., 200K-300K tokens of training data for the English, Dutch and German systems), the dictionary feature approach, which uses a Wikipedia entity type mapping to create dictionary type features, achieves the best improvement.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Discussion",
+                "sec_num": "5.5"
+            },
+            {
+                "text": "\u2022 In both scenarios, the joint approach, which combines the decoding constraint approach and the post-processing approach in a smart way, achieves relatively robust performance among the Wikipedia-based approaches.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Discussion",
+                "sec_num": "5.5"
+            },
+            {
+                "text": "In this paper, we proposed and evaluated several approaches that utilize high-accuracy, high-coverage Wikipedia entity type mappings to improve multilingual NER systems. These mappings are built from weakly annotated data, and can be easily extended to new languages with no human annotation or language-dependent knowledge involved. Experimental results show that the Wikipediabased approaches are effective in improving the generalization capability of NER systems. When a system is well trained, the dictionary feature approach achieves the best improvement over the baseline system; while when a system is trained with little human-annotated training data, a more aggressive decoding constraint approach achieves the best improvement. The improvements are larger on unseen entities, and the approaches are especially useful when a system is applied to a new domain or it is trained with little training data.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion",
+                "sec_num": "6"
+            },
+            {
+                "text": "An entity is an unseen entity if it does not appear in the training data used to train the NER model.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            }
+        ],
+        "back_matter": [
+            {
+                "text": "We would like to thank Avirup Sil for helpful comments, and for collecting the Wikipedia data. We also thank the anonymous reviewers for their suggestions.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Acknowledgments",
+                "sec_num": null
+            },
+            {
+                "text": "system is trained with little human-annotated data (e.g., 20K-30K tokens of training data for the Portuguese and Japanese systems), the decoding constraint approach, which uses a highaccuracy, high-coverage Wikipedia entity type mapping to create constraints during the decoding phase, achieves the best improvement.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "annex",
+                "sec_num": null
+            }
+        ],
+        "bib_entries": {
+            "BIBREF0": {
+                "ref_id": "b0",
+                "title": "Natural language processing (almost) from scratch",
+                "authors": [
+                    {
+                        "first": "Ronan",
+                        "middle": [],
+                        "last": "Collobert",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jason",
+                        "middle": [],
+                        "last": "Weston",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "L\u00e9on",
+                        "middle": [],
+                        "last": "Bottou",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Michael",
+                        "middle": [],
+                        "last": "Karlen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Koray",
+                        "middle": [],
+                        "last": "Kavukcuoglu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Pavel",
+                        "middle": [],
+                        "last": "Kuksa",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2011,
+                "venue": "Journal of Machine Learning Research",
+                "volume": "12",
+                "issue": "",
+                "pages": "2493--2537",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ronan Collobert, Jason Weston, L\u00e9on Bottou, Michael Karlen, Koray Kavukcuoglu, and Pavel Kuksa. 2011. Natural language processing (almost) from scratch. Journal of Machine Learning Research, 12:2493- 2537, November.",
+                "links": null
+            },
+            "BIBREF1": {
+                "ref_id": "b1",
+                "title": "Augmenting Wikipedia with named entity tags",
+                "authors": [
+                    {
+                        "first": "Wisam",
+                        "middle": [],
+                        "last": "Dakka",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Silviu",
+                        "middle": [],
+                        "last": "Cucerzan",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2008,
+                "venue": "Proceedings of the 3rd International Joint Conference on Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "545--552",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Wisam Dakka and Silviu Cucerzan. 2008. Augment- ing Wikipedia with named entity tags. In Proceedings of the 3rd International Joint Conference on Natural Language Processing, pages 545-552, Hyderabad, In- dia.",
+                "links": null
+            },
+            "BIBREF2": {
+                "ref_id": "b2",
+                "title": "A statistical model for multilingual entity detection and tracking",
+                "authors": [
+                    {
+                        "first": "Radu",
+                        "middle": [],
+                        "last": "Florian",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hany",
+                        "middle": [],
+                        "last": "Hassan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Abe",
+                        "middle": [],
+                        "last": "Ittycheriah",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hongyan",
+                        "middle": [],
+                        "last": "Jing",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nanda",
+                        "middle": [],
+                        "last": "Kambhatla",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xiaqiang",
+                        "middle": [],
+                        "last": "Luo",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nicolas",
+                        "middle": [],
+                        "last": "Nicolov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Salim",
+                        "middle": [],
+                        "last": "Roukos",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2004,
+                "venue": "Proceedings of the Human Language Technologies Conference 2004 (HLT-NAACL'04)",
+                "volume": "",
+                "issue": "",
+                "pages": "1--8",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Radu Florian, Hany Hassan, Abe Ittycheriah, Hongyan Jing, Nanda Kambhatla, Xiaqiang Luo, Nicolas Ni- colov, and Salim Roukos. 2004. A statistical model for multilingual entity detection and tracking. In Pro- ceedings of the Human Language Technologies Con- ference 2004 (HLT-NAACL'04), pages 1-8, Boston, Massachusetts, USA, May. Association for Computa- tional Linguistics.",
+                "links": null
+            },
+            "BIBREF3": {
+                "ref_id": "b3",
+                "title": "Collective entity linking in web text: A graph-based method",
+                "authors": [
+                    {
+                        "first": "Xianpei",
+                        "middle": [],
+                        "last": "Han",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Le",
+                        "middle": [],
+                        "last": "Sun",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jun",
+                        "middle": [],
+                        "last": "Zhao",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2011,
+                "venue": "Proceedings of the 34th International ACM SIGIR Conference on Research and Development in Information Retrieval, SIGIR '11",
+                "volume": "",
+                "issue": "",
+                "pages": "765--774",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Xianpei Han, Le Sun, and Jun Zhao. 2011. Collec- tive entity linking in web text: A graph-based method. In Proceedings of the 34th International ACM SIGIR Conference on Research and Development in Informa- tion Retrieval, SIGIR '11, pages 765-774, New York, NY, USA. ACM.",
+                "links": null
+            },
+            "BIBREF4": {
+                "ref_id": "b4",
+                "title": "Robust disambiguation of named entities in text",
+                "authors": [
+                    {
+                        "first": "Johannes",
+                        "middle": [],
+                        "last": "Hoffart",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mohamed",
+                        "middle": [
+                            "Amir"
+                        ],
+                        "last": "Yosef",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ilaria",
+                        "middle": [],
+                        "last": "Bordino",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hagen",
+                        "middle": [],
+                        "last": "F\u00fcrstenau",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Manfred",
+                        "middle": [],
+                        "last": "Pinkal",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Marc",
+                        "middle": [],
+                        "last": "Spaniol",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Bilyana",
+                        "middle": [],
+                        "last": "Taneva",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Stefan",
+                        "middle": [],
+                        "last": "Thater",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Gerhard",
+                        "middle": [],
+                        "last": "Weikum",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2011,
+                "venue": "Proceedings of the Conference on Empirical Methods in Natural Language Processing, EMNLP '11",
+                "volume": "",
+                "issue": "",
+                "pages": "782--792",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Johannes Hoffart, Mohamed Amir Yosef, Ilaria Bordino, Hagen F\u00fcrstenau, Manfred Pinkal, Marc Spaniol, Bilyana Taneva, Stefan Thater, and Gerhard Weikum. 2011. Robust disambiguation of named entities in text. In Proceedings of the Conference on Empirical Meth- ods in Natural Language Processing, EMNLP '11, pages 782-792, Stroudsburg, PA, USA. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF5": {
+                "ref_id": "b5",
+                "title": "Exploiting Wikipedia as external knowledge for named entity recognition",
+                "authors": [
+                    {
+                        "first": "Jun'ichi",
+                        "middle": [],
+                        "last": "Kazama",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kentaro",
+                        "middle": [],
+                        "last": "Torisawa",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2007,
+                "venue": "Proceedings of the 2007 Joint Conference on Empirical Methods in Natural Language Processing and Computational Natural Language Learning (EMNLP-CoNLL)",
+                "volume": "",
+                "issue": "",
+                "pages": "698--707",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jun'ichi Kazama and Kentaro Torisawa. 2007. Exploit- ing Wikipedia as external knowledge for named entity recognition. In Proceedings of the 2007 Joint Confer- ence on Empirical Methods in Natural Language Pro- cessing and Computational Natural Language Learn- ing (EMNLP-CoNLL), pages 698-707, Prague, Czech Republic, June. Association for Computational Lin- guistics.",
+                "links": null
+            },
+            "BIBREF6": {
+                "ref_id": "b6",
+                "title": "Conditional random fields: Probabilistic models for segmenting and labeling sequence data",
+                "authors": [
+                    {
+                        "first": "John",
+                        "middle": [
+                            "D"
+                        ],
+                        "last": "Lafferty",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Andrew",
+                        "middle": [],
+                        "last": "Mccallum",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Fernando",
+                        "middle": [
+                            "C N"
+                        ],
+                        "last": "Pereira",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2001,
+                "venue": "Proceedings of the Eighteenth International Conference on Machine Learning, ICML '01",
+                "volume": "",
+                "issue": "",
+                "pages": "282--289",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "John D. Lafferty, Andrew McCallum, and Fernando C. N. Pereira. 2001. Conditional random fields: Proba- bilistic models for segmenting and labeling sequence data. In Proceedings of the Eighteenth International Conference on Machine Learning, ICML '01, pages 282-289, San Francisco, CA, USA. Morgan Kauf- mann Publishers Inc.",
+                "links": null
+            },
+            "BIBREF7": {
+                "ref_id": "b7",
+                "title": "Neural architectures for named entity recognition",
+                "authors": [
+                    {
+                        "first": "Guillaume",
+                        "middle": [],
+                        "last": "Lample",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Miguel",
+                        "middle": [],
+                        "last": "Ballesteros",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sandeep",
+                        "middle": [],
+                        "last": "Subramanian",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kazuya",
+                        "middle": [],
+                        "last": "Kawakami",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chris",
+                        "middle": [],
+                        "last": "Dyer",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of NAACL-HLT (NAACL 2016)",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Guillaume Lample, Miguel Ballesteros, Sandeep Subra- manian, Kazuya Kawakami, and Chris Dyer. 2016. Neural architectures for named entity recognition. In Proceedings of NAACL-HLT (NAACL 2016), San Diego, US.",
+                "links": null
+            },
+            "BIBREF8": {
+                "ref_id": "b8",
+                "title": "Maximum entropy Markov models for information extraction and segmentation",
+                "authors": [
+                    {
+                        "first": "Andrew",
+                        "middle": [],
+                        "last": "Mccallum",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dayne",
+                        "middle": [],
+                        "last": "Freitag",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Fernando",
+                        "middle": [
+                            "C N"
+                        ],
+                        "last": "Pereira",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1999,
+                "venue": "Proceedings of the Seventeenth International Conference on Machine Learning, ICML '00",
+                "volume": "",
+                "issue": "",
+                "pages": "61--67",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Andrew McCallum, Dayne Freitag, and Fernando C. N. Pereira. 2000. Maximum entropy Markov models for information extraction and segmentation. In Proceed- ings of the Seventeenth International Conference on Machine Learning, ICML '00, pages 591-598, San Francisco, CA, USA. Morgan Kaufmann Publishers Inc. Kamal Nigam, John Lafferty, and Andrew McCallum. 1999. Using maximum entropy for text classification. In In IJCAI-99 Workshop on Machine Learning for In- formation Filtering, pages 61-67.",
+                "links": null
+            },
+            "BIBREF9": {
+                "ref_id": "b9",
+                "title": "Learning multilingual named entity recognition from Wikipedia",
+                "authors": [
+                    {
+                        "first": "Joel",
+                        "middle": [],
+                        "last": "Nothman",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nicky",
+                        "middle": [],
+                        "last": "Ringland",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Will",
+                        "middle": [],
+                        "last": "Radford",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tara",
+                        "middle": [],
+                        "last": "Murphy",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "James",
+                        "middle": [
+                            "R"
+                        ],
+                        "last": "Curran",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "Journal of Artificial Intelligence",
+                "volume": "194",
+                "issue": "",
+                "pages": "151--175",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Joel Nothman, Nicky Ringland, Will Radford, Tara Mur- phy, and James R. Curran. 2013. Learning multilin- gual named entity recognition from Wikipedia. Jour- nal of Artificial Intelligence, 194:151-175, January.",
+                "links": null
+            },
+            "BIBREF10": {
+                "ref_id": "b10",
+                "title": "Named entity recognition with documentspecific KB tag gazetteers",
+                "authors": [
+                    {
+                        "first": "Will",
+                        "middle": [],
+                        "last": "Radford",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xavier",
+                        "middle": [],
+                        "last": "Carreras",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "James",
+                        "middle": [],
+                        "last": "Henderson",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Proceedings of the 2015 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "512--517",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Will Radford, Xavier Carreras, and James Henderson. 2015. Named entity recognition with document- specific KB tag gazetteers. In Proceedings of the 2015 Conference on Empirical Methods in Natural Language Processing, pages 512-517, Lisbon, Por- tugal, September. Association for Computational Lin- guistics.",
+                "links": null
+            },
+            "BIBREF11": {
+                "ref_id": "b11",
+                "title": "Design challenges and misconceptions in named entity recognition",
+                "authors": [
+                    {
+                        "first": "Lev",
+                        "middle": [],
+                        "last": "Ratinov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dan",
+                        "middle": [],
+                        "last": "Roth",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "Proceedings of the Thirteenth Conference on Computational Natural Language Learning (CoNLL-2009)",
+                "volume": "",
+                "issue": "",
+                "pages": "147--155",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Lev Ratinov and Dan Roth. 2009. Design challenges and misconceptions in named entity recognition. In Proceedings of the Thirteenth Conference on Compu- tational Natural Language Learning (CoNLL-2009), pages 147-155, Boulder, Colorado, June. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF12": {
+                "ref_id": "b12",
+                "title": "Mining Wiki resources for multilingual named entity recognition",
+                "authors": [
+                    {
+                        "first": "Alexander",
+                        "middle": [
+                            "E"
+                        ],
+                        "last": "Richman",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Patrick",
+                        "middle": [],
+                        "last": "Schone",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2008,
+                "venue": "Proceedings of ACL-08: HLT",
+                "volume": "",
+                "issue": "",
+                "pages": "1--9",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Alexander E. Richman and Patrick Schone. 2008. Min- ing Wiki resources for multilingual named entity recognition. In Proceedings of ACL-08: HLT, pages 1-9, Columbus, Ohio, June. Association for Computa- tional Linguistics.",
+                "links": null
+            },
+            "BIBREF13": {
+                "ref_id": "b13",
+                "title": "The IBM systems for English entity discovery and linking and Spanish entity linking at TAC 2014",
+                "authors": [
+                    {
+                        "first": "Avirup",
+                        "middle": [],
+                        "last": "Sil",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Radu",
+                        "middle": [],
+                        "last": "Florian",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "Text Analysis Conference (TAC)",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Avirup Sil and Radu Florian. 2014. The IBM systems for English entity discovery and linking and Spanish entity linking at TAC 2014. In Text Analysis Confer- ence (TAC), Gaithersburg, Maryland, USA.",
+                "links": null
+            },
+            "BIBREF14": {
+                "ref_id": "b14",
+                "title": "Introduction to the CONLL-2003 shared task: Language-independent named entity recognition",
+                "authors": [
+                    {
+                        "first": "Erik",
+                        "middle": [
+                            "F"
+                        ],
+                        "last": "Tjong",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kim",
+                        "middle": [],
+                        "last": "Sang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Fien",
+                        "middle": [],
+                        "last": "De",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Meulder",
+                        "middle": [],
+                        "last": "",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2003,
+                "venue": "Proceedings of the Seventh Conference on Natural Language Learning at HLT-NAACL 2003",
+                "volume": "4",
+                "issue": "",
+                "pages": "142--147",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Erik F. Tjong Kim Sang and Fien De Meulder. 2003. Introduction to the CONLL-2003 shared task: Language-independent named entity recognition. In Proceedings of the Seventh Conference on Natural Language Learning at HLT-NAACL 2003 -Volume 4, CONLL '03, pages 142-147, Stroudsburg, PA, USA. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF15": {
+                "ref_id": "b15",
+                "title": "Introduction to the CONLL-2002 shared task: Language-independent named entity recognition",
+                "authors": [
+                    {
+                        "first": "Erik",
+                        "middle": [
+                            "F"
+                        ],
+                        "last": "Tjong",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kim",
+                        "middle": [],
+                        "last": "Sang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2002,
+                "venue": "Proceedings of the Sixth Conference on Natural Language Learning",
+                "volume": "20",
+                "issue": "",
+                "pages": "1--4",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Erik F. Tjong Kim Sang. 2002. Introduction to the CONLL-2002 shared task: Language-independent named entity recognition. In Proceedings of the Sixth Conference on Natural Language Learning -Volume 20, CONLL '02, pages 1-4, Stroudsburg, PA, USA. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF16": {
+                "ref_id": "b16",
+                "title": "A proposal to automatically build and maintain gazetteers for named entity recognition by using Wikipedia",
+                "authors": [
+                    {
+                        "first": "Antonio",
+                        "middle": [],
+                        "last": "Toral",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Rafael",
+                        "middle": [],
+                        "last": "Muoz",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2006,
+                "venue": "EACL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Antonio Toral and Rafael Muoz. 2006. A proposal to automatically build and maintain gazetteers for named entity recognition by using Wikipedia. In EACL 2006.",
+                "links": null
+            }
+        },
+        "ref_entries": {
+            "TABREF0": {
+                "content": "<table><tr><td colspan=\"7\">Features ALL PER ORG GPE TITL FAC</td></tr><tr><td>Title</td><td>62.4</td><td>73.4</td><td>67.2</td><td>59.0</td><td>57.1</td><td>47.1</td></tr><tr><td>Infobox</td><td>77.3</td><td>92.6</td><td>87.8</td><td>92.0</td><td>95.4</td><td>50.0</td></tr><tr><td>Text</td><td>87.2</td><td>97.5</td><td>87.3</td><td>95.1</td><td>88.5</td><td>40.0</td></tr><tr><td>All</td><td>90.1</td><td>96.1</td><td>92.5</td><td>95.1</td><td>96.9</td><td>75.0</td></tr><tr><td colspan=\"7\">was dumped in April 2014 which contains around</td></tr><tr><td colspan=\"7\">4.6M pages. Using this method we generate a train-</td></tr><tr><td colspan=\"7\">ing data set with 4,699 English Wikipedia pages and</td></tr><tr><td colspan=\"6\">a test set of 415 English Wikipedia pages.</td><td/></tr></table>",
+                "type_str": "table",
+                "text": "F1 score of English Wikipedia entity type classifiers.",
+                "html": null,
+                "num": null
+            },
+            "TABREF1": {
+                "content": "<table><tr><td>Classifier Original Classifier</td><td>Train Size 4,699</td><td>F 1 90.1</td></tr><tr><td colspan=\"3\">Self-Training (Standard) +2,352,836 91.1</td></tr><tr><td>Self-Training (Sampling)</td><td>+26,518</td><td>91.8</td></tr></table>",
+                "type_str": "table",
+                "text": "Self-Training Self-training is a semi-supervised learning technique that can be used in applications where there is only a small number of labeled training examples but a large number of unlabeled examples. Since our weakly annotated classifier training data only covers around 1% of all the Wikipedia pages, we are motivated to use self-training to further improve the Improving classifier accuracy via self-training.",
+                "html": null,
+                "num": null
+            },
+            "TABREF2": {
+                "content": "<table><tr><td>System</td><td colspan=\"2\">Test (News) All Unseen 100% 38%</td><td colspan=\"2\">Test (Political) All Unseen 100% 84%</td></tr><tr><td colspan=\"2\">Baseline 88.2</td><td>78.7</td><td>64.1</td><td>60.9</td></tr><tr><td>DC(2)</td><td>88.1</td><td>79.4</td><td>66.3</td><td>63.5</td></tr><tr><td>DC(3)</td><td>88.7</td><td>80.2</td><td>65.8</td><td>62.9</td></tr><tr><td>PP(2)</td><td>88.6</td><td>79.8</td><td>64.7</td><td>61.7</td></tr><tr><td>Joint</td><td>88.9</td><td>80.7</td><td>66.3</td><td>63.6</td></tr><tr><td>DF(1)</td><td>88.5</td><td>80.0</td><td>66.3</td><td>64.2</td></tr><tr><td>DF(2)</td><td>89.4</td><td>81.8</td><td>66.8</td><td>64.5</td></tr></table>",
+                "type_str": "table",
+                "text": "Experimental results for English NER (the highest F1",
+                "html": null,
+                "num": null
+            },
+            "TABREF3": {
+                "content": "<table><tr><td>NER System</td><td colspan=\"2\">Test (News) All Unseen 100% 80%</td></tr><tr><td colspan=\"2\">Baseline 60.1</td><td>50.2</td></tr><tr><td>DC(2)</td><td>66.0</td><td>58.8</td></tr><tr><td>DC(3)</td><td>62.2</td><td>53.4</td></tr><tr><td>PP(2)</td><td>60.9</td><td>51.4</td></tr><tr><td>Joint</td><td>63.1</td><td>54.5</td></tr><tr><td>DF(1)</td><td>62.4</td><td>52.7</td></tr><tr><td>DF(2)</td><td>61.3</td><td>51.9</td></tr><tr><td>NER System</td><td colspan=\"2\">Test (News) All Unseen 100% 59%</td></tr><tr><td colspan=\"2\">Baseline 50.8</td><td>27.3</td></tr><tr><td>DC(2)</td><td>59.8</td><td>45.6</td></tr><tr><td>DC(3)</td><td>55.6</td><td>36.9</td></tr><tr><td>PP(2)</td><td>50.8</td><td>27.3</td></tr><tr><td>Joint</td><td>55.6</td><td>36.9</td></tr><tr><td>DF(1)</td><td>52.9</td><td>29.0</td></tr><tr><td>DF(2)</td><td>51.8</td><td>28.0</td></tr></table>",
+                "type_str": "table",
+                "text": "Experimental results for Portuguese NER.",
+                "html": null,
+                "num": null
+            },
+            "TABREF4": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "Experimental results for Japanese NER.",
+                "html": null,
+                "num": null
+            }
+        }
+    }
+}

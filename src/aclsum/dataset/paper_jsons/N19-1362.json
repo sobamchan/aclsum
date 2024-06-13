@@ -1,0 +1,3070 @@
+{
+    "paper_id": "N19-1362",
+    "header": {
+        "generated_with": "S2ORC 1.0.0",
+        "date_generated": "2023-06-16T12:07:58.138073Z"
+    },
+    "title": "pair2vec: Compositional Word-Pair Embeddings for Cross-Sentence Inference",
+    "authors": [
+        {
+            "first": "Mandar",
+            "middle": [],
+            "last": "Joshi",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "University of Washington",
+                "location": {
+                    "settlement": "Seattle",
+                    "region": "WA"
+                }
+            },
+            "email": "mandar90@cs.washington.edu"
+        },
+        {
+            "first": "Eunsol",
+            "middle": [],
+            "last": "Choi",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "University of Washington",
+                "location": {
+                    "settlement": "Seattle",
+                    "region": "WA"
+                }
+            },
+            "email": "eunsol@cs.washington.edu"
+        },
+        {
+            "first": "Omer",
+            "middle": [],
+            "last": "Levy",
+            "suffix": "",
+            "affiliation": {},
+            "email": "omerlevy@fb.com"
+        },
+        {
+            "first": "Daniel",
+            "middle": [
+                "S"
+            ],
+            "last": "Weld",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "University of Washington",
+                "location": {
+                    "settlement": "Seattle",
+                    "region": "WA"
+                }
+            },
+            "email": "weld@cs.washington.edu"
+        },
+        {
+            "first": "Luke",
+            "middle": [],
+            "last": "Zettlemoyer",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "University of Washington",
+                "location": {
+                    "settlement": "Seattle",
+                    "region": "WA"
+                }
+            },
+            "email": ""
+        }
+    ],
+    "year": "",
+    "venue": null,
+    "identifiers": {},
+    "abstract": "Reasoning about implied relationships (e.g. paraphrastic, common sense, encyclopedic) between pairs of words is crucial for many cross-sentence inference problems. This paper proposes new methods for learning and using embeddings of word pairs that implicitly represent background knowledge about such relationships. Our pairwise embeddings are computed as a compositional function on word representations, which is learned by maximizing the pointwise mutual information (PMI) with the contexts in which the two words cooccur. We add these representations to the cross-sentence attention layer of existing inference models (e.g. BiDAF for QA, ESIM for NLI), instead of extending or replacing existing word embeddings. Experiments show a gain of 2.7% on the recently released SQuAD 2.0 and 1.3% on MultiNLI. Our representations also aid in better generalization with gains of around 6-7% on adversarial SQuAD datasets, and 8.8% on the adversarial entailment test set by Glockner et al. (2018) .",
+    "pdf_parse": {
+        "paper_id": "N19-1362",
+        "_pdf_hash": "",
+        "abstract": [
+            {
+                "text": "Reasoning about implied relationships (e.g. paraphrastic, common sense, encyclopedic) between pairs of words is crucial for many cross-sentence inference problems. This paper proposes new methods for learning and using embeddings of word pairs that implicitly represent background knowledge about such relationships. Our pairwise embeddings are computed as a compositional function on word representations, which is learned by maximizing the pointwise mutual information (PMI) with the contexts in which the two words cooccur. We add these representations to the cross-sentence attention layer of existing inference models (e.g. BiDAF for QA, ESIM for NLI), instead of extending or replacing existing word embeddings. Experiments show a gain of 2.7% on the recently released SQuAD 2.0 and 1.3% on MultiNLI. Our representations also aid in better generalization with gains of around 6-7% on adversarial SQuAD datasets, and 8.8% on the adversarial entailment test set by Glockner et al. (2018) .",
+                "cite_spans": [
+                    {
+                        "start": 969,
+                        "end": 991,
+                        "text": "Glockner et al. (2018)",
+                        "ref_id": "BIBREF16"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            }
+        ],
+        "body_text": [
+            {
+                "text": "Reasoning about relationships between pairs of words is crucial for cross sentence inference problems such as question answering (QA) and natural language inference (NLI). In NLI, for example, given the premise \"golf is prohibitively expensive\", inferring that the hypothesis \"golf is a cheap pastime\" is a contradiction requires one to know that expensive and cheap are antonyms. Recent work (Glockner et al., 2018) has shown that current models, which rely heavily on unsupervised single-word embeddings, struggle to learn such relationships. In this paper, we show that they can be learned with word pair vectors (pair2vec 1 ), which are trained unsupervised, and which significantly improve performance when added to existing cross-sentence attention mechanisms.",
+                "cite_spans": [
+                    {
+                        "start": 393,
+                        "end": 416,
+                        "text": "(Glockner et al., 2018)",
+                        "ref_id": "BIBREF16"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Unlike single-word representations, which typically model the co-occurrence of a target word x with its context c, our word-pair representations are learned by modeling the three-way cooccurrence between words (x, y) and the context c that ties them together, as seen in Table 1 . While similar training signals have been used to learn models for ontology construction (Hearst, 1992; Snow et al., 2005; Turney, 2005; Shwartz et al., 2016) and knowledge base completion (Riedel et al., 2013) , this paper shows, for the first time, that large scale learning of pairwise embeddings can be used to directly improve the performance of neural cross-sentence inference models.",
+                "cite_spans": [
+                    {
+                        "start": 369,
+                        "end": 383,
+                        "text": "(Hearst, 1992;",
+                        "ref_id": "BIBREF18"
+                    },
+                    {
+                        "start": 384,
+                        "end": 402,
+                        "text": "Snow et al., 2005;",
+                        "ref_id": "BIBREF36"
+                    },
+                    {
+                        "start": 403,
+                        "end": 416,
+                        "text": "Turney, 2005;",
+                        "ref_id": "BIBREF38"
+                    },
+                    {
+                        "start": 417,
+                        "end": 438,
+                        "text": "Shwartz et al., 2016)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 469,
+                        "end": 490,
+                        "text": "(Riedel et al., 2013)",
+                        "ref_id": "BIBREF31"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 277,
+                        "end": 278,
+                        "text": "1",
+                        "ref_id": "TABREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "More specifically, we train a feedforward network R(x, y) that learns representations for the individual words x and y, as well as how to compose them into a single vector. Training is done by maximizing a generalized notion of the pointwise mutual information (PMI) among x, y, and their context c using a variant of negative sampling (Mikolov et al., 2013a) . Making R(x, y) a compositional function on individual words alleviates the sparsity that necessarily comes with embedding pairs of words, even at a very large scale.",
+                "cite_spans": [
+                    {
+                        "start": 336,
+                        "end": 359,
+                        "text": "(Mikolov et al., 2013a)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "We show that our embeddings can be added to existing cross-sentence inference models, such as BiDAF++ (Seo et al., 2017; Clark and Gardner, 2018) for QA and ESIM (Chen et al., 2017) for NLI. Instead of changing the word embeddings that are fed into the encoder, we add the pretrained pair representations to higher layers in the network where cross sentence attention mechanisms are used. This allows the model to use the background knowledge that the pair embeddings implicitly encode to reason about the likely relationships between the pairs of words it aligns.",
+                "cite_spans": [
+                    {
+                        "start": 102,
+                        "end": 120,
+                        "text": "(Seo et al., 2017;",
+                        "ref_id": "BIBREF33"
+                    },
+                    {
+                        "start": 121,
+                        "end": 145,
+                        "text": "Clark and Gardner, 2018)",
+                        "ref_id": "BIBREF9"
+                    },
+                    {
+                        "start": 162,
+                        "end": 181,
+                        "text": "(Chen et al., 2017)",
+                        "ref_id": "BIBREF7"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Experiments show that simply adding our wordpair embeddings to existing high-performing models, which already use ELMo (Peters et al., 2018) , results in sizable gains. We show 2.72 F1 points over the BiDAF++ model (Clark and Gardner, 2018) on SQuAD 2.0 (Rajpurkar et al., 2018) , as well as a 1.3 point gain over ESIM (Chen et al., 2017) on MultiNLI (Williams et al., 2018) . Additionally, our approach generalizes well to adversarial examples, with a 6-7% F1 increase on adversarial SQuAD (Jia and Liang, 2017 ) and a 8.8% gain on the Glockner et al. (2018) NLI benchmark. An analysis of pair2vec on word analogies suggests that it complements the information in single-word representations, especially for encyclopedic and lexicographic relations.",
+                "cite_spans": [
+                    {
+                        "start": 119,
+                        "end": 140,
+                        "text": "(Peters et al., 2018)",
+                        "ref_id": "BIBREF28"
+                    },
+                    {
+                        "start": 215,
+                        "end": 240,
+                        "text": "(Clark and Gardner, 2018)",
+                        "ref_id": "BIBREF9"
+                    },
+                    {
+                        "start": 254,
+                        "end": 278,
+                        "text": "(Rajpurkar et al., 2018)",
+                        "ref_id": "BIBREF29"
+                    },
+                    {
+                        "start": 319,
+                        "end": 338,
+                        "text": "(Chen et al., 2017)",
+                        "ref_id": "BIBREF7"
+                    },
+                    {
+                        "start": 351,
+                        "end": 374,
+                        "text": "(Williams et al., 2018)",
+                        "ref_id": "BIBREF42"
+                    },
+                    {
+                        "start": 491,
+                        "end": 511,
+                        "text": "(Jia and Liang, 2017",
+                        "ref_id": "BIBREF20"
+                    },
+                    {
+                        "start": 537,
+                        "end": 559,
+                        "text": "Glockner et al. (2018)",
+                        "ref_id": "BIBREF16"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Extending the distributional hypothesis to word pairs, we posit that similar word pairs tend to occur in similar contexts, and that the contexts provide strong clues about the likely relationships that hold between the words (see Table 1 ). We assume a dataset of (x, y, c) triplets, where each instance depicts a word pair (x, y) and the context c in which they appeared. We learn two compositional representation functions, R(x, y) and C(c), to encode the pair and the context, respectively, as ddimensional vectors (Section 2.1). The functions are trained using a variant of negative sampling, which tries to embed word pairs (x, y) close to the contexts c with which they appeared (Section 2.2).",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 236,
+                        "end": 237,
+                        "text": "1",
+                        "ref_id": "TABREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Unsupervised Pretraining",
+                "sec_num": "2"
+            },
+            {
+                "text": "Our word-pair and context representations are both fixed-length vectors, composed from individ-ual words. The word-pair representation function R(x, y) first embeds and normalizes the individual words with a shared lookup matrix E a :",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Representation",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "x = E a (x) E a (x) y = E a (y) E a (y)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Representation",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "These vectors, along with their element-wise product, are fed into a four-layer perceptron: R(x, y) = M LP 4 (x, y, x \u2022 y)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Representation",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "The context c = c 1 ...c n is encoded as a ddimensional vector using the function C(c). C(c) embeds each token c i with a lookup matrix E c , contextualizes it with a single-layer Bi-LSTM, and then aggregates the entire context with attentive pooling:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Representation",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "c i = E c (c i ) h 1 ...h n = BiLSTM(c 1 ...c n ) w = softmax i (kh i ) C(c) = i w i Wh i",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Representation",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "where W \u2208 R d\u00d7d and k \u2208 R d . All parameters, including the lookup tables E a and E c , are trained. Our representation is similar to two recentlyproposed frameworks by Washio and Kato (2018a,b) , but differs in that: (1) they use dependency paths as context, while we use surface form;",
+                "cite_spans": [
+                    {
+                        "start": 169,
+                        "end": 194,
+                        "text": "Washio and Kato (2018a,b)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Representation",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "(2) they encode the context as either a lookup table or the last state of a unidirectional LSTM. We also use a different objective, which we discuss next.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Representation",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "To optimize our representation functions, we consider two variants of negative sampling (Mikolov et al., 2013a) : bivariate and multivariate. The original bivariate objective models the two-way distribution of context and (monolithic) word pair co-occurrences, while our multivariate extension models the three-way distribution of word-wordcontext co-occurrences. We further augment the multivariate objective with typed sampling to upsample harder negative examples. We discuss the impact of the bivariate and multivariate objectives (and other components) in Section 4.3.",
+                "cite_spans": [
+                    {
+                        "start": 88,
+                        "end": 111,
+                        "text": "(Mikolov et al., 2013a)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Objective",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "Bivariate Negative Sampling Our objective aspires to make R(x, y) and C(c) similar (have high inner products) for (x, y, c) that were observed together in the data. At the same time, we wish Assuming that the negative contexts are sampled from the empirical distribution P (\u2022, \u2022, c) (with P (x, y, c) being the portion of (x, y, c) instances in the dataset), we can follow Levy and Goldberg (2014) to show that this objective converges into the pointwise mutual information (PMI) between the word pair and the context.",
+                "cite_spans": [
+                    {
+                        "start": 373,
+                        "end": 397,
+                        "text": "Levy and Goldberg (2014)",
+                        "ref_id": "BIBREF22"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Objective",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "Bivariate J2NS (x, y, c) = log \u03c3 (R(x, y) \u2022 C(c)) + kc i=1 log \u03c3 -R(x, y) \u2022 C(c N i ) Multivariate J3NS (x, y, c) = J2NS (x, y, c) + kx i=1 log \u03c3 -R(x N i , y) \u2022 C(c) + ky i=1 log \u03c3 -R(x, y N i ) \u2022 C(c)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Objective",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "R(x, y) \u2022 C(c) = log P (x, y, c) k c P (x, y, \u2022)P (\u2022, \u2022, c)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Objective",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "This objective mainly captures co-occurrences of monolithic pairs and contexts, and is limited by the fact that the training data, by construction, only contains pairs occurring within a sentence. For better generalization to cross-sentence tasks, where the pair distribution differs from that of the training data, we need a multivariate objective that captures the full three-way (x, y, c) interaction.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Objective",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "Multivariate Negative Sampling We introduce negative sampling of target words, x and y, in addition to negative sampling of contexts c (Table 2 , J 3N S ). Our new objective also converges to a novel multivariate generalization of PMI, different from previous PMI extensions that were inspired by information theory (Van de Cruys, 2011) and heuristics (Jameel et al., 2018) . 2 Following Levy and Goldberg (2014) , we can show that when replacing target words in addition to contexts, our objective will converge 3 to the optimal value in Equation 1:",
+                "cite_spans": [
+                    {
+                        "start": 352,
+                        "end": 373,
+                        "text": "(Jameel et al., 2018)",
+                        "ref_id": "BIBREF19"
+                    },
+                    {
+                        "start": 388,
+                        "end": 412,
+                        "text": "Levy and Goldberg (2014)",
+                        "ref_id": "BIBREF22"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 142,
+                        "end": 143,
+                        "text": "2",
+                        "ref_id": "TABREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Objective",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "R(x, y) \u2022 C(c) = log P (x, y, c) Z x,y,c",
+                        "eq_num": "(1)"
+                    }
+                ],
+                "section": "Objective",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "2 See supplementary material for their exact formulations.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Objective",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "3 A full proof is provided in the supplementary material.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Objective",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "where Z x,y,c , the denominator, is:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Objective",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "Z x,y,c = k c P (\u2022, \u2022, c)P (x, y, \u2022) + k x P (x, \u2022, \u2022)P (\u2022, y, c) + k y P (\u2022, y, \u2022)P (x, \u2022, c)",
+                        "eq_num": "(2)"
+                    }
+                ],
+                "section": "Objective",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "This optimal value deviates from previous generalizations of PMI by having a linear mixture of marginal probability products in its denominator. By introducing terms such as P (x, \u2022, c) and P (\u2022, y, c), the objective penalizes spurious correlations between words and contexts that disregard the other target word. For example, it would assign the pattern \"X is a Y\" a high score with (banana, fruit), but a lower score with (cat, fruit).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Objective",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "Typed Sampling In multivariate negative sampling, we typically replace x and y by sampling from their unigram distributions. In addition to this, we also sample uniformly from the top 100 words according to cosine similarity using distributional word vectors. This is done to encourage the model to learn relations between specific instances as opposed to more general types. For example, using California as a negative sample for Oregon helps the model to learn that the pattern \"X is located in Y\" fits the pair (Portland, Oregon), but not the pair (Portland, California). Similar adversarial constraints were used in knowledge base completion (Toutanova et al., 2015) and word embeddings (Li et al., 2017) .4 ",
+                "cite_spans": [
+                    {
+                        "start": 646,
+                        "end": 670,
+                        "text": "(Toutanova et al., 2015)",
+                        "ref_id": "BIBREF37"
+                    },
+                    {
+                        "start": 691,
+                        "end": 708,
+                        "text": "(Li et al., 2017)",
+                        "ref_id": "BIBREF24"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Objective",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "We first present a general outline for incorporating pair2vec into attention-based architectures, and then discuss changes made to BiDAF++ and ESIM. The key idea is to inject our pairwise representations into the attention layer by reusing the cross-sentence attention weights. In addition to attentive pooling over single word representations, we also pool over cross-sentence word pair embeddings (Figure 1 ). We represent the word-pair embeddings between a and b using the pretrained pair2vec model as:",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 407,
+                        "end": 408,
+                        "text": "1",
+                        "ref_id": "FIGREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Integrating pair2vec into Models",
+                "sec_num": "3"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "r i,j = R(a i , b j ) R(a i , b j ) ; R(b j , a i ) R(b j , a i )",
+                        "eq_num": "(3)"
+                    }
+                ],
+                "section": "Integrating pair2vec into Models",
+                "sec_num": "3"
+            },
+            {
+                "text": "We include embeddings in both directions, R(a i , b j ) and R(b j , a i ), because the many relations can be expressed in both directions; e.g., hypernymy can be expressed via \"X is a type of Y\" as well as \"Y such as X\". We take the L 2 normalization of each direction's pair embedding because the heavy-tailed distribution of word pairs results in significant variance of their norms.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Integrating pair2vec into Models",
+                "sec_num": "3"
+            },
+            {
+                "text": "Base Model Let a 1 ...a n and b 1 ...b m be the vector representations of sequences a and b, as produced by the input encoder (e.g. ELMo embeddings contextualized with model-specific BiL-STMs). Furthermore, we assume that the base model computes soft word alignments between a and b via co-attention (4, 5), which are then used to compute b-aware representations of a:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Integrating pair2vec into Models",
+                "sec_num": "3"
+            },
+            {
+                "text": "s i,j = f att (a i , b j ) (4) \u03b1 = softmax j (s i,j ) (5) b i = m j=0 \u03b1 i,j b j (6) a inf i = a i ; b i (7)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Integrating pair2vec into Models",
+                "sec_num": "3"
+            },
+            {
+                "text": "The symmetric term b inf j is defined analogously. We refer to a inf and b inf as the inputs to the infer-ence layer, since this layer computes some function over aligned word pairs, typically via a feedforward network and LSTMs. The inference layer is followed by aggregation and output layers.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Integrating pair2vec into Models",
+                "sec_num": "3"
+            },
+            {
+                "text": "We conjecture that the inference layer effectively learns word-pair relationships from training data, and it should, therefore, help to augment its input with pair2vec. We augment a inf i (7) with the pair vectors r i,j (3) by concatenating a weighted average of the pair vectors r i,j involving a i , where the weights are the same \u03b1 i,j computed via attention in (5):",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Injecting pair2vec",
+                "sec_num": null
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "r i = j \u03b1 i,j r i,j",
+                        "eq_num": "(8)"
+                    }
+                ],
+                "section": "Injecting pair2vec",
+                "sec_num": null
+            },
+            {
+                "text": "a inf i = a i ; b i ; r i (9)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Injecting pair2vec",
+                "sec_num": null
+            },
+            {
+                "text": "The symmetric term b inf j is defined analogously.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Injecting pair2vec",
+                "sec_num": null
+            },
+            {
+                "text": "We augment the inference layer in the BiDAF++ model with pair2vec. BiDAF++ is an improved version of the BiDAFNoAnswer (Seo et al., 2017; Levy et al., 2017) which includes selfattention and ELMo embeddings from Peters et al. (2018) . We found this variant to be stronger than the baselines presented in Rajpurkar et al. (2018) by over 2.5 F1. We use BiDAF++ as a baseline since its architecture is typical for QA systems, and, until recently, was state-of-the-art on SQuAD 2.0 and other benchmarks.",
+                "cite_spans": [
+                    {
+                        "start": 119,
+                        "end": 137,
+                        "text": "(Seo et al., 2017;",
+                        "ref_id": "BIBREF33"
+                    },
+                    {
+                        "start": 138,
+                        "end": 156,
+                        "text": "Levy et al., 2017)",
+                        "ref_id": "BIBREF23"
+                    },
+                    {
+                        "start": 211,
+                        "end": 231,
+                        "text": "Peters et al. (2018)",
+                        "ref_id": "BIBREF28"
+                    },
+                    {
+                        "start": 303,
+                        "end": 326,
+                        "text": "Rajpurkar et al. (2018)",
+                        "ref_id": "BIBREF29"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Question Answering",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "BiDAF++ Let a and b be the outputs of the passage and question encoders respectively (in place of the standard p and q notations). The inference layer's inputs a inf i are defined similarly to the generic model's in ( 7), but also contain an aggregation of the elements in a, with better-aligned elements receiving larger weights:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Question Answering",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "\u00b5 = softmax i (max j s i,j ) (10) \u00e2i = i \u00b5 i a i (",
+                        "eq_num": "11"
+                    }
+                ],
+                "section": "Question Answering",
+                "sec_num": "3.2"
+            },
+            {
+                "text": ")",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Question Answering",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "a inf i = a i ; b i ; a i \u2022 b i ; \u00e2",
+                        "eq_num": "(12)"
+                    }
+                ],
+                "section": "Question Answering",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "In the later layers, a inf is recontextualized using a BiGRU and self attention. Finally a prediction layer predicts the start and end tokens.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Question Answering",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "BiDAF++ with pair2vec To add our pair vectors, we simply concatenate r i (3) to a inf i (12):",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Question Answering",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "a inf i = a i ; b i ; a i \u2022 b i ; \u00e2; r i (13)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Question Answering",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "For NLI, we augment the ESIM model (Chen et al., 2017) , which was previously state-of-theart on both SNLI (Bowman et al., 2015) and MultiNLI (Williams et al., 2018) benchmarks.",
+                "cite_spans": [
+                    {
+                        "start": 35,
+                        "end": 54,
+                        "text": "(Chen et al., 2017)",
+                        "ref_id": "BIBREF7"
+                    },
+                    {
+                        "start": 107,
+                        "end": 128,
+                        "text": "(Bowman et al., 2015)",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 142,
+                        "end": 165,
+                        "text": "(Williams et al., 2018)",
+                        "ref_id": "BIBREF42"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Natural Language Inference",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "ESIM Let a and b be the outputs of the premise and hypothesis encoders respectively (in place of the standard p and h notations). The inference layer's inputs a inf i (and b inf j ) are defined similarly to the generic model's in (7):",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Natural Language Inference",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "a inf i = a i ; b i ; a i \u2022 b i ; a i -b i",
+                        "eq_num": "(14)"
+                    }
+                ],
+                "section": "Natural Language Inference",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "In the later layers, a inf and b inf are projected, recontextualized, and converted to a fixed-length vector for each sentence using multiple pooling schemes. These vectors are then passed on to an output layer, which predicts the class.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Natural Language Inference",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "ESIM with pair2vec To add our pair vectors, we simply concatenate r i (3) to a inf i (14):",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Natural Language Inference",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "a inf i = a i ; b i ; a i \u2022 b i ; a i -b i ; r i",
+                        "eq_num": "(15)"
+                    }
+                ],
+                "section": "Natural Language Inference",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "A similar augmentation of ESIM was recently proposed in KIM (Chen et al., 2018) . However, their pair vectors are composed of WordNet features, while our pair embeddings are learned directly from text (see further discussion in Section 6).",
+                "cite_spans": [
+                    {
+                        "start": 60,
+                        "end": 79,
+                        "text": "(Chen et al., 2018)",
+                        "ref_id": "BIBREF6"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Natural Language Inference",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "For experiments on QA (Section 4. Data We use the January 2018 dump of English Wikipedia, containing 96M sentences to train pair2vec. We restrict the vocabulary to the 100K most frequent words. Preprocessing removes all out-of-vocabulary words in the corpus. We consider each word pair within a window of 5 in the preprocessed corpus, and subsample5 instances based on pair probability with a threshold of 5\u202210 -7 . We define the context as one word each to the left and right, and all the words in between each pair, replacing both target words with placeholders X and Y (see Table 1 ). More details can be found in the supplementary material.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 583,
+                        "end": 584,
+                        "text": "1",
+                        "ref_id": "TABREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "4"
+            },
+            {
+                "text": "We experiment on the SQuAD 2.0 QA benchmark (Rajpurkar et al., 2018) , as well as the adversarial datasets of SQuAD 1.1 (Rajpurkar et al., 2016; Jia and Liang, 2017) . Table 3 shows the performance of BiDAF++, with ELMo , before and after adding pair2vec. Experiments on SQuAD 2.0 show that our pair representations improve performance by 2.72 F1. Moreover, adding pair2vec also results in better generalization on the adversarial SQuAD datasets with gains of 7.14 and 6.11 F1.",
+                "cite_spans": [
+                    {
+                        "start": 44,
+                        "end": 68,
+                        "text": "(Rajpurkar et al., 2018)",
+                        "ref_id": "BIBREF29"
+                    },
+                    {
+                        "start": 120,
+                        "end": 144,
+                        "text": "(Rajpurkar et al., 2016;",
+                        "ref_id": "BIBREF30"
+                    },
+                    {
+                        "start": 145,
+                        "end": 165,
+                        "text": "Jia and Liang, 2017)",
+                        "ref_id": "BIBREF20"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 174,
+                        "end": 175,
+                        "text": "3",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Question Answering",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "We ESIM + ELMo baseline by 1.3% on the matched and mismatched portions of the dataset. We also record a gain of 8.8% absolute over ESIM on the Glockner et al. (2018) dataset, setting a new state of the art. Following standard practice (Glockner et al., 2018) , we train all models on a combination of SNLI (Bowman et al., 2015) and MultiNLI. Glockner et al. (2018) show that with the exception of KIM (Chen et al., 2018) , which uses WordNet features, several NLI models fail to generalize to this setting which involves lexical inference. For a fair comparison with KIM on the Glockner test set, we replace ELMo with GLoVE embeddings, and still outperform KIM by almost halving the error rate.",
+                "cite_spans": [
+                    {
+                        "start": 143,
+                        "end": 165,
+                        "text": "Glockner et al. (2018)",
+                        "ref_id": "BIBREF16"
+                    },
+                    {
+                        "start": 235,
+                        "end": 258,
+                        "text": "(Glockner et al., 2018)",
+                        "ref_id": "BIBREF16"
+                    },
+                    {
+                        "start": 306,
+                        "end": 327,
+                        "text": "(Bowman et al., 2015)",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 342,
+                        "end": 364,
+                        "text": "Glockner et al. (2018)",
+                        "ref_id": "BIBREF16"
+                    },
+                    {
+                        "start": 401,
+                        "end": 420,
+                        "text": "(Chen et al., 2018)",
+                        "ref_id": "BIBREF6"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Natural Language Inference",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "Ablating parts of pair2vec shows that all components of the model (Section 2) are useful. We ablate each component and report the EM and F1 on the development set of SQuAD 2.0 (Table 6 ). The full model, which uses a 4-layer MLP for R(x, y) and trains with multivariate negative sampling, achieves the highest F1 of 72.68.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 183,
+                        "end": 184,
+                        "text": "6",
+                        "ref_id": "TABREF4"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Ablations",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "We experiment with two alternative composition functions, a 2-layer MLP (Composition: 2 Layers) and element-wise multiplication (Compo- 16)). The \u03b1=0 configuration relies only on fastText (Bojanowski et al., 2017) , while \u03b1=1 reflects pair2vec. sition: Multiply), which yield significantly smaller gains over the baseline BiDAF++ model. This demonstrates the need for a deep composition function. Eliminating sampling of target words (x, y) from the objective (Objective: Bivariate NS) results in a drop of 0.7 F1, accounting for about a quarter of the overall gain. This suggests that while the bulk of the signal is mined from the pair-context interactions, there is also valuable information in other interactions as well.",
+                "cite_spans": [
+                    {
+                        "start": 188,
+                        "end": 213,
+                        "text": "(Bojanowski et al., 2017)",
+                        "ref_id": "BIBREF3"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Ablations",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "We also test whether specific pre-training of word pair representations is useful by replacing pair2vec embeddings with the vector offsets of pre-trained word embeddings (Unsupervised: Pair Dist). We follow the PairDistance method for word analogies (Mikolov et al., 2013b) , and represent the pair (x, y) as the L2 normalized difference of single-word vectors: (x -y)/ xy . We use the same fastText (Bojanowski et al., 2017) word vectors with which we initialized pair2vec before training. We observe a gain of only 0.34 F1 over the baseline.",
+                "cite_spans": [
+                    {
+                        "start": 250,
+                        "end": 273,
+                        "text": "(Mikolov et al., 2013b)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 400,
+                        "end": 425,
+                        "text": "(Bojanowski et al., 2017)",
+                        "ref_id": "BIBREF3"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Ablations",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "In Section 4, we showed that pair2vec adds information complementary to single-word representations like ELMo. Here, we ask what this extra information is, and try to characterize which word relations are better captured by pair2vec.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Analysis",
+                "sec_num": "5"
+            },
+            {
+                "text": "To that end, we evaluate performance on a word analogy dataset with over 40 different relation types (Section 5.1), and observe how pair2vec fills hand-crafted relation patterns (Section 5.2). Table 7 : The top 10 analogy relations for which interpolating with pair2vec improves performance. \u03b1 * is the optimal interpolation parameter for each relation.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 199,
+                        "end": 200,
+                        "text": "7",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Analysis",
+                "sec_num": "5"
+            },
+            {
+                "text": "Word Analogy Dataset Given a word pair (a, b) and word x, the word analogy task involves predicting a word y such that a : b :: x : y. We use the Bigger Analogy Test Set (BATS, Gladkova et al., 2016) which contains four groups of relations: encyclopedic semantics (e.g., personprofession as in Einstein-physicist), lexicographic semantics (e.g., antonymy as in cheap-expensive), derivational morphology (e.g., noun forms as in oblige-obligation), and inflectional morphology (e.g., noun-plural as in bird-birds). Each group contains 10 sub-relations.",
+                "cite_spans": [
+                    {
+                        "start": 177,
+                        "end": 199,
+                        "text": "Gladkova et al., 2016)",
+                        "ref_id": "BIBREF15"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Quantitative Analysis: Word Analogies",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "Method We interpolate pair2vec and 3CosAdd (Mikolov et al., 2013b; Levy et al., 2014) scores on fastText embeddings, as follows:",
+                "cite_spans": [
+                    {
+                        "start": 43,
+                        "end": 66,
+                        "text": "(Mikolov et al., 2013b;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 67,
+                        "end": 85,
+                        "text": "Levy et al., 2014)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Quantitative Analysis: Word Analogies",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "score(y) = \u03b1 \u2022 cos(r a,b , r x,y ) + (1 -\u03b1) \u2022 cos(b -a + x, y) (16)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Quantitative Analysis: Word Analogies",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "where a, b, x, and y represent fastText embeddings6 and r a,b , r x,y represent the pair2vec embedding for the word pairs (a, b) and (x, y), respectively; \u03b1 is the linear interpolation parameter. Following prior work (Mikolov et al., 2013b) , we return the highest-scoring y in the entire vocabulary, excluding the given words a, b, and x.",
+                "cite_spans": [
+                    {
+                        "start": 217,
+                        "end": 240,
+                        "text": "(Mikolov et al., 2013b)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Quantitative Analysis: Word Analogies",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "Figure 2 shows how the accuracy on each category of relations varies with \u03b1. For all four groups, adding pair2vec to 3CosAdd results in significant gains. In particular, the biggest relative improvements are observed for encyclopedic (356%) and lexicographic (51%) relations.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 7,
+                        "end": 8,
+                        "text": "2",
+                        "ref_id": "FIGREF2"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": null
+            },
+            {
+                "text": "Table 7 shows the specific relations in which pair2vec made the largest absolute impact. The gains are particularly significant for relations where fastText embeddings provide limited signal. For example, the accuracy for substance meronyms goes from 3.8% to 14.5%. In some cases, there is also a synergistic effect; for instance, in noun+less, pair2vec alone scored 0% accuracy, but mixing it with 3CosAdd, which got 4.8% on its own, yielded 16% accuracy.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 6,
+                        "end": 7,
+                        "text": "7",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": null
+            },
+            {
+                "text": "These results, alongside our experiments in Section 4, strongly suggest that pair2vec encodes information complementary to that in single-word embedding methods such as fastText and ELMo.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": null
+            },
+            {
+                "text": "To further explore how pair2vec encodes such complementary information, we consider a setting similar to that of knowledge base completion: given a Hearst-like context pattern c and a single word x, predict the other word y from the entire vocabulary. We rank candidate words y based on the scoring function in our training objective: R(x, y) \u2022 C(c). We use a fixed set of example relations and manually define their predictive context patterns and a small set of candidate words x.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Qualitative Analysis: Slot Filling",
+                "sec_num": "5.2"
+            },
+            {
+                "text": "Table 8 shows the top three y words. The model embeds (x, y) pairs close to contexts that reflect their relationship. For example, substituting Portland in the city-state pattern (\"in X, Y.\"), the top two words are Oregon and Maine, both US states with cities named Portland. When used with the city-city pattern (\"from X to Y.\"), the top two words are Salem and Astoria, both cities in Oregon. The word-context interaction often captures multiple relations; for example, Monet is used to refer to the painter (profession) as well as his paintings.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 6,
+                        "end": 7,
+                        "text": "8",
+                        "ref_id": "TABREF7"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Qualitative Analysis: Slot Filling",
+                "sec_num": "5.2"
+            },
+            {
+                "text": "As intended, pair2vec captures the threeway word-word-context interaction, and not just the two-way word-context interaction (as in single-word embeddings). This profound difference allows pair2vec to complement singleword embeddings with additional information.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Qualitative Analysis: Slot Filling",
+                "sec_num": "5.2"
+            },
+            {
+                "text": "Pretrained Word Embeddings Many state-ofthe-art models initialize their word representations using pretrained embeddings such as word2vec (Mikolov et al., 2013a) or ELMo (Peters et al., 2018) . These representations are typically trained using an interpretation of the Distributional Hy- pothesis (Harris, 1954) in which the bivariate distribution of target words and contexts is modeled.",
+                "cite_spans": [
+                    {
+                        "start": 138,
+                        "end": 161,
+                        "text": "(Mikolov et al., 2013a)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 170,
+                        "end": 191,
+                        "text": "(Peters et al., 2018)",
+                        "ref_id": "BIBREF28"
+                    },
+                    {
+                        "start": 297,
+                        "end": 311,
+                        "text": "(Harris, 1954)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "6"
+            },
+            {
+                "text": "Our work deviates from the word embedding literature in two major aspects. First, our goal is to represent word pairs, not individual words. Second, our new PMI formulation models the trivariate word-word-context distribution. Experiments show that our pair embeddings can complement single-word embeddings.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "6"
+            },
+            {
+                "text": "Mining Textual Patterns There is extensive literature on mining textual patterns to predict relations between words (Hearst, 1992; Snow et al., 2005; Turney, 2005; Riedel et al., 2013; Van de Cruys, 2014; Toutanova et al., 2015; Shwartz and Dagan, 2016) . These approaches focus mostly on relations between pairs of nouns (perhaps with the exception of VerbOcean (Chklovski and Pantel, 2004) ). More recently, they have been expanded to predict relations between unrestricted pairs of words (Jameel et al., 2018; Espinosa Anke and Schockaert, 2018) , assuming that each word-pair was observed together during pretraining. Washio and Kato (2018a,b) relax this assumption with a compositional model that can represent any pair, as long as each word appeared (individually) in the corpus. These methods are evaluated on either intrinsic relation prediction tasks, such as BLESS (Baroni and Lenci, 2011) and CogALex (Santus et al., 2016) , or knowledge-base population benchmarks, e.g. FB15 (Bordes et al., 2013) . To the best of our knowledge, our work is the first to integrate pattern-based methods into modern high-performing semantic models and evaluate their impact on complex end-tasks like QA and NLI.",
+                "cite_spans": [
+                    {
+                        "start": 116,
+                        "end": 130,
+                        "text": "(Hearst, 1992;",
+                        "ref_id": "BIBREF18"
+                    },
+                    {
+                        "start": 131,
+                        "end": 149,
+                        "text": "Snow et al., 2005;",
+                        "ref_id": "BIBREF36"
+                    },
+                    {
+                        "start": 150,
+                        "end": 163,
+                        "text": "Turney, 2005;",
+                        "ref_id": "BIBREF38"
+                    },
+                    {
+                        "start": 164,
+                        "end": 184,
+                        "text": "Riedel et al., 2013;",
+                        "ref_id": "BIBREF31"
+                    },
+                    {
+                        "start": 185,
+                        "end": 204,
+                        "text": "Van de Cruys, 2014;",
+                        "ref_id": "BIBREF11"
+                    },
+                    {
+                        "start": 205,
+                        "end": 228,
+                        "text": "Toutanova et al., 2015;",
+                        "ref_id": "BIBREF37"
+                    },
+                    {
+                        "start": 229,
+                        "end": 253,
+                        "text": "Shwartz and Dagan, 2016)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 363,
+                        "end": 391,
+                        "text": "(Chklovski and Pantel, 2004)",
+                        "ref_id": "BIBREF8"
+                    },
+                    {
+                        "start": 491,
+                        "end": 512,
+                        "text": "(Jameel et al., 2018;",
+                        "ref_id": "BIBREF19"
+                    },
+                    {
+                        "start": 513,
+                        "end": 548,
+                        "text": "Espinosa Anke and Schockaert, 2018)",
+                        "ref_id": "BIBREF13"
+                    },
+                    {
+                        "start": 622,
+                        "end": 647,
+                        "text": "Washio and Kato (2018a,b)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 912,
+                        "end": 933,
+                        "text": "(Santus et al., 2016)",
+                        "ref_id": "BIBREF32"
+                    },
+                    {
+                        "start": 987,
+                        "end": 1008,
+                        "text": "(Bordes et al., 2013)",
+                        "ref_id": "BIBREF4"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "6"
+            },
+            {
+                "text": "Ahn et al. ( 2016) integrate Freebase facts into a language model using a copying mechanism over fact attributes. Yang and Mitchell (2017) modify the LSTM cell to incorporate WordNet and NELL knowledge for event and entity extraction. For cross-sentence inference tasks, Weissenborn et al. (2017) , Bauer et al. (2018) , and Mihaylov and Frank (2018) dynamically refine word representations by reading assertions from ConceptNet and Wikipedia abstracts. Our approach, on the other hand, relies on a relatively simple extension of existing cross-sentence inference models. Furthermore, we do not need to dynamically retrieve and process knowledge base facts or Wikipedia texts, and just pretrain our pair vectors in advance. KIM (Chen et al., 2017) integrates word-pair vectors into the ESIM model for NLI in a very similar way to ours. However, KIM's wordpair vectors contain only hand-engineered wordrelation indicators from WordNet, whereas our word-pair vectors are automatically learned from unlabeled text. Our vectors can therefore reflect relation types that do not exist in WordNet (such as profession) as well as word pairs that do not have a direct link in WordNet (e.g. bronze and statue); see Table 8 for additional examples.",
+                "cite_spans": [
+                    {
+                        "start": 271,
+                        "end": 296,
+                        "text": "Weissenborn et al. (2017)",
+                        "ref_id": "BIBREF41"
+                    },
+                    {
+                        "start": 299,
+                        "end": 318,
+                        "text": "Bauer et al. (2018)",
+                        "ref_id": "BIBREF2"
+                    },
+                    {
+                        "start": 325,
+                        "end": 350,
+                        "text": "Mihaylov and Frank (2018)",
+                        "ref_id": "BIBREF25"
+                    },
+                    {
+                        "start": 728,
+                        "end": 747,
+                        "text": "(Chen et al., 2017)",
+                        "ref_id": "BIBREF7"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 1211,
+                        "end": 1212,
+                        "text": "8",
+                        "ref_id": "TABREF7"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Integrating Knowledge in Complex Models",
+                "sec_num": null
+            },
+            {
+                "text": "We presented new methods for training and using word pair embeddings that implicitly represent background knowledge. Our pair embeddings are computed as a compositional function of the individual word representations, which is learned by maximizing a variant of the PMI with the contexts in which the the two words co-occur. Experiments on cross-sentence inference benchmarks demonstrated that adding these representations to existing models results in sizable improvements for both in-domain and adversarial settings.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion and Future Work",
+                "sec_num": "7"
+            },
+            {
+                "text": "Published concurrently with this paper, BERT (Devlin et al., 2018) , which uses a masked language model objective, has reported dramatic gains on multiple semantic benchmarks including question-answering, natural language inference, and named entity recognition. Potential avenues for future work include multitasking BERT with pair2vec in order to more directly incorporate reasoning about word pair relations into the BERT objective.",
+                "cite_spans": [
+                    {
+                        "start": 45,
+                        "end": 66,
+                        "text": "(Devlin et al., 2018)",
+                        "ref_id": "BIBREF12"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion and Future Work",
+                "sec_num": "7"
+            },
+            {
+                "text": "Bishan Yang and Tom Mitchell. 2017. Leveraging knowledge bases in LSTMs for improving machine reading. In Proceedings of the 55th Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers), pages 1436-1446. Association for Computational Linguistics.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion and Future Work",
+                "sec_num": "7"
+            },
+            {
+                "text": "Hyperparameters For both word pairs and contexts, we use 300-dimensional word embeddings initialized with FastText (Bojanowski et al., 2017) .",
+                "cite_spans": [
+                    {
+                        "start": 115,
+                        "end": 140,
+                        "text": "(Bojanowski et al., 2017)",
+                        "ref_id": "BIBREF3"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "A Implementation Details",
+                "sec_num": null
+            },
+            {
+                "text": "The context representation uses a single-layer Bi-LSTM with a hidden layer size of 100. We use 2 negative context samples and 3 negative argument samples for each pair-context tuple.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "A Implementation Details",
+                "sec_num": null
+            },
+            {
+                "text": "For pre-training, we used stochastic gradient descent with an initial learning rate of 0.01. We reduce the learning rate by a factor of 0.9 if the loss does not decrease for 300K steps. We use a batch size of 600, and train for 12 epochs. 7For both end-task models, we use AllenNLP's implementations (Gardner et al., 2018) with default hyperparameters; we did not change any setting before or after injecting pair2vec. We use 0.15 dropout on our pretrained pair embeddings.",
+                "cite_spans": [
+                    {
+                        "start": 300,
+                        "end": 322,
+                        "text": "(Gardner et al., 2018)",
+                        "ref_id": "BIBREF14"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "A Implementation Details",
+                "sec_num": null
+            },
+            {
+                "text": "In this appendix, we elaborate on mathematical details of multivariate negative sampling to support our claims in Section 2.2, and also discuss its relation to other PMI multivariate formulations (Table 9 ).",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 203,
+                        "end": 204,
+                        "text": "9",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "B.1 Relation to Multivariate PMI",
+                "sec_num": null
+            },
+            {
+                "text": "Equation (Table 2 , J 3N S ) in Section 2.2 characterizes the local objective for each data instance. To understand the mathematical properties of this objective, we must first describe the global objective in terms of the entire dataset. However, this",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 16,
+                        "end": 17,
+                        "text": "2",
+                        "ref_id": "TABREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "B.2 Global Objective",
+                "sec_num": null
+            },
+            {
+                "text": "Applying typed sampling also changes the value to which our objective will converge, and will replace the unigram probabilities in Equation (2) to reflect the type-based distribution.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "Like in word2vec, subsampling reduces the size of the dataset and speeds up training. For this, we define the word pair probability as the product of unigram probabilities.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "The fastText embeddings in the analysis were retrained using the same Wikipedia corpus used to train pair2vec to control for the corpus when comparing the two methods.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "On Titan X GPUs, the training takes about a week.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            }
+        ],
+        "back_matter": [
+            {
+                "text": "We would like to thank Anna Rogers (Gladkova), Qian Chen, Koki Washio, Pranav Rajpurkar, and Robin Jia for their help with the evaluation. We are also grateful to members of the UW and FAIR NLP groups, and anonymous reviewers for their thoughtful comments and suggestions.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Acknowledgments",
+                "sec_num": null
+            },
+            {
+                "text": "(Van de Cruys, 2011) SI1(x, y, c) log P (x,y,\u2022)P (x,\u2022,c)P (\u2022,y,c) P (x,\u2022,\u2022)P (\u2022,y,\u2022)P (\u2022,\u2022,c)P (x,y,c) SI2(x, y, c) log P (x,y,c) P (x,\u2022,\u2022)P (\u2022,y,\u2022)P (\u2022,\u2022,c) (Jameel et al., 2018) SI3(x, y, c) log P (x,y,c) P (x,y,\u2022)P (\u2022,\u2022,c) SI4(x, y, c) log P (x,y,c)P (\u2022,\u2022,c) cannot be done by simply summing the local objective for each (x, y, c), since each such example may appear multiple times in our dataset. Moreover, due to the nature of negative sampling, the number of times an (x, y, c) triplet appears as a positive example will almost always be different from the number of times it appears as a negative one. Therefore, we must determine the frequency in which each triplet appears in each role.We first denote the number of times the example (x, y, c) appears in the dataset as #(x, y, c); this is also the number of times (x, y, c) is used as a positive example. We observe that the expected number of times (x, y, c) is used as a corrupt x example is k x P (x, \u2022, \u2022)#(\u2022, y, c), since (x, y, c) can only be created as a corrupt x example by randomly sampling x from an example that already contained y and c. The number of times (x, y, c) is used as a corrupt y or c example can be derived analogously. Therefore, the global objective of our trenary negative sampling approach is:With the global objective, we can now ask what is the optimal value of S x,y,c (20) by comparing the partial derivative of (17) to zero. This derivative is in fact equal to the partial derivative of ( 18), since it is the only component of the global objective in which R(x, y) \u2022 C(c) appears:The partial derivative of ( 18) can be expressed as:which can be reformulated as:By expanding the fraction by 1/#(\u2022, \u2022, \u2022) (i.e. dividing by the size of the dataset), we essentially convert all the frequency counts (e.g. #(x, y, z)) to empirical probabilities (e.g. P (x, y, z)), and arrive at Equation (1) in Section 2.2.",
+                "cite_spans": [
+                    {
+                        "start": 158,
+                        "end": 179,
+                        "text": "(Jameel et al., 2018)",
+                        "ref_id": "BIBREF19"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "annex",
+                "sec_num": null
+            },
+            {
+                "text": "Previous work has proposed different multivariate formulations of PMI, shown in Table 9 . Van de Cruys (2011) presented specific interaction information (SI 1 ) and specific correlation (SI 2 ). In addition to those metrics, Jameel et al. (2018) experimented with SI 3 , which is the bivariate PMI between (x, y) and c, and with SI 4 . Our formulation deviates from previous work, and, to the best of our knowledge, cannot be trivially expressed by one of the existing metrics.",
+                "cite_spans": [
+                    {
+                        "start": 90,
+                        "end": 109,
+                        "text": "Van de Cruys (2011)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 225,
+                        "end": 245,
+                        "text": "Jameel et al. (2018)",
+                        "ref_id": "BIBREF19"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 86,
+                        "end": 87,
+                        "text": "9",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "B.3 Other Multivariate PMI Formulations",
+                "sec_num": null
+            }
+        ],
+        "bib_entries": {
+            "BIBREF0": {
+                "ref_id": "b0",
+                "title": "A neural knowledge language model",
+                "authors": [
+                    {
+                        "first": "Heeyoul",
+                        "middle": [],
+                        "last": "Sungjin Ahn",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tanel",
+                        "middle": [],
+                        "last": "Choi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yoshua",
+                        "middle": [],
+                        "last": "P\u00e4rnamaa",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Bengio",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1608.00318"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Sungjin Ahn, Heeyoul Choi, Tanel P\u00e4rnamaa, and Yoshua Bengio. 2016. A neural knowledge lan- guage model. arXiv preprint arXiv:1608.00318.",
+                "links": null
+            },
+            "BIBREF1": {
+                "ref_id": "b1",
+                "title": "How we blessed distributional semantic evaluation",
+                "authors": [
+                    {
+                        "first": "Marco",
+                        "middle": [],
+                        "last": "Baroni",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alessandro",
+                        "middle": [],
+                        "last": "Lenci",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2011,
+                "venue": "Proceedings of the GEMS 2011 Workshop on GEometrical Models of Natural Language Semantics, GEMS '11",
+                "volume": "",
+                "issue": "",
+                "pages": "1--10",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Marco Baroni and Alessandro Lenci. 2011. How we blessed distributional semantic evaluation. In Pro- ceedings of the GEMS 2011 Workshop on GEometri- cal Models of Natural Language Semantics, GEMS '11, pages 1-10, Stroudsburg, PA, USA. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF2": {
+                "ref_id": "b2",
+                "title": "Commonsense for generative multi-hop question answering tasks",
+                "authors": [
+                    {
+                        "first": "Lisa",
+                        "middle": [],
+                        "last": "Bauer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yicheng",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mohit",
+                        "middle": [],
+                        "last": "Bansal",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "4220--4230",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Lisa Bauer, Yicheng Wang, and Mohit Bansal. 2018. Commonsense for generative multi-hop question an- swering tasks. In Proceedings of the 2018 Confer- ence on Empirical Methods in Natural Language Processing, pages 4220-4230, Brussels, Belgium. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF3": {
+                "ref_id": "b3",
+                "title": "Enriching word vectors with subword information",
+                "authors": [
+                    {
+                        "first": "Piotr",
+                        "middle": [],
+                        "last": "Bojanowski",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Edouard",
+                        "middle": [],
+                        "last": "Grave",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Armand",
+                        "middle": [],
+                        "last": "Joulin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tomas",
+                        "middle": [],
+                        "last": "Mikolov",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Transactions of the Association for Computational Linguistics",
+                "volume": "5",
+                "issue": "",
+                "pages": "135--146",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Piotr Bojanowski, Edouard Grave, Armand Joulin, and Tomas Mikolov. 2017. Enriching word vectors with subword information. Transactions of the Associa- tion for Computational Linguistics, 5:135-146.",
+                "links": null
+            },
+            "BIBREF4": {
+                "ref_id": "b4",
+                "title": "Translating embeddings for modeling multirelational data",
+                "authors": [
+                    {
+                        "first": "Antoine",
+                        "middle": [],
+                        "last": "Bordes",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nicolas",
+                        "middle": [],
+                        "last": "Usunier",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alberto",
+                        "middle": [],
+                        "last": "Garcia-Duran",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jason",
+                        "middle": [],
+                        "last": "Weston",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Oksana",
+                        "middle": [],
+                        "last": "Yakhnenko",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "Advances in Neural Information Processing Systems",
+                "volume": "26",
+                "issue": "",
+                "pages": "2787--2795",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Antoine Bordes, Nicolas Usunier, Alberto Garcia- Duran, Jason Weston, and Oksana Yakhnenko. 2013. Translating embeddings for modeling multi- relational data. In C. J. C. Burges, L. Bottou, M. Welling, Z. Ghahramani, and K. Q. Weinberger, editors, Advances in Neural Information Processing Systems 26, pages 2787-2795. Curran Associates, Inc.",
+                "links": null
+            },
+            "BIBREF5": {
+                "ref_id": "b5",
+                "title": "A large annotated corpus for learning natural language inference",
+                "authors": [
+                    {
+                        "first": "R",
+                        "middle": [],
+                        "last": "Samuel",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Gabor",
+                        "middle": [],
+                        "last": "Bowman",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [],
+                        "last": "Angeli",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [
+                            "D"
+                        ],
+                        "last": "Potts",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Manning",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Proceedings of the 2015 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "632--642",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Samuel R. Bowman, Gabor Angeli, Christopher Potts, and Christopher D. Manning. 2015. A large anno- tated corpus for learning natural language inference. In Proceedings of the 2015 Conference on Empiri- cal Methods in Natural Language Processing, pages 632-642. Association for Computational Linguis- tics.",
+                "links": null
+            },
+            "BIBREF6": {
+                "ref_id": "b6",
+                "title": "Neural natural language inference models enhanced with external knowledge",
+                "authors": [
+                    {
+                        "first": "Qian",
+                        "middle": [],
+                        "last": "Chen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xiaodan",
+                        "middle": [],
+                        "last": "Zhu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zhen-Hua",
+                        "middle": [],
+                        "last": "Ling",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Diana",
+                        "middle": [],
+                        "last": "Inkpen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Si",
+                        "middle": [],
+                        "last": "Wei",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 56th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "2406--2417",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Qian Chen, Xiaodan Zhu, Zhen-Hua Ling, Diana Inkpen, and Si Wei. 2018. Neural natural language inference models enhanced with external knowl- edge. In Proceedings of the 56th Annual Meeting of the Association for Computational Linguistics (Vol- ume 1: Long Papers), pages 2406-2417. Associa- tion for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF7": {
+                "ref_id": "b7",
+                "title": "Enhanced LSTM for natural language inference",
+                "authors": [
+                    {
+                        "first": "Qian",
+                        "middle": [],
+                        "last": "Chen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xiaodan",
+                        "middle": [],
+                        "last": "Zhu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zhen-Hua",
+                        "middle": [],
+                        "last": "Ling",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Si",
+                        "middle": [],
+                        "last": "Wei",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hui",
+                        "middle": [],
+                        "last": "Jiang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Diana",
+                        "middle": [],
+                        "last": "Inkpen",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Proceedings of the 55th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "1",
+                "issue": "",
+                "pages": "1657--1668",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Qian Chen, Xiaodan Zhu, Zhen-Hua Ling, Si Wei, Hui Jiang, and Diana Inkpen. 2017. Enhanced LSTM for natural language inference. In Proceedings of the 55th Annual Meeting of the Association for Compu- tational Linguistics (Volume 1: Long Papers), pages 1657-1668. Association for Computational Linguis- tics.",
+                "links": null
+            },
+            "BIBREF8": {
+                "ref_id": "b8",
+                "title": "Verbocean: Mining the web for fine-grained semantic verb relations",
+                "authors": [
+                    {
+                        "first": "Timothy",
+                        "middle": [],
+                        "last": "Chklovski",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Patrick",
+                        "middle": [],
+                        "last": "Pantel",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2004,
+                "venue": "Proceedings of the 2004 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Timothy Chklovski and Patrick Pantel. 2004. Verbo- cean: Mining the web for fine-grained semantic verb relations. In Proceedings of the 2004 Conference on Empirical Methods in Natural Language Process- ing.",
+                "links": null
+            },
+            "BIBREF9": {
+                "ref_id": "b9",
+                "title": "Simple and effective multi-paragraph reading comprehension",
+                "authors": [
+                    {
+                        "first": "Christopher",
+                        "middle": [],
+                        "last": "Clark",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Matt",
+                        "middle": [],
+                        "last": "Gardner",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 56th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "845--855",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Christopher Clark and Matt Gardner. 2018. Simple and effective multi-paragraph reading comprehen- sion. In Proceedings of the 56th Annual Meeting of the Association for Computational Linguistics (Vol- ume 1: Long Papers), pages 845-855. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF10": {
+                "ref_id": "b10",
+                "title": "Two multivariate generalizations of pointwise mutual information",
+                "authors": [],
+                "year": 2011,
+                "venue": "Proceedings of the Workshop on Distributional Semantics and Compositionality",
+                "volume": "",
+                "issue": "",
+                "pages": "16--20",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Tim Van de Cruys. 2011. Two multivariate general- izations of pointwise mutual information. In Pro- ceedings of the Workshop on Distributional Seman- tics and Compositionality, pages 16-20. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF11": {
+                "ref_id": "b11",
+                "title": "A neural network approach to selectional preference acquisition",
+                "authors": [
+                    {
+                        "first": "Tim",
+                        "middle": [],
+                        "last": "Van De Cruys",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "Proceedings of the 2014 Conference on Empirical Methods in Natural Language Processing (EMNLP)",
+                "volume": "",
+                "issue": "",
+                "pages": "26--35",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Tim Van de Cruys. 2014. A neural network approach to selectional preference acquisition. In Proceedings of the 2014 Conference on Empirical Methods in Natural Language Processing (EMNLP), pages 26- 35. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF12": {
+                "ref_id": "b12",
+                "title": "BERT: Pre-training of deep bidirectional transformers for language understanding",
+                "authors": [
+                    {
+                        "first": "Jacob",
+                        "middle": [],
+                        "last": "Devlin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ming-Wei",
+                        "middle": [],
+                        "last": "Chang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kenton",
+                        "middle": [],
+                        "last": "Lee",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kristina",
+                        "middle": [],
+                        "last": "Toutanova",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1810.04805"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Jacob Devlin, Ming-Wei Chang, Kenton Lee, and Kristina Toutanova. 2018. BERT: Pre-training of deep bidirectional transformers for language under- standing. arXiv preprint arXiv:1810.04805.",
+                "links": null
+            },
+            "BIBREF13": {
+                "ref_id": "b13",
+                "title": "Seven: Augmenting word embeddings with unsupervised relation vectors",
+                "authors": [
+                    {
+                        "first": "Luis",
+                        "middle": [],
+                        "last": "Espinosa",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Anke",
+                        "middle": [],
+                        "last": "",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Steven",
+                        "middle": [],
+                        "last": "Schockaert",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 27th International Conference on Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "2653--2665",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Luis Espinosa Anke and Steven Schockaert. 2018. Seven: Augmenting word embeddings with unsu- pervised relation vectors. In Proceedings of the 27th International Conference on Computational Linguistics, pages 2653-2665. Association for Com- putational Linguistics.",
+                "links": null
+            },
+            "BIBREF14": {
+                "ref_id": "b14",
+                "title": "Allennlp: A deep semantic natural language processing platform",
+                "authors": [
+                    {
+                        "first": "Matt",
+                        "middle": [],
+                        "last": "Gardner",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Joel",
+                        "middle": [],
+                        "last": "Grus",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mark",
+                        "middle": [],
+                        "last": "Neumann",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Oyvind",
+                        "middle": [],
+                        "last": "Tafjord",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Pradeep",
+                        "middle": [],
+                        "last": "Dasigi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nelson",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Matthew",
+                        "middle": [],
+                        "last": "Peters",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Michael",
+                        "middle": [],
+                        "last": "Schmitz",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Luke",
+                        "middle": [],
+                        "last": "Zettlemoyer",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1803.07640"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Matt Gardner, Joel Grus, Mark Neumann, Oyvind Tafjord, Pradeep Dasigi, Nelson Liu, Matthew Pe- ters, Michael Schmitz, and Luke Zettlemoyer. 2018. Allennlp: A deep semantic natural language pro- cessing platform. arXiv preprint arXiv:1803.07640.",
+                "links": null
+            },
+            "BIBREF15": {
+                "ref_id": "b15",
+                "title": "Analogy-based detection of morphological and semantic relations with word embeddings: What works and what doesn't",
+                "authors": [
+                    {
+                        "first": "Anna",
+                        "middle": [],
+                        "last": "Gladkova",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Aleksandr",
+                        "middle": [],
+                        "last": "Drozd",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Satoshi",
+                        "middle": [],
+                        "last": "Matsuoka",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of the NAACL-HLT SRW",
+                "volume": "",
+                "issue": "",
+                "pages": "47--54",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Anna Gladkova, Aleksandr Drozd, and Satoshi Mat- suoka. 2016. Analogy-based detection of morpho- logical and semantic relations with word embed- dings: What works and what doesn't. In Proceed- ings of the NAACL-HLT SRW, pages 47-54, San Diego, California, June 12-17, 2016. ACL.",
+                "links": null
+            },
+            "BIBREF16": {
+                "ref_id": "b16",
+                "title": "Breaking nli systems with sentences that require simple lexical inferences",
+                "authors": [
+                    {
+                        "first": "Max",
+                        "middle": [],
+                        "last": "Glockner",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Vered",
+                        "middle": [],
+                        "last": "Shwartz",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yoav",
+                        "middle": [],
+                        "last": "Goldberg",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 56th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "2",
+                "issue": "",
+                "pages": "650--655",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Max Glockner, Vered Shwartz, and Yoav Goldberg. 2018. Breaking nli systems with sentences that re- quire simple lexical inferences. In Proceedings of the 56th Annual Meeting of the Association for Com- putational Linguistics (Volume 2: Short Papers), pages 650-655. Association for Computational Lin- guistics.",
+                "links": null
+            },
+            "BIBREF18": {
+                "ref_id": "b18",
+                "title": "Automatic acquisition of hyponyms from large text corpora",
+                "authors": [
+                    {
+                        "first": "Marti",
+                        "middle": [],
+                        "last": "Hearst",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1992,
+                "venue": "Proceedings of the 14th International Conference on Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Marti Hearst. 1992. Automatic acquisition of hy- ponyms from large text corpora. In Proceedings of the 14th International Conference on Computational Linguistics, Nantes, France.",
+                "links": null
+            },
+            "BIBREF19": {
+                "ref_id": "b19",
+                "title": "Unsupervised learning of distributional relation vectors",
+                "authors": [
+                    {
+                        "first": "Shoaib",
+                        "middle": [],
+                        "last": "Jameel",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zied",
+                        "middle": [],
+                        "last": "Bouraoui",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Steven",
+                        "middle": [],
+                        "last": "Schockaert",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 56th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "1",
+                "issue": "",
+                "pages": "23--33",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Shoaib Jameel, Zied Bouraoui, and Steven Schockaert. 2018. Unsupervised learning of distributional re- lation vectors. In Proceedings of the 56th Annual Meeting of the Association for Computational Lin- guistics (Volume 1: Long Papers), pages 23-33. As- sociation for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF20": {
+                "ref_id": "b20",
+                "title": "Adversarial examples for evaluating reading comprehension systems",
+                "authors": [
+                    {
+                        "first": "Robin",
+                        "middle": [],
+                        "last": "Jia",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Percy",
+                        "middle": [],
+                        "last": "Liang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Proceedings of the 2017 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "2021--2031",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Robin Jia and Percy Liang. 2017. Adversarial exam- ples for evaluating reading comprehension systems. In Proceedings of the 2017 Conference on Empiri- cal Methods in Natural Language Processing, pages 2021-2031. Association for Computational Linguis- tics.",
+                "links": null
+            },
+            "BIBREF21": {
+                "ref_id": "b21",
+                "title": "Focused entailment graphs for open ie propositions",
+                "authors": [
+                    {
+                        "first": "Omer",
+                        "middle": [],
+                        "last": "Levy",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ido",
+                        "middle": [],
+                        "last": "Dagan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jacob",
+                        "middle": [],
+                        "last": "Goldberger",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "Proceedings of the Eighteenth Conference on Computational Natural Language Learning",
+                "volume": "",
+                "issue": "",
+                "pages": "87--97",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Omer Levy, Ido Dagan, and Jacob Goldberger. 2014. Focused entailment graphs for open ie propositions. In Proceedings of the Eighteenth Conference on Computational Natural Language Learning, pages 87-97. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF22": {
+                "ref_id": "b22",
+                "title": "Neural word embedding as implicit matrix factorization",
+                "authors": [
+                    {
+                        "first": "Omer",
+                        "middle": [],
+                        "last": "Levy",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yoav",
+                        "middle": [],
+                        "last": "Goldberg",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "Proceedings of the 27th International Conference on Neural Information Processing Systems",
+                "volume": "2",
+                "issue": "",
+                "pages": "2177--2185",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Omer Levy and Yoav Goldberg. 2014. Neural word embedding as implicit matrix factorization. In Pro- ceedings of the 27th International Conference on Neural Information Processing Systems -Volume 2, NIPS'14, pages 2177-2185, Cambridge, MA, USA. MIT Press.",
+                "links": null
+            },
+            "BIBREF23": {
+                "ref_id": "b23",
+                "title": "Zero-shot relation extraction via reading comprehension",
+                "authors": [
+                    {
+                        "first": "Omer",
+                        "middle": [],
+                        "last": "Levy",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Minjoon",
+                        "middle": [],
+                        "last": "Seo",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Eunsol",
+                        "middle": [],
+                        "last": "Choi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Luke",
+                        "middle": [],
+                        "last": "Zettlemoyer",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Proceedings of the 21st Conference on Computational Natural Language Learning",
+                "volume": "",
+                "issue": "",
+                "pages": "333--342",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Omer Levy, Minjoon Seo, Eunsol Choi, and Luke Zettlemoyer. 2017. Zero-shot relation extraction via reading comprehension. In Proceedings of the 21st Conference on Computational Natural Lan- guage Learning (CoNLL 2017), Vancouver, Canada, August 3-4, 2017, pages 333-342.",
+                "links": null
+            },
+            "BIBREF24": {
+                "ref_id": "b24",
+                "title": "Investigating different syntactic context types and context representations for learning word embeddings",
+                "authors": [
+                    {
+                        "first": "Bofang",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tao",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zhe",
+                        "middle": [],
+                        "last": "Zhao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Buzhou",
+                        "middle": [],
+                        "last": "Tang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Proceedings of the 2017 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "2421--2431",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Bofang Li, Tao Liu, Zhe Zhao, Buzhou Tang, Alek- sandr Drozd, Anna Rogers, and Xiaoyong Du. 2017. Investigating different syntactic context types and context representations for learning word embed- dings. In Proceedings of the 2017 Conference on Empirical Methods in Natural Language Process- ing, pages 2421-2431. Association for Computa- tional Linguistics.",
+                "links": null
+            },
+            "BIBREF25": {
+                "ref_id": "b25",
+                "title": "Knowledgeable reader: Enhancing cloze-style reading comprehension with external commonsense knowledge",
+                "authors": [
+                    {
+                        "first": "Todor",
+                        "middle": [],
+                        "last": "Mihaylov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Anette",
+                        "middle": [],
+                        "last": "Frank",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 56th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "1",
+                "issue": "",
+                "pages": "821--832",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Todor Mihaylov and Anette Frank. 2018. Knowledge- able reader: Enhancing cloze-style reading compre- hension with external commonsense knowledge. In Proceedings of the 56th Annual Meeting of the As- sociation for Computational Linguistics (Volume 1: Long Papers), pages 821-832. Association for Com- putational Linguistics.",
+                "links": null
+            },
+            "BIBREF26": {
+                "ref_id": "b26",
+                "title": "Distributed representations of words and phrases and their compositionality",
+                "authors": [
+                    {
+                        "first": "Tomas",
+                        "middle": [],
+                        "last": "Mikolov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ilya",
+                        "middle": [],
+                        "last": "Sutskever",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kai",
+                        "middle": [],
+                        "last": "Chen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Gregory",
+                        "middle": [
+                            "S"
+                        ],
+                        "last": "Corrado",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jeffrey",
+                        "middle": [],
+                        "last": "Dean",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "Advances in Neural Information Processing Systems 26: 27th Annual Conference on Neural Information Processing Systems 2013. Proceedings of a meeting",
+                "volume": "",
+                "issue": "",
+                "pages": "3111--3119",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Tomas Mikolov, Ilya Sutskever, Kai Chen, Gregory S. Corrado, and Jeffrey Dean. 2013a. Distributed rep- resentations of words and phrases and their com- positionality. In Advances in Neural Information Processing Systems 26: 27th Annual Conference on Neural Information Processing Systems 2013. Pro- ceedings of a meeting held December 5-8, 2013, Lake Tahoe, Nevada, United States., pages 3111- 3119.",
+                "links": null
+            },
+            "BIBREF27": {
+                "ref_id": "b27",
+                "title": "Linguistic regularities in continuous space word representations",
+                "authors": [
+                    {
+                        "first": "Tomas",
+                        "middle": [],
+                        "last": "Mikolov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Wen-Tau",
+                        "middle": [],
+                        "last": "Yih",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Geoffrey",
+                        "middle": [],
+                        "last": "Zweig",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "Proceedings of the 2013 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies",
+                "volume": "",
+                "issue": "",
+                "pages": "746--751",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Tomas Mikolov, Wen-tau Yih, and Geoffrey Zweig. 2013b. Linguistic regularities in continuous space word representations. In Proceedings of the 2013 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies, pages 746-751. Associa- tion for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF28": {
+                "ref_id": "b28",
+                "title": "Deep contextualized word representations",
+                "authors": [
+                    {
+                        "first": "Matthew",
+                        "middle": [],
+                        "last": "Peters",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mark",
+                        "middle": [],
+                        "last": "Neumann",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mohit",
+                        "middle": [],
+                        "last": "Iyyer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Matt",
+                        "middle": [],
+                        "last": "Gardner",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [],
+                        "last": "Clark",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kenton",
+                        "middle": [],
+                        "last": "Lee",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Luke",
+                        "middle": [],
+                        "last": "Zettlemoyer",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 2018 Conference of the North American Chapter",
+                "volume": "1",
+                "issue": "",
+                "pages": "2227--2237",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Matthew Peters, Mark Neumann, Mohit Iyyer, Matt Gardner, Christopher Clark, Kenton Lee, and Luke Zettlemoyer. 2018. Deep contextualized word repre- sentations. In Proceedings of the 2018 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies, Volume 1 (Long Papers), pages 2227- 2237. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF29": {
+                "ref_id": "b29",
+                "title": "Know what you don't know: Unanswerable questions for SQuAD",
+                "authors": [
+                    {
+                        "first": "Pranav",
+                        "middle": [],
+                        "last": "Rajpurkar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Robin",
+                        "middle": [],
+                        "last": "Jia",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Percy",
+                        "middle": [],
+                        "last": "Liang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 56th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "2",
+                "issue": "",
+                "pages": "784--789",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Pranav Rajpurkar, Robin Jia, and Percy Liang. 2018. Know what you don't know: Unanswerable ques- tions for SQuAD. In Proceedings of the 56th Annual Meeting of the Association for Computational Lin- guistics (Volume 2: Short Papers), pages 784-789. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF30": {
+                "ref_id": "b30",
+                "title": "SQuAD: 100,000+ questions for machine comprehension of text",
+                "authors": [
+                    {
+                        "first": "Pranav",
+                        "middle": [],
+                        "last": "Rajpurkar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jian",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Konstantin",
+                        "middle": [],
+                        "last": "Lopyrev",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Percy",
+                        "middle": [],
+                        "last": "Liang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of the 2016 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "2383--2392",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Pranav Rajpurkar, Jian Zhang, Konstantin Lopyrev, and Percy Liang. 2016. SQuAD: 100,000+ questions for machine comprehension of text. In Proceedings of the 2016 Conference on Empirical Methods in Natu- ral Language Processing, pages 2383-2392, Austin, Texas. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF31": {
+                "ref_id": "b31",
+                "title": "Relation extraction with matrix factorization and universal schemas",
+                "authors": [
+                    {
+                        "first": "Sebastian",
+                        "middle": [],
+                        "last": "Riedel",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Limin",
+                        "middle": [],
+                        "last": "Yao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Benjamin",
+                        "middle": [
+                            "M"
+                        ],
+                        "last": "Marlin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Andrew",
+                        "middle": [],
+                        "last": "Mccallum",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "Joint Human Language Technology Conference/Annual Meeting of the North American Chapter",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Sebastian Riedel, Limin Yao, Benjamin M. Marlin, and Andrew McCallum. 2013. Relation extraction with matrix factorization and universal schemas. In Joint Human Language Technology Conference/Annual Meeting of the North American Chapter of the Association for Computational Linguistics (HLT- NAACL).",
+                "links": null
+            },
+            "BIBREF32": {
+                "ref_id": "b32",
+                "title": "The CogALex-V shared task on the corpus-based identification of semantic relations",
+                "authors": [
+                    {
+                        "first": "Enrico",
+                        "middle": [],
+                        "last": "Santus",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Anna",
+                        "middle": [],
+                        "last": "Gladkova",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Stefan",
+                        "middle": [],
+                        "last": "Evert",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alessandro",
+                        "middle": [],
+                        "last": "Lenci",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of the 5th Workshop on Cognitive Aspects of the Lexicon (CogALex -V)",
+                "volume": "",
+                "issue": "",
+                "pages": "69--79",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Enrico Santus, Anna Gladkova, Stefan Evert, and Alessandro Lenci. 2016. The CogALex-V shared task on the corpus-based identification of seman- tic relations. In Proceedings of the 5th Workshop on Cognitive Aspects of the Lexicon (CogALex -V), pages 69-79. The COLING 2016 Organizing Com- mittee.",
+                "links": null
+            },
+            "BIBREF33": {
+                "ref_id": "b33",
+                "title": "Bidirectional attention flow for machine comprehension",
+                "authors": [
+                    {
+                        "first": "Minjoon",
+                        "middle": [],
+                        "last": "Seo",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Aniruddha",
+                        "middle": [],
+                        "last": "Kembhavi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ali",
+                        "middle": [],
+                        "last": "Farhadi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hannaneh",
+                        "middle": [],
+                        "last": "Hajishirzi",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Proceedings of the International Conference on Learning Representations (ICLR)",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Minjoon Seo, Aniruddha Kembhavi, Ali Farhadi, and Hannaneh Hajishirzi. 2017. Bidirectional attention flow for machine comprehension. In Proceedings of the International Conference on Learning Represen- tations (ICLR).",
+                "links": null
+            },
+            "BIBREF34": {
+                "ref_id": "b34",
+                "title": "Path-based vs. distributional information in recognizing lexical semantic relations",
+                "authors": [
+                    {
+                        "first": "Vered",
+                        "middle": [],
+                        "last": "Shwartz",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ido",
+                        "middle": [],
+                        "last": "Dagan",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of the 5th Workshop on Cognitive Aspects of the Lexicon, Co-gALex@COLING 2016",
+                "volume": "",
+                "issue": "",
+                "pages": "24--29",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Vered Shwartz and Ido Dagan. 2016. Path-based vs. distributional information in recognizing lexi- cal semantic relations. In Proceedings of the 5th Workshop on Cognitive Aspects of the Lexicon, Co- gALex@COLING 2016, Osaka, Japan, December 12, 2016, pages 24-29.",
+                "links": null
+            },
+            "BIBREF35": {
+                "ref_id": "b35",
+                "title": "Improving hypernymy detection with an integrated path-based and distributional method",
+                "authors": [
+                    {
+                        "first": "Vered",
+                        "middle": [],
+                        "last": "Shwartz",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yoav",
+                        "middle": [],
+                        "last": "Goldberg",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ido",
+                        "middle": [],
+                        "last": "Dagan",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of the 54th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "1",
+                "issue": "",
+                "pages": "2389--2398",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Vered Shwartz, Yoav Goldberg, and Ido Dagan. 2016. Improving hypernymy detection with an integrated path-based and distributional method. In Proceed- ings of the 54th Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Pa- pers), pages 2389-2398. Association for Computa- tional Linguistics.",
+                "links": null
+            },
+            "BIBREF36": {
+                "ref_id": "b36",
+                "title": "Learning syntactic patterns for automatic hypernym discovery",
+                "authors": [
+                    {
+                        "first": "Rion",
+                        "middle": [],
+                        "last": "Snow",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Daniel",
+                        "middle": [],
+                        "last": "Jurafsky",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Andrew",
+                        "middle": [
+                            "Y"
+                        ],
+                        "last": "Ng",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2005,
+                "venue": "Advances in Neural Information Processing Systems",
+                "volume": "17",
+                "issue": "",
+                "pages": "1297--1304",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Rion Snow, Daniel Jurafsky, and Andrew Y. Ng. 2005. Learning syntactic patterns for automatic hypernym discovery. In L. K. Saul, Y. Weiss, and L. Bottou, editors, Advances in Neural Information Processing Systems 17, pages 1297-1304. MIT Press.",
+                "links": null
+            },
+            "BIBREF37": {
+                "ref_id": "b37",
+                "title": "Representing text for joint embedding of text and knowledge bases",
+                "authors": [
+                    {
+                        "first": "Kristina",
+                        "middle": [],
+                        "last": "Toutanova",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Danqi",
+                        "middle": [],
+                        "last": "Chen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Patrick",
+                        "middle": [],
+                        "last": "Pantel",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hoifung",
+                        "middle": [],
+                        "last": "Poon",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Pallavi",
+                        "middle": [],
+                        "last": "Choudhury",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Michael",
+                        "middle": [],
+                        "last": "Gamon",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Proceedings of the 2015 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "1499--1509",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Kristina Toutanova, Danqi Chen, Patrick Pantel, Hoi- fung Poon, Pallavi Choudhury, and Michael Gamon. 2015. Representing text for joint embedding of text and knowledge bases. In Proceedings of the 2015 Conference on Empirical Methods in Natural Lan- guage Processing, EMNLP 2015, Lisbon, Portugal, September 17-21, 2015, pages 1499-1509.",
+                "links": null
+            },
+            "BIBREF38": {
+                "ref_id": "b38",
+                "title": "Measuring semantic similarity by latent relational analysis",
+                "authors": [
+                    {
+                        "first": "D",
+                        "middle": [],
+                        "last": "Peter",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Turney",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2005,
+                "venue": "Proceedings of the 19th International Joint Conference on Artificial Intelligence, IJCAI'05",
+                "volume": "",
+                "issue": "",
+                "pages": "1136--1141",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Peter D. Turney. 2005. Measuring semantic similar- ity by latent relational analysis. In Proceedings of the 19th International Joint Conference on Artificial Intelligence, IJCAI'05, pages 1136-1141, San Fran- cisco, CA, USA. Morgan Kaufmann Publishers Inc.",
+                "links": null
+            },
+            "BIBREF39": {
+                "ref_id": "b39",
+                "title": "Filling missing paths: Modeling co-occurrences of word pairs and dependency paths for recognizing lexical semantic relations",
+                "authors": [
+                    {
+                        "first": "Koki",
+                        "middle": [],
+                        "last": "Washio",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tsuneaki",
+                        "middle": [],
+                        "last": "Kato",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 2018 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies",
+                "volume": "1",
+                "issue": "",
+                "pages": "1123--1133",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Koki Washio and Tsuneaki Kato. 2018a. Filling miss- ing paths: Modeling co-occurrences of word pairs and dependency paths for recognizing lexical se- mantic relations. In Proceedings of the 2018 Con- ference of the North American Chapter of the Asso- ciation for Computational Linguistics: Human Lan- guage Technologies, Volume 1 (Long Papers), pages 1123-1133. Association for Computational Linguis- tics.",
+                "links": null
+            },
+            "BIBREF40": {
+                "ref_id": "b40",
+                "title": "Neural latent relational analysis to capture lexical semantic relations in a vector space",
+                "authors": [
+                    {
+                        "first": "Koki",
+                        "middle": [],
+                        "last": "Washio",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tsuneaki",
+                        "middle": [],
+                        "last": "Kato",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Koki Washio and Tsuneaki Kato. 2018b. Neural latent relational analysis to capture lexical semantic rela- tions in a vector space. In Proceedings of the 2018 Conference on Empirical Methods in Natural Lan- guage Processing, EMNLP 2018. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF41": {
+                "ref_id": "b41",
+                "title": "Dynamic integration of background knowledge in neural NLU systems",
+                "authors": [
+                    {
+                        "first": "Dirk",
+                        "middle": [],
+                        "last": "Weissenborn",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tom\u00e1\u0161",
+                        "middle": [],
+                        "last": "Ko\u010disk\u1ef3",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chris",
+                        "middle": [],
+                        "last": "Dyer",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1706.02596"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Dirk Weissenborn, Tom\u00e1\u0161 Ko\u010disk\u1ef3, and Chris Dyer. 2017. Dynamic integration of background knowl- edge in neural NLU systems. arXiv preprint arXiv:1706.02596.",
+                "links": null
+            },
+            "BIBREF42": {
+                "ref_id": "b42",
+                "title": "A broad-coverage challenge corpus for sentence understanding through inference",
+                "authors": [
+                    {
+                        "first": "Adina",
+                        "middle": [],
+                        "last": "Williams",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nikita",
+                        "middle": [],
+                        "last": "Nangia",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Samuel",
+                        "middle": [],
+                        "last": "Bowman",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 2018 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies",
+                "volume": "1",
+                "issue": "",
+                "pages": "1112--1122",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Adina Williams, Nikita Nangia, and Samuel Bowman. 2018. A broad-coverage challenge corpus for sen- tence understanding through inference. In Proceed- ings of the 2018 Conference of the North American Chapter of the Association for Computational Lin- guistics: Human Language Technologies, Volume 1 (Long Papers), pages 1112-1122. Association for Computational Linguistics.",
+                "links": null
+            }
+        },
+        "ref_entries": {
+            "FIGREF0": {
+                "num": null,
+                "text": "Figure 1: A typical architecture of a cross-sentence inference model (left), and how pair2vec is added to it (right). Given two sequences, a and b, existing models create b-aware representations of words in a. For any word a i , this typically involves the BiLSTM representation of word a i (a i ), and an attention-weighted sum over b's BiLSTM states with a i as the query (b i ). To these, we add the word-pair representation of a i and each word in b, weighted by attention (r i ). Thicker attention arrows indicate stronger word pair alignments (e.g. cheap, expensive).",
+                "uris": null,
+                "fig_num": "1",
+                "type_str": "figure"
+            },
+            "FIGREF1": {
+                "num": null,
+                "text": "3.1 General Approach Pair Representation We assume that we are given two sequences a = a 1 ...a n and b = b 1 ...b m .",
+                "uris": null,
+                "fig_num": null,
+                "type_str": "figure"
+            },
+            "FIGREF2": {
+                "num": null,
+                "text": "Figure 2: Accuracy as a function of the interpolation parameter \u03b1 (see Eq. (16)). The \u03b1=0 configuration relies only on fastText(Bojanowski et al., 2017), while \u03b1=1 reflects pair2vec.",
+                "uris": null,
+                "fig_num": "2",
+                "type_str": "figure"
+            },
+            "TABREF0": {
+                "content": "<table><tr><td>1 https://github.com/mandarjoshi90/</td></tr><tr><td>pair2vec</td></tr></table>",
+                "type_str": "table",
+                "text": "Example word pairs and their contexts.",
+                "html": null,
+                "num": null
+            },
+            "TABREF1": {
+                "content": "<table><tr><td>to keep our pair vectors dis-similar from random</td></tr><tr><td>context vectors. In a straightforward application</td></tr><tr><td>of the original (bivariate) negative sampling objec-</td></tr><tr><td>tive, we could generate a negative example from</td></tr><tr><td>each observed (x, y, c) instance by replacing the</td></tr><tr><td>original context c with a randomly-sampled con-</td></tr><tr><td>text c N (Table 2, J 2N S ).</td></tr></table>",
+                "type_str": "table",
+                "text": "The bivariate and multivariate negative sampling objectives. The superscript N marks randomly sampled components, with k * being the negative sample size per instance. The equations present per-instance objectives.",
+                "html": null,
+                "num": null
+            },
+            "TABREF2": {
+                "content": "<table><tr><td>Benchmark</td><td colspan=\"3\">BiDAF + pair2vec</td><td>\u2206</td></tr><tr><td>SQuAD 2.0</td><td>EM 65.66 F1 68.86</td><td>68.02 71.58</td><td colspan=\"2\">+2.36 +2.72</td></tr><tr><td>AddSent</td><td>EM 37.50 F1 42.55</td><td>44.20 49.69</td><td colspan=\"2\">+6.70 +7.14</td></tr><tr><td>AddOneSent</td><td>EM 48.20 F1 54.02</td><td>53.30 60.13</td><td colspan=\"2\">+5.10 +6.11</td></tr><tr><td colspan=\"5\">Table 3: Performance on SQuAD 2.0 and adversarial</td></tr><tr><td colspan=\"5\">SQuAD (AddSent and AddOneSent) benchmarks, with</td></tr><tr><td colspan=\"5\">and without pair2vec. All models have ELMo.</td></tr><tr><td colspan=\"3\">Benchmark ESIM + pair2vec</td><td>\u2206</td></tr><tr><td>Matched</td><td>79.68</td><td>81.03</td><td colspan=\"2\">+1.35</td></tr><tr><td colspan=\"2\">Mismatched 78.80</td><td>80.12</td><td colspan=\"2\">+1.32</td></tr></table>",
+                "type_str": "table",
+                "text": "Performance on MultiNLI, with and without pair2vec. All models have ELMo.",
+                "html": null,
+                "num": null
+            },
+            "TABREF3": {
+                "content": "<table><tr><td>Model</td><td colspan=\"2\">Accuracy</td></tr><tr><td colspan=\"2\">Rule-based Models</td><td/></tr><tr><td>WordNet Baseline</td><td/><td>85.8</td></tr><tr><td colspan=\"2\">Models with GloVe</td><td/></tr><tr><td colspan=\"2\">ESIM (Chen et al., 2017)</td><td>77.0</td></tr><tr><td colspan=\"2\">KIM (Chen et al., 2018)</td><td>87.7</td></tr><tr><td colspan=\"2\">ESIM + pair2vec</td><td>92.9</td></tr><tr><td colspan=\"2\">Models with ELMo</td><td/></tr><tr><td colspan=\"2\">ESIM (Peters et al., 2018)</td><td>84.6</td></tr><tr><td colspan=\"2\">ESIM + pair2vec</td><td>93.4</td></tr><tr><td>Model</td><td>EM (\u2206)</td><td>F1 (\u2206)</td></tr><tr><td colspan=\"2\">pair2vec (Full Model) 69.20</td><td>72.68</td></tr><tr><td>Composition: 2 Layers</td><td colspan=\"2\">68.35 (-0.85) 71.65 (-1.03)</td></tr><tr><td>Composition: Multiply</td><td colspan=\"2\">67.10 (-2.20) 70.20 (-2.48)</td></tr><tr><td>Objective: Bivariate NS</td><td colspan=\"2\">68.63 (-0.57) 71.98 (-0.70)</td></tr><tr><td>Unsupervised: Pair Dist</td><td colspan=\"2\">67.07 (-2.13) 70.24 (-2.44)</td></tr><tr><td colspan=\"3\">No pair2vec (BiDAF) 66.66 (-2.54) 69.90 (-2.78)</td></tr></table>",
+                "type_str": "table",
+                "text": "report the performance of our model on MultiNLI and the adversarial test set from Glockner et al. (2018) in Table5. We outperform the Performance on the adversarial NLI test set ofGlockner et al. (2018).",
+                "html": null,
+                "num": null
+            },
+            "TABREF4": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "Ablations on the Squad 2.0 development set show that argument sampling as well as using a deeper composition function are useful.",
+                "html": null,
+                "num": null
+            },
+            "TABREF7": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "Given a context c and a word x, we select the top 3 words y from the entire vocabulary using our scoring function R(x, y) \u2022 C(c). The analysis suggests that the model tends to rank correct matches (italics) over others.",
+                "html": null,
+                "num": null
+            }
+        }
+    }
+}

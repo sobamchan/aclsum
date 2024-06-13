@@ -1,0 +1,2761 @@
+{
+    "paper_id": "2021",
+    "header": {
+        "generated_with": "S2ORC 1.0.0",
+        "date_generated": "2023-06-16T12:02:44.854070Z"
+    },
+    "title": "Sliding Selector Network with Dynamic Memory for Extractive Summarization of Long Documents",
+    "authors": [
+        {
+            "first": "Peng",
+            "middle": [],
+            "last": "Cui",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "Harbin Institute of Technology",
+                "location": {
+                    "settlement": "Harbin",
+                    "country": "China"
+                }
+            },
+            "email": "pcui@insun.hit.edu.cn"
+        },
+        {
+            "first": "Le",
+            "middle": [],
+            "last": "Hu",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "Harbin Institute of Technology",
+                "location": {
+                    "settlement": "Harbin",
+                    "country": "China"
+                }
+            },
+            "email": ""
+        }
+    ],
+    "year": "",
+    "venue": null,
+    "identifiers": {},
+    "abstract": "Neural-based summarization models suffer from the length limitation of text encoder. Long documents have to been truncated before they are sent to the model, which results in huge loss of summary-relevant contents. To address this issue, we propose the sliding selector network with dynamic memory for extractive summarization of long-form documents, which employs a sliding window to extract summary sentences segment by segment. Moreover, we adopt memory mechanism to preserve and update the history information dynamically, allowing the semantic flow across different windows. Experimental results on two large-scale datasets that consist of scientific papers demonstrate that our model substantially outperforms previous state-of-the-art models. Besides, we perform qualitative and quantitative investigations on how our model works and where the performance gain comes from. 1 ",
+    "pdf_parse": {
+        "paper_id": "2021",
+        "_pdf_hash": "",
+        "abstract": [
+            {
+                "text": "Neural-based summarization models suffer from the length limitation of text encoder. Long documents have to been truncated before they are sent to the model, which results in huge loss of summary-relevant contents. To address this issue, we propose the sliding selector network with dynamic memory for extractive summarization of long-form documents, which employs a sliding window to extract summary sentences segment by segment. Moreover, we adopt memory mechanism to preserve and update the history information dynamically, allowing the semantic flow across different windows. Experimental results on two large-scale datasets that consist of scientific papers demonstrate that our model substantially outperforms previous state-of-the-art models. Besides, we perform qualitative and quantitative investigations on how our model works and where the performance gain comes from. 1 ",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            }
+        ],
+        "body_text": [
+            {
+                "text": "Text summarization is an important task of natural language processing which aims to distil salient contents from a textual document. Existing summarization models can be roughly classified into two categories, which are abstractive and extractive. Abstractive summarization usually adopts natural language generation technology to produce a wordby-word summary. In general, these approaches are flexible but may yield disfluent summaries (Liu and Lapata, 2019a) . By comparison, extractive approaches aim to select a subset of the sentences in the source document, thereby enjoying better fluency and efficiency (Cao et al., 2017) .",
+                "cite_spans": [
+                    {
+                        "start": 439,
+                        "end": 462,
+                        "text": "(Liu and Lapata, 2019a)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 613,
+                        "end": 631,
+                        "text": "(Cao et al., 2017)",
+                        "ref_id": "BIBREF0"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Although many summarization approaches have demonstrated their success on relatively short documents, such as news articles, they usually fail Paragraph 1: Medical tourism is illustrated as occurrence in which individuals travel abroad to receive healthcare services. It is a multibillion dollar industry and countries like India, Thailand, Israel, Singapore, \u2026 Paragraph 2: The prime driving factors in medical tourism are increased medical costs, increased insurance premiums, increasing number of uninsured or partially insured individuals in developed countries, \u2026 \u2026\u2026 Paragraph 5: It is generally presumed in marketing that products with similar characteristics will be equally preferred by the consumers, however, attributes, which make the product similar to other products, will not\u2026. to achieve desired performance when directly applied in long-form documents, such as scientific papers. This inferior performance is partly due to the truncation operation, which inevitably leads to information loss, especially for extractive models because parts of gold sentences would be inaccessible. In addition, the accurate modeling of long texts remains a challenge (Frermann and Klementiev, 2019) .",
+                "cite_spans": [
+                    {
+                        "start": 1166,
+                        "end": 1197,
+                        "text": "(Frermann and Klementiev, 2019)",
+                        "ref_id": "BIBREF10"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "A practical solution for this problem is to use a sliding window to process documents separately. This approach is used in other NLP tasks, such as machine reading comprehension (Wang et al., 2019b) . However, such a paradigm is not suitable for summarization task because the concatenation of summaries that are independently extracted from local contexts is usually inconsistent with the gold summary of the entire document. Figure 1 shows an example to illustrate this problem. The core topic of the source document is \"medical tourism,\" which is discussed in Paragraphs 1 and 2. How-ever, the 5-th paragraph is mainly about \"consumer and product.\" As a consequence, the paragraphby-paragraph extraction approach might produce a both repetitive and noisy summary. Under this circumstance, the supervised signals will have a negative effect on model behaviors because understanding why Paragraph 5 should output an empty result without information conveying from previous texts is confused for the model.",
+                "cite_spans": [
+                    {
+                        "start": 178,
+                        "end": 198,
+                        "text": "(Wang et al., 2019b)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 434,
+                        "end": 435,
+                        "text": "1",
+                        "ref_id": "FIGREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "In this paper, we propose a novel extractive summarization model for long-form documents. We split the input document into multiple windows and encode them with a sliding encoder sequentially. During this process, we introduce a memory to preserve salient information learned from previous windows, which is used to complete and enrich local texts. Intuitively, our model has the following advantages: 1) In each window, the text encoder processes a relatively short segment, thereby yielding more accurate representations. 2) The local text representations can capture beyond-window contextual information via the memory module. 3) The previous selection results are also parameterized in the memory block, allowing the collaboration among summary sentences.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "To sum up, our contributions are threefold.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "(1) We propose a novel extractive summarization model that can summarize documents of arbitrary length without truncation loss. Also, it employs the memory mechanism to address context fragmentation. To the best of our knowledge, we are the first to propose applying memory networks into extractive text summarization task.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "(2) The proposed framework (i.e., a sliding encoder combined with dynamic memory) provides a general solution for summarizing long documents and can be easily extended to other abstractive and extractive summarization models.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "(3) Our model achieves the state-of-the-art results on two widely used datasets for long document summarization. Moreover, we conduct extensive analysis to understand how our model works and where the performance gain comes from.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Neural Extractive Summarization.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "Neuralnetworks have become the dominant approach for extractive summarization. Existing studies usually formulate this task as sentence labelling (Dong et al., 2018; Nallapati et al., 2016; Zhang et al., 2019) or sentence ranking (Narayan et al., 2018) .",
+                "cite_spans": [
+                    {
+                        "start": 146,
+                        "end": 165,
+                        "text": "(Dong et al., 2018;",
+                        "ref_id": "BIBREF9"
+                    },
+                    {
+                        "start": 166,
+                        "end": 189,
+                        "text": "Nallapati et al., 2016;",
+                        "ref_id": "BIBREF17"
+                    },
+                    {
+                        "start": 190,
+                        "end": 209,
+                        "text": "Zhang et al., 2019)",
+                        "ref_id": "BIBREF31"
+                    },
+                    {
+                        "start": 230,
+                        "end": 252,
+                        "text": "(Narayan et al., 2018)",
+                        "ref_id": "BIBREF18"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "Among them, recurrent neural networks (Cheng and Lapata, 2016; Zhou et al., 2018) , Transformer encoder (Wang et al., 2019a) , or graph neural networks (Wang and Liu, 2020 , Xu et al., 2020 , Cui et al., 2020) (Wang et al., 2020; Xu et al., 2019; Cui et al., 2020) have been used to learn sentence representation.",
+                "cite_spans": [
+                    {
+                        "start": 38,
+                        "end": 62,
+                        "text": "(Cheng and Lapata, 2016;",
+                        "ref_id": "BIBREF3"
+                    },
+                    {
+                        "start": 63,
+                        "end": 81,
+                        "text": "Zhou et al., 2018)",
+                        "ref_id": "BIBREF34"
+                    },
+                    {
+                        "start": 104,
+                        "end": 124,
+                        "text": "(Wang et al., 2019a)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 152,
+                        "end": 171,
+                        "text": "(Wang and Liu, 2020",
+                        "ref_id": "BIBREF23"
+                    },
+                    {
+                        "start": 172,
+                        "end": 189,
+                        "text": ", Xu et al., 2020",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 190,
+                        "end": 209,
+                        "text": ", Cui et al., 2020)",
+                        "ref_id": "BIBREF6"
+                    },
+                    {
+                        "start": 210,
+                        "end": 229,
+                        "text": "(Wang et al., 2020;",
+                        "ref_id": "BIBREF23"
+                    },
+                    {
+                        "start": 230,
+                        "end": 246,
+                        "text": "Xu et al., 2019;",
+                        "ref_id": "BIBREF29"
+                    },
+                    {
+                        "start": 247,
+                        "end": 264,
+                        "text": "Cui et al., 2020)",
+                        "ref_id": "BIBREF6"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "Recently, pre-trained language model (e.g. BERT (Devlin et al., 2018) ) has provided substantial performance gain for extractive summarization. Liu and Lapata (2019b) modified standard BERT for document modelling. Xu et al. (2019) used a span-BERT to perform span-level summarization. Zhong et al. (2020) regarded document summarization as a semantic matching task and used a Siamese-BERT as the matching model. However, the valid length of standard BERT is only 512, which means most of them can hardly generalize to long-form documents effectively. Long Document Summarization. Recent years have seen a surge of interest on long document summarization, especially scientific publications. Celikyilmaz et al. (2018) used a multi-agent framework to boost the encoder performance. Cohan et al. (2018) proposed a hierarchical network that incorporates the discourse structures into the encoder and decoder. Xiao and Carenini (2019) proposed to model the local and global contexts jointly. Cui et al. (2020) proposed a hybrid model that employs a neural topic model (NTM) to infer latent topics as a kind of global information.",
+                "cite_spans": [
+                    {
+                        "start": 48,
+                        "end": 69,
+                        "text": "(Devlin et al., 2018)",
+                        "ref_id": "BIBREF8"
+                    },
+                    {
+                        "start": 144,
+                        "end": 166,
+                        "text": "Liu and Lapata (2019b)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 214,
+                        "end": 230,
+                        "text": "Xu et al. (2019)",
+                        "ref_id": "BIBREF29"
+                    },
+                    {
+                        "start": 285,
+                        "end": 304,
+                        "text": "Zhong et al. (2020)",
+                        "ref_id": "BIBREF32"
+                    },
+                    {
+                        "start": 691,
+                        "end": 716,
+                        "text": "Celikyilmaz et al. (2018)",
+                        "ref_id": "BIBREF2"
+                    },
+                    {
+                        "start": 780,
+                        "end": 799,
+                        "text": "Cohan et al. (2018)",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 905,
+                        "end": 929,
+                        "text": "Xiao and Carenini (2019)",
+                        "ref_id": "BIBREF27"
+                    },
+                    {
+                        "start": 987,
+                        "end": 1004,
+                        "text": "Cui et al. (2020)",
+                        "ref_id": "BIBREF6"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "Despite their success, these approaches still face the input length limitation and the difficulty in encoding long texts accurately. In comparison, our model addresses these problems with a novel segment-wise extraction way and can summarize arbitrarily long documents without any content truncation. Memory Networks. Memory network (Weston et al., 2015) is a general framework that employs a memory bank to model long-term information. Due to its flexible architecture and superior adaptability, it has been applied into various NLP scenarios, such as text classification (Zeng et al., 2018) , question answering (Kumar et al., 2016; Xiong et al., 2016) , and sentiment analysis (Tang et al., 2016) . In this study, we leverage a memory module capture beyond-window when performing segmentlevel summarization. To the best of our knowledge, memory networks have never been applied into extractive summarization task.",
+                "cite_spans": [
+                    {
+                        "start": 333,
+                        "end": 354,
+                        "text": "(Weston et al., 2015)",
+                        "ref_id": "BIBREF26"
+                    },
+                    {
+                        "start": 573,
+                        "end": 592,
+                        "text": "(Zeng et al., 2018)",
+                        "ref_id": "BIBREF30"
+                    },
+                    {
+                        "start": 614,
+                        "end": 634,
+                        "text": "(Kumar et al., 2016;",
+                        "ref_id": "BIBREF13"
+                    },
+                    {
+                        "start": 635,
+                        "end": 654,
+                        "text": "Xiong et al., 2016)",
+                        "ref_id": "BIBREF28"
+                    },
+                    {
+                        "start": 680,
+                        "end": 699,
+                        "text": "(Tang et al., 2016)",
+                        "ref_id": "BIBREF20"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "This section describes our model, namely, the Sliding Selector Network with Dynamic Memory (SSN-DM), of which Figure 2 gives an overall architecture. Formally, given a document D of arbitrary length, we first split D into multiple segments according to the pre-defined window length. Then, we use a BERT encoder to sequentially encode each segment and select salient sentences. During this process, a memory module is applied to achieve the information flow across different windows. Finally, the extracted sentences are aggregated to generate the final summary. We elucidate each module in the following subsections.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 117,
+                        "end": 118,
+                        "text": "2",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Model",
+                "sec_num": "3"
+            },
+            {
+                "text": "Let seg k = s k 1 , s k 2 , . . . , s k n be the kth window consisting of n sentences. We encode the window text with a pre-trained BERT, which has been proven effective on extractive summarization task (Liu and Lapata, 2019b; Xu et al., 2019; Cui et al., 2020) . Following previous studies, we modify the standard BERT by inserting [CLS] and [SEP ] tokens into the beginning and end of each sentence, respectively.",
+                "cite_spans": [
+                    {
+                        "start": 203,
+                        "end": 226,
+                        "text": "(Liu and Lapata, 2019b;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 227,
+                        "end": 243,
+                        "text": "Xu et al., 2019;",
+                        "ref_id": "BIBREF29"
+                    },
+                    {
+                        "start": 244,
+                        "end": 261,
+                        "text": "Cui et al., 2020)",
+                        "ref_id": "BIBREF6"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Sliding Encoder",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "O B = BERT (w k 1,CLS , w k 1,2 , . . . , w k n,SEP ) (1)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Sliding Encoder",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "where w k i,j denotes the jth word of the ith sentence. O B = {h k 1,CLS , h k 1,2 , . . . , h k n,SEP } denotes the representations of each token learned by BERT. We regard the hidden states of [CLS] tokens H k = {h k 1,CLS , h k 2,CLS , . . . , h k n,CLS } as the corresponding sentence representations.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Sliding Encoder",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "On top of BERT encoder, we add an additional layer to incorporate two types of structural information. The first part is the position information of the current window. In our segment-wise encoding, the position embeddings equipped in BERT are recalculated in each window, thereby losing the exact position of each token in the entire document. This positional bias may lead to inferior performance (Zhong et al., 2019; Dai et al., 2019) . To address this problem, we assign a window-level position encoding to each window as a complementary feature, indicating its relative position in the document.",
+                "cite_spans": [
+                    {
+                        "start": 399,
+                        "end": 419,
+                        "text": "(Zhong et al., 2019;",
+                        "ref_id": "BIBREF33"
+                    },
+                    {
+                        "start": 420,
+                        "end": 437,
+                        "text": "Dai et al., 2019)",
+                        "ref_id": "BIBREF7"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Sliding Encoder",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "In addition, we further introduce a group of section (e.g., introduction, conclusion) embeddings to capture the discourse information, which has been proved an important feature for scientific papers summarization (Cohan et al., 2018) . Combining",
+                "cite_spans": [
+                    {
+                        "start": 214,
+                        "end": 234,
+                        "text": "(Cohan et al., 2018)",
+                        "ref_id": "BIBREF5"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Sliding Encoder",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "\ud835\udc64 !,! BERT \ud835\udc64 !,# \ud835\udc36\ud835\udc3f\ud835\udc46 \u2026 \ud835\udc36\ud835\udc3f\ud835\udc46 \u2026 \ud835\udc64 $,! \ud835\udc64 $,# \ud835\udc36\ud835\udc3f\ud835\udc46 \u2026 \u210e !,! \u210e !,# \u2026 \u2026 \u210e $,! \u210e $,# \u210e $,% \u2026 \ud835\udc60 ! \ud835\udc60 \" \ud835\udc60 # Memory slots + Update Sliding Encoder Prediction Layer Memory Layer \u2026 \ud835\udc46\ud835\udc52\ud835\udc5b\ud835\udc61\ud835\udc52\ud835\udc5b\ud835\udc50\ud835\udc52 ! \ud835\udc46\ud835\udc52\ud835\udc5b\ud835\udc61\ud835\udc52\ud835\udc5b\ud835\udc50\ud835\udc52 # \ud835\udc46\ud835\udc52\ud835\udc5b\ud835\udc61\ud835\udc52\ud835\udc5b\ud835\udc50\ud835\udc52 $ \ud835\udc64 #,! \ud835\udc64 #,# \u210e #,! \u210e #,% \u210e #,# \ud835\udc0c \ud835\udfcf k-th window - \u2218 , , \u210e !,% \ud835\udc9a \ud835\udfcf , \ud835\udc9a \ud835\udfd0 , \u2026 , \ud835\udc9a \ud835\udc8f GNN-based Interaction \ud835\udc0c \ud835\udfd0 \ud835\udc0c \ud835\udfd1 \ud835\udc0c \ud835\udc8d Structural Information FFNN FFNN Figure 2:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Sliding Encoder",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "The framework of our model. There are three major components: (1) The sliding encoder generates representation of each sentence in the current window.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Sliding Encoder",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "(2) The memory layer infuses history information into sentence representations via graph neural networks.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Sliding Encoder",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "(3)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Sliding Encoder",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "The predication layer aggregates learned features to compute the binary sentence labels.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Sliding Encoder",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "these two parts, the structural encoding layer can be denoted as:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Sliding Encoder",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "f s (H k ) = tanh(W 1 H k + W 2 e k w + W 3 e s )",
+                        "eq_num": "(2)"
+                    }
+                ],
+                "section": "Sliding Encoder",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "where e k w indicates the kth window-level position embedding, and e s the section embedding. Both of them are randomly initialized and learned as a part of the model. Throughout the paper, W * represents trainable parameter matrix.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Sliding Encoder",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "Noticeably, the section features might not be generally available for long texts of other genres. Therefore, in our experiments, we consider e s as an optional setting and conduct quantitative investigations on Section 5 to probe into its effect on model performance.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Sliding Encoder",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "After encoding the window text, we infuse the history information of previous texts into the learned representations H k via a memory module. Let M k \u2208 R l\u00d7dm be the memory block in the kth window that preserves salient information of previous k -1 windows, where l represents the number of memory slots and d m represents the dimension of memory vector. M 0 is initialized with fixed values in the first window and then updated in the learning process dynamically. The detail of this part is explained in Section 3.4.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Graph-based Memory Interaction",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "We use a graph neural network to model the interaction between memory module and the current window. Concretely, we first construct a bipartite graph that consists of l memory nodes and n sentence nodes, whose embeddings are initialized with M k and H k , respectively. Then, we use graph attention network (GAT; Velickovic et al., 2018) to encode this graph. Given a sentence node h i , we update its representation by aggregating its neighboring nodes, as shown as follows,",
+                "cite_spans": [
+                    {
+                        "start": 313,
+                        "end": 337,
+                        "text": "Velickovic et al., 2018)",
+                        "ref_id": "BIBREF22"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Graph-based Memory Interaction",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "\ud835\udc9a \ud835\udfcf , \ud835\udc9a \ud835\udfd0 , \u2026 , \ud835\udc9a \ud835\udc8f \ud835\udc0c ! \" \ud835\udc0c ! # S ! S ! ! \ud835\udc53 !\"# \ud835\udc53 !\"# \ud835\udc0c !#$ Output \u00b0\ud835\udc5f$%& ' \ud835\udc14 ( (a) (a) (a) (a) (b) (b) (b) (c) (c) (c) (c) (c) (c)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Graph-based Memory Interaction",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "z k i,j =LeaklyRelu(W a [h k i ; SG(m k j )]), \u03b1 i,j = exp(z k i,j ) l j=1 exp(z k i,j )",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Graph-based Memory Interaction",
+                "sec_num": "3.2"
+            },
+            {
+                "text": ",",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Graph-based Memory Interaction",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "hk i = T t=1 l j=1 tanh(\u03b1 t i,j W t c SG(m k j )),",
+                        "eq_num": "(3)"
+                    }
+                ],
+                "section": "Graph-based Memory Interaction",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "where \u03b1 i,j denotes the attention weight from node h k i to node m k j . Multi-head attention is applied to stabilize the calculation process. Function SG(\u2022) stands for stop-gradient operation.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Graph-based Memory Interaction",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "We refer Hk and M k to the sentence representations and memory vectors after graph propagation, respectively. During the graph interaction, the sentence representations are completed and enriched by history information and vice versa.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Graph-based Memory Interaction",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "Empirical observations of prior research (Tang et al., 2016; Zeng et al., 2018) have shown that stacking multiple memory layers can bring further performance gain. Similarly, in our model, the multi-hops setting can be achieved by increasing the graph iteration number, i.e., repeating the GAT calculation process (Eq. 3).",
+                "cite_spans": [
+                    {
+                        "start": 41,
+                        "end": 60,
+                        "text": "(Tang et al., 2016;",
+                        "ref_id": "BIBREF20"
+                    },
+                    {
+                        "start": 61,
+                        "end": 79,
+                        "text": "Zeng et al., 2018)",
+                        "ref_id": "BIBREF30"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Graph-based Memory Interaction",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "We have obtained the sentence representations H k derived from window text, and its extended version Hk enriched by memory information. Given ith sentence, we send h k i and hk i into a MLP classifier to compute its summary label.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Prediction Layer",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "\u1ef9i = f o ( hk i , h k i , |h k i -h k i |, hk i \u2022 h k i ) (4)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Prediction Layer",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "where \u1ef9i represents the predicted probability of ith sentence, and \u2022 represents the point-wise operation.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Prediction Layer",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "f o is a feed-forward network with three hidden layers. We construct interaction features between hk i and h k i to capture the importance of ith sentence in both current segment and history context.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Prediction Layer",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "The training objective of the model is to minimize the binary cross-entropy loss given the predictions and ground truth sentence labels, i.e., L = -",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Prediction Layer",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "y i log(\u1ef9 i ) + (1 -y i )log(1 -\u1ef9i )",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Prediction Layer",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "After processing the entire document, we rank all the sentences and select top-k as the final summary, where k is a hyperparameter set according to the average length of reference summaries. It worth noting that the memory module also acts as an intermediary to make the sentence scores of different windows comparable.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Prediction Layer",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "Now we explain the learning process of memory module. Figure 3 presents the information flow of our model. In each window, after the prediction layer, we update the memory values with two inputs.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 61,
+                        "end": 62,
+                        "text": "3",
+                        "ref_id": "FIGREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Dynamic Memory Updating",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "First, recall that in GAT calculation, the updated memory vectors M k has also encoded the contextual information of the current window during the interaction with H k . Therefore, we combine M k and M k with gating mechanism (Chung et al., 2014) .",
+                "cite_spans": [
+                    {
+                        "start": 226,
+                        "end": 246,
+                        "text": "(Chung et al., 2014)",
+                        "ref_id": "BIBREF4"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Dynamic Memory Updating",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "\u03c3 k i = tanh(W m * mk i ), u k i = \u03c3 k i \u2022 m k i + (1 -\u03c3 k i ) \u2022 mk i (5)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Dynamic Memory Updating",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "where u k i is the liner interpolation between history memory m k i and the newly computed mi k . \u03c3 k i \u2208 R dm is an gate vector to modulates the information flow.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Dynamic Memory Updating",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "The second part refers to the extraction result of the current window. We first aggregate the sentence representations with their predicted probabilities (Eq.4) to parameterize the selected sentences.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Dynamic Memory Updating",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "r k sum = n i=1 \u1ef9i * h k i .",
+                        "eq_num": "(6)"
+                    }
+                ],
+                "section": "Dynamic Memory Updating",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "Here, r k sum can be considered a sentence-level coverage vector (See et al., 2017) that records what contents has been extracted from the current window. This ensures that the following selection is informed by previous decisions.",
+                "cite_spans": [
+                    {
+                        "start": 65,
+                        "end": 83,
+                        "text": "(See et al., 2017)",
+                        "ref_id": "BIBREF19"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Dynamic Memory Updating",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "Then, we use a single feedforward layer to generate new memory M k+1 = {m k+1 1 , . . . , m k+1 l } for next window.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Dynamic Memory Updating",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "m k+1 i = tanh(W 4 m k i + W 5 r k sum ). (",
+                        "eq_num": "7"
+                    }
+                ],
+                "section": "Dynamic Memory Updating",
+                "sec_num": "3.4"
+            },
+            {
+                "text": ")",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Dynamic Memory Updating",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "4 Experimental Setup (Cohan et al., 2018) are two recently constructed datasets collected from arXiv.com and PubMed.com, respectively. Both of them consist of scientific papers, which are much longer than the common news articles. We preprocess and split datasets in accordance with (Cohan et al., 2018) and use the oracle labels created by (Xiao and Carenini, 2019) . Their statistics is summarized in Table 1 .",
+                "cite_spans": [
+                    {
+                        "start": 21,
+                        "end": 41,
+                        "text": "(Cohan et al., 2018)",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 283,
+                        "end": 303,
+                        "text": "(Cohan et al., 2018)",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 341,
+                        "end": 366,
+                        "text": "(Xiao and Carenini, 2019)",
+                        "ref_id": "BIBREF27"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 409,
+                        "end": 410,
+                        "text": "1",
+                        "ref_id": "TABREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Dynamic Memory Updating",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "Figure 4 shows the position distributions of ground-truth sentences of the two datasets, where we can see the importance of the long text processing ability for extractive summarization models. For example, the maximum length of standard BERT is 512, which means that a large proportion (colored in grey) of ground-truth sentences would be inaccessible for existing state-of-the-art BERTbased summarization models.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 7,
+                        "end": 8,
+                        "text": "4",
+                        "ref_id": "FIGREF3"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Dynamic Memory Updating",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "We compare our model with the following state-ofthe-art summarization approaches. Pointer Generator Network (PGN; See et al., 2017) extends the standard seq2seq framework with attention, coverage, and copy mechanism. Discourse-Aware (Cohan et al., 2018) is an abstractive model particularly designed for summarizing long-form document with discourse structure. It employs a hierarchical encoder and explicitly introduces the section information of scientific papers. Seq2seq-local&global (Xiao and Carenini, 2019) is also an extractive model for long document summarization that jointly encodes local and global contexts. Match-Sum (Zhong et al., 2020) is a state-of-theart BERT-based summarization model. It performs summary-level extraction based on the matching scores between candidate summary and the source document. Topic-GraphSum (Cui et al., 2020) introduces a joint neural topic model to explore latent topics as a kind of global information to help summarize long documents. Since Cui et al. ( 2020) used different data preprocessing, we repeat the experiments using the model released by the authors and preprocess the data in accordance with previous studies (Cohan et al., 2018; Xiao and Carenini, 2019) to make the results comparable.",
+                "cite_spans": [
+                    {
+                        "start": 114,
+                        "end": 131,
+                        "text": "See et al., 2017)",
+                        "ref_id": "BIBREF19"
+                    },
+                    {
+                        "start": 233,
+                        "end": 253,
+                        "text": "(Cohan et al., 2018)",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 488,
+                        "end": 513,
+                        "text": "(Xiao and Carenini, 2019)",
+                        "ref_id": "BIBREF27"
+                    },
+                    {
+                        "start": 632,
+                        "end": 652,
+                        "text": "(Zhong et al., 2020)",
+                        "ref_id": "BIBREF32"
+                    },
+                    {
+                        "start": 838,
+                        "end": 856,
+                        "text": "(Cui et al., 2020)",
+                        "ref_id": "BIBREF6"
+                    },
+                    {
+                        "start": 1172,
+                        "end": 1192,
+                        "text": "(Cohan et al., 2018;",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 1193,
+                        "end": 1217,
+                        "text": "Xiao and Carenini, 2019)",
+                        "ref_id": "BIBREF27"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Models for Comparison",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "For the sliding encoder, we use the \"bert-baseuncased\" version with the hidden size of 768 and fine-tune it for all experiments. The maximum length of window is set to 512, and we segment the documents with sentence as the smallest unit to alleviate semantic fragility. For the memory module, we set the number of slots to 50 and the dimension of the memory vector to 768, same with the hidden size of the encoder. The iteration number of GAT is set to 2. We use Rouge (Lin, 2004) as the evaluation metric and select the hyperparameters by grid search based on the \"Rouge-2\" performance on validation sets. Further analysis about the impacts of hyperparameters are discussed in Section 5.2. We train our model with 2 NVIDIA V100 cards with a small batch size of 16. During the training, we use Adam (Kingma and Ba, 2015) to optimize parameters with a learning rate of 5e-4. An earlystop strategy (Caruana et al., 2000) is applied when valid loss is no longer decent. The extracted sentence number is set to 7 for arXiv dataset and 6 for PubMed dataset according to their average summary length. We report the average results over 5 runs.",
+                "cite_spans": [
+                    {
+                        "start": 469,
+                        "end": 480,
+                        "text": "(Lin, 2004)",
+                        "ref_id": "BIBREF14"
+                    },
+                    {
+                        "start": 799,
+                        "end": 820,
+                        "text": "(Kingma and Ba, 2015)",
+                        "ref_id": "BIBREF12"
+                    },
+                    {
+                        "start": 896,
+                        "end": 918,
+                        "text": "(Caruana et al., 2000)",
+                        "ref_id": "BIBREF1"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Implementation Details",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "Models arXiv PubMed R-1 R-2 R-L R-1 R-2 R-",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Implementation Details",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "Table 2 presents the results of different models on two datasets. The first section includes traditional approaches and the Oracle; the second and the third sections includes abstractive and extractive models, respectively; and the last section reports ours. Our model with discourse represents that we leverage section information as additional feature (Eq. 2).",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 6,
+                        "end": 7,
+                        "text": "2",
+                        "ref_id": "TABREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Main Results",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "Several observations deserve to be mentioned.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Main Results",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "\u2022 Encoding long texts for abstractive summarization is a challenge. The vanilla seq2seq with attention model and the pointer network perform rather poorly on the two datasets. A possible reason is that most encoders experience difficulties in modeling long-range contextual dependency when encoding long texts (Vaswani et al., 2017; Frermann and Klementiev, 2019) , thereby leading to the inferior performance during the generation (decoding) process.",
+                "cite_spans": [
+                    {
+                        "start": 310,
+                        "end": 332,
+                        "text": "(Vaswani et al., 2017;",
+                        "ref_id": "BIBREF21"
+                    },
+                    {
+                        "start": 333,
+                        "end": 363,
+                        "text": "Frermann and Klementiev, 2019)",
+                        "ref_id": "BIBREF10"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Main Results",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "\u2022 Global Information Modeling is important for summarizing long documents. We also observe that Seq2seq-local&global and Topic- GraphSum show promising results on the two datasets. Both of them explicitly model the global information (e.g., latent topics). Such observation provides a useful instruction for designing the summarization model for long documents.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Main Results",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "\u2022 Our framework is effective. Our two models substantially outperform all the baselines on two datasets. Figure 5 shows the proportion of sentences selected by each window, where we can see that our model can extract contents from any position of an entire document. By contrast, BERT-Sum and Topic-GraphSum, two BERTbased strong baselines, can only select sentences from the first 512 or 768 words because their truncation setting. This superiority endows our model a higher upper bound when summarizing long documents.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 112,
+                        "end": 113,
+                        "text": "5",
+                        "ref_id": "FIGREF4"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Main Results",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "\u2022 Discourse structure is automatically captured. The last section of Table 3 shows that the incorporation of discourse information brings no substantial performance gain for our model, though observations in previous studies (Cohan et al., 2018; Xiao and Carenini, 2019) have shown it an effective feature on arXiv and PubMed datasets. A possible reason is that our window-level position encoding has already learned such discourse information because it indicates the window's relative position in the document, while scientific papers are generally organized in specific and relatively fixed structure. This observation implies that the performance of our model does not rely on prior information of datasets. As a result, our model could be easily generalized to long texts of other genres.",
+                "cite_spans": [
+                    {
+                        "start": 225,
+                        "end": 245,
+                        "text": "(Cohan et al., 2018;",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 246,
+                        "end": 270,
+                        "text": "Xiao and Carenini, 2019)",
+                        "ref_id": "BIBREF27"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 75,
+                        "end": 76,
+                        "text": "3",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Main Results",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "We conduct experiments to probe into the impact of several important hyperparameters on model performance, including window length, number of memory slots, and number of memory hops (i.e., iteration number of GAT).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Results on Varying Hyperparameters",
+                "sec_num": "5.2"
+            },
+            {
+                "text": "Rouge Impact of Window Length. Intuitively, a shorter window means more accurate text encoding. However, it will result in more segments, which is demanding for memory module. Therefore, it is important to find a balanced window length. Figure 6 (left) shows that the overall performance is enhanced when the window length increases from a small value (128). This is because that too short windows suffer from semantic fragility. However, when the window length is set to 368-512, the performance shows a stable trend, implying that the step number and text length are both in a suitable range. For the sake of efficiency, we set the window length to 512 in our experiments.",
+                "cite_spans": [
+                    {
+                        "start": 237,
+                        "end": 252,
+                        "text": "Figure 6 (left)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Iteration",
+                "sec_num": null
+            },
+            {
+                "text": "Impact of Slots Numbers. Figure 6 (right) presents the Rouge-1 results on varying slot numbers. As can be seen, the curves on the two datasets are not monotonous and show a similar trend. In particular, within a particular range where l is relatively small, more slots produce better performance because the memory capacity is improving. However, such increasing trend will reach a saturation when slot number exceeds a threshold, which is 60 in our experiments.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 32,
+                        "end": 33,
+                        "text": "6",
+                        "ref_id": "FIGREF5"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Iteration",
+                "sec_num": null
+            },
+            {
+                "text": "Impact of Iteration Numbers. Recall that in memory layer, we employ a GAT to calculate the interaction between the memory and the window texts. To select the best iteration number (hop number) t, we compare the performance of different t on the validation sets of two datasets. Table 3 shows when t goes from 0 to 2, the performance is slightly boosted. However, this increasing trend is not always monotonous, and a larger t does not bring further substantial gain. To balance the time cost and performance, we select t=2 for the two datasets.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 284,
+                        "end": 285,
+                        "text": "3",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Iteration",
+                "sec_num": null
+            },
+            {
+                "text": "In this subsection, we perform quantitative and qualitative investigations to understand the effect 1-th window 4-th window 5-th window",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Effect of Dynamic Memory",
+                "sec_num": "5.3"
+            },
+            {
+                "text": "Social isolation and exclusion are associated with poor health status and premature death, while social cohesion, the quality of social relationships and the existence of trust, mutual obligations, and respect in communities, helps to protect people and their health. ..\u2026\u2026 Good nutrition is important for health and well-being at all stages of the life course; however, its determinants change with age. \u2026\u2026 Their results suggest that participation in social and cultural activities is beneficial for health, since it helps people to remain active and socially connected, fighting social isolation\u2026\u2026 \u2026\u2026 We decided to take a snapshot of the metropolitan area of the city of @entity investigating the relationship between adherence to diet or nutritional regimen, BMI, and subjective well-being and the impact of social and cultural participation. Engagement with community activities, friendships, and meaningful volunteer work are perceived as strategies for maintaining social participation, especially for people with a chronic disease. Thus, encouraging participation in social and cultural activities could be a key tool to fight social isolation and its health detrimental outcomes.\u2026\u2026 \u2026\u2026 Av a i l a b i l i t y and access to cultural and social activities are a key element of healthy environment, especially of urban environment. Social isolation can have a negative effect on nutrition, and thus we speculated that social and cultural participation might influence adherence to diet. \u2026\u2026 Subjective well-being significantly correlates with high self-esteem, and self-esteem shares significant variance in both mental well-being and happiness. Selfesteem has been found to be the most dominant and powerful\u2026 \u2026",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Our full model",
+                "sec_num": null
+            },
+            {
+                "text": "Social isolation and exclusion are associated with poor health status and premature death, while social cohesion, the quality of social relationships and the existence of trust, mutual obligations, and respect in communities, helps to protect people and their health.\u2026\u2026 Good nutrition is important for health and well-being at all stages of the life course; however, its determinants change with age. \u2026\u2026 Their results suggest that participation in social and cultural activities is beneficial for health, since it helps people to remain active and socially connected, fighting social isolation. \u2026\u2026 \u2026\u2026 We decided to take a snapshot of the metropolitan area of the city of @entity investigating the relationship between adherence to diet or nutritional regimen, BMI, and subjective well-being and the impact of social and cultural participation.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Ablated model (w/o memory)",
+                "sec_num": null
+            },
+            {
+                "text": "Engagement with community activities, friendships, and meaningful volunteer work are perceived as strategies for maintaining social participation, especially for people with a chronic disease. Thus, encouraging participation in social and cultural activities could be a key tool to fight social isolation and its health detrimental outcomes. \u2026\u2026 \u2026\u2026 Av a i l a b i l i t y and access to cultural and social activities are a key element of healthy environment, especially of urban environment. Social isolation can have a negative effect on nutrition, and thus we speculated that social and cultural participation might influence adherence to diet. \u2026\u2026 Subjective well-being significantly correlates with high self-esteem, and self-esteem shares significant variance in both mental well-being and happiness. Selfesteem has been found to be the most dominant and powerful\u2026 \u2026 of memory module. To this end, we construct an ablated version by removing the memory module and then seek to observe the result difference.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Ablated model (w/o memory)",
+                "sec_num": null
+            },
+            {
+                "text": "Case Study. Figure 7 provides a case study that compares the selection results of the ablated model and our full model. In 4-th window, the ablated model selects a repetitive sentence, whereas our full model avoids such error. This positive effect is brought by the extraction results preserved in memory module, which serve as a reminder of what information has already been selected. We also note that the ablated model selects wrong sentences in 5-th window. This is because that the model mistakes the \"self-esteem\" as the salient information. By contrast, our model, being aware of previous texts, correctly captures the \"social isolation\" as the core topic and filters the noisy sentences.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 19,
+                        "end": 20,
+                        "text": "7",
+                        "ref_id": "FIGREF6"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Ablated model (w/o memory)",
+                "sec_num": null
+            },
+            {
+                "text": "Quantitative analysis. In Figure 8 , we compare the Rouge scores between our full model and the ablated one. As can be seen, the performance declines dramatically on both datasets when the memory module is removed. This proves that the dynamic memory indeed plays a necessary role in our model.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 33,
+                        "end": 34,
+                        "text": "8",
+                        "ref_id": "FIGREF7"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Ablated model (w/o memory)",
+                "sec_num": null
+            },
+            {
+                "text": "We further analyze the effecf of memory module in better granularity. Intuitively, the memory module should enhance our model in the following aspects: (1) Reducing Redundancy. Our mem- ory module explicitly records the previous predictions and functions like a sentence-level coverage mechanism, which is expected to reduce repetition.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Ablated model (w/o memory)",
+                "sec_num": null
+            },
+            {
+                "text": "(2) Avoiding Noise. As discussed in Section 1, segment-wise extraction tend to mistake locally important content as summary sentences due to the lack of global context. Our memory module allows the cross-window information flow and therefore should alleviate this problem.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Ablated model (w/o memory)",
+                "sec_num": null
+            },
+            {
+                "text": "(3) Perceiving Sentence Length. The awareness of previous selections may also allow the model to capture sentence length information (Zhong et al., 2019) . Ideally, our model is able to adaptively change the change the length of extracted sentence, thereby achieving better performance.",
+                "cite_spans": [
+                    {
+                        "start": 133,
+                        "end": 153,
+                        "text": "(Zhong et al., 2019)",
+                        "ref_id": "BIBREF33"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Ablated model (w/o memory)",
+                "sec_num": null
+            },
+            {
+                "text": "To verify our hypothesis, we design three measurements to quantitatively evaluate the model per- , where N oisySent are the sentences with \"R-1\" smaller than a threshold. For the length deviation, we have S Len =",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Ablated model (w/o memory)",
+                "sec_num": null
+            },
+            {
+                "text": "(|sum|-|ref |) |ref |",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Models",
+                "sec_num": null
+            },
+            {
+                "text": ", where |sum| and |ref | denote the length of model-produced summary and reference summary, respectively.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Models",
+                "sec_num": null
+            },
+            {
+                "text": "Table 4 presents the comparison results. The model achieves better performance in three indicators when combined with memory mechanism, consistent with aforementioned analysis.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 6,
+                        "end": 7,
+                        "text": "4",
+                        "ref_id": "TABREF3"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Models",
+                "sec_num": null
+            },
+            {
+                "text": "In this study, we propose a novel extractive summarization that can summarize long-form documents without content loss. We conduct extensive experiments on two well-studied datasets that consist of scientific papers. Experimental results demonstrate that our model outperforms previous stateof-the-art models. In the future, we will extend our framework (i.e., a sliding encoder combined with long-range memory modeling) to abstractive summarization models.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion and Future Work",
+                "sec_num": "6"
+            },
+            {
+                "text": "Code will be released at https://github.com/ pcui-nlp/SSN_DM",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            }
+        ],
+        "back_matter": [],
+        "bib_entries": {
+            "BIBREF0": {
+                "ref_id": "b0",
+                "title": "Faithful to the original: Fact aware neural abstractive summarization",
+                "authors": [
+                    {
+                        "first": "Ziqiang",
+                        "middle": [],
+                        "last": "Cao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Furu",
+                        "middle": [],
+                        "last": "Wei",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Wenjie",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sujian",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "AAAI",
+                "volume": "",
+                "issue": "",
+                "pages": "4784--4791",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ziqiang Cao, Furu Wei, Wenjie Li, and Sujian Li. 2017. Faithful to the original: Fact aware neural abstrac- tive summarization. In AAAI, pages 4784-4791.",
+                "links": null
+            },
+            "BIBREF1": {
+                "ref_id": "b1",
+                "title": "Overfitting in neural nets: Backpropagation, conjugate gradient, and early stopping",
+                "authors": [
+                    {
+                        "first": "Rich",
+                        "middle": [],
+                        "last": "Caruana",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Steve",
+                        "middle": [],
+                        "last": "Lawrence",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "C",
+                        "middle": [
+                            "Lee"
+                        ],
+                        "last": "Giles",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2000,
+                "venue": "Advances in Neural Information Processing Systems",
+                "volume": "13",
+                "issue": "",
+                "pages": "402--408",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Rich Caruana, Steve Lawrence, and C. Lee Giles. 2000. Overfitting in neural nets: Backpropagation, con- jugate gradient, and early stopping. In Advances in Neural Information Processing Systems 13, vol- ume 13, pages 402-408.",
+                "links": null
+            },
+            "BIBREF2": {
+                "ref_id": "b2",
+                "title": "Deep communicating agents for abstractive summarization",
+                "authors": [
+                    {
+                        "first": "Asli",
+                        "middle": [],
+                        "last": "Celikyilmaz",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Antoine",
+                        "middle": [],
+                        "last": "Bosselut",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xiaodong",
+                        "middle": [],
+                        "last": "He",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yejin",
+                        "middle": [],
+                        "last": "Choi",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 2018 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies",
+                "volume": "1",
+                "issue": "",
+                "pages": "1662--1675",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Asli Celikyilmaz, Antoine Bosselut, Xiaodong He, and Yejin Choi. 2018. Deep communicating agents for abstractive summarization. In Proceedings of the 2018 Conference of the North American Chapter of the Association for Computational Linguistics: Hu- man Language Technologies, Volume 1 (Long Pa- pers), volume 1, pages 1662-1675.",
+                "links": null
+            },
+            "BIBREF3": {
+                "ref_id": "b3",
+                "title": "Neural summarization by extracting sentences and words",
+                "authors": [
+                    {
+                        "first": "Jianpeng",
+                        "middle": [],
+                        "last": "Cheng",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mirella",
+                        "middle": [],
+                        "last": "Lapata",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of the 54th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "1",
+                "issue": "",
+                "pages": "484--494",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jianpeng Cheng and Mirella Lapata. 2016. Neural sum- marization by extracting sentences and words. In Proceedings of the 54th Annual Meeting of the As- sociation for Computational Linguistics (Volume 1: Long Papers), volume 1, pages 484-494.",
+                "links": null
+            },
+            "BIBREF4": {
+                "ref_id": "b4",
+                "title": "Empirical evaluation of gated recurrent neural networks on sequence modeling",
+                "authors": [
+                    {
+                        "first": "Junyoung",
+                        "middle": [],
+                        "last": "Chung",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "\u00c7aglar",
+                        "middle": [],
+                        "last": "G\u00fcl\u00e7ehre",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kyunghyun",
+                        "middle": [],
+                        "last": "Cho",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yoshua",
+                        "middle": [],
+                        "last": "Bengio",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1412.3555"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Junyoung Chung, \u00c7aglar G\u00fcl\u00e7ehre, KyungHyun Cho, and Yoshua Bengio. 2014. Empirical evaluation of gated recurrent neural networks on sequence model- ing. arXiv preprint arXiv:1412.3555.",
+                "links": null
+            },
+            "BIBREF5": {
+                "ref_id": "b5",
+                "title": "A discourse-aware attention model for abstractive summarization of long documents",
+                "authors": [
+                    {
+                        "first": "Arman",
+                        "middle": [],
+                        "last": "Cohan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Franck",
+                        "middle": [],
+                        "last": "Dernoncourt",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Soon",
+                        "middle": [],
+                        "last": "Doo",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Trung",
+                        "middle": [],
+                        "last": "Kim",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Seokhwan",
+                        "middle": [],
+                        "last": "Bui",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Walter",
+                        "middle": [],
+                        "last": "Kim",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nazli",
+                        "middle": [],
+                        "last": "Chang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Goharian",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 2018 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies",
+                "volume": "2",
+                "issue": "",
+                "pages": "615--621",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Arman Cohan, Franck Dernoncourt, Doo Soon Kim, Trung Bui, Seokhwan Kim, Walter Chang, and Nazli Goharian. 2018. A discourse-aware attention model for abstractive summarization of long documents. In Proceedings of the 2018 Conference of the North American Chapter of the Association for Computa- tional Linguistics: Human Language Technologies, Volume 2 (Short Papers), volume 2, pages 615-621.",
+                "links": null
+            },
+            "BIBREF6": {
+                "ref_id": "b6",
+                "title": "Enhancing extractive text summarization with topic-aware graph neural networks",
+                "authors": [
+                    {
+                        "first": "Peng",
+                        "middle": [],
+                        "last": "Cui",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Le",
+                        "middle": [],
+                        "last": "Hu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yuanchao",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "Proceedings of the 28th International Conference on Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "5360--5371",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Peng Cui, Le Hu, and Yuanchao Liu. 2020. Enhanc- ing extractive text summarization with topic-aware graph neural networks. In Proceedings of the 28th International Conference on Computational Linguis- tics, pages 5360-5371.",
+                "links": null
+            },
+            "BIBREF7": {
+                "ref_id": "b7",
+                "title": "Transformer-xl: Attentive language models beyond a fixed-length context",
+                "authors": [
+                    {
+                        "first": "Zihang",
+                        "middle": [],
+                        "last": "Dai",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zhilin",
+                        "middle": [],
+                        "last": "Yang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yiming",
+                        "middle": [],
+                        "last": "Yang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jaime",
+                        "middle": [
+                            "G"
+                        ],
+                        "last": "Carbonell",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Quoc",
+                        "middle": [],
+                        "last": "Viet Le",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ruslan",
+                        "middle": [],
+                        "last": "Salakhutdinov",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "2978--2988",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Zihang Dai, Zhilin Yang, Yiming Yang, Jaime G. Car- bonell, Quoc Viet Le, and Ruslan Salakhutdinov. 2019. Transformer-xl: Attentive language models beyond a fixed-length context. In Proceedings of the 57th Annual Meeting of the Association for Compu- tational Linguistics, pages 2978-2988.",
+                "links": null
+            },
+            "BIBREF8": {
+                "ref_id": "b8",
+                "title": "Bert: Pre-training of deep bidirectional transformers for language understanding",
+                "authors": [
+                    {
+                        "first": "Jacob",
+                        "middle": [],
+                        "last": "Devlin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ming-Wei",
+                        "middle": [],
+                        "last": "Chang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kenton",
+                        "middle": [],
+                        "last": "Lee",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kristina",
+                        "middle": [
+                            "N"
+                        ],
+                        "last": "Toutanova",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies",
+                "volume": "1",
+                "issue": "",
+                "pages": "4171--4186",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jacob Devlin, Ming-Wei Chang, Kenton Lee, and Kristina N. Toutanova. 2018. Bert: Pre-training of deep bidirectional transformers for language under- standing. In Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Tech- nologies, Volume 1 (Long and Short Papers), pages 4171-4186.",
+                "links": null
+            },
+            "BIBREF9": {
+                "ref_id": "b9",
+                "title": "Banditsum: Extractive summarization as a contextual bandit",
+                "authors": [
+                    {
+                        "first": "Yue",
+                        "middle": [],
+                        "last": "Dong",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yikang",
+                        "middle": [],
+                        "last": "Shen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Eric",
+                        "middle": [],
+                        "last": "Crawford",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Herke",
+                        "middle": [],
+                        "last": "Van Hoof",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jackie",
+                        "middle": [],
+                        "last": "Chi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kit",
+                        "middle": [],
+                        "last": "Cheung",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "3739--3748",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Yue Dong, Yikang Shen, Eric Crawford, Herke van Hoof, and Jackie Chi Kit Cheung. 2018. Bandit- sum: Extractive summarization as a contextual ban- dit. In Proceedings of the 2018 Conference on Em- pirical Methods in Natural Language Processing, pages 3739-3748.",
+                "links": null
+            },
+            "BIBREF10": {
+                "ref_id": "b10",
+                "title": "Inducing document structure for aspect-based summarization",
+                "authors": [
+                    {
+                        "first": "Lea",
+                        "middle": [],
+                        "last": "Frermann",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alexandre",
+                        "middle": [],
+                        "last": "Klementiev",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "6263--6273",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Lea Frermann and Alexandre Klementiev. 2019. In- ducing document structure for aspect-based summa- rization. In Proceedings of the 57th Annual Meet- ing of the Association for Computational Linguistics, pages 6263-6273.",
+                "links": null
+            },
+            "BIBREF11": {
+                "ref_id": "b11",
+                "title": "Teaching machines to read and comprehend",
+                "authors": [
+                    {
+                        "first": "Karl",
+                        "middle": [],
+                        "last": "Moritz Hermann",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tom\u00e1\u0161",
+                        "middle": [],
+                        "last": "Ko\u010disk\u00fd",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Edward",
+                        "middle": [],
+                        "last": "Grefenstette",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Lasse",
+                        "middle": [],
+                        "last": "Espeholt",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Will",
+                        "middle": [],
+                        "last": "Kay",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mustafa",
+                        "middle": [],
+                        "last": "Suleyman",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Phil",
+                        "middle": [],
+                        "last": "Blunsom",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "NIPS'15 Proceedings of the 28th International Conference on Neural Information Processing Systems",
+                "volume": "1",
+                "issue": "",
+                "pages": "1693--1701",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Karl Moritz Hermann, Tom\u00e1\u0161 Ko\u010disk\u00fd, Edward Grefen- stette, Lasse Espeholt, Will Kay, Mustafa Suleyman, and Phil Blunsom. 2015. Teaching machines to read and comprehend. In NIPS'15 Proceedings of the 28th International Conference on Neural Infor- mation Processing Systems -Volume 1, volume 28, pages 1693-1701.",
+                "links": null
+            },
+            "BIBREF12": {
+                "ref_id": "b12",
+                "title": "Adam: A method for stochastic optimization",
+                "authors": [
+                    {
+                        "first": "P",
+                        "middle": [],
+                        "last": "Diederik",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jimmy",
+                        "middle": [
+                            "Lei"
+                        ],
+                        "last": "Kingma",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Ba",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "ICLR 2015 : International Conference on Learning Representations",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Diederik P. Kingma and Jimmy Lei Ba. 2015. Adam: A method for stochastic optimization. In ICLR 2015 : International Conference on Learning Representa- tions 2015.",
+                "links": null
+            },
+            "BIBREF13": {
+                "ref_id": "b13",
+                "title": "Ask me anything: dynamic memory networks for natural language processing",
+                "authors": [
+                    {
+                        "first": "Ankit",
+                        "middle": [],
+                        "last": "Kumar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ozan",
+                        "middle": [],
+                        "last": "Irsoy",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Peter",
+                        "middle": [],
+                        "last": "Ondruska",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mohit",
+                        "middle": [],
+                        "last": "Iyyer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "James",
+                        "middle": [],
+                        "last": "Bradbury",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ishaan",
+                        "middle": [],
+                        "last": "Gulrajani",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Victor",
+                        "middle": [],
+                        "last": "Zhong",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Romain",
+                        "middle": [],
+                        "last": "Paulus",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Richard",
+                        "middle": [],
+                        "last": "Socher",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "ICML'16 Proceedings of the 33rd International Conference on International Conference on Machine Learning",
+                "volume": "48",
+                "issue": "",
+                "pages": "1378--1387",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ankit Kumar, Ozan Irsoy, Peter Ondruska, Mohit Iyyer, James Bradbury, Ishaan Gulrajani, Victor Zhong, Romain Paulus, and Richard Socher. 2016. Ask me anything: dynamic memory networks for natural lan- guage processing. In ICML'16 Proceedings of the 33rd International Conference on International Con- ference on Machine Learning -Volume 48, pages 1378-1387.",
+                "links": null
+            },
+            "BIBREF14": {
+                "ref_id": "b14",
+                "title": "Rouge: A package for automatic evaluation of summaries",
+                "authors": [
+                    {
+                        "first": "Chin-Yew",
+                        "middle": [],
+                        "last": "Lin",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2004,
+                "venue": "Proc. Workshop on Text Summarization Branches Out, Post Conference Workshop of ACL 2004",
+                "volume": "",
+                "issue": "",
+                "pages": "74--81",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Chin-Yew Lin. 2004. Rouge: A package for automatic evaluation of summaries. In Proc. Workshop on Text Summarization Branches Out, Post Conference Workshop of ACL 2004, pages 74-81.",
+                "links": null
+            },
+            "BIBREF15": {
+                "ref_id": "b15",
+                "title": "Hierarchical transformers for multi-document summarization",
+                "authors": [
+                    {
+                        "first": "Yang",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mirella",
+                        "middle": [],
+                        "last": "Lapata",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "5070--5081",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Yang Liu and Mirella Lapata. 2019a. Hierarchical transformers for multi-document summarization. In Proceedings of the 57th Annual Meeting of the Asso- ciation for Computational Linguistics, pages 5070- 5081.",
+                "links": null
+            },
+            "BIBREF16": {
+                "ref_id": "b16",
+                "title": "Text summarization with pretrained encoders",
+                "authors": [
+                    {
+                        "first": "Yang",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mirella",
+                        "middle": [],
+                        "last": "Lapata",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing (EMNLP-IJCNLP)",
+                "volume": "",
+                "issue": "",
+                "pages": "3728--3738",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Yang Liu and Mirella Lapata. 2019b. Text summariza- tion with pretrained encoders. In Proceedings of the 2019 Conference on Empirical Methods in Nat- ural Language Processing and the 9th International Joint Conference on Natural Language Processing (EMNLP-IJCNLP), pages 3728-3738.",
+                "links": null
+            },
+            "BIBREF17": {
+                "ref_id": "b17",
+                "title": "Summarunner: A recurrent neural network based sequence model for extractive summarization of documents",
+                "authors": [
+                    {
+                        "first": "Ramesh",
+                        "middle": [],
+                        "last": "Nallapati",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Feifei",
+                        "middle": [],
+                        "last": "Zhai",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Bowen",
+                        "middle": [],
+                        "last": "Zhou",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of the AAAI Conference on Artificial Intelligence",
+                "volume": "31",
+                "issue": "",
+                "pages": "3075--3081",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ramesh Nallapati, Feifei Zhai, and Bowen Zhou. 2016. Summarunner: A recurrent neural network based se- quence model for extractive summarization of doc- uments. In Proceedings of the AAAI Conference on Artificial Intelligence, volume 31, pages 3075-3081.",
+                "links": null
+            },
+            "BIBREF18": {
+                "ref_id": "b18",
+                "title": "Don't give me the details, just the summary! topic-aware convolutional neural networks for extreme summarization",
+                "authors": [
+                    {
+                        "first": "Shashi",
+                        "middle": [],
+                        "last": "Narayan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Shay",
+                        "middle": [
+                            "B"
+                        ],
+                        "last": "Cohen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mirella",
+                        "middle": [],
+                        "last": "Lapata",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "1797--1807",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Shashi Narayan, Shay B. Cohen, and Mirella Lapata. 2018. Don't give me the details, just the summary! topic-aware convolutional neural networks for ex- treme summarization. In Proceedings of the 2018 Conference on Empirical Methods in Natural Lan- guage Processing, pages 1797-1807.",
+                "links": null
+            },
+            "BIBREF19": {
+                "ref_id": "b19",
+                "title": "Get to the point: Summarization with pointer-generator networks",
+                "authors": [
+                    {
+                        "first": "Abigail",
+                        "middle": [],
+                        "last": "See",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Peter",
+                        "middle": [
+                            "J"
+                        ],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [
+                            "D"
+                        ],
+                        "last": "Manning",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Proceedings of the 55th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "1",
+                "issue": "",
+                "pages": "1073--1083",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Abigail See, Peter J. Liu, and Christopher D. Man- ning. 2017. Get to the point: Summarization with pointer-generator networks. In Proceedings of the 55th Annual Meeting of the Association for Compu- tational Linguistics (Volume 1: Long Papers), vol- ume 1, pages 1073-1083.",
+                "links": null
+            },
+            "BIBREF20": {
+                "ref_id": "b20",
+                "title": "Aspect level sentiment classification with deep memory network",
+                "authors": [
+                    {
+                        "first": "Duyu",
+                        "middle": [],
+                        "last": "Tang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Bing",
+                        "middle": [],
+                        "last": "Qin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ting",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of the 2016 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "214--224",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Duyu Tang, Bing Qin, and Ting Liu. 2016. Aspect level sentiment classification with deep memory net- work. In Proceedings of the 2016 Conference on Empirical Methods in Natural Language Processing, pages 214-224.",
+                "links": null
+            },
+            "BIBREF21": {
+                "ref_id": "b21",
+                "title": "Attention is all you need",
+                "authors": [
+                    {
+                        "first": "Ashish",
+                        "middle": [],
+                        "last": "Vaswani",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Noam",
+                        "middle": [],
+                        "last": "Shazeer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Niki",
+                        "middle": [],
+                        "last": "Parmar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jakob",
+                        "middle": [],
+                        "last": "Uszkoreit",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Llion",
+                        "middle": [],
+                        "last": "Jones",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Aidan",
+                        "middle": [
+                            "N"
+                        ],
+                        "last": "Gomez",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Lukasz",
+                        "middle": [],
+                        "last": "Kaiser",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Illia",
+                        "middle": [],
+                        "last": "Polosukhin",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Proceedings of the 31st International Conference on Neural Information Processing Systems",
+                "volume": "30",
+                "issue": "",
+                "pages": "5998--6008",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Lukasz Kaiser, and Illia Polosukhin. 2017. Attention is all you need. In Proceedings of the 31st International Conference on Neural Information Processing Sys- tems, volume 30, pages 5998-6008.",
+                "links": null
+            },
+            "BIBREF22": {
+                "ref_id": "b22",
+                "title": "Graph attention networks",
+                "authors": [
+                    {
+                        "first": "Petar",
+                        "middle": [],
+                        "last": "Velickovic",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Guillem",
+                        "middle": [],
+                        "last": "Cucurull",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Arantxa",
+                        "middle": [],
+                        "last": "Casanova",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Adriana",
+                        "middle": [],
+                        "last": "Romero",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Pietro",
+                        "middle": [],
+                        "last": "Li\u00f2",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yoshua",
+                        "middle": [],
+                        "last": "Bengio",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "International Conference on Learning Representations",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Petar Velickovic, Guillem Cucurull, Arantxa Casanova, Adriana Romero, Pietro Li\u00f2, and Yoshua Bengio. 2018. Graph attention networks. In International Conference on Learning Representations.",
+                "links": null
+            },
+            "BIBREF23": {
+                "ref_id": "b23",
+                "title": "Heterogeneous graph neural networks for extractive document summarization",
+                "authors": [
+                    {
+                        "first": "Danqing",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Pengfei",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yining",
+                        "middle": [],
+                        "last": "Zheng",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "6209--6219",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Danqing Wang, Pengfei Liu, Yining Zheng, Xipeng Qiu, and Xuanjing Huang. 2020. Heterogeneous graph neural networks for extractive document sum- marization. In Proceedings of the 58th Annual Meet- ing of the Association for Computational Linguistics, pages 6209-6219.",
+                "links": null
+            },
+            "BIBREF24": {
+                "ref_id": "b24",
+                "title": "Exploring domain shift in extractive text summarization. arXiv: Computation and Language",
+                "authors": [
+                    {
+                        "first": "Danqing",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Pengfei",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ming",
+                        "middle": [],
+                        "last": "Zhong",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jie",
+                        "middle": [],
+                        "last": "Fu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xipeng",
+                        "middle": [],
+                        "last": "Qiu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xuanjing",
+                        "middle": [],
+                        "last": "Huang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Danqing Wang, Pengfei Liu, Ming Zhong, Jie Fu, Xipeng Qiu, and Xuanjing Huang. 2019a. Explor- ing domain shift in extractive text summarization. arXiv: Computation and Language.",
+                "links": null
+            },
+            "BIBREF25": {
+                "ref_id": "b25",
+                "title": "Multi-passage bert: A globally normalized bert model for opendomain question answering",
+                "authors": [
+                    {
+                        "first": "Zhiguo",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Patrick",
+                        "middle": [],
+                        "last": "Ng",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xiaofei",
+                        "middle": [],
+                        "last": "Ma",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing (EMNLP-IJCNLP)",
+                "volume": "",
+                "issue": "",
+                "pages": "5877--5881",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Zhiguo Wang, Patrick Ng, Xiaofei Ma, Ramesh Nal- lapati, and Bing Xiang. 2019b. Multi-passage bert: A globally normalized bert model for open- domain question answering. In Proceedings of the 2019 Conference on Empirical Methods in Natu- ral Language Processing and the 9th International Joint Conference on Natural Language Processing (EMNLP-IJCNLP), pages 5877-5881.",
+                "links": null
+            },
+            "BIBREF26": {
+                "ref_id": "b26",
+                "title": "Memory networks",
+                "authors": [
+                    {
+                        "first": "Jason",
+                        "middle": [],
+                        "last": "Weston",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sumit",
+                        "middle": [],
+                        "last": "Chopra",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Antoine",
+                        "middle": [],
+                        "last": "Bordes",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "ICLR 2015 : International Conference on Learning Representations",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jason Weston, Sumit Chopra, and Antoine Bordes. 2015. Memory networks. In ICLR 2015 : Inter- national Conference on Learning Representations 2015.",
+                "links": null
+            },
+            "BIBREF27": {
+                "ref_id": "b27",
+                "title": "Extractive summarization of long documents by combining global and local context",
+                "authors": [
+                    {
+                        "first": "Wen",
+                        "middle": [],
+                        "last": "Xiao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Giuseppe",
+                        "middle": [],
+                        "last": "Carenini",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing (EMNLP-IJCNLP)",
+                "volume": "",
+                "issue": "",
+                "pages": "3009--3019",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Wen Xiao and Giuseppe Carenini. 2019. Extractive summarization of long documents by combining global and local context. In Proceedings of the 2019 Conference on Empirical Methods in Natu- ral Language Processing and the 9th International Joint Conference on Natural Language Processing (EMNLP-IJCNLP), pages 3009-3019.",
+                "links": null
+            },
+            "BIBREF28": {
+                "ref_id": "b28",
+                "title": "Dynamic memory networks for visual and textual question answering",
+                "authors": [
+                    {
+                        "first": "Caiming",
+                        "middle": [],
+                        "last": "Xiong",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Stephen",
+                        "middle": [],
+                        "last": "Merity",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Richard",
+                        "middle": [],
+                        "last": "Socher",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "ICML'16 Proceedings of the 33rd International Conference on International Conference on Machine Learning",
+                "volume": "48",
+                "issue": "",
+                "pages": "2397--2406",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Caiming Xiong, Stephen Merity, and Richard Socher. 2016. Dynamic memory networks for visual and textual question answering. In ICML'16 Proceed- ings of the 33rd International Conference on Inter- national Conference on Machine Learning -Volume 48, pages 2397-2406.",
+                "links": null
+            },
+            "BIBREF29": {
+                "ref_id": "b29",
+                "title": "Discourse-aware neural extractive model for text summarization",
+                "authors": [
+                    {
+                        "first": "Jiacheng",
+                        "middle": [],
+                        "last": "Xu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zhe",
+                        "middle": [],
+                        "last": "Gan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yu",
+                        "middle": [],
+                        "last": "Cheng",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jingjing",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jiacheng Xu, Zhe Gan, Yu Cheng, and Jingjing Liu. 2019. Discourse-aware neural extractive model for text summarization.",
+                "links": null
+            },
+            "BIBREF30": {
+                "ref_id": "b30",
+                "title": "Topic memory networks for short text classification",
+                "authors": [
+                    {
+                        "first": "Jichuan",
+                        "middle": [],
+                        "last": "Zeng",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jing",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yan",
+                        "middle": [],
+                        "last": "Song",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Cuiyun",
+                        "middle": [],
+                        "last": "Gao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Michael",
+                        "middle": [
+                            "R"
+                        ],
+                        "last": "Lyu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Irwin",
+                        "middle": [],
+                        "last": "King",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "3120--3131",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jichuan Zeng, Jing Li, Yan Song, Cuiyun Gao, Michael R. Lyu, and Irwin King. 2018. Topic mem- ory networks for short text classification. In Pro- ceedings of the 2018 Conference on Empirical Meth- ods in Natural Language Processing, pages 3120- 3131.",
+                "links": null
+            },
+            "BIBREF31": {
+                "ref_id": "b31",
+                "title": "Hibert: Document level pre-training of hierarchical bidirectional transformers for document summarization",
+                "authors": [
+                    {
+                        "first": "Xingxing",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Furu",
+                        "middle": [],
+                        "last": "Wei",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ming",
+                        "middle": [],
+                        "last": "Zhou",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "5059--5069",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Xingxing Zhang, Furu Wei, and Ming Zhou. 2019. Hibert: Document level pre-training of hierarchi- cal bidirectional transformers for document summa- rization. In Proceedings of the 57th Annual Meet- ing of the Association for Computational Linguistics, pages 5059-5069.",
+                "links": null
+            },
+            "BIBREF32": {
+                "ref_id": "b32",
+                "title": "Extractive summarization as text matching",
+                "authors": [
+                    {
+                        "first": "Ming",
+                        "middle": [],
+                        "last": "Zhong",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Pengfei",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yiran",
+                        "middle": [],
+                        "last": "Chen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Danqing",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "6197--6208",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ming Zhong, Pengfei Liu, Yiran Chen, Danqing Wang, Xipeng Qiu, and Xuanjing Huang. 2020. Extractive summarization as text matching. In Proceedings of the 58th Annual Meeting of the Association for Com- putational Linguistics, pages 6197-6208.",
+                "links": null
+            },
+            "BIBREF33": {
+                "ref_id": "b33",
+                "title": "Searching for effective neural extractive summarization: What works and what's next",
+                "authors": [
+                    {
+                        "first": "Ming",
+                        "middle": [],
+                        "last": "Zhong",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Pengfei",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Danqing",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xipeng",
+                        "middle": [],
+                        "last": "Qiu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xuanjing",
+                        "middle": [],
+                        "last": "Huang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "1049--1058",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ming Zhong, Pengfei Liu, Danqing Wang, Xipeng Qiu, and Xuanjing Huang. 2019. Searching for effec- tive neural extractive summarization: What works and what's next. In Proceedings of the 57th Annual Meeting of the Association for Computational Lin- guistics, pages 1049-1058.",
+                "links": null
+            },
+            "BIBREF34": {
+                "ref_id": "b34",
+                "title": "Neural document summarization by jointly learning to score and select sentences",
+                "authors": [
+                    {
+                        "first": "Qingyu",
+                        "middle": [],
+                        "last": "Zhou",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nan",
+                        "middle": [],
+                        "last": "Yang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Furu",
+                        "middle": [],
+                        "last": "Wei",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Shaohan",
+                        "middle": [],
+                        "last": "Huang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ming",
+                        "middle": [],
+                        "last": "Zhou",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tiejun",
+                        "middle": [],
+                        "last": "Zhao",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 56th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "1",
+                "issue": "",
+                "pages": "654--663",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Qingyu Zhou, Nan Yang, Furu Wei, Shaohan Huang, Ming Zhou, and Tiejun Zhao. 2018. Neural docu- ment summarization by jointly learning to score and select sentences. In Proceedings of the 56th Annual Meeting of the Association for Computational Lin- guistics (Volume 1: Long Papers), volume 1, pages 654-663.",
+                "links": null
+            }
+        },
+        "ref_entries": {
+            "FIGREF0": {
+                "num": null,
+                "text": "Figure 1: An example where a paragraph-by-paragraph extraction will produce an incoherent summary.",
+                "uris": null,
+                "fig_num": "1",
+                "type_str": "figure"
+            },
+            "FIGREF1": {
+                "num": null,
+                "text": "Figure 3: An illustration of the information flow in our model. Paths (a) denote the interaction between memory vectors (M) and sentence representations (S) via a GAT layer. Paths (b) denote the compution of sentence labels. Paths (c) denote the updating process of memory module.",
+                "uris": null,
+                "fig_num": "3",
+                "type_str": "figure"
+            },
+            "FIGREF3": {
+                "num": null,
+                "text": "Figure 4: Position distribution of gold sentences on two datasets.",
+                "uris": null,
+                "fig_num": "4",
+                "type_str": "figure"
+            },
+            "FIGREF4": {
+                "num": null,
+                "text": "Figure 5: Proportion of sentences selected by each window.",
+                "uris": null,
+                "fig_num": "5",
+                "type_str": "figure"
+            },
+            "FIGREF5": {
+                "num": null,
+                "text": "Figure 6: Impact of window length (left) and slot number (right) on model performance (R-1).",
+                "uris": null,
+                "fig_num": "6",
+                "type_str": "figure"
+            },
+            "FIGREF6": {
+                "num": null,
+                "text": "Figure 7: Comparison between the output of our full model (top) and the ablated model (bottom). We use underlined text to denote model-selected sentences and bold text to denote the ground truth sentences. The ablated model selects repetitive contents in 4-th window and noisy contents in 5-th window.",
+                "uris": null,
+                "fig_num": "7",
+                "type_str": "figure"
+            },
+            "FIGREF7": {
+                "num": null,
+                "text": "Figure 8: Rouge results of our full model and the ablated version on the two datasets.",
+                "uris": null,
+                "fig_num": "8",
+                "type_str": "figure"
+            },
+            "TABREF0": {
+                "content": "<table><tr><td>Datasets</td><td>Train</td><td>#Doc Val.</td><td>Test</td><td>Avg. Tokens Doc Sum</td></tr><tr><td>arXiv</td><td colspan=\"4\">203,037 6,436 6,440 4,938 220</td></tr><tr><td colspan=\"5\">PubMed 119,224 6,633 6,658 3,016 203</td></tr></table>",
+                "type_str": "table",
+                "text": "The statistics of two datasets arXiv and PubMed",
+                "html": null,
+                "num": null
+            },
+            "TABREF1": {
+                "content": "<table><tr><td>L</td></tr></table>",
+                "type_str": "table",
+                "text": "Rouge results on two dataets. Apart from the baselines mentioned in Section 4.2, we also collected the public results reported by previous studies. Oracle represents the results of ground truth sentences extracted by the greedy algorithm, usually as the upper bound. Results with + are token fromCohan et al. (2018), and results with * are token fromXiao and Carenini (2019).",
+                "html": null,
+                "num": null
+            },
+            "TABREF3": {
+                "content": "<table><tr><td>arXiv</td><td/><td/></tr><tr><td>w/o memory 0.105</td><td>0.118</td><td>1.247</td></tr><tr><td>Full model 0.033</td><td>0.011</td><td>0.295</td></tr><tr><td>PubMed</td><td/><td/></tr><tr><td>w/o memory 0.107</td><td>0.097</td><td>1.106</td></tr><tr><td>Full model 0.031</td><td>0.008</td><td>0.343</td></tr></table>",
+                "type_str": "table",
+                "text": "S Rep S N oise S Len Comparison between our full model and the ablated version. S Rep , S N oise and S Len are the metrics of repetition, noise, and length deviation. Lower is better.formance on above aspects. Similar to(Zhong et al., 2019), we useS Rep = 1 -CountU niq(ngram) Count(ngram)to measure the degree of repetition, where Count(ngram) and CountU niq(ngram) are the total and unique number of ngrams of selected sentences. For the noise measurement, we have S noise = Count(N oisySent)  Count(ExtractSent)",
+                "html": null,
+                "num": null
+            }
+        }
+    }
+}

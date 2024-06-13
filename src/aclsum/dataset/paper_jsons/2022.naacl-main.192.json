@@ -1,0 +1,3294 @@
+{
+    "paper_id": "2022",
+    "header": {
+        "generated_with": "S2ORC 1.0.0",
+        "date_generated": "2023-06-16T12:25:02.076326Z"
+    },
+    "title": "Necessity and Sufficiency for Explaining Text Classifiers: A Case Study in Hate Speech Detection",
+    "authors": [
+        {
+            "first": "Esma",
+            "middle": [],
+            "last": "Balk\u0131r",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "National Research Council",
+                "location": {
+                    "settlement": "Ottawa",
+                    "country": "Canada, Canada"
+                }
+            },
+            "email": "esma.balkir@nrc-cnrc.gc.ca"
+        },
+        {
+            "first": "Isar",
+            "middle": [],
+            "last": "Nejadgholi",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "National Research Council",
+                "location": {
+                    "settlement": "Ottawa",
+                    "country": "Canada, Canada"
+                }
+            },
+            "email": "isar.nejadgholi@nrc-cnrc.gc.ca"
+        },
+        {
+            "first": "Kathleen",
+            "middle": [
+                "C"
+            ],
+            "last": "Fraser",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "National Research Council",
+                "location": {
+                    "settlement": "Ottawa",
+                    "country": "Canada, Canada"
+                }
+            },
+            "email": "kathleen.fraser@nrc-cnrc.gc.ca"
+        },
+        {
+            "first": "Svetlana",
+            "middle": [],
+            "last": "Kiritchenko",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "National Research Council",
+                "location": {
+                    "settlement": "Ottawa",
+                    "country": "Canada, Canada"
+                }
+            },
+            "email": "svetlana.kiritchenko@nrc-cnrc.gc.ca"
+        }
+    ],
+    "year": "",
+    "venue": null,
+    "identifiers": {},
+    "abstract": "We present a novel feature attribution method for explaining text classifiers, and analyze it in the context of hate speech detection. Although feature attribution models usually provide a single importance score for each token, we instead provide two complementary and theoreticallygrounded scores -necessity and sufficiencyresulting in more informative explanations. We propose a transparent method that calculates these values by generating explicit perturbations of the input text, allowing the importance scores themselves to be explainable. We employ our method to explain the predictions of different hate speech detection models on the same set of curated examples from a test suite, and show that different values of necessity and sufficiency for identity terms correspond to different kinds of false positive errors, exposing sources of classifier bias against marginalized groups.",
+    "pdf_parse": {
+        "paper_id": "2022",
+        "_pdf_hash": "",
+        "abstract": [
+            {
+                "text": "We present a novel feature attribution method for explaining text classifiers, and analyze it in the context of hate speech detection. Although feature attribution models usually provide a single importance score for each token, we instead provide two complementary and theoreticallygrounded scores -necessity and sufficiencyresulting in more informative explanations. We propose a transparent method that calculates these values by generating explicit perturbations of the input text, allowing the importance scores themselves to be explainable. We employ our method to explain the predictions of different hate speech detection models on the same set of curated examples from a test suite, and show that different values of necessity and sufficiency for identity terms correspond to different kinds of false positive errors, exposing sources of classifier bias against marginalized groups.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            }
+        ],
+        "body_text": [
+            {
+                "text": "Explainability in AI (XAI) is critical in reaching various objectives during a system's development and deployment, including debugging the system, ensuring its fairness, safety and security, and understanding and appealing its decisions by end-users (Vaughan and Wallach, 2021; Luo et al., 2021) .",
+                "cite_spans": [
+                    {
+                        "start": 251,
+                        "end": 278,
+                        "text": "(Vaughan and Wallach, 2021;",
+                        "ref_id": "BIBREF40"
+                    },
+                    {
+                        "start": 279,
+                        "end": 296,
+                        "text": "Luo et al., 2021)",
+                        "ref_id": "BIBREF25"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "A popular class of local explanation techniques is feature attribution methods, where the aim is to provide scores for each feature according to how important that feature is for the classifier decision for a given input. From an intuitive perspective, one issue with feature attribution scores is that it is not always clear how to interpret the assigned importance in operational terms. Specifically, saying that a feature is 'important' might translate to two different predictions. The first interpretation is that if an important feature value is changed, then the prediction will change. The second interpretation is that, as long as the feature remains, the prediction will not change. The former interpretation corresponds to the necessity of the feature value, while the latter corresponds to its sufficiency.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "To further illustrate the difference between necessity and sufficiency, we take an example from hate speech detection. Consider the utterance \"I hate women\". For a perfect model, the token 'women' should have low sufficiency for a positive prediction, since merely the mention of this identity group should not trigger a hateful prediction. However, this token should have fairly high necessity, since a target identity is required for an abusive utterance to count as hate speech (e.g., \"I hate oranges\" should not be classified as hate speech). In this paper, we develop a method to estimate the necessity and sufficiency of each word in the input, as explanations for a binary text classifier's decisions.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Model-agnostic feature attribution methods like ours often perturb the input to be explained, obtain the predictions of the model for the perturbed instances, and aggregate the results to make conclusions about which input features are more influential on the model decision. When applying these methods to textual data, it is common to either drop the chosen tokens, or replace them with the mask token for those models that have been trained by fine-tuning a masked language model such as BERT (Devlin et al., 2019) . However, deleting tokens raises the possibility that a large portion of the perturbed examples are not fluent, and lie well outside the data manifold. Replacing some tokens with the mask token partially remedies this issue, however it raises others. Firstly, the explanation method ceases to be truly model-agnostic. Secondly, a masked sentence is in-distribution for the pre-trained model but out-of-distribution for the fine-tuned model, because the learned manifolds deviate from those formed during pre-training in the fine-tuning step.",
+                "cite_spans": [
+                    {
+                        "start": 496,
+                        "end": 517,
+                        "text": "(Devlin et al., 2019)",
+                        "ref_id": "BIBREF6"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "To avoid these problems we use a generative model to replace tokens with most probable n-grams. Generating perturbations in this way ensures that the perturbed instances are close to the true data manifold. It also provides an additional layer of transparency to the user, so they can decide whether to trust the explanation by checking how reasonable the perturbed examples seem.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Although supervised discriminative models rely fundamentally on correlations within the dataset, different models might rely on different correlations more or less depending on model architecture and biases, training methods, and other idiosyncrasies. To capture the distinction between correlations in the data and the direct causes of the prediction, we turn to the notion of interventions from causal inference (Pearl, 2009) . Previous work employing causal definitions of necessity and sufficiency for XAI have assumed tabular data with binary or numerical features. The situation in NLP is much more complex, since each feature is a word in context, and we have no concept of 'flipping' or 'increasing' feature values (as in binary data and numerical data, respectively). Instead, our method generates perturbations of the input text that have high probability of being fluent while minimizing the probability that the generated text will also be a direct cause of the prediction we aim to explain.",
+                "cite_spans": [
+                    {
+                        "start": 414,
+                        "end": 427,
+                        "text": "(Pearl, 2009)",
+                        "ref_id": "BIBREF31"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "As our application domain we choose hate speech detection, a prominent NLP task with significant social outcomes (Fortuna and Nunes, 2018; Kiritchenko et al., 2021) . It has been shown that contemporary hate speech classifiers tend to learn spurious correlations, including those between identity terms and the positive (hate) class, which can result in further discrimination of already marginalized groups (Dixon et al., 2018; Park et al., 2018; Garg et al., 2019) . We apply our explainability metrics to test classifiers' fairness towards identity-based groups (e.g., women, Muslims). We show how necessity and sufficiency metrics calculated for identity terms over hateful sentences can explain the classifier's behaviour on non-hateful statements, highlighting classifiers' tendencies to over-rely on the presence of identity terms or to ignore the characteristics of the object of abuse (e.g., protected identity groups vs. non-human entities).",
+                "cite_spans": [
+                    {
+                        "start": 113,
+                        "end": 138,
+                        "text": "(Fortuna and Nunes, 2018;",
+                        "ref_id": "BIBREF11"
+                    },
+                    {
+                        "start": 139,
+                        "end": 164,
+                        "text": "Kiritchenko et al., 2021)",
+                        "ref_id": "BIBREF23"
+                    },
+                    {
+                        "start": 408,
+                        "end": 428,
+                        "text": "(Dixon et al., 2018;",
+                        "ref_id": "BIBREF8"
+                    },
+                    {
+                        "start": 429,
+                        "end": 447,
+                        "text": "Park et al., 2018;",
+                        "ref_id": "BIBREF30"
+                    },
+                    {
+                        "start": 448,
+                        "end": 466,
+                        "text": "Garg et al., 2019)",
+                        "ref_id": "BIBREF14"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "The contributions of this work are as follows:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "\u2022 We present the first methodology for calculating necessity and sufficiency metrics for text data as a feature attribution method. Arguably, this dual explainability measure is more informative and allows for deeper insights into a model's inner workings than traditional single metrics.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "\u2022 We use a generative model for producing input perturbations to avoid the out-of-distribution prediction issues that emerge with token deletion and masking techniques.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "\u2022 To evaluate the new methodology, we apply it to the task of explaining hate speech classification, and demonstrate that it can detect and explain biases in hate speech classifiers.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "We make the implementation code freely available to researchers to facilitate further advancement of explainability techniques for NLP.1 ",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Explanations are often categorized as to whether they are for an individual prediction (local) or for the model reasoning as a whole (global), and whether the explanation generation is a part of the prediction process (self-explaining) or generated through additional post-processing (post-hoc) (Guidotti et al., 2018; Adadi and Berrada, 2018) . The necessity and sufficiency explanations presented here belong to the class of local explanation methods, as do most of the XAI methods applied to NLP data (Danilevsky et al., 2020) . It is also a post-hoc method to the degree that it is entirely model-agnostic: all it requires is binary predictions on provided inputs.",
+                "cite_spans": [
+                    {
+                        "start": 295,
+                        "end": 318,
+                        "text": "(Guidotti et al., 2018;",
+                        "ref_id": "BIBREF15"
+                    },
+                    {
+                        "start": 319,
+                        "end": 343,
+                        "text": "Adadi and Berrada, 2018)",
+                        "ref_id": "BIBREF0"
+                    },
+                    {
+                        "start": 504,
+                        "end": 529,
+                        "text": "(Danilevsky et al., 2020)",
+                        "ref_id": "BIBREF4"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Background and Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "There are a few classes of popular techniques for explaining natural language processing models (see Danilevsky et al. (2020) for a survey). One approach is feature attribution methods that allocate importance scores to each feature. These can be architecture-specific (Bahdanau et al., 2015; Sundararajan et al., 2017) , or model-agnostic (Ribeiro et al., 2016; Lundberg and Lee, 2017) .",
+                "cite_spans": [
+                    {
+                        "start": 101,
+                        "end": 125,
+                        "text": "Danilevsky et al. (2020)",
+                        "ref_id": "BIBREF4"
+                    },
+                    {
+                        "start": 269,
+                        "end": 292,
+                        "text": "(Bahdanau et al., 2015;",
+                        "ref_id": "BIBREF1"
+                    },
+                    {
+                        "start": 293,
+                        "end": 319,
+                        "text": "Sundararajan et al., 2017)",
+                        "ref_id": "BIBREF39"
+                    },
+                    {
+                        "start": 340,
+                        "end": 362,
+                        "text": "(Ribeiro et al., 2016;",
+                        "ref_id": "BIBREF34"
+                    },
+                    {
+                        "start": 363,
+                        "end": 386,
+                        "text": "Lundberg and Lee, 2017)",
+                        "ref_id": "BIBREF24"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Background and Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "Another approach is counterfactual explanations, which provide similar examples to the input in order to show what kinds of small differences affect the prediction of the model (Wu et al., 2021; Kaushik et al., 2021; Ribeiro et al., 2020; Ross et al., 2020) . These contrastive examples are related to the concept of counterfactual reasoning from the causality literature, that formalizes the question: \"Would the outcome have happened if this event had not occurred?\" in order to determine whether the event was a cause of the observed outcome (Pearl, 2009) . Counterfactual explanation methods are often targeted at certain semantic or syntactic phenomena such as negation (Kaushik et al., 2021) or swapping objects and subjects (Zhang et al., 2019) , and hence do not guarantee that the counterfactuals cover the data distribution around the input text well.",
+                "cite_spans": [
+                    {
+                        "start": 177,
+                        "end": 194,
+                        "text": "(Wu et al., 2021;",
+                        "ref_id": "BIBREF43"
+                    },
+                    {
+                        "start": 195,
+                        "end": 216,
+                        "text": "Kaushik et al., 2021;",
+                        "ref_id": "BIBREF21"
+                    },
+                    {
+                        "start": 217,
+                        "end": 238,
+                        "text": "Ribeiro et al., 2020;",
+                        "ref_id": "BIBREF35"
+                    },
+                    {
+                        "start": 239,
+                        "end": 257,
+                        "text": "Ross et al., 2020)",
+                        "ref_id": "BIBREF37"
+                    },
+                    {
+                        "start": 545,
+                        "end": 558,
+                        "text": "(Pearl, 2009)",
+                        "ref_id": "BIBREF31"
+                    },
+                    {
+                        "start": 675,
+                        "end": 697,
+                        "text": "(Kaushik et al., 2021)",
+                        "ref_id": "BIBREF21"
+                    },
+                    {
+                        "start": 731,
+                        "end": 751,
+                        "text": "(Zhang et al., 2019)",
+                        "ref_id": "BIBREF46"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Background and Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "In this work, we combine methods from feature attribution and counterfactual generation models. This allows us to calculate scores that capture local feature importance, and provide counterfactual examples as justification for the assigned scores.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Background and Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "Necessity and sufficiency. These are two notions from causal analysis that capture what one intuitively expects a true cause of an event to exhibit (Pearl, 2009; Halpern, 2016) . Several works have recently suggested applying necessity and sufficiency to explain model predictions. Mothilal et al. (2021) used the actual causality framework of Halpern (2016) to calculate necessity and sufficiency scores for tabular data. Galhotra et al. (2021) suggested an approach to capture the notions of necessity and sufficiency from probabilistic causal models (Pearl, 2009) . Watson et al. (2021) presented a different method for quantifying necessity and sufficiency over subsets of features. We follow the framework of probabilistic causal models, and adopt the definitions from Galhotra et al. (2021) . In NLP explanations, necessity and sufficiency have been used for evaluating rationales (Zaidan et al., 2007; DeYoung et al., 2020; Mathew et al., 2021) 2 , however to the best of our knowledge, this is the first work to explore their usage for estimating feature attribution scores.",
+                "cite_spans": [
+                    {
+                        "start": 148,
+                        "end": 161,
+                        "text": "(Pearl, 2009;",
+                        "ref_id": "BIBREF31"
+                    },
+                    {
+                        "start": 162,
+                        "end": 176,
+                        "text": "Halpern, 2016)",
+                        "ref_id": "BIBREF16"
+                    },
+                    {
+                        "start": 282,
+                        "end": 304,
+                        "text": "Mothilal et al. (2021)",
+                        "ref_id": "BIBREF28"
+                    },
+                    {
+                        "start": 423,
+                        "end": 445,
+                        "text": "Galhotra et al. (2021)",
+                        "ref_id": "BIBREF13"
+                    },
+                    {
+                        "start": 553,
+                        "end": 566,
+                        "text": "(Pearl, 2009)",
+                        "ref_id": "BIBREF31"
+                    },
+                    {
+                        "start": 569,
+                        "end": 589,
+                        "text": "Watson et al. (2021)",
+                        "ref_id": "BIBREF42"
+                    },
+                    {
+                        "start": 774,
+                        "end": 796,
+                        "text": "Galhotra et al. (2021)",
+                        "ref_id": "BIBREF13"
+                    },
+                    {
+                        "start": 887,
+                        "end": 908,
+                        "text": "(Zaidan et al., 2007;",
+                        "ref_id": "BIBREF45"
+                    },
+                    {
+                        "start": 909,
+                        "end": 930,
+                        "text": "DeYoung et al., 2020;",
+                        "ref_id": "BIBREF7"
+                    },
+                    {
+                        "start": 931,
+                        "end": 951,
+                        "text": "Mathew et al., 2021)",
+                        "ref_id": "BIBREF26"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Background and Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "The out-of-distribution problem in feature attribution models. Virtually all model-agnostic feature attribution models calculate importance scores by perturbing input features and assign importance according to which feature changes the outcome the most. However, an issue has been raised that these perturbed inputs are no longer drawn from the data distribution that the model would naturally encounter for a given task (Fong and Vedaldi, 2017; Chang et al., 2018; Hooker et al., 2019; Janzing et al., 2020; Hase et al., 2021) . This is problematic because then, any change in the model predictions could be caused by the distribution shift rather than the removal of feature values (Hooker et al., 2019) . Recently, Hase et al. (2021) have argued that the problem is due to social misalignment (Jacovi and Goldberg, 2021) , where the information communicated by the model differs in non-intuitive ways from the information people expect.",
+                "cite_spans": [
+                    {
+                        "start": 422,
+                        "end": 446,
+                        "text": "(Fong and Vedaldi, 2017;",
+                        "ref_id": "BIBREF10"
+                    },
+                    {
+                        "start": 447,
+                        "end": 466,
+                        "text": "Chang et al., 2018;",
+                        "ref_id": "BIBREF3"
+                    },
+                    {
+                        "start": 467,
+                        "end": 487,
+                        "text": "Hooker et al., 2019;",
+                        "ref_id": "BIBREF18"
+                    },
+                    {
+                        "start": 488,
+                        "end": 509,
+                        "text": "Janzing et al., 2020;",
+                        "ref_id": "BIBREF20"
+                    },
+                    {
+                        "start": 510,
+                        "end": 528,
+                        "text": "Hase et al., 2021)",
+                        "ref_id": "BIBREF18"
+                    },
+                    {
+                        "start": 685,
+                        "end": 706,
+                        "text": "(Hooker et al., 2019)",
+                        "ref_id": "BIBREF18"
+                    },
+                    {
+                        "start": 719,
+                        "end": 737,
+                        "text": "Hase et al. (2021)",
+                        "ref_id": "BIBREF18"
+                    },
+                    {
+                        "start": 797,
+                        "end": 824,
+                        "text": "(Jacovi and Goldberg, 2021)",
+                        "ref_id": "BIBREF19"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Background and Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "One solution to address these issues is to calculate importance scores by marginalizing over counterfactuals that respect the data distribution. Kim et al. (2020) and Harbecke and Alt (2020) adopted this approach and targeted text data specifically by marginalizing over infills generated by BERT. In our preliminary experiments, this resulted in the model putting an overwhelmingly high probability mass to one or few very common words, making the generated perturbations relatively non-diverse. 3As Pham et al. ( 2021) also pointed out, BERT is very good at guessing the masked word, doing so correctly about half of the time. This behaviour results in assigning low importance to highly predictable words regardless of their true importance.",
+                "cite_spans": [
+                    {
+                        "start": 145,
+                        "end": 162,
+                        "text": "Kim et al. (2020)",
+                        "ref_id": "BIBREF22"
+                    },
+                    {
+                        "start": 167,
+                        "end": 190,
+                        "text": "Harbecke and Alt (2020)",
+                        "ref_id": "BIBREF17"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Background and Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "For this reason, we choose to use a generative language model to infill masked sections with ngrams. Our mask-and-infill approach is similar to that of Wu et al. (2021) and Ross et al. (2021) , who used fine-tuned causal language models to infill masked sections of text with variable length sequences. Ross et al. also used the contrasting label to condition the generative model. However, both these works aim to find counterfactual examples as explanations, while we marginalize over them to calculate necessity and sufficiency of each token.",
+                "cite_spans": [
+                    {
+                        "start": 152,
+                        "end": 168,
+                        "text": "Wu et al. (2021)",
+                        "ref_id": "BIBREF43"
+                    },
+                    {
+                        "start": 173,
+                        "end": 191,
+                        "text": "Ross et al. (2021)",
+                        "ref_id": "BIBREF36"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Background and Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "A central idea in causal inference is that of intervention, where a random variable is intervened on and set to a certain value. The intuition is that, if a random variable is the cause of another, then intervening on the first one should affect the other, whereas if they are correlated by other means then the intervention should not have an effect.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Our Method",
+                "sec_num": "3"
+            },
+            {
+                "text": "Necessity. Let X \u2190 a denote that the random variable X has been intervened so that X = a. When talking about a feature vector x, we will denote by x i\u2190a that we intervene on the ith feature value and set it to a. For an input with features x where x i = a, the necessity of x i = a for the model prediction f (x) = y is defined as:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Our Method",
+                "sec_num": "3"
+            },
+            {
+                "text": "N x i ,y =P c\u223cDn(x) (f (c i\u2190a \u2032 )=y \u2032 |c i = a, f (c) = y)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Our Method",
+                "sec_num": "3"
+            },
+            {
+                "text": "where a \u2032 is an alternative feature value such that a \u2032 \u0338 = a and y \u2032 is an alternate outcome such that y \u2032 \u0338 = y. D n (x) is a distribution that covers the neighborhood of x, and can be defined according to the data and the implementation. In words, x i = a has high necessity for the prediction y if, for those points in the neighborhood of x that also have the value a for the ith feature and the same model prediction y, changing the ith feature value from a to a \u2032 changes the prediction from y to y \u2032 with high probability.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Our Method",
+                "sec_num": "3"
+            },
+            {
+                "text": "Sufficiency. The sufficiency of x i = a for the model prediction f (x) = y is defined as:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Our Method",
+                "sec_num": "3"
+            },
+            {
+                "text": "S x i ,y =P c\u223cDs(x) (f (c i\u2190a ) = y|c i = a \u2032 , f (c) = y \u2032 )",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Our Method",
+                "sec_num": "3"
+            },
+            {
+                "text": "This means that if x i = a has high sufficiency for the outcome y, then for inputs in the neighborhood of x that differ in the ith feature value, changing ith feature value to that of a will flip the prediction to f (x) = y.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Our Method",
+                "sec_num": "3"
+            },
+            {
+                "text": "Interventions. Previous works applying notions of necessity and sufficiency from causal inference to XAI assume tabular data. This makes it relatively straightforward to apply these measures to the features since a) it is clear how to assess and compare the ith feature of each input and b) there is little ambiguity in how to change one feature value to another. Both these are issues for NLP data, where each feature is a token in the context of the wider text.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Our Method",
+                "sec_num": "3"
+            },
+            {
+                "text": "We argue that the replacements should reflect the likelihood of natural data, but should still be distinct from purely observational correlations in task-specific aspects. To achieve this balance, we sample the replacement values a \u2032 conditioned both on the other parts of the text and on the opposite class y \u2032 . If there are two features x i = a and x j = b that are both correlated with the outcome y, the intervention x i\u2190a \u2032 , where a \u2032 is sampled in this way results in a \u2032 being still plausible with respect to the context x j = b, but removes the potential indirect effect that x j = b causes x i = a, which causes f (x) = y. This allows us to distinguish which of the correlated features the model relies on more for a given prediction.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Our Method",
+                "sec_num": "3"
+            },
+            {
+                "text": "Estimation. The formulae for necessity and sufficiency suggest a naive implementation of sampling first from the neighborhood of the input, picking those samples that conform to the conditions, and intervening on the feature of interest and marginalizing over the model predictions to calculate the final value. To perform these steps for each token in a sentence is prohibitively expensive. We therefore perform interventions on subsets of tokens at once, so that one perturbation can be used in the necessity and sufficiency estimation of multiple tokens.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Our Method",
+                "sec_num": "3"
+            },
+            {
+                "text": "We estimate the necessity of a token by perturbing subsets of tokens containing the given token and calculating the average change in model prediction, weighted according to the size of the subset. For calculating necessity, we marginalize over",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Our Method",
+                "sec_num": "3"
+            },
+            {
+                "text": "f (c i\u2190a \u2032 ) where c = x j 1 \u2190b 1 ,\u2022\u2022\u2022j k \u2190b k for a random subset of features x j 1 , \u2022 \u2022 \u2022 , x j k ,",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Our Method",
+                "sec_num": "3"
+            },
+            {
+                "text": "not including the original feature i. This means that in our implementation, D n (x) is an interventional distribution around x rather than an observational one. In practice, we estimate a simplified version of this value where we do not explicitly condition on f (c) = y in order to perform the estimation efficiently.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Our Method",
+                "sec_num": "3"
+            },
+            {
+                "text": "We consider the instances where only one or a few tokens are perturbed to have higher probability in D n (x). As such, the weight assigned to a sample with k perturbed tokens is proportional to 1/k. This means that the difference between the original and the perturbed instance is attributed to each perturbed token equally.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Our Method",
+                "sec_num": "3"
+            },
+            {
+                "text": "For estimating sufficiency we take the dual approach. We perturb subsets of tokens excluding the target token, and calculate the difference between the weighted average of the model predictions and the baseline prediction. Here too, D s (x) is an interventional distribution where each sample c = x i\u2190a \u2032 ,j 1 \u2190b 1 ,\u2022\u2022\u2022j k \u2190b k for the focus feature x i and a subset of other features",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Our Method",
+                "sec_num": "3"
+            },
+            {
+                "text": "x j 1 , \u2022 \u2022 \u2022 , x j k . Even though we do not explicitly condition on f (c) = y \u2032 , D s (x)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Our Method",
+                "sec_num": "3"
+            },
+            {
+                "text": "is biased towards such c because the interventions are conditioned on y \u2032 . For a sequence of length n, the weight assigned to an instance where k tokens are perturbed is 1/(nk). This means that for an perturbed example that contains only a single token from the original instance, the difference from the baseline will be attributed entirely to that token, whereas if there is k original tokens, the attribution is shared between them. Note that D s (x) still assigns a higher probability mass to instances closer to x, but is less peaked than D n (x). Figure 1 : An illustration of how necessity and sufficiency are calculated for a chosen token \"women\" in the input \"I hate women\" that the model classifies as hateful. In the MASKING step, the subsets of tokens are masked. For the necessity calculation the masked tokens always include the focus word, and for sufficiency they always exclude it.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 561,
+                        "end": 562,
+                        "text": "1",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Our Method",
+                "sec_num": "3"
+            },
+            {
+                "text": "In the INFILLING step, the generative language model is used to infill the masked sections with n-grams of various lengths. These are then passed to the classifier. The necessity is the proportion of instances where changing the token changes the prediction, and sufficiency is the proportion of instances where changing other tokens does not change the original prediction. The infills are real examples generated by our method.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Our Method",
+                "sec_num": "3"
+            },
+            {
+                "text": "For tasks with very skewed class distributions such as those for binary hate speech classification, it is not intuitive to ask for explanations for the majority class predictions: it is difficult to answer why a regular utterance such as \"I would like some coffee.\" is not hate speech. This echoes the argument of Miller (2019) that humans demand explanations only for selective and surprising aspects of an occurrence. We assume that there exists a majority, 'neutral' class, and aim to provide explanations only for the minority, 'positive' class.",
+                "cite_spans": [
+                    {
+                        "start": 314,
+                        "end": 327,
+                        "text": "Miller (2019)",
+                        "ref_id": "BIBREF27"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Explaining Hate Speech Models",
+                "sec_num": "4"
+            },
+            {
+                "text": "At the core of our approach is sampling replacements x i \u2190 a \u2032 that are interventional with respect to the task, but also have high likelihood in the context of other tokens. We implement such a perturbation model for explaining positive predictions of hate speech classifiers, and explore what information necessity and sufficiency provide for this task through quantitative and qualitative analysis. Our implementation is task specific, since we sample from the data labelled as 'neutral' only; however, it is not dataset specific in that it allows comparing hate speech classifiers that are trained on different datasets. Figure 1 illustrates the calculations of necessity and sufficiency for an example classifier.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 632,
+                        "end": 633,
+                        "text": "1",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Explaining Hate Speech Models",
+                "sec_num": "4"
+            },
+            {
+                "text": "We use the infilling language model (ILM) of Donahue et al. (2020) to generate the perturbed examples. This model fine-tunes GPT-2 (Radford et al., 2019) to allow infilling masked sections of text with n-grams, where the length of the infill varies from 1 to 7 tokens.",
+                "cite_spans": [
+                    {
+                        "start": 45,
+                        "end": 66,
+                        "text": "Donahue et al. (2020)",
+                        "ref_id": "BIBREF9"
+                    },
+                    {
+                        "start": 131,
+                        "end": 153,
+                        "text": "(Radford et al., 2019)",
+                        "ref_id": "BIBREF33"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Generating perturbations",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "We fine-tune the ILM on training data that is labelled 'neutral', which is the opposite of the model prediction we aim to explain. Training the perturbation model only on the neutral examples allows us to distinguish direct causes of the model prediction from correlations in data. To see this, consider the case where we would like to determine whether a given identity mention is sufficient for a positive prediction. If the ILM captures the entire data distribution rather than just the neutral class, then a large chunk of the perturbed instances might still be hateful utterances. In those cases a good model should predict the positive class even though the occurrence of the identity term is arguably not the direct cause of the prediction. Rather, the presence of the identity term causes the ILM to generate a hateful infill, which then causes the positive pre- diction. Using the non-hateful data distribution to train the infilling model helps avoid such cases, and enables the method to attribute importance to a token only when the classifier relies on it directly.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Generating perturbations",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "To train our infilling language model, we choose four widely-used datasets for hate speech and abusive language detection that are from various sources such as Twitter (Founta et al., 2018) , Reddit (Vidgen et al., 2021) , Wikipedia comments (Wulczyn et al., 2017) and news article comments (Borkan et al., 2019) . For all these datasets, we fine-tune our generative model on benign instances from the training sets. Details for training and datasets can be found in Appendix A.",
+                "cite_spans": [
+                    {
+                        "start": 168,
+                        "end": 189,
+                        "text": "(Founta et al., 2018)",
+                        "ref_id": "BIBREF12"
+                    },
+                    {
+                        "start": 199,
+                        "end": 220,
+                        "text": "(Vidgen et al., 2021)",
+                        "ref_id": "BIBREF41"
+                    },
+                    {
+                        "start": 242,
+                        "end": 264,
+                        "text": "(Wulczyn et al., 2017)",
+                        "ref_id": "BIBREF44"
+                    },
+                    {
+                        "start": 291,
+                        "end": 312,
+                        "text": "(Borkan et al., 2019)",
+                        "ref_id": "BIBREF2"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Generating perturbations",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "For our experiments, we focus on investigating the necessity and sufficiency of identity mentions for a sentence to be detected as hate speech, since a known bias in many hate speech detection models is that mere mentions of identity terms result in false positive predictions (Dixon et al., 2018) .",
+                "cite_spans": [
+                    {
+                        "start": 277,
+                        "end": 297,
+                        "text": "(Dixon et al., 2018)",
+                        "ref_id": "BIBREF8"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "5"
+            },
+            {
+                "text": "For a set of instances that contain mentions of identity terms we leverage HateCheck (R\u00f6ttger et al., 2021) , which is a suite of functional tests targeted at diagnosing weaknesses of hate speech classifiers. Tests are constructed from hand-crafted templates, where the target is picked from a predefined set of protected groups.",
+                "cite_spans": [
+                    {
+                        "start": 85,
+                        "end": 107,
+                        "text": "(R\u00f6ttger et al., 2021)",
+                        "ref_id": "BIBREF38"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "5"
+            },
+            {
+                "text": "To evaluate our explanation method, we train six BERT classifiers on three different datasets (Founta et al., 2018; Vidgen et al., 2021; Davidson et al., 2017) , and obtain the necessity and sufficiency of the identity terms on explicitly hateful test cases in HateCheck that target women and Muslims. Details for the datasets and classifiers can be found in Appendix B. We train classifiers on both 'hate speech' labels and on more general 'abusive' language labels in order to observe the effects of this distinction on the necessity and sufficiency values for identity terms. The difference between the two is that abusive language does not need to target a protected group identity. Accordingly, our first hypothesis is:",
+                "cite_spans": [
+                    {
+                        "start": 94,
+                        "end": 115,
+                        "text": "(Founta et al., 2018;",
+                        "ref_id": "BIBREF12"
+                    },
+                    {
+                        "start": 116,
+                        "end": 136,
+                        "text": "Vidgen et al., 2021;",
+                        "ref_id": "BIBREF41"
+                    },
+                    {
+                        "start": 137,
+                        "end": 159,
+                        "text": "Davidson et al., 2017)",
+                        "ref_id": "BIBREF5"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "5"
+            },
+            {
+                "text": "Hypothesis 1: We will observe lower necessity for the identity terms for those models that are trained on the 'abuse' labels compared to the ones that are trained on the 'hate' labels.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "5"
+            },
+            {
+                "text": "We further hypothesize that different necessity and sufficiency scores for identity mentions in explicitly hateful test cases indicate different biases, and correlate with how well a model does in the Hate-Check functionalities that aim to capture those biases (see Table 1 for the test cases), leading to our These women disgust me so much. These Muslims disgust me so much.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 272,
+                        "end": 273,
+                        "text": "1",
+                        "ref_id": "TABREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "5"
+            },
+            {
+                "text": ". Hypothesis 3: If the necessity scores for identity terms are low in explicit expressions of hate, we can conclude under-reliance on the identity terms, and over-reliance on the context. Consequently, we expect that the model will perform poorly on F22, F23 and F24, which capture abuse not targeted at protected identity groups.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "5"
+            },
+            {
+                "text": "We obtain the average necessity and sufficiency values for explicitly hateful test cases targeting women and Muslims for each of the classifiers. We calculate necessity and sufficiency by masking a subset of the tokens and using our fine-tuned language model to generate infillings. If multiple consecutive tokens are chosen, we aggregate them to a single mask instance to be infilled. We choose the number of perturbations for each example so that the expected number of perturbations for each token is 100. The necessity and sufficiency scores are only calculated for test cases that a classifier returns a correct prediction, since we only aim to explain positive predictions. The results can be found in Table 2 . Table 3 presents the proportions of test cases classified as hateful/abusive by each of the six classifiers on the non-hateful statements that mention identity terms (F18 and F19) and abusive utterances not targeting protected identity groups (F22, F23, and F24). We report the results where necessity and sufficiency are calculated with masking rather than perturbing the chosen tokens in Appendix C.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 714,
+                        "end": 715,
+                        "text": "2",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 724,
+                        "end": 725,
+                        "text": "3",
+                        "ref_id": "TABREF4"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Implementation",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "As baselines, we calculate the average importance of the tokens corresponding to target groups with SHAP4 and LIME5 . For both of these methods, we use the default parameters for textual data. As with the calculation of necessity and sufficiency, we only include the attribution scores for test cases on which the classifier correctly predicts the positive class. These results can be found in Table 4 .",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 400,
+                        "end": 401,
+                        "text": "4",
+                        "ref_id": "TABREF6"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Implementation",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "An example necessity and sufficiency attribution is given in Figure 2 . It shows that for this input, the token 'Muslims' is more sufficient compared to 'women', and the token 'disgust' is more necessary in the context of 'women' than that of 'Muslims'.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 68,
+                        "end": 69,
+                        "text": "2",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Results and Discussion",
+                "sec_num": "6"
+            },
+            {
+                "text": "According to our first hypothesis, we expect the models that were trained on the abuse versions of each dataset to have lower necessity for identity terms compared to those that have been trained on hate labels. Indeed, in Table 2 we observe this pattern for all models and targets except David-son2017 for the target women. This correctly suggests that identity terms are necessary for a comment to be hate speech, but not for it to be abusive.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 229,
+                        "end": 230,
+                        "text": "2",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Results and Discussion",
+                "sec_num": "6"
+            },
+            {
+                "text": "The results also clearly support our second hypothesis that if an identity mention has high sufficiency on explicit examples for a given model, then this model is over-sensitive to the identity term. Comparing the sufficiency of women and Muslims in Table 2 illustrates this difference: for all models except Davidson2017-abuse sufficiency is high for Muslims and significantly lower for women. Accordingly, all models except Davidson2017-abuse display a large difference between their error rates on neutral or positive mentions for women and Muslims in Table 3 (F18, F19). That is, the mere occurrence of the word \"Muslims\" is sufficient for the classifiers to classify a text as hate speech, even if the text is neutral. Furthermore within each group, higher sufficiency values correspond to higher error rates in functionalities F18, F19. Vidgen2021-hate Vidgen2021-hate 0.96 \u00b10.02 0.71 \u00b10.17 0.97 \u00b10.03 0.88 \u00b10.13 Vidgen2021-abuse 0.82 \u00b10.14 0.64 \u00b10.14 0.82 \u00b10.15 0.88 \u00b10.07",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 256,
+                        "end": 257,
+                        "text": "2",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 561,
+                        "end": 562,
+                        "text": "3",
+                        "ref_id": "TABREF4"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Results and Discussion",
+                "sec_num": "6"
+            },
+            {
+                "text": "Table 2 : The mean and standard deviation of necessity and sufficiency scores for target tokens in explicitly hateful cases of HateCheck (F1, F2, and F3) targeting women or Muslims for the the three classifiers trained on hate, and three classifiers trained on abuse labels. and Vidgen2021-abuse display the highest sufficiency for women, and correspondingly have the highest error rates on these test cases for women. Davidson2017-abuse has the lowest sufficiency for Muslims, and the lowest error rate for this target.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 6,
+                        "end": 7,
+                        "text": "2",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Results and Discussion",
+                "sec_num": "6"
+            },
+            {
+                "text": "Our third hypothesis is that low necessity for identity terms will be correlated with positive predictions for abusive instances that do not target a protected identity. In Table 2 , the lowest necessity for both target groups are observed with Founta2018-abuse. Indeed, this model has the highest rate of positive (abuse) predictions on all functionalities that test for abuse against non-protected targets in Table 3 . The false positives in the test cases that target objects is much higher than the corresponding errors for the other models, indicating that Founta2018-abuse is indeed over-sensitive to abusive contexts, and does not consider the target of the abuse to be a necessary feature for the classification. On the other hand, the classifier trained on Vidgen2021-hate shows the highest necessity values for both targets, and the lowest error rates on F22, F23, F24.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 179,
+                        "end": 180,
+                        "text": "2",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 417,
+                        "end": 418,
+                        "text": "3",
+                        "ref_id": "TABREF4"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Results and Discussion",
+                "sec_num": "6"
+            },
+            {
+                "text": "Values with Necessity and Sufficiency",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Comparison of Average SHAP and LIME",
+                "sec_num": "6.1"
+            },
+            {
+                "text": "The average SHAP and LIME values for the two targets are presented in Table 4 . While Founta-abuse and Davidson-abuse get very similar SHAP scores for the target Muslims, Founta2018-abuse has high sufficiency for this token while Davidson2017abuse has high necessity. These two classifiers have very different false-positive rates for test instances that are non-abusive mentions of this target as reported in Table 3 , and hence can be observed to be biased against this group to a different extent. This distinction is clearly captured with the necessity and sufficiency scores, but not with SHAP.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 76,
+                        "end": 77,
+                        "text": "4",
+                        "ref_id": "TABREF6"
+                    },
+                    {
+                        "start": 416,
+                        "end": 417,
+                        "text": "3",
+                        "ref_id": "TABREF4"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Comparison of Average SHAP and LIME",
+                "sec_num": "6.1"
+            },
+            {
+                "text": "LIME scores seem even less consistent with the false-positive rates in Table 3 than SHAP. For example, Davidson2017-hate has a very high falsepositive rate for neutral/supportive mentions of the target Muslims, however the average LIME score for this model and target group is in low negatives. This means that LIME was unable to capture the biases of the model against this target group.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 77,
+                        "end": 78,
+                        "text": "3",
+                        "ref_id": "TABREF4"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Comparison of Average SHAP and LIME",
+                "sec_num": "6.1"
+            },
+            {
+                "text": "For the target women, LIME gives very similar average importance to the target tokens for Founta2018-abuse and Vidgen2021-hate, however all of the other metrics we calculate highlight significant differences. Indeed, we can observe in Table 3 that Founta2018-abuse has high false-positive rates for abuse against non-protected targets, but low false-positive rates for neutral/supportive mentions of the target women, whereas Vidgen2021hate shows the exact opposite pattern. LIME scores seem unable to distinguish this important difference, unlike our necessity and sufficiency scores.  and F3 ) targeting women or Muslims for the the three classifiers trained on hate, and three classifiers trained on abuse labels.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 586,
+                        "end": 586,
+                        "text": "",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 591,
+                        "end": 593,
+                        "text": "F3",
+                        "ref_id": "TABREF4"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Comparison of Average SHAP and LIME",
+                "sec_num": "6.1"
+            },
+            {
+                "text": "Examining the generated perturbations reveals that the majority of the time, the generator successfully replaces the original snippet with non-offensive text. There are minimal repetitions of the same infill, indicating that the perturbations are sufficiently diverse. The quality of the perturbations is mixed, and tends to decrease with the number of infills.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Qualitative analysis",
+                "sec_num": "6.2"
+            },
+            {
+                "text": "Our method can be used with any generator that can model the data distribution conditioned on the label. For our current model we prioritize diversity over fluency, and leave improvements on this aspect for future work.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Qualitative analysis",
+                "sec_num": "6.2"
+            },
+            {
+                "text": "Inspecting the generated perturbations reveal that there are often instances that combine a few HateCheck functionalities. For example, as a perturbation for \"I hate [IDENTITY]\" model generates \"This is a subreddit I hate.\", combining shuffling the word order with changing the target. For the template \"[IDENTITY] are the dumbest people.\", one of the generated counterfactuals is \"I don't believe that American people are the dumbest people.\", combining negation and phrasing.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Qualitative analysis",
+                "sec_num": "6.2"
+            },
+            {
+                "text": "Interestingly, many infills for the identity terms do not clearly correspond to either object, individuals or non-protected groups, which are the three cases that HateCheck checks for. Instead, our generative model infills it with clauses such as \"I hate that I feel like I have to do these things\", actions such as \"I hate crying,\" or types of events like \"I hate surprises.\" This illustrates that our relatively non-constrained generation of counterfactuals provides better coverage of potential replacements, and provides a good complement to manual checks.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Qualitative analysis",
+                "sec_num": "6.2"
+            },
+            {
+                "text": "This work is a step towards more informative and transparent feature attribution metrics for explaining text classifiers. We argue that standard token importance metrics can be ambiguous in terms of what 'importance' means. Instead, we adapt the theoretically-grounded concepts of necessity and sufficiency to explain text classifiers. Besides being more informative, the process of generating these two metrics is intuitive and can be explained to lay people in terms of \"how much the perturbations in input change the output of the classifier\". Moreover, the input perturbations can be presented to the users, leading to a transparent and understandable explainability framework.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion",
+                "sec_num": "7"
+            },
+            {
+                "text": "Considering the complexities of perturbing textual features, we introduced a practical implementation to compute the necessity and sufficiency of the input tokens. Taking hate speech detection as an example application, we showed that sufficiency and necessity can be used to explain the expected differences between a classifier that is intended to detect identity-based hate speech and those trained for detecting general abuse. We also leveraged these metrics to explain the observed over-sensitivity and under-sensitivity to mentions of target groups, issues that are tightly related to fairness in hate speech detection. While the current work focused on binary hate speech detection for English-language social media posts, in future work, we will explore the effectiveness of these metrics in generating explanations for other applications and languages. We will also explore how the new metrics can improve the debugging of the models or communicating the model's decisionmaking process to the end-users.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion",
+                "sec_num": "7"
+            },
+            {
+                "text": "The proposed method has benefits and risks that should be considered from an ethics perspective.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Ethical Considerations",
+                "sec_num": "8"
+            },
+            {
+                "text": "One principle of ethical AI is transparency, and we have developed this method with the goal of improving transparency for system developers, end users, and other stakeholders to better understand the inner workings of complex NLP systems. In the application domain of hate speech detection, we demonstrated how necessity and sufficiency scores might be used to diagnose possible classification biases against identity groups, who are frequently subjects of online abuse. This can help in addressing the known issue of over-sensitivity to identity terms, ensuring that benign conversations around issues concerning marginalized groups are not misclassified as hate speech.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Ethical Considerations",
+                "sec_num": "8"
+            },
+            {
+                "text": "However, there are also potential risks. We make use of existing datasets and thus our analysis is limited by those data: they were collected from public, online platforms without user's explicit consent, and may not accurately represent speakers from all demographic groups, they are only in English, and they may be biased towards or against certain topics of conversation. The data and analysis are also limited to the English language. Training language models on user data also has privacy implications, as the language model may then re-generate user text when deployed.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Ethical Considerations",
+                "sec_num": "8"
+            },
+            {
+                "text": "While transparency and explainability are seen as desirable properties, they can also expose AI systems to malicious attacks. In the context of hate speech, our explainability metrics could potentially be used to identify and then exploit system vulnerabilities.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Ethical Considerations",
+                "sec_num": "8"
+            },
+            {
+                "text": "Finally, our approach requires the use of large language models, which are computationally expensive to train and can reflect the biases of their training data. Our method of generating multiple counterfactual examples per word, rather than simply removing or masking that word, also increases the computational resources required. The details on each dataset are provided in Table A.1. For the Wikipedia Toxicity dataset, a large portion of the data is from conversations about Wikipedia-specific topics. To not skew our generation model, we filter these instances following the unsupervised method presented by Nejadgholi and Kiritchenko (2020) 10 . Because the Civil Comments dataset is significantly larger than the rest, we randomly sample 30K neutral instances and discard the rest. After filtering, the compound dataset of neutral instances consists of 130,430 instances in total. As preprocessing, we replace URLs, mentions and emojis with special tokens.",
+                "cite_spans": [
+                    {
+                        "start": 613,
+                        "end": 646,
+                        "text": "Nejadgholi and Kiritchenko (2020)",
+                        "ref_id": "BIBREF29"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Ethical Considerations",
+                "sec_num": "8"
+            },
+            {
+                "text": "To train the ILM, we fine-tune GPT-2 (1.5B parameters) for 4 epochs with the default hyperparameters provided by Donahue et al. (2020) . The training takes approximately 2.5 hours on a Tesla V100-SXM2 GPU. Although the original ILM is trained by infilling words, n-grams, sentences and paragraphs, we modify the objective to only infill words and n-grams.",
+                "cite_spans": [
+                    {
+                        "start": 113,
+                        "end": 134,
+                        "text": "Donahue et al. (2020)",
+                        "ref_id": "BIBREF9"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "A Data, Training and Generation Details for the Infilling Language Model",
+                "sec_num": null
+            },
+            {
+                "text": "We generate perturbations once for the 120 Hate-Check cases, and evaluate all models on the same set of perturbations. The number of perturbations are chosen so that to have approximately 100 per- ",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "A Data, Training and Generation Details for the Infilling Language Model",
+                "sec_num": null
+            },
+            {
+                "text": "We fine-tune six BERT (Devlin et al., 2019) classifiers on three different datasets and with two different labelling schemes (hate speech vs. abusive language) for each. The datasets include: David-son201711 (Davidson et al., 2017 ), Founta2018 (Founta et al., 2018) , and Vidgen2021 (Vidgen et al., 2021) . The datasets contain English-language posts from two online platforms, Twitter and Reddit. The details on each dataset are provided in Table B .1. We train two models on the dataset of Founta et al. (2018) . For Founta2018-hate, we binarize the labels to map hate annotations as positive, and the rest as the negative class. For Founta2018abuse, we label both hate and abuse annotations as positive, and the rest as negative. To illustrate that our method can provide explanations for models trained on data that is not explicitly modelled by our perturbation generator, we also train models on two versions of the dataset of Davidson et al. (2017) : Davidson2017-abuse and Davidson2017hate, which are binarized in the same manner.",
+                "cite_spans": [
+                    {
+                        "start": 22,
+                        "end": 43,
+                        "text": "(Devlin et al., 2019)",
+                        "ref_id": "BIBREF6"
+                    },
+                    {
+                        "start": 208,
+                        "end": 230,
+                        "text": "(Davidson et al., 2017",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 231,
+                        "end": 266,
+                        "text": "), Founta2018 (Founta et al., 2018)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 284,
+                        "end": 305,
+                        "text": "(Vidgen et al., 2021)",
+                        "ref_id": "BIBREF41"
+                    },
+                    {
+                        "start": 507,
+                        "end": 513,
+                        "text": "(2018)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 934,
+                        "end": 956,
+                        "text": "Davidson et al. (2017)",
+                        "ref_id": "BIBREF5"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 449,
+                        "end": 450,
+                        "text": "B",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "B Data and Training Details for Hate Speech Classifiers",
+                "sec_num": null
+            },
+            {
+                "text": "The dataset of Vidgen et al. (2021) provides a hierarchical labelling scheme, the top distinction being abusive vs. non-abusive. We binarize Vidgen2021-abuse based on these labels. For Vidgen2021-hate, we take the positive class to be those instances that are labelled identity-directed abuse, and label the rest as the negative class. evaluating necessity and sufficiency with masked rather than perturbed inputs might be preferable in contexts where latency is more important than transparency, or as a pre-processing step to choose which inputs and tokens to focus on for in-depth analysis with explicit perturbations. We leave further explorations of this avenue for future work.",
+                "cite_spans": [
+                    {
+                        "start": 15,
+                        "end": 35,
+                        "text": "Vidgen et al. (2021)",
+                        "ref_id": "BIBREF41"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "B Data and Training Details for Hate Speech Classifiers",
+                "sec_num": null
+            },
+            {
+                "text": "https://github.com/esmab/ necessity-sufficiency",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "The term comprehensiveness is often used instead of necessity in this context.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "Making the softmax scores more distributed across the vocabulary results in unpredictably disfluent infills.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "https://github.com/slundberg/shap",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "https://github.com/marcotcr/lime",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "https://github.com/t-davidson/ hate-speech-and-offensive-language/tree/ master/data",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            }
+        ],
+        "back_matter": [
+            {
+                "text": "We employ the same pre-processing steps as in the experiments by R\u00f6ttger et al. (2021) , and replace URLs, mentions and emojis with special tokens. We fine-tune a BERT model from the Hugging Face library 12 on each of these datasets on a single Tesla V100-SXM2 GPU. Each model has 110M trainable parameters. We follow the implementation of R\u00f6ttger et al. (2021) and use their hyper-parameters of 3 epochs, batch size of 16, learning rate of 5e-5 and weight decay of 0.01. We also employ weighted cross-entropy loss that corrects for the class imbalance in data. For the training/development/test splits, we use the standard split for Vidgen2021 provided by the creators of the dataset, and use a stratified 80/10/10 split for the other datasets, making sure that the splits are the same for the hate and abuse versions of each, and correspond to the training set for ILM when applicable. The classification performance of these models on the held-out test sets is shown in Table B .2, together with the training times for each. We can observe that the reported scores are within a few percentage points of the previously published B .3: Average necessity and sufficiency scores calculated by masking rather than perturbing selected tokens, for the identity terms in explicitly hateful cases of HateCheck (F1, F2, and F3) targeting women or Muslims for the the three classifiers trained on hate, and three classifiers trained on abuse labels. results (R\u00f6ttger et al., 2021) . All reported results are from a single run.",
+                "cite_spans": [
+                    {
+                        "start": 65,
+                        "end": 86,
+                        "text": "R\u00f6ttger et al. (2021)",
+                        "ref_id": "BIBREF38"
+                    },
+                    {
+                        "start": 340,
+                        "end": 361,
+                        "text": "R\u00f6ttger et al. (2021)",
+                        "ref_id": "BIBREF38"
+                    },
+                    {
+                        "start": 1450,
+                        "end": 1472,
+                        "text": "(R\u00f6ttger et al., 2021)",
+                        "ref_id": "BIBREF38"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 979,
+                        "end": 980,
+                        "text": "B",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 1131,
+                        "end": 1132,
+                        "text": "B",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "annex",
+                "sec_num": null
+            },
+            {
+                "text": "In Section 1 we have argued that using the mask token from the pre-training objective in feature attribution methods has several drawbacks. Nevertheless, in Table B .3 we report the results of a modified version of our experiment presented in Section 5 where we keep the number and the location of the perturbations the same as the original experiments, but instead of perturbing the chosen tokens using an LM, we replace them with the mask token. The results show that although the values are different than their counterparts in the main experiment, the overall trends remain the same, and support the hypotheses presented in Section 5. Evaluating the classifier with the masked input is faster than explicitly generating perturbations, but the method ceases to be model agnostic and looses transparency. The results still suggest that",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 163,
+                        "end": 164,
+                        "text": "B",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "C Calculating Necessity and Sufficiency with Masking",
+                "sec_num": null
+            }
+        ],
+        "bib_entries": {
+            "BIBREF0": {
+                "ref_id": "b0",
+                "title": "Peeking inside the black-box: A survey on explainable artificial intelligence (XAI)",
+                "authors": [
+                    {
+                        "first": "Amina",
+                        "middle": [],
+                        "last": "Adadi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mohammed",
+                        "middle": [],
+                        "last": "Berrada",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "IEEE Access",
+                "volume": "6",
+                "issue": "",
+                "pages": "52138--52160",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Amina Adadi and Mohammed Berrada. 2018. Peek- ing inside the black-box: A survey on explainable artificial intelligence (XAI). IEEE Access, 6:52138- 52160.",
+                "links": null
+            },
+            "BIBREF1": {
+                "ref_id": "b1",
+                "title": "Neural machine translation by jointly learning to align and translate",
+                "authors": [
+                    {
+                        "first": "Dzmitry",
+                        "middle": [],
+                        "last": "Bahdanau",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kyung",
+                        "middle": [],
+                        "last": "",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hyun",
+                        "middle": [],
+                        "last": "Cho",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yoshua",
+                        "middle": [],
+                        "last": "Bengio",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Proceedings of the 3rd International Conference on Learning Representations",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Dzmitry Bahdanau, Kyung Hyun Cho, and Yoshua Ben- gio. 2015. Neural machine translation by jointly learning to align and translate. In Proceedings of the 3rd International Conference on Learning Represen- tations.",
+                "links": null
+            },
+            "BIBREF2": {
+                "ref_id": "b2",
+                "title": "Nuanced metrics for measuring unintended bias with real data for text classification",
+                "authors": [
+                    {
+                        "first": "Daniel",
+                        "middle": [],
+                        "last": "Borkan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Lucas",
+                        "middle": [],
+                        "last": "Dixon",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jeffrey",
+                        "middle": [],
+                        "last": "Sorensen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nithum",
+                        "middle": [],
+                        "last": "Thain",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Lucy",
+                        "middle": [],
+                        "last": "Vasserman",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Companion Proceedings of the 2019 World Wide Web Conference",
+                "volume": "",
+                "issue": "",
+                "pages": "491--500",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Daniel Borkan, Lucas Dixon, Jeffrey Sorensen, Nithum Thain, and Lucy Vasserman. 2019. Nuanced met- rics for measuring unintended bias with real data for text classification. In Companion Proceedings of the 2019 World Wide Web Conference, pages 491-500.",
+                "links": null
+            },
+            "BIBREF3": {
+                "ref_id": "b3",
+                "title": "Explaining image classifiers by counterfactual generation",
+                "authors": [
+                    {
+                        "first": "Chun-Hao",
+                        "middle": [],
+                        "last": "Chang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Elliot",
+                        "middle": [],
+                        "last": "Creager",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Anna",
+                        "middle": [],
+                        "last": "Goldenberg",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "David",
+                        "middle": [],
+                        "last": "Duvenaud",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the International Conference on Learning Representations",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Chun-Hao Chang, Elliot Creager, Anna Goldenberg, and David Duvenaud. 2018. Explaining image clas- sifiers by counterfactual generation. In Proceedings of the International Conference on Learning Repre- sentations.",
+                "links": null
+            },
+            "BIBREF4": {
+                "ref_id": "b4",
+                "title": "A survey of the state of explainable AI for natural language processing",
+                "authors": [
+                    {
+                        "first": "Marina",
+                        "middle": [],
+                        "last": "Danilevsky",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ranit",
+                        "middle": [],
+                        "last": "Kun Qian",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yannis",
+                        "middle": [],
+                        "last": "Aharonov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ban",
+                        "middle": [],
+                        "last": "Katsis",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Prithviraj",
+                        "middle": [],
+                        "last": "Kawas",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Sen",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "Proceedings of the 1st Conference of the Asia-Pacific Chapter of the Association for Computational Linguistics and the 10th International Joint Conference on Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "447--459",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Marina Danilevsky, Kun Qian, Ranit Aharonov, Yan- nis Katsis, Ban Kawas, and Prithviraj Sen. 2020. A survey of the state of explainable AI for natural lan- guage processing. In Proceedings of the 1st Confer- ence of the Asia-Pacific Chapter of the Association for Computational Linguistics and the 10th Interna- tional Joint Conference on Natural Language Pro- cessing, pages 447-459, Suzhou, China. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF5": {
+                "ref_id": "b5",
+                "title": "Automated hate speech detection and the problem of offensive language",
+                "authors": [
+                    {
+                        "first": "Thomas",
+                        "middle": [],
+                        "last": "Davidson",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dana",
+                        "middle": [],
+                        "last": "Warmsley",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Michael",
+                        "middle": [],
+                        "last": "Macy",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ingmar",
+                        "middle": [],
+                        "last": "Weber",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Proceedings of the International AAAI Conference on Web and Social Media",
+                "volume": "11",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Thomas Davidson, Dana Warmsley, Michael Macy, and Ingmar Weber. 2017. Automated hate speech de- tection and the problem of offensive language. In Proceedings of the International AAAI Conference on Web and Social Media, volume 11.",
+                "links": null
+            },
+            "BIBREF6": {
+                "ref_id": "b6",
+                "title": "Bert: Pre-training of deep bidirectional transformers for language understanding",
+                "authors": [
+                    {
+                        "first": "Jacob",
+                        "middle": [],
+                        "last": "Devlin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ming-Wei",
+                        "middle": [],
+                        "last": "Chang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kenton",
+                        "middle": [],
+                        "last": "Lee",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kristina",
+                        "middle": [],
+                        "last": "Toutanova",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the Annual Conference of the North American Chapter of the Association for Computational Linguistics (NAACL-HLT)",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jacob Devlin, Ming-Wei Chang, Kenton Lee, and Kristina Toutanova. 2019. Bert: Pre-training of deep bidirectional transformers for language understand- ing. In Proceedings of the Annual Conference of the North American Chapter of the Association for Computational Linguistics (NAACL-HLT).",
+                "links": null
+            },
+            "BIBREF7": {
+                "ref_id": "b7",
+                "title": "Eraser: A benchmark to evaluate rationalized NLP models",
+                "authors": [
+                    {
+                        "first": "Jay",
+                        "middle": [],
+                        "last": "Deyoung",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sarthak",
+                        "middle": [],
+                        "last": "Jain",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nazneen",
+                        "middle": [],
+                        "last": "Fatema Rajani",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Eric",
+                        "middle": [],
+                        "last": "Lehman",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Caiming",
+                        "middle": [],
+                        "last": "Xiong",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Richard",
+                        "middle": [],
+                        "last": "Socher",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Byron",
+                        "middle": [
+                            "C"
+                        ],
+                        "last": "Wallace",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "4443--4458",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jay DeYoung, Sarthak Jain, Nazneen Fatema Rajani, Eric Lehman, Caiming Xiong, Richard Socher, and Byron C Wallace. 2020. Eraser: A benchmark to evaluate rationalized NLP models. In Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics, pages 4443-4458.",
+                "links": null
+            },
+            "BIBREF8": {
+                "ref_id": "b8",
+                "title": "Measuring and mitigating unintended bias in text classification",
+                "authors": [
+                    {
+                        "first": "Lucas",
+                        "middle": [],
+                        "last": "Dixon",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "John",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jeffrey",
+                        "middle": [],
+                        "last": "Sorensen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nithum",
+                        "middle": [],
+                        "last": "Thain",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Lucy",
+                        "middle": [],
+                        "last": "Vasserman",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 2018 AAAI/ACM Conference on AI, Ethics, and Society",
+                "volume": "",
+                "issue": "",
+                "pages": "67--73",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Lucas Dixon, John Li, Jeffrey Sorensen, Nithum Thain, and Lucy Vasserman. 2018. Measuring and mitigat- ing unintended bias in text classification. In Proceed- ings of the 2018 AAAI/ACM Conference on AI, Ethics, and Society, pages 67-73.",
+                "links": null
+            },
+            "BIBREF9": {
+                "ref_id": "b9",
+                "title": "Enabling language models to fill in the blanks",
+                "authors": [
+                    {
+                        "first": "Chris",
+                        "middle": [],
+                        "last": "Donahue",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mina",
+                        "middle": [],
+                        "last": "Lee",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Percy",
+                        "middle": [],
+                        "last": "Liang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "2492--2501",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Chris Donahue, Mina Lee, and Percy Liang. 2020. En- abling language models to fill in the blanks. In Pro- ceedings of the 58th Annual Meeting of the Asso- ciation for Computational Linguistics, pages 2492- 2501.",
+                "links": null
+            },
+            "BIBREF10": {
+                "ref_id": "b10",
+                "title": "Interpretable explanations of black boxes by meaningful perturbation",
+                "authors": [
+                    {
+                        "first": "C",
+                        "middle": [],
+                        "last": "Ruth",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Andrea",
+                        "middle": [],
+                        "last": "Fong",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Vedaldi",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Proceedings of the IEEE international conference on computer vision",
+                "volume": "",
+                "issue": "",
+                "pages": "3429--3437",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ruth C Fong and Andrea Vedaldi. 2017. Interpretable explanations of black boxes by meaningful pertur- bation. In Proceedings of the IEEE international conference on computer vision, pages 3429-3437.",
+                "links": null
+            },
+            "BIBREF11": {
+                "ref_id": "b11",
+                "title": "A survey on automatic detection of hate speech in text",
+                "authors": [
+                    {
+                        "first": "Paula",
+                        "middle": [],
+                        "last": "Fortuna",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "S\u00e9rgio",
+                        "middle": [],
+                        "last": "Nunes",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "ACM Computing Surveys (CSUR)",
+                "volume": "51",
+                "issue": "4",
+                "pages": "1--30",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Paula Fortuna and S\u00e9rgio Nunes. 2018. A survey on automatic detection of hate speech in text. ACM Computing Surveys (CSUR), 51(4):1-30.",
+                "links": null
+            },
+            "BIBREF12": {
+                "ref_id": "b12",
+                "title": "Large scale crowdsourcing and characterization of Twitter abusive behavior",
+                "authors": [
+                    {
+                        "first": "Maria",
+                        "middle": [],
+                        "last": "Antigoni",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Constantinos",
+                        "middle": [],
+                        "last": "Founta",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Despoina",
+                        "middle": [],
+                        "last": "Djouvas",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ilias",
+                        "middle": [],
+                        "last": "Chatzakou",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jeremy",
+                        "middle": [],
+                        "last": "Leontiadis",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Gianluca",
+                        "middle": [],
+                        "last": "Blackburn",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Athena",
+                        "middle": [],
+                        "last": "Stringhini",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Michael",
+                        "middle": [],
+                        "last": "Vakali",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nicolas",
+                        "middle": [],
+                        "last": "Sirivianos",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Kourtellis",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the Twelfth International AAAI Conference on Web and Social Media",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Antigoni Maria Founta, Constantinos Djouvas, De- spoina Chatzakou, Ilias Leontiadis, Jeremy Black- burn, Gianluca Stringhini, Athena Vakali, Michael Sirivianos, and Nicolas Kourtellis. 2018. Large scale crowdsourcing and characterization of Twitter abu- sive behavior. In Proceedings of the Twelfth Interna- tional AAAI Conference on Web and Social Media.",
+                "links": null
+            },
+            "BIBREF13": {
+                "ref_id": "b13",
+                "title": "Explaining black-box algorithms using probabilistic contrastive counterfactuals",
+                "authors": [
+                    {
+                        "first": "Sainyam",
+                        "middle": [],
+                        "last": "Galhotra",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Romila",
+                        "middle": [],
+                        "last": "Pradhan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Babak",
+                        "middle": [],
+                        "last": "Salimi",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2021,
+                "venue": "Proceedings of the 2021 International Conference on Management of Data",
+                "volume": "",
+                "issue": "",
+                "pages": "577--590",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Sainyam Galhotra, Romila Pradhan, and Babak Salimi. 2021. Explaining black-box algorithms using proba- bilistic contrastive counterfactuals. In Proceedings of the 2021 International Conference on Management of Data, pages 577-590.",
+                "links": null
+            },
+            "BIBREF14": {
+                "ref_id": "b14",
+                "title": "Counterfactual fairness in text classification through robustness",
+                "authors": [
+                    {
+                        "first": "Sahaj",
+                        "middle": [],
+                        "last": "Garg",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Vincent",
+                        "middle": [],
+                        "last": "Perot",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nicole",
+                        "middle": [],
+                        "last": "Limtiaco",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ankur",
+                        "middle": [],
+                        "last": "Taly",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ed",
+                        "middle": [
+                            "H"
+                        ],
+                        "last": "Chi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alex",
+                        "middle": [],
+                        "last": "Beutel",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 2019 AAAI/ACM Conference on AI, Ethics, and Society",
+                "volume": "",
+                "issue": "",
+                "pages": "219--226",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Sahaj Garg, Vincent Perot, Nicole Limtiaco, Ankur Taly, Ed H Chi, and Alex Beutel. 2019. Counterfactual fairness in text classification through robustness. In Proceedings of the 2019 AAAI/ACM Conference on AI, Ethics, and Society, pages 219-226.",
+                "links": null
+            },
+            "BIBREF15": {
+                "ref_id": "b15",
+                "title": "A survey of methods for explaining black box models",
+                "authors": [
+                    {
+                        "first": "Riccardo",
+                        "middle": [],
+                        "last": "Guidotti",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Anna",
+                        "middle": [],
+                        "last": "Monreale",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Salvatore",
+                        "middle": [],
+                        "last": "Ruggieri",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Franco",
+                        "middle": [],
+                        "last": "Turini",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Fosca",
+                        "middle": [],
+                        "last": "Giannotti",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dino",
+                        "middle": [],
+                        "last": "Pedreschi",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "ACM computing surveys (CSUR)",
+                "volume": "51",
+                "issue": "5",
+                "pages": "1--42",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Riccardo Guidotti, Anna Monreale, Salvatore Ruggieri, Franco Turini, Fosca Giannotti, and Dino Pedreschi. 2018. A survey of methods for explaining black box models. ACM computing surveys (CSUR), 51(5):1- 42.",
+                "links": null
+            },
+            "BIBREF16": {
+                "ref_id": "b16",
+                "title": "Actual Causality",
+                "authors": [
+                    {
+                        "first": "Y",
+                        "middle": [],
+                        "last": "Joseph",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Halpern",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Joseph Y. Halpern. 2016. Actual Causality. MIT Press.",
+                "links": null
+            },
+            "BIBREF17": {
+                "ref_id": "b17",
+                "title": "Considering likelihood in NLP classification explanations with occlusion and language modeling",
+                "authors": [
+                    {
+                        "first": "David",
+                        "middle": [],
+                        "last": "Harbecke",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christoph",
+                        "middle": [],
+                        "last": "Alt",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics: Student Research Workshop",
+                "volume": "",
+                "issue": "",
+                "pages": "111--117",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "David Harbecke and Christoph Alt. 2020. Considering likelihood in NLP classification explanations with occlusion and language modeling. In Proceedings of the 58th Annual Meeting of the Association for Com- putational Linguistics: Student Research Workshop, pages 111-117.",
+                "links": null
+            },
+            "BIBREF18": {
+                "ref_id": "b18",
+                "title": "The out-of-distribution problem in explainability and search methods for feature importance explanations",
+                "authors": [
+                    {
+                        "first": "Peter",
+                        "middle": [],
+                        "last": "Hase",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Harry",
+                        "middle": [],
+                        "last": "Xie",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mohit",
+                        "middle": [],
+                        "last": "Bansal",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sara",
+                        "middle": [],
+                        "last": "Hooker",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dumitru",
+                        "middle": [],
+                        "last": "Erhan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Pieter-Jan",
+                        "middle": [],
+                        "last": "Kindermans",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Been",
+                        "middle": [],
+                        "last": "Kim",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Advances in Neural Information Processing Systems",
+                "volume": "34",
+                "issue": "",
+                "pages": "9737--9748",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Peter Hase, Harry Xie, and Mohit Bansal. 2021. The out-of-distribution problem in explainability and search methods for feature importance explanations. Advances in Neural Information Processing Systems, 34. Sara Hooker, Dumitru Erhan, Pieter-Jan Kindermans, and Been Kim. 2019. A benchmark for interpretabil- ity methods in deep neural networks. Advances in Neural Information Processing Systems, 32:9737- 9748.",
+                "links": null
+            },
+            "BIBREF19": {
+                "ref_id": "b19",
+                "title": "Aligning faithful interpretations with their social attribution",
+                "authors": [
+                    {
+                        "first": "Alon",
+                        "middle": [],
+                        "last": "Jacovi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yoav",
+                        "middle": [],
+                        "last": "Goldberg",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2021,
+                "venue": "Transactions of the Association for Computational Linguistics",
+                "volume": "9",
+                "issue": "",
+                "pages": "294--310",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Alon Jacovi and Yoav Goldberg. 2021. Aligning faithful interpretations with their social attribution. Transac- tions of the Association for Computational Linguis- tics, 9:294-310.",
+                "links": null
+            },
+            "BIBREF20": {
+                "ref_id": "b20",
+                "title": "Feature relevance quantification in explainable AI: A causal problem",
+                "authors": [
+                    {
+                        "first": "Dominik",
+                        "middle": [],
+                        "last": "Janzing",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Lenon",
+                        "middle": [],
+                        "last": "Minorics",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Patrick",
+                        "middle": [],
+                        "last": "Bl\u00f6baum",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "Proceedings of the International Conference on Artificial Intelligence and Statistics",
+                "volume": "",
+                "issue": "",
+                "pages": "2907--2916",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Dominik Janzing, Lenon Minorics, and Patrick Bl\u00f6baum. 2020. Feature relevance quantification in explainable AI: A causal problem. In Proceedings of the International Conference on Artificial Intelli- gence and Statistics, pages 2907-2916. PMLR.",
+                "links": null
+            },
+            "BIBREF21": {
+                "ref_id": "b21",
+                "title": "Explaining the efficacy of counterfactually augmented data",
+                "authors": [
+                    {
+                        "first": "Divyansh",
+                        "middle": [],
+                        "last": "Kaushik",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Amrith",
+                        "middle": [],
+                        "last": "Setlur",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Eduard",
+                        "middle": [
+                            "H"
+                        ],
+                        "last": "Hovy",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zachary",
+                        "middle": [
+                            "Chase"
+                        ],
+                        "last": "Lipton",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2021,
+                "venue": "Proceedings of the International Conference on Learning Representations",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Divyansh Kaushik, Amrith Setlur, Eduard H Hovy, and Zachary Chase Lipton. 2021. Explaining the efficacy of counterfactually augmented data. In Proceedings of the International Conference on Learning Repre- sentations.",
+                "links": null
+            },
+            "BIBREF22": {
+                "ref_id": "b22",
+                "title": "Interpretation of NLP models through input marginalization",
+                "authors": [
+                    {
+                        "first": "Siwon",
+                        "middle": [],
+                        "last": "Kim",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jihun",
+                        "middle": [],
+                        "last": "Yi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Eunji",
+                        "middle": [],
+                        "last": "Kim",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sungroh",
+                        "middle": [],
+                        "last": "Yoon",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "Proceedings of the 2020 Conference on Empirical Methods in Natural Language Processing (EMNLP)",
+                "volume": "",
+                "issue": "",
+                "pages": "3154--3167",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/2020.emnlp-main.255"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Siwon Kim, Jihun Yi, Eunji Kim, and Sungroh Yoon. 2020. Interpretation of NLP models through input marginalization. In Proceedings of the 2020 Con- ference on Empirical Methods in Natural Language Processing (EMNLP), pages 3154-3167, Online. As- sociation for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF23": {
+                "ref_id": "b23",
+                "title": "Confronting abusive language online: A survey from the ethical and human rights perspective",
+                "authors": [
+                    {
+                        "first": "Svetlana",
+                        "middle": [],
+                        "last": "Kiritchenko",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Isar",
+                        "middle": [],
+                        "last": "Nejadgholi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kathleen",
+                        "middle": [
+                            "C"
+                        ],
+                        "last": "Fraser",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2021,
+                "venue": "Journal of Artificial Intelligence Research",
+                "volume": "71",
+                "issue": "",
+                "pages": "431--478",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Svetlana Kiritchenko, Isar Nejadgholi, and Kathleen C Fraser. 2021. Confronting abusive language online: A survey from the ethical and human rights per- spective. Journal of Artificial Intelligence Research, 71:431-478.",
+                "links": null
+            },
+            "BIBREF24": {
+                "ref_id": "b24",
+                "title": "A unified approach to interpreting model predictions",
+                "authors": [
+                    {
+                        "first": "M",
+                        "middle": [],
+                        "last": "Scott",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Su-In",
+                        "middle": [],
+                        "last": "Lundberg",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Lee",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Advances in Neural Information Processing Systems",
+                "volume": "30",
+                "issue": "",
+                "pages": "4765--4774",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Scott M Lundberg and Su-In Lee. 2017. A unified ap- proach to interpreting model predictions. In I. Guyon, U. V. Luxburg, S. Bengio, H. Wallach, R. Fergus, S. Vishwanathan, and R. Garnett, editors, Advances in Neural Information Processing Systems 30, pages 4765-4774. Curran Associates, Inc.",
+                "links": null
+            },
+            "BIBREF25": {
+                "ref_id": "b25",
+                "title": "Local interpretations for explainable natural language processing: A survey",
+                "authors": [
+                    {
+                        "first": "Siwen",
+                        "middle": [],
+                        "last": "Luo",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hamish",
+                        "middle": [],
+                        "last": "Ivison",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Caren",
+                        "middle": [],
+                        "last": "Han",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Josiah",
+                        "middle": [],
+                        "last": "Poon",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2021,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:2103.11072"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Siwen Luo, Hamish Ivison, Caren Han, and Josiah Poon. 2021. Local interpretations for explainable natu- ral language processing: A survey. arXiv preprint arXiv:2103.11072.",
+                "links": null
+            },
+            "BIBREF26": {
+                "ref_id": "b26",
+                "title": "Hatexplain: A benchmark dataset for explainable hate speech detection",
+                "authors": [
+                    {
+                        "first": "Binny",
+                        "middle": [],
+                        "last": "Mathew",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Punyajoy",
+                        "middle": [],
+                        "last": "Saha",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Seid",
+                        "middle": [],
+                        "last": "Muhie Yimam",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chris",
+                        "middle": [],
+                        "last": "Biemann",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Pawan",
+                        "middle": [],
+                        "last": "Goyal",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Animesh",
+                        "middle": [],
+                        "last": "Mukherjee",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2021,
+                "venue": "Proceedings of the AAAI Conference on Artificial Intelligence",
+                "volume": "35",
+                "issue": "",
+                "pages": "14867--14875",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Binny Mathew, Punyajoy Saha, Seid Muhie Yimam, Chris Biemann, Pawan Goyal, and Animesh Mukher- jee. 2021. Hatexplain: A benchmark dataset for ex- plainable hate speech detection. In Proceedings of the AAAI Conference on Artificial Intelligence, vol- ume 35, pages 14867-14875.",
+                "links": null
+            },
+            "BIBREF27": {
+                "ref_id": "b27",
+                "title": "Explanation in artificial intelligence: Insights from the social sciences. Artificial intelligence",
+                "authors": [
+                    {
+                        "first": "Tim",
+                        "middle": [],
+                        "last": "Miller",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "",
+                "volume": "267",
+                "issue": "",
+                "pages": "1--38",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Tim Miller. 2019. Explanation in artificial intelligence: Insights from the social sciences. Artificial intelli- gence, 267:1-38.",
+                "links": null
+            },
+            "BIBREF28": {
+                "ref_id": "b28",
+                "title": "Towards unifying feature attribution and counterfactual explanations: Different means to the same end",
+                "authors": [
+                    {
+                        "first": "Ramaravind",
+                        "middle": [],
+                        "last": "Mothilal",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Divyat",
+                        "middle": [],
+                        "last": "Mahajan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chenhao",
+                        "middle": [],
+                        "last": "Tan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Amit",
+                        "middle": [],
+                        "last": "Sharma",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2021,
+                "venue": "Proceedings of the 2021 AAAI/ACM Conference on AI, Ethics, and Society",
+                "volume": "",
+                "issue": "",
+                "pages": "652--663",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ramaravind Mothilal, Divyat Mahajan, Chenhao Tan, and Amit Sharma. 2021. Towards unifying feature attribution and counterfactual explanations: Different means to the same end. In Proceedings of the 2021 AAAI/ACM Conference on AI, Ethics, and Society, pages 652-663.",
+                "links": null
+            },
+            "BIBREF29": {
+                "ref_id": "b29",
+                "title": "On cross-dataset generalization in automatic detection of online abuse",
+                "authors": [
+                    {
+                        "first": "Isar",
+                        "middle": [],
+                        "last": "Nejadgholi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Svetlana",
+                        "middle": [],
+                        "last": "Kiritchenko",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "Proceedings of the Fourth Workshop on Online Abuse and Harms",
+                "volume": "",
+                "issue": "",
+                "pages": "173--183",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Isar Nejadgholi and Svetlana Kiritchenko. 2020. On cross-dataset generalization in automatic detection of online abuse. In Proceedings of the Fourth Workshop on Online Abuse and Harms, pages 173-183.",
+                "links": null
+            },
+            "BIBREF30": {
+                "ref_id": "b30",
+                "title": "Reducing gender bias in abusive language detection",
+                "authors": [
+                    {
+                        "first": "Ji",
+                        "middle": [],
+                        "last": "Ho",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Park",
+                        "middle": [],
+                        "last": "",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jamin",
+                        "middle": [],
+                        "last": "Shin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Pascale",
+                        "middle": [],
+                        "last": "Fung",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "2799--2804",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ji Ho Park, Jamin Shin, and Pascale Fung. 2018. Re- ducing gender bias in abusive language detection. In Proceedings of the Conference on Empirical Methods in Natural Language Processing, pages 2799-2804, Brussels, Belgium.",
+                "links": null
+            },
+            "BIBREF31": {
+                "ref_id": "b31",
+                "title": "Causality",
+                "authors": [
+                    {
+                        "first": "Judea",
+                        "middle": [],
+                        "last": "Pearl",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Judea Pearl. 2009. Causality. Cambridge University Press.",
+                "links": null
+            },
+            "BIBREF32": {
+                "ref_id": "b32",
+                "title": "Double trouble: How to not explain a text classifier's decisions using counterfactuals synthesized by masked language models",
+                "authors": [
+                    {
+                        "first": "M",
+                        "middle": [],
+                        "last": "Thang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Trung",
+                        "middle": [],
+                        "last": "Pham",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Long",
+                        "middle": [],
+                        "last": "Bui",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Anh",
+                        "middle": [],
+                        "last": "Mai",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Nguyen",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2021,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:2110.11929"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Thang M Pham, Trung Bui, Long Mai, and Anh Nguyen. 2021. Double trouble: How to not explain a text classifier's decisions using counterfactuals synthe- sized by masked language models? arXiv preprint arXiv:2110.11929.",
+                "links": null
+            },
+            "BIBREF33": {
+                "ref_id": "b33",
+                "title": "Language models are unsupervised multitask learners",
+                "authors": [
+                    {
+                        "first": "Alec",
+                        "middle": [],
+                        "last": "Radford",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jeffrey",
+                        "middle": [],
+                        "last": "Wu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Rewon",
+                        "middle": [],
+                        "last": "Child",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "David",
+                        "middle": [],
+                        "last": "Luan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dario",
+                        "middle": [],
+                        "last": "Amodei",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ilya",
+                        "middle": [],
+                        "last": "Sutskever",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "OpenAI blog",
+                "volume": "1",
+                "issue": "8",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Alec Radford, Jeffrey Wu, Rewon Child, David Luan, Dario Amodei, Ilya Sutskever, et al. 2019. Language models are unsupervised multitask learners. OpenAI blog, 1(8):9.",
+                "links": null
+            },
+            "BIBREF34": {
+                "ref_id": "b34",
+                "title": "Explaining the predictions of any classifier",
+                "authors": [
+                    {
+                        "first": "Marco",
+                        "middle": [],
+                        "last": "Tulio Ribeiro",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sameer",
+                        "middle": [],
+                        "last": "Singh",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Carlos",
+                        "middle": [],
+                        "last": "Guestrin",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of the 22nd ACM SIGKDD International Conference on Knowledge Discovery and Data Mining",
+                "volume": "",
+                "issue": "",
+                "pages": "1135--1144",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Marco Tulio Ribeiro, Sameer Singh, and Carlos Guestrin. 2016. \"Why should i trust you?\" Explain- ing the predictions of any classifier. In Proceedings of the 22nd ACM SIGKDD International Conference on Knowledge Discovery and Data Mining, pages 1135-1144.",
+                "links": null
+            },
+            "BIBREF35": {
+                "ref_id": "b35",
+                "title": "Beyond accuracy: Behavioral testing of NLP models with CheckList",
+                "authors": [
+                    {
+                        "first": "Marco",
+                        "middle": [],
+                        "last": "Tulio Ribeiro",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tongshuang",
+                        "middle": [],
+                        "last": "Wu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Carlos",
+                        "middle": [],
+                        "last": "Guestrin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sameer",
+                        "middle": [],
+                        "last": "Singh",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "4902--4912",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/2020.acl-main.442"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Marco Tulio Ribeiro, Tongshuang Wu, Carlos Guestrin, and Sameer Singh. 2020. Beyond accuracy: Be- havioral testing of NLP models with CheckList. In Proceedings of the 58th Annual Meeting of the Asso- ciation for Computational Linguistics, pages 4902- 4912, Online. Association for Computational Lin- guistics.",
+                "links": null
+            },
+            "BIBREF36": {
+                "ref_id": "b36",
+                "title": "Explaining NLP models via minimal contrastive editing (MiCE)",
+                "authors": [
+                    {
+                        "first": "Alexis",
+                        "middle": [],
+                        "last": "Ross",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ana",
+                        "middle": [],
+                        "last": "Marasovi\u0107",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Matthew",
+                        "middle": [],
+                        "last": "Peters",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2021,
+                "venue": "Findings of the Association for Computational Linguistics: ACL-IJCNLP 2021",
+                "volume": "",
+                "issue": "",
+                "pages": "3840--3852",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/2021.findings-acl.336"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Alexis Ross, Ana Marasovi\u0107, and Matthew Peters. 2021. Explaining NLP models via minimal contrastive edit- ing (MiCE). In Findings of the Association for Com- putational Linguistics: ACL-IJCNLP 2021, pages 3840-3852, Online. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF37": {
+                "ref_id": "b37",
+                "title": "Explaining NLP models via minimal contrastive editing (MiCE)",
+                "authors": [
+                    {
+                        "first": "Alexis",
+                        "middle": [],
+                        "last": "Ross",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ana",
+                        "middle": [],
+                        "last": "Marasovi\u0107",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Matthew",
+                        "middle": [
+                            "E"
+                        ],
+                        "last": "Peters",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:2012.13985"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Alexis Ross, Ana Marasovi\u0107, and Matthew E Pe- ters. 2020. Explaining NLP models via mini- mal contrastive editing (MiCE). arXiv preprint arXiv:2012.13985.",
+                "links": null
+            },
+            "BIBREF38": {
+                "ref_id": "b38",
+                "title": "HateCheck: Functional tests for hate speech detection models",
+                "authors": [
+                    {
+                        "first": "Paul",
+                        "middle": [],
+                        "last": "R\u00f6ttger",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Bertie",
+                        "middle": [],
+                        "last": "Vidgen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dong",
+                        "middle": [],
+                        "last": "Nguyen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zeerak",
+                        "middle": [],
+                        "last": "Waseem",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Helen",
+                        "middle": [],
+                        "last": "Margetts",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Janet",
+                        "middle": [],
+                        "last": "Pierrehumbert",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2021,
+                "venue": "Proceedings of the 59th Annual Meeting of the Association for Computational Linguistics and the 11th International Joint Conference on Natural Language Processing",
+                "volume": "1",
+                "issue": "",
+                "pages": "41--58",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/2021.acl-long.4"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Paul R\u00f6ttger, Bertie Vidgen, Dong Nguyen, Zeerak Waseem, Helen Margetts, and Janet Pierrehumbert. 2021. HateCheck: Functional tests for hate speech detection models. In Proceedings of the 59th An- nual Meeting of the Association for Computational Linguistics and the 11th International Joint Confer- ence on Natural Language Processing (Volume 1: Long Papers), pages 41-58, Online. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF39": {
+                "ref_id": "b39",
+                "title": "Axiomatic attribution for deep networks",
+                "authors": [
+                    {
+                        "first": "Mukund",
+                        "middle": [],
+                        "last": "Sundararajan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ankur",
+                        "middle": [],
+                        "last": "Taly",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Qiqi",
+                        "middle": [],
+                        "last": "Yan",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Proceedings of the International Conference on Machine Learning",
+                "volume": "",
+                "issue": "",
+                "pages": "3319--3328",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Mukund Sundararajan, Ankur Taly, and Qiqi Yan. 2017. Axiomatic attribution for deep networks. In Pro- ceedings of the International Conference on Machine Learning, pages 3319-3328. PMLR.",
+                "links": null
+            },
+            "BIBREF40": {
+                "ref_id": "b40",
+                "title": "A human-centered agenda for intelligible machine learning",
+                "authors": [
+                    {
+                        "first": "Jennifer",
+                        "middle": [],
+                        "last": "Wortman",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Vaughan",
+                        "middle": [],
+                        "last": "",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hanna",
+                        "middle": [],
+                        "last": "Wallach",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2021,
+                "venue": "Machines We Trust: Perspectives on Dependable AI",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jennifer Wortman Vaughan and Hanna Wallach. 2021. A human-centered agenda for intelligible machine learning. In Marcello Pelillo and Teresa Scantam- burlo, editors, Machines We Trust: Perspectives on Dependable AI. The MIT Press.",
+                "links": null
+            },
+            "BIBREF41": {
+                "ref_id": "b41",
+                "title": "Introducing CAD: the contextual abuse dataset",
+                "authors": [
+                    {
+                        "first": "Bertie",
+                        "middle": [],
+                        "last": "Vidgen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dong",
+                        "middle": [],
+                        "last": "Nguyen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Helen",
+                        "middle": [],
+                        "last": "Margetts",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Patricia",
+                        "middle": [],
+                        "last": "Rossini",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Rebekah",
+                        "middle": [],
+                        "last": "Tromble",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2021,
+                "venue": "Proceedings of the 2021 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies",
+                "volume": "",
+                "issue": "",
+                "pages": "2289--2303",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Bertie Vidgen, Dong Nguyen, Helen Margetts, Patricia Rossini, and Rebekah Tromble. 2021. Introducing CAD: the contextual abuse dataset. In Proceedings of the 2021 Conference of the North American Chap- ter of the Association for Computational Linguistics: Human Language Technologies, pages 2289-2303.",
+                "links": null
+            },
+            "BIBREF42": {
+                "ref_id": "b42",
+                "title": "Local explanations via necessity and sufficiency: Unifying theory and practice",
+                "authors": [
+                    {
+                        "first": "David",
+                        "middle": [],
+                        "last": "Watson",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Limor",
+                        "middle": [],
+                        "last": "Gultchin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ankur",
+                        "middle": [],
+                        "last": "Taly",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Luciano",
+                        "middle": [],
+                        "last": "Floridi",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2021,
+                "venue": "Proceedings of Machine Learning Research",
+                "volume": "161",
+                "issue": "",
+                "pages": "1382--1392",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "David Watson, Limor Gultchin, Ankur Taly, and Lu- ciano Floridi. 2021. Local explanations via necessity and sufficiency: Unifying theory and practice. In Proceedings of Machine Learning Research, volume 161, page 1382-1392.",
+                "links": null
+            },
+            "BIBREF43": {
+                "ref_id": "b43",
+                "title": "Polyjuice: Generating counterfactuals for explaining, evaluating, and improving models",
+                "authors": [
+                    {
+                        "first": "Tongshuang",
+                        "middle": [],
+                        "last": "Wu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Marco",
+                        "middle": [],
+                        "last": "Tulio Ribeiro",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jeffrey",
+                        "middle": [],
+                        "last": "Heer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Daniel",
+                        "middle": [],
+                        "last": "Weld",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2021,
+                "venue": "Proceedings of the 59th Annual Meeting of the Association for Computational Linguistics and the 11th International Joint Conference on Natural Language Processing",
+                "volume": "1",
+                "issue": "",
+                "pages": "6707--6723",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/2021.acl-long.523"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Tongshuang Wu, Marco Tulio Ribeiro, Jeffrey Heer, and Daniel Weld. 2021. Polyjuice: Generating counter- factuals for explaining, evaluating, and improving models. In Proceedings of the 59th Annual Meet- ing of the Association for Computational Linguistics and the 11th International Joint Conference on Natu- ral Language Processing (Volume 1: Long Papers), pages 6707-6723, Online. Association for Computa- tional Linguistics.",
+                "links": null
+            },
+            "BIBREF44": {
+                "ref_id": "b44",
+                "title": "Ex machina: Personal attacks seen at scale",
+                "authors": [
+                    {
+                        "first": "Ellery",
+                        "middle": [],
+                        "last": "Wulczyn",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nithum",
+                        "middle": [],
+                        "last": "Thain",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Lucas",
+                        "middle": [],
+                        "last": "Dixon",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Proceedings of the 26th International Conference on World Wide Web",
+                "volume": "",
+                "issue": "",
+                "pages": "1391--1399",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ellery Wulczyn, Nithum Thain, and Lucas Dixon. 2017. Ex machina: Personal attacks seen at scale. In Pro- ceedings of the 26th International Conference on World Wide Web, pages 1391-1399.",
+                "links": null
+            },
+            "BIBREF45": {
+                "ref_id": "b45",
+                "title": "Using \"annotator rationales\" to improve machine learning for text categorization",
+                "authors": [
+                    {
+                        "first": "Omar",
+                        "middle": [],
+                        "last": "Zaidan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jason",
+                        "middle": [],
+                        "last": "Eisner",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christine",
+                        "middle": [],
+                        "last": "Piatko",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2007,
+                "venue": "Proceedings of the Conference of the North American Chapter",
+                "volume": "",
+                "issue": "",
+                "pages": "260--267",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Omar Zaidan, Jason Eisner, and Christine Piatko. 2007. Using \"annotator rationales\" to improve machine learning for text categorization. In Proceedings of the Conference of the North American Chapter of the Association for Computational Linguistics, pages 260-267.",
+                "links": null
+            },
+            "BIBREF46": {
+                "ref_id": "b46",
+                "title": "Paws: Paraphrase adversaries from word scrambling",
+                "authors": [
+                    {
+                        "first": "Yuan",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jason",
+                        "middle": [],
+                        "last": "Baldridge",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Luheng",
+                        "middle": [],
+                        "last": "He",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies",
+                "volume": "1",
+                "issue": "",
+                "pages": "1298--1308",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Yuan Zhang, Jason Baldridge, and Luheng He. 2019. Paws: Paraphrase adversaries from word scrambling. In Proceedings of the 2019 Conference of the North American Chapter of the Association for Computa- tional Linguistics: Human Language Technologies, Volume 1 (Long and Short Papers), pages 1298-1308.",
+                "links": null
+            }
+        },
+        "ref_entries": {
+            "TABREF1": {
+                "content": "<table><tr><td/><td>Functionality</td><td>Example Test Case</td><td>Gold Label</td><td>n</td></tr><tr><td>Explicit</td><td>F1: Expression of strong negative emotions F2: Description using very negative attributes F3: Dehumanisation</td><td>\"I hate [IDENTITY].\" \"You [IDENTITY] make me sick.\" \"[IDENTITY] are disgusting.\" \"All [IDENTITY] like them are vile.\" \"[IDENTITY] are scum.\" \"[IDENTITY] are a pest.\"</td><td>hateful hateful hateful</td><td>40 40 40</td></tr><tr><td>Non-hate grp. ident.</td><td>F18: Neutral statements using pro-tected group identifiers F19: Positive statements using pro-tected group identifiers</td><td>\"We are a group of [IDENTITY].\" \"I live with two [IDENTITY].\" \"I love [IDENTITY].\" \"[IDENTITY] are great.\"</td><td>non-hate non-hate</td><td>36 54</td></tr><tr><td>Abuse against non-prot. targets</td><td>F22: Abuse targeted at objects F23: Abuse targeted at individuals (not as member of a prot. group) F24: Abuse targeted at non-protected groups (e.g. professions)</td><td>\"I really can't stand cauliflower.\" \"All cocktails like these are vile\" \"You make me sick.\" \"I will hurt you.\" \"Artists are parasites to our society.\" \"Death to all capitalists.\"</td><td>non-hate non-hate non-hate</td><td>65 65 62</td></tr></table>",
+                "type_str": "table",
+                "text": "Test cases of interest from HateCheck(R\u00f6ttger et al., 2021). We hypothesize that for identity terms in explicit test cases, if sufficiency is high then the model will have a high error rate on the test cases that capture non-hate group identity mentions, and if necessity is low then the model will have a high error rate on the test cases that cover abuse against non-protected targets.",
+                "html": null,
+                "num": null
+            },
+            "TABREF3": {
+                "content": "<table><tr><td>necc</td><td colspan=\"2\">women</td><td>suff</td><td>necc</td><td>Muslims</td><td>suff</td></tr><tr><td colspan=\"2\">Founta2018-hate 0.82 \u00b10.18 Founta2018-abuse 0.54 \u00b10.17</td><td colspan=\"2\">0.29 \u00b10.1 0.34 \u00b10.1</td><td colspan=\"3\">0.89 \u00b10.16 0.81 \u00b10.08 0.65 \u00b10.21 0.82 \u00b10.06</td></tr></table>",
+                "type_str": "table",
+                "text": "Davidson2017-hate 0.58 \u00b10.09 0.21 \u00b10.06 0.91 \u00b10.12 0.74 \u00b10.09 Davidson2017-abuse 0.82 \u00b10.14 0.43 \u00b10.13 0.83 \u00b10.13 0.41 \u00b10.14",
+                "html": null,
+                "num": null
+            },
+            "TABREF4": {
+                "content": "<table><tr><td/><td colspan=\"2\">Neutral/supportive group identity mention (F18, F19) women Muslims</td><td colspan=\"3\">Abuse against non-protected targets (F22, F23, F24) group individual object</td></tr><tr><td>Founta2018-hate Founta2018-abuse Davidson2017-hate Davidson2017-abuse Vidgen2021-hate Vidgen2021-abuse</td><td>0.02 0.02 0.02 0.31 0.36 0.42</td><td>0.78 0.78 0.78 0.22 0.82 0.96</td><td>0.19 0.45 0.37 0.26 0.02 0.40</td><td>0.15 0.72 0.18 0.28 0.00 0.61</td><td>0.05 0.37 0.02 0.14 0.00 0.00</td></tr></table>",
+                "type_str": "table",
+                "text": "Proportions of test cases classified as hateful/abusive for different non-hateful HateCheck functionalities and targets.",
+                "html": null,
+                "num": null
+            },
+            "TABREF6": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "The mean and standard deviation of SHAP and LIME scores for target tokens in explicitly hateful cases of HateCheck (F1, F2,",
+                "html": null,
+                "num": null
+            },
+            "TABREF7": {
+                "content": "<table><tr><td>Civil Comments 8 (Borkan et al., 2019), and Vidgen2021 9</td></tr><tr><td>(Vidgen et al., 2021). The datasets contain English-</td></tr><tr><td>language utterances, and cover different domains</td></tr><tr><td>(Twitter post, Reddit posts, Wikipedia comments,</td></tr><tr><td>and comments from news websites). The datasets</td></tr><tr><td>have been created to study abusive language, and</td></tr><tr><td>are commonly used to train and evaluate classifi-</td></tr><tr><td>cation models that detect various sub-categories</td></tr><tr><td>of online abuse, such as hate speech, toxicity, per-</td></tr><tr><td>sonal attacks, etc. All datasets except Founta2018</td></tr><tr><td>are in the public domain and licensed for research</td></tr><tr><td>purposes. Founta2018 dataset is being used with</td></tr><tr><td>the permission of the first author.</td></tr></table>",
+                "type_str": "table",
+                "text": "To fine-tune the ILM model, we use the following four datasets: Wikipedia Toxicity 6(Wulczyn et al.,  2017), Founta2018 7 (Founta et al., 2018),",
+                "html": null,
+                "num": null
+            },
+            "TABREF8": {
+                "content": "<table><tr><td>Dataset Wikipedia Toxicity (Wulczyn et al., 2017)</td><td>Source Wikipedia comments</td><td>Class Normal 36,121 Size</td></tr><tr><td>Founta2018 (Founta et al., 2018) Civil Comments (Borkan et al., 2019) Vidgen2021 (Vidgen et al., 2021) Total</td><td>Twitter posts Comments on news sites Reddit posts</td><td>Normal 53,236 Normal 30,000 Non-11,073 Abusive 130,430</td></tr><tr><td>6 https://figshare.com/articles/</td><td/><td/></tr><tr><td>dataset/Wikipedia_Talk_Labels_Toxicity/</td><td/><td/></tr><tr><td>4563973 7 https://github.com/ENCASEH2020/</td><td/><td/></tr><tr><td>hatespeech-twitter 8 https://bit.ly/3Kfaveb 9 https://zenodo.org/record/4881008#</td><td/><td/></tr><tr><td>.YeBBQ2jMKUk 10 https://github.com/IsarNejad/cross_</td><td/><td/></tr><tr><td>dataset_toxicity</td><td/><td/></tr></table>",
+                "type_str": "table",
+                "text": "Table A.1: Description of the training data used to finetune the ILM model.turbed instances for each token for the necessity calculation, and 100 instances for the sufficiency calculation. This results in a total of 66,120 perturbed instances, and takes approximately 6 hours to generate on a 2.3 GHz Quad-Core Intel Core i7 CPU.",
+                "html": null,
+                "num": null
+            }
+        }
+    }
+}

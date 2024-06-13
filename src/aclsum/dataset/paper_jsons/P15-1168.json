@@ -1,0 +1,2443 @@
+{
+    "paper_id": "P15-1168",
+    "header": {
+        "generated_with": "S2ORC 1.0.0",
+        "date_generated": "2023-06-16T12:26:25.008704Z"
+    },
+    "title": "Gated Recursive Neural Network for Chinese Word Segmentation",
+    "authors": [
+        {
+            "first": "Xinchi",
+            "middle": [],
+            "last": "Chen",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "Shanghai Key Laboratory of Intelligent Information Processing",
+                "institution": "Fudan University",
+                "location": {
+                    "addrLine": "825 Zhangheng Road",
+                    "settlement": "Shanghai",
+                    "country": "China"
+                }
+            },
+            "email": "xinchichen13@fudan.edu.cn"
+        },
+        {
+            "first": "Xipeng",
+            "middle": [],
+            "last": "Qiu",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "Shanghai Key Laboratory of Intelligent Information Processing",
+                "institution": "Fudan University",
+                "location": {
+                    "addrLine": "825 Zhangheng Road",
+                    "settlement": "Shanghai",
+                    "country": "China"
+                }
+            },
+            "email": "xpqiu@fudan.edu.cn"
+        },
+        {
+            "first": "Chenxi",
+            "middle": [],
+            "last": "Zhu",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "Shanghai Key Laboratory of Intelligent Information Processing",
+                "institution": "Fudan University",
+                "location": {
+                    "addrLine": "825 Zhangheng Road",
+                    "settlement": "Shanghai",
+                    "country": "China"
+                }
+            },
+            "email": ""
+        },
+        {
+            "first": "Xuanjing",
+            "middle": [],
+            "last": "Huang",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "Shanghai Key Laboratory of Intelligent Information Processing",
+                "institution": "Fudan University",
+                "location": {
+                    "addrLine": "825 Zhangheng Road",
+                    "settlement": "Shanghai",
+                    "country": "China"
+                }
+            },
+            "email": "xjhuang@fudan.edu.cn"
+        }
+    ],
+    "year": "",
+    "venue": null,
+    "identifiers": {},
+    "abstract": "Recently, neural network models for natural language processing tasks have been increasingly focused on for their ability of alleviating the burden of manual feature engineering. However, the previous neural models cannot extract the complicated feature compositions as the traditional methods with discrete features. In this paper, we propose a gated recursive neural network (GRNN) for Chinese word segmentation, which contains reset and update gates to incorporate the complicated combinations of the context characters. Since GRNN is relative deep, we also use a supervised layer-wise training method to avoid the problem of gradient diffusion. Experiments on the benchmark datasets show that our model outperforms the previous neural network models as well as the state-of-the-art methods.",
+    "pdf_parse": {
+        "paper_id": "P15-1168",
+        "_pdf_hash": "",
+        "abstract": [
+            {
+                "text": "Recently, neural network models for natural language processing tasks have been increasingly focused on for their ability of alleviating the burden of manual feature engineering. However, the previous neural models cannot extract the complicated feature compositions as the traditional methods with discrete features. In this paper, we propose a gated recursive neural network (GRNN) for Chinese word segmentation, which contains reset and update gates to incorporate the complicated combinations of the context characters. Since GRNN is relative deep, we also use a supervised layer-wise training method to avoid the problem of gradient diffusion. Experiments on the benchmark datasets show that our model outperforms the previous neural network models as well as the state-of-the-art methods.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            }
+        ],
+        "body_text": [
+            {
+                "text": "Unlike English and other western languages, Chinese do not delimit words by white-space. Therefore, word segmentation is a preliminary and important pre-process for Chinese language processing. Most previous systems address this problem by treating this task as a sequence labeling problem and have achieved great success. Due to the nature of supervised learning, the performance of these models is greatly affected by the design of features. These features are explicitly represented by the different combinations of context characters, which are based on linguistic intuition and statistical information. However, the number of features could be so large that the result models are too large to use in practice and prone to overfit on training corpus.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Figure 1 : Illustration of our model for Chinese word segmentation. The solid nodes indicate the active neurons, while the hollow ones indicate the suppressed neurons. Specifically, the links denote the information flow, where the solid edges denote the acceptation of the combinations while the dashed edges means rejection of that. As shown in the right figure, we receive a score vector for tagging target character \"\u5730\" by incorporating all the combination information.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 7,
+                        "end": 8,
+                        "text": "1",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Recently, neural network models have been increasingly focused on for their ability to minimize the effort in feature engineering. Collobert et al. (2011) developed a general neural network architecture for sequence labeling tasks. Following this work, many methods (Zheng et al., 2013; Pei et al., 2014; Qi et al., 2014) applied the neural network to Chinese word segmentation and achieved a performance that approaches the state-of-the-art methods.",
+                "cite_spans": [
+                    {
+                        "start": 131,
+                        "end": 154,
+                        "text": "Collobert et al. (2011)",
+                        "ref_id": "BIBREF3"
+                    },
+                    {
+                        "start": 266,
+                        "end": 286,
+                        "text": "(Zheng et al., 2013;",
+                        "ref_id": "BIBREF24"
+                    },
+                    {
+                        "start": 287,
+                        "end": 304,
+                        "text": "Pei et al., 2014;",
+                        "ref_id": "BIBREF8"
+                    },
+                    {
+                        "start": 305,
+                        "end": 321,
+                        "text": "Qi et al., 2014)",
+                        "ref_id": "BIBREF10"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "However, these neural models just concatenate the embeddings of the context characters, and feed them into neural network. Since the concatenation operation is relatively simple, it is difficult to model the complicated features as the traditional discrete feature based models. Although the complicated interactions of inputs can be modeled by the deep neural network, the previous neural model shows that the deep model cannot outperform the one with a single non-linear model. Therefore, the neural model only captures the interactions by the simple transition matrix and the single non-linear transformation . These dense features extracted via these simple interactions are not nearly as good as the substantial discrete features in the traditional methods.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "In this paper, we propose a gated recursive neural network (GRNN) to model the complicated combinations of characters, and apply it to Chinese word segmentation task. Inspired by the success of gated recurrent neural network (Chung et al., 2014) , we introduce two kinds of gates to control the combinations in recursive structure. We also use the layer-wise training method to avoid the problem of gradient diffusion, and the dropout strategy to avoid the overfitting problem.",
+                "cite_spans": [
+                    {
+                        "start": 225,
+                        "end": 245,
+                        "text": "(Chung et al., 2014)",
+                        "ref_id": "BIBREF2"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Figure 1 gives an illustration of how our approach models the complicated combinations of the context characters. Given a sentence \"\u96e8 (Rainy) \u5929 (Day) \u5730\u9762 (Ground) \u79ef\u6c34 (Accumulated water)\", the target character is \"\u5730\". This sentence is very complicated because each consecutive two characters can be combined as a word. To predict the label of the target character \"\u5730\" under the given context, GRNN detects the combinations recursively from the bottom layer to the top. Then, we receive a score vector of tags by incorporating all the combination information in network.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 7,
+                        "end": 8,
+                        "text": "1",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "The contributions of this paper can be summarized as follows:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "\u2022 We propose a novel GRNN architecture to model the complicated combinations of the context characters. GRNN can select and preserve the useful combinations via reset and update gates. These combinations play a similar role in the feature engineering of the traditional methods with discrete features.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "\u2022 We evaluate the performance of Chinese word segmentation on PKU, MSRA and CTB6 benchmark datasets which are commonly used for evaluation of Chinese word segmentation. Experiment results show that our model outperforms other neural network models, and achieves state-of-the-art performance.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Chinese word segmentation task is usually regarded as a character-based sequence labeling The general neural network architecture for Chinese word segmentation task is usually characterized by three specialized layers: (1) a character embedding layer; (2) a series of classical neural network layers and (3) tag inference layer. A illustration is shown in Figure 2 .",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 363,
+                        "end": 364,
+                        "text": "2",
+                        "ref_id": "FIGREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Neural Model for Chinese Word Segmentation",
+                "sec_num": "2"
+            },
+            {
+                "text": "Input Window Characters C i-2 C i-1 C i+1 C i+2 C i Lookup Table \u2022 \u2022 \u2022 \u2022 \u2022 \u2022 \u2022 \u2022 \u2022 \u2022 \u2022 \u2022 \u2022 \u2022 \u2022 3 4 5 2 6 1 \u2022 \u2022 \u2022 d-1 d Features Linear W 1 \u00d7\u25a1+b 1 \u2022 \u2022 \u2022 Number of Hidden Units Sigmoid g(\u25a1)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Neural Model for Chinese Word Segmentation",
+                "sec_num": "2"
+            },
+            {
+                "text": "\u2022 \u2022 Tag Inference f(t|1) f(t|2) f(t|i) f(t|n-1) f(t|n) Aij Concatenate B E M S",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Neural Model for Chinese Word Segmentation",
+                "sec_num": "2"
+            },
+            {
+                "text": "The most common tagging approach is based on a local window. The window approach assumes that the tag of a character largely depends on its neighboring characters.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Neural Model for Chinese Word Segmentation",
+                "sec_num": "2"
+            },
+            {
+                "text": "Firstly, we have a character set C of size |C|. Then each character c \u2208 C is mapped into an ddimensional embedding space as c \u2208 R d by a lookup table M \u2208 R d\u00d7|C| .",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Neural Model for Chinese Word Segmentation",
+                "sec_num": "2"
+            },
+            {
+                "text": "For each character c i in a given sentence c 1:n , the context characters c i-w 1 :i+w2 are mapped to their corresponding character embeddings as c i-w 1 :i+w 2 , where w 1 and w 2 are left and right context lengths respectively. Specifically, the unknown characters and characters exceeding the sentence boundaries are mapped to special symbols, \"unknown\", \"start\" and \"end\" respectively. In addition, w 1 and w 2 satisfy the constraint w 1 + w 2 + 1 = w, where w is the window size of the model. As an illustration in Figure 2 , w 1 , w 2 and w are set to 2, 2 and 5 respectively.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 527,
+                        "end": 528,
+                        "text": "2",
+                        "ref_id": "FIGREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Neural Model for Chinese Word Segmentation",
+                "sec_num": "2"
+            },
+            {
+                "text": "The embeddings of all the context characters are then concatenated into a single vector a i \u2208 R H 1 as input of the neural network, where H 1 = w \u00d7 d is the size of Layer 1. And a i is then fed into a conventional neural network layer which performs a linear transformation followed by an element-wise activation function g, such as tanh.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Neural Model for Chinese Word Segmentation",
+                "sec_num": "2"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "h i = g(W 1 a i + b 1 ),",
+                        "eq_num": "(1)"
+                    }
+                ],
+                "section": "Neural Model for Chinese Word Segmentation",
+                "sec_num": "2"
+            },
+            {
+                "text": "where",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Neural Model for Chinese Word Segmentation",
+                "sec_num": "2"
+            },
+            {
+                "text": "W 1 \u2208 R H 2 \u00d7H 1 , b 1 \u2208 R H 2 , h i \u2208 R H 2 . H 2",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Neural Model for Chinese Word Segmentation",
+                "sec_num": "2"
+            },
+            {
+                "text": "is the number of hidden units in Layer 2. Here, w, H 1 and H 2 are hyper-parameters chosen on development set.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Neural Model for Chinese Word Segmentation",
+                "sec_num": "2"
+            },
+            {
+                "text": "Then, a similar linear transformation is performed without non-linear function followed:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Neural Model for Chinese Word Segmentation",
+                "sec_num": "2"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "f (t|c i-w 1 :i+w 2 ) = W 2 h i + b 2 ,",
+                        "eq_num": "(2)"
+                    }
+                ],
+                "section": "Neural Model for Chinese Word Segmentation",
+                "sec_num": "2"
+            },
+            {
+                "text": "where",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Neural Model for Chinese Word Segmentation",
+                "sec_num": "2"
+            },
+            {
+                "text": "W 2 \u2208 R |T |\u00d7H 2 , b 2 \u2208 R |T | and T is the set of 4 possible tags. Each dimension of vector f (t|c i-w 1 :i+w 2 ) \u2208 R |T |",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Neural Model for Chinese Word Segmentation",
+                "sec_num": "2"
+            },
+            {
+                "text": "is the score of the corresponding tag.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Neural Model for Chinese Word Segmentation",
+                "sec_num": "2"
+            },
+            {
+                "text": "To model the tag dependency, a transition score A ij is introduced to measure the probability of jumping from tag i \u2208 T to tag j \u2208 T (Collobert et al., 2011) .",
+                "cite_spans": [
+                    {
+                        "start": 133,
+                        "end": 157,
+                        "text": "(Collobert et al., 2011)",
+                        "ref_id": "BIBREF3"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Neural Model for Chinese Word Segmentation",
+                "sec_num": "2"
+            },
+            {
+                "text": "To model the complicated feature combinations, we propose a novel gated recursive neural network (GRNN) architecture for Chinese word segmentation task (see Figure 3 ).",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 164,
+                        "end": 165,
+                        "text": "3",
+                        "ref_id": "FIGREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Gated Recursive Neural Network for Chinese Word Segmentation",
+                "sec_num": "3"
+            },
+            {
+                "text": "A recursive neural network (RNN) is a kind of deep neural network created by applying the same set of weights recursively over a given structure(such as parsing tree) in topological order (Pollack, 1990; Socher et al., 2013a) .",
+                "cite_spans": [
+                    {
+                        "start": 188,
+                        "end": 203,
+                        "text": "(Pollack, 1990;",
+                        "ref_id": "BIBREF9"
+                    },
+                    {
+                        "start": 204,
+                        "end": 225,
+                        "text": "Socher et al., 2013a)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Recursive Neural Network",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "In the simplest case, children nodes are combined into their parent node using a weight matrix W that is shared across the whole network, followed by a non-linear function g(\u2022). Specifically, if h L and h R are d-dimensional vector representations of left and right children nodes respectively, their parent node h P will be a d-dimensional vector as well, calculated as:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Recursive Neural Network",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "E M B S \u2026\u2026 \u2026\u2026 \u2026\u2026 \u2026\u2026 \u2026\u2026 \u2026\u2026 \u2026\u2026 \u2026\u2026 \u2026\u2026 \u2026\u2026 \u2026\u2026 \u2026\u2026 \u2026\u2026 \u2026\u2026 \u2026\u2026 \u2026\u2026 \u2026\u2026 c i-2 c i-1 c i c i+1 c i+2 \u2026\u2026 \u2026\u2026 \u2026\u2026 \u2026\u2026 Linear x i yi = Ws \u00d7 xi + bs Concatenate y i",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Recursive Neural Network",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "h P = g ( W [ h L h R ]) ,",
+                        "eq_num": "(3)"
+                    }
+                ],
+                "section": "Recursive Neural Network",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "where W \u2208 R d\u00d72d and g is a non-linear function as mentioned above.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Recursive Neural Network",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "The RNN need a topological structure to model a sequence, such as a syntactic tree. In this paper, we use a directed acyclic graph (DAG), as showing in Figure 3 , to model the combinations of the input characters, in which two consecutive nodes in the lower layer are combined into a single node in the upper layer via the operation as Eq. ( 3).",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 159,
+                        "end": 160,
+                        "text": "3",
+                        "ref_id": "FIGREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Gated Recursive Neural Network",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "In fact, the DAG structure can model the combinations of characters by continuously mixing the information from the bottom layer to the top layer. Each neuron can be regarded as a complicated feature composition of its governed characters, similar to the discrete feature based models. The difference between them is that the neural one automatically learns the complicated combinations while the conventional one need manually design them.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Gated Recursive Neural Network",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "When the children nodes combine into their parent node, the combination information of two children nodes is also merged and preserved by their parent node.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Gated Recursive Neural Network",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "Although the mechanism above seem to work well, it can not sufficiently model the complicated combination features for its simplicity in practice.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Gated Recursive Neural Network",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "Inspired by the success of the gated recurrent neural network (Cho et al., 2014b; Chung et al., 2014) , we propose a gated recursive neural network (GRNN) by introducing two kinds of gates, namely \"reset gate\" and \"update gate\". Specifically, there are two reset gates, r L and r R , partially reading the information from left child and right child respectively. And the update gates z N , z L and z R decide what to preserve when combining the children's information. Intuitively, these gates seems to decide how to update and exploit the combination information.",
+                "cite_spans": [
+                    {
+                        "start": 62,
+                        "end": 81,
+                        "text": "(Cho et al., 2014b;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 82,
+                        "end": 101,
+                        "text": "Chung et al., 2014)",
+                        "ref_id": "BIBREF2"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Gated Recursive Neural Network",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "In the case of word segmentation, for each character c i of a given sentence c 1:n , we first represent each context character c j into its corresponding embedding c j , where i -w 1 \u2264 j \u2264 i + w 2 and the definitions of w 1 and w 2 are as same as mentioned above.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Gated Recursive Neural Network",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "Then, the embeddings are sent to the first layer of GRNN as inputs, whose outputs are recursively applied to upper layers until it outputs a single fixed-length vector.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Gated Recursive Neural Network",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "The outputs of the different neurons can be regarded as the different feature compositions. After concatenating the outputs of all neurons in the network, we get a new big vector x i . Next, we receive the tag score vector y i for character c j by a linear transformation of x i :",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Gated Recursive Neural Network",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "y i = W s \u00d7 x i + b s ,",
+                        "eq_num": "(4)"
+                    }
+                ],
+                "section": "Gated Recursive Neural Network",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "where",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Gated Recursive Neural Network",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "b s \u2208 R |T | , W s \u2208 R |T |\u00d7Q . Q = q \u00d7 d",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Gated Recursive Neural Network",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "is dimensionality of the concatenated vector x i , where q is the number of nodes in the network.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Gated Recursive Neural Network",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "GRNN consists of the minimal structures, gated recursive units, as showing in Figure 4 . By assuming that the window size is w, we will have recursion layer l \u2208 [1, w]. At each recursion layer l, the activation of the j-th hidden node h where z N , z L and z R \u2208 R d are update gates for new activation \u0125l j , left child node h l-1 j-1 and right child node h l-1 j respectively, and \u2299 indicates element-wise multiplication.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 85,
+                        "end": 86,
+                        "text": "4",
+                        "ref_id": "FIGREF2"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Gated Recursive Unit",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "(l) j \u2208 R d is computed as h (l) j = { zN \u2299 \u0125l j + zL \u2299 h l-1 j-1 + zR \u2299 h l-1 j , l > 1, cj, l = 1, (5) Gate z Gate r L Gate r R h j-1 (l-1) h j (l-1) h j ^(l) h j (l)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Gated Recursive Unit",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "The update gates can be formalized as:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Gated Recursive Unit",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "z = \uf8ee \uf8f0 z N z L z R \uf8f9 \uf8fb = \uf8ee \uf8f0 1/Z 1/Z 1/Z \uf8f9 \uf8fb \u2299 exp(U \uf8ee \uf8ef \uf8f0 \u0125l j h l-1 j-1 h l-1 j \uf8f9 \uf8fa \uf8fb),",
+                        "eq_num": "(6)"
+                    }
+                ],
+                "section": "Gated Recursive Unit",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "where U \u2208 R 3d\u00d73d is the coefficient of update gates, and Z \u2208 R d is the vector of the normalization coefficients,",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Gated Recursive Unit",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "Z k = 3 \u2211 i=1 [exp(U \uf8ee \uf8ef \uf8f0 \u0125l j h l-1 j-1 h l-1 j \uf8f9 \uf8fa \uf8fb)] d\u00d7(i-1)+k , (7) where 1 \u2264 k \u2264 d.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Gated Recursive Unit",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "Intuitively, three update gates are constrained by:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Gated Recursive Unit",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "\uf8f1 \uf8f4 \uf8f4 \uf8f4 \uf8f4 \uf8f2 \uf8f4 \uf8f4 \uf8f4 \uf8f4 \uf8f3 [z N ] k + [z L ] k + [z R ] k = 1, 1 \u2264 k \u2264 d; [z N ] k \u2265 0, 1 \u2264 k \u2264 d; [z L ] k \u2265 0, 1 \u2264 k \u2264 d; [z R ] k \u2265 0, 1 \u2264 k \u2264 d.",
+                        "eq_num": "(8)"
+                    }
+                ],
+                "section": "Gated Recursive Unit",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "The new activation \u0125l j is computed as:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Gated Recursive Unit",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "\u0125l j = tanh(W \u0125 [ r L \u2299 h l-1 j-1 r R \u2299 h l-1 j ] ),",
+                        "eq_num": "(9)"
+                    }
+                ],
+                "section": "Gated Recursive Unit",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "where W \u0125 \u2208 R d\u00d72d , r L \u2208 R d , r R \u2208 R d . r L and r R are the reset gates for left child node h l-1 j-1 and right child node h l-1 j respectively, which can be formalized as:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Gated Recursive Unit",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "[ r L r R ] = \u03c3(G [ h l-1 j-1 h l-1 j ] ),",
+                        "eq_num": "(10) (11)"
+                    }
+                ],
+                "section": "Gated Recursive Unit",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "where G \u2208 R 2d\u00d72d is the coefficient of two reset gates and \u03c3 indicates the sigmoid function.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Gated Recursive Unit",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "Intuiativly, the reset gates control how to select the output information of the left and right children, which results to the current new activation \u0125.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Gated Recursive Unit",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "By the update gates, the activation of a parent neuron can be regarded as a choice among the the current new activation \u0125, the left child, and the right child. This choice allows the overall structure to change adaptively with respect to the inputs.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Gated Recursive Unit",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "This gating mechanism is effective to model the combinations of the characters.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Gated Recursive Unit",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "In Chinese word segmentation task, it is usually to employ the Viterbi algorithm to inference the tag sequence t 1:n for a given input sentence c 1:n .",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inference",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "In order to model the tag dependencies, the previous neural network models (Collobert et al., 2011; Zheng et al., 2013; Pei et al., 2014) introduce a transition matrix A, and each entry A ij is the score of the transformation from tag i \u2208 T to tag j \u2208 T .",
+                "cite_spans": [
+                    {
+                        "start": 75,
+                        "end": 99,
+                        "text": "(Collobert et al., 2011;",
+                        "ref_id": "BIBREF3"
+                    },
+                    {
+                        "start": 100,
+                        "end": 119,
+                        "text": "Zheng et al., 2013;",
+                        "ref_id": "BIBREF24"
+                    },
+                    {
+                        "start": 120,
+                        "end": 137,
+                        "text": "Pei et al., 2014)",
+                        "ref_id": "BIBREF8"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inference",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "Thus, the sentence-level score can be formulated as follows:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inference",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "s(c 1:n , t 1:n , \u03b8) = n \u2211 i=1 ( A t i-1 t i + f \u03b8 (t i |c i-w 1 :i+w 2 ) ) ,",
+                        "eq_num": "(12)"
+                    }
+                ],
+                "section": "Inference",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "where f \u03b8 (t i |c i-w 1 :i+w 2 ) is the score for choosing tag t i for the i-th character by our proposed GRNN (Eq. ( 4)). The parameter set of our model is \u03b8 = (M, W s , b s , W \u0125, U, G, A).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inference",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "Deep neural network with multiple hidden layers is very difficult to train for its problem of gradient diffusion and risk of overfitting.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Layer-wise Training",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "Following (Hinton and Salakhutdinov, 2006) , we employ the layer-wise training strategy to avoid problems of overfitting and gradient vanishing. The main idea of layer-wise training is to train the network with adding the layers one by one. Specifically, we first train the neural network with the first hidden layer only. Then, we train at the network with two hidden layers after training at first layer is done and so on until we reach the top hidden layer. When getting convergency of the network with layers 1 to l , we preserve the current parameters as initial values of that in training the network with layers 1 to l + 1.",
+                "cite_spans": [
+                    {
+                        "start": 10,
+                        "end": 42,
+                        "text": "(Hinton and Salakhutdinov, 2006)",
+                        "ref_id": "BIBREF6"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Layer-wise Training",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "We use the Max-Margin criterion (Taskar et al., 2005) to train our model. Intuitively, the Max-Margin criterion provides an alternative to probabilistic, likelihood based estimation methods by concentrating directly on the robustness of the decision boundary of a model. We use Y (x i ) to denote the set of all possible tag sequences for a given sentence x i and the correct tag sequence for x i is y i . The parameter set of our model is \u03b8. We first define a structured margin loss \u2206(y i , \u0177) for predicting a tag sequence \u0177 for a given correct tag sequence y i :",
+                "cite_spans": [
+                    {
+                        "start": 32,
+                        "end": 53,
+                        "text": "(Taskar et al., 2005)",
+                        "ref_id": "BIBREF18"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Max-Margin Criterion",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "\u2206(y i , \u0177) = n \u2211 j \u03b71{y i,j \u0338 = \u0177j }, (",
+                        "eq_num": "13"
+                    }
+                ],
+                "section": "Max-Margin Criterion",
+                "sec_num": "4.2"
+            },
+            {
+                "text": ")",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Max-Margin Criterion",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "where n is the length of sentence x i and \u03b7 is a discount parameter. The loss is proportional to the number of characters with an incorrect tag in the predicted tag sequence. For a given training instance (x i , y i ), we search for the tag sequence with the highest score:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Max-Margin Criterion",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "y * = arg max \u0177\u2208Y (x) s(x i , \u0177, \u03b8),",
+                        "eq_num": "(14)"
+                    }
+                ],
+                "section": "Max-Margin Criterion",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "where the tag sequence is found and scored by the proposed model via the function s(\u2022) in Eq. ( 12). The object of Max-Margin training is that the tag sequence with highest score is the correct one: y * = y i and its score will be larger up to a margin to other possible tag sequences \u0177 \u2208 Y (x i ):",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Max-Margin Criterion",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "s(x, y i , \u03b8) \u2265 s(x, \u0177, \u03b8) + \u2206(y i , \u0177). (",
+                        "eq_num": "15"
+                    }
+                ],
+                "section": "Max-Margin Criterion",
+                "sec_num": "4.2"
+            },
+            {
+                "text": ")",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Max-Margin Criterion",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "This leads to the regularized objective function for m training examples:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Max-Margin Criterion",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "J(\u03b8) = 1 m m \u2211 i=1 l i (\u03b8) + \u03bb 2 \u2225\u03b8\u2225 2 2 , (",
+                        "eq_num": "16"
+                    }
+                ],
+                "section": "Max-Margin Criterion",
+                "sec_num": "4.2"
+            },
+            {
+                "text": ")",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Max-Margin Criterion",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "l i (\u03b8) = max \u0177\u2208Y (x i ) (s(x i , \u0177, \u03b8)+\u2206(y i , \u0177))-s(x i , y i , \u03b8).",
+                        "eq_num": "(17)"
+                    }
+                ],
+                "section": "Max-Margin Criterion",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "By minimizing this object, the score of the correct tag sequence y i is increased and score of the highest scoring incorrect tag sequence \u0177 is decreased. The objective function is not differentiable due to the hinge loss. We use a generalization of gradient descent called subgradient method (Ratliff et al., 2007) which computes a gradient-like direction. Following (Socher et al., 2013a) , we minimize the objective by the diagonal variant of AdaGrad (Duchi et al., 2011) with minibatchs. The parameter update for the i-th parameter \u03b8 t,i at time step t is as follows:",
+                "cite_spans": [
+                    {
+                        "start": 292,
+                        "end": 314,
+                        "text": "(Ratliff et al., 2007)",
+                        "ref_id": "BIBREF13"
+                    },
+                    {
+                        "start": 367,
+                        "end": 389,
+                        "text": "(Socher et al., 2013a)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 453,
+                        "end": 473,
+                        "text": "(Duchi et al., 2011)",
+                        "ref_id": "BIBREF4"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Max-Margin Criterion",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "\u03b8 t,i = \u03b8 t-1,i - \u03b1 \u221a \u2211 t \u03c4 =1 g 2 \u03c4,i g t,i , (",
+                        "eq_num": "18"
+                    }
+                ],
+                "section": "Max-Margin Criterion",
+                "sec_num": "4.2"
+            },
+            {
+                "text": ")",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Max-Margin Criterion",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "where \u03b1 is the initial learning rate and",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Max-Margin Criterion",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "g \u03c4 \u2208 R |\u03b8 i |",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Max-Margin Criterion",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "is the subgradient at time step \u03c4 for parameter \u03b8 i .",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Max-Margin Criterion",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "We evaluate our model on two different kinds of texts: newswire texts and micro-blog texts. For evaluation, we use the standard Bakeoff scoring program to calculate precision, recall, F1-score.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "5"
+            },
+            {
+                "text": "We use three popular datasets, PKU, MSRA and CTB6, to evaluate our model on newswire texts. The PKU and MSRA data are provided by the second International Chinese Word Segmentation Bakeoff (Emerson, 2005) , and CTB6 is from Chinese TreeBank 6.0 (LDC2007T36) (Xue et al., 2005) , which is a segmented, part-of-speech tagged, and fully bracketed corpus in the constituency formalism. These datasets are commonly used by previous state-of-the-art models and neural network models. In addition, we use the first 90% sentences of the training data as training set and the rest 10% sentences as development set for PKU and MSRA datasets, and we divide the training, development and test sets according to (Yang and Xue, 2012) for the CTB6 dataset. All datasets are preprocessed by replacing the Chinese idioms and the continuous English characters and digits with a unique flag.",
+                "cite_spans": [
+                    {
+                        "start": 189,
+                        "end": 204,
+                        "text": "(Emerson, 2005)",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 258,
+                        "end": 276,
+                        "text": "(Xue et al., 2005)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 699,
+                        "end": 719,
+                        "text": "(Yang and Xue, 2012)",
+                        "ref_id": "BIBREF21"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Datasets",
+                "sec_num": "5.1.1"
+            },
+            {
+                "text": "We set the hyper-parameters of the model as list in Table 1 find that it is a good balance between model performance and efficiency to set character embedding size d = 50. In fact, the larger embedding size leads to higher cost of computational resource, while lower dimensionality of the character embedding seems to underfit according to the experiment results.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 58,
+                        "end": 59,
+                        "text": "1",
+                        "ref_id": "TABREF2"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Hyper-parameters",
+                "sec_num": "5.1.2"
+            },
+            {
+                "text": "Deep neural networks contain multiple nonlinear hidden layers are always hard to train for it is easy to overfit. Several methods have been used in neural models to avoid overfitting, such as early stop and weight regularization. Dropout (Srivastava et al., 2014) is also one of the popular strategies to avoid overfitting when training the deep neural networks. Hence, we utilize the dropout strategy in this work. Specifically, dropout is to temporarily remove the neuron away with a fixed probability p independently, along with the incoming and outgoing connections of it. As a result, we find dropout on the input layer with probability p = 20% is a good tradeoff between model efficiency and performance. ",
+                "cite_spans": [
+                    {
+                        "start": 238,
+                        "end": 263,
+                        "text": "(Srivastava et al., 2014)",
+                        "ref_id": "BIBREF16"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Hyper-parameters",
+                "sec_num": "5.1.2"
+            },
+            {
+                "text": "We first investigate the effects of the layer-wise training strategy. Since we set the size of context window to five, there are five recursive layers in our architecture. And we train the networks with the different numbers of recursion layers. Due to the limit of space, we just give the results on PKU dataset.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Layer-wise Training",
+                "sec_num": "5.1.3"
+            },
+            {
+                "text": "Figure 5 gives the convergence speeds of the five models with different numbers of layers and the model with layer-wise training strategy on development set of PKU dataset. The model with one layer just use the neurons of the lowest layer in final linear score function. Since there are no non-linear layer, its seems to underfit and perform poorly. The model with two layers just use the neurons in the lowest two layers, and so on. The model with five layers use all the neurons in the network. As we can see, the layer-wise training strategy lead to the fastest convergence and the best performance.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 7,
+                        "end": 8,
+                        "text": "5",
+                        "ref_id": "FIGREF3"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Layer-wise Training",
+                "sec_num": "5.1.3"
+            },
+            {
+                "text": "Table 2 shows the performances on PKU test set. The performance of the model with layer-wise training strategy is always better than that without layer-wise training strategy. With the increase of the number of layers, the performance also increases and reaches the stable high performance until getting to the top layer.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 6,
+                        "end": 7,
+                        "text": "2",
+                        "ref_id": "TABREF3"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Layer-wise Training",
+                "sec_num": "5.1.3"
+            },
+            {
+                "text": "We first compare our model with the previous neural approaches on PKU, MSRA and CTB6 datasets as showing in Table 3 . The character embeddings of the models are random initialized. The performance of word segmentation is significantly boosted by exploiting the gated recursive architecture, which can better model the combinations of the context characters than the previous neural models.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 114,
+                        "end": 115,
+                        "text": "3",
+                        "ref_id": "TABREF4"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "5.1.4"
+            },
+            {
+                "text": "Previous works have proven it will greatly improve the performance to exploit the pre-trained character embeddings instead of that with random initialization. Thus, we pre-train the embeddings on a huge unlabeled data, the Chinese Wikipedia corpus, with word2vec toolkit (Mikolov et al., 2013) . By using these obtained character embeddings, our model receives better performance and still outperforms the previous neural models with pre-trained character embeddings. The detailed results are shown in Table 4 (1st to 3rd rows).",
+                "cite_spans": [
+                    {
+                        "start": 271,
+                        "end": 293,
+                        "text": "(Mikolov et al., 2013)",
+                        "ref_id": "BIBREF7"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 508,
+                        "end": 509,
+                        "text": "4",
+                        "ref_id": "TABREF5"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "5.1.4"
+            },
+            {
+                "text": "Inspired by (Pei et al., 2014) , we utilize the bigram feature embeddings in our model as well. The concept of feature embedding is quite similar to that of character embedding mentioned above. Specifically, each context feature is represented as a single vector called feature embedding. In this paper, we only use the simply bigram feature embeddings initialized by the average of two embeddings of consecutive characters element-wisely.",
+                "cite_spans": [
+                    {
+                        "start": 12,
+                        "end": 30,
+                        "text": "(Pei et al., 2014)",
+                        "ref_id": "BIBREF8"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "5.1.4"
+            },
+            {
+                "text": "Although the model of Pei et al. (2014) greatly benefits from the bigram feature embeddings, our model just obtains a small improvement with them. This difference indicates that our model has well modeled the combinations of the characters and do not need much help of the feature engineering. The detailed results are shown in Table 4 (4-th and 6-th rows).",
+                "cite_spans": [
+                    {
+                        "start": 22,
+                        "end": 39,
+                        "text": "Pei et al. (2014)",
+                        "ref_id": "BIBREF8"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 334,
+                        "end": 335,
+                        "text": "4",
+                        "ref_id": "TABREF5"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "5.1.4"
+            },
+            {
+                "text": "Table 5 shows the comparisons of our model with the state-of-the-art systems on F-value. The model proposed by Zhang and Clark (2007) is a word-based segmentation method, which exploit features of complete words, while remains of the list are all character-based word segmenters, whose features are mostly extracted from the context characters. Moreover, some systems (such as Sun and Xu (2011) and Zhang et al. (2013) ) also exploit kinds of extra information such as the unlabeled data or other knowledge. Although our model only uses simple bigram features, it outperforms the previous state-of-the-art methods which use more complex features. Here, we use the default setting of CRF++ toolkit with the feature templates as shown in Table 7. The same feature templates are also used for FNLP.",
+                "cite_spans": [
+                    {
+                        "start": 111,
+                        "end": 133,
+                        "text": "Zhang and Clark (2007)",
+                        "ref_id": "BIBREF22"
+                    },
+                    {
+                        "start": 377,
+                        "end": 394,
+                        "text": "Sun and Xu (2011)",
+                        "ref_id": "BIBREF17"
+                    },
+                    {
+                        "start": 399,
+                        "end": 418,
+                        "text": "Zhang et al. (2013)",
+                        "ref_id": "BIBREF23"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 6,
+                        "end": 7,
+                        "text": "5",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "5.1.4"
+            },
+            {
+                "text": "Since the NLPCC 2015 dataset is a new released dataset, we compare our model with the two popular open source toolkits for sequence labeling task: FNLP3 (Qiu et al., 2013) and CRF++4 . Our model uses pre-trained and bigram character embeddings.",
+                "cite_spans": [
+                    {
+                        "start": 153,
+                        "end": 171,
+                        "text": "(Qiu et al., 2013)",
+                        "ref_id": "BIBREF11"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "5.2.2"
+            },
+            {
+                "text": "Table 8 shows the comparisons of our model with the other systems on NLPCC 2015 dataset.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 6,
+                        "end": 7,
+                        "text": "8",
+                        "ref_id": "TABREF10"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "5.2.2"
+            },
+            {
+                "text": "Chinese word segmentation has been studied with considerable efforts in the NLP community. The most popular word segmentation method is based on sequence labeling (Xue, 2003) based approaches (Collobert et al., 2011) to reduce efforts of the feature engineering (Zheng et al., 2013; Qi et al., 2014) . However, the features of all these methods are the concatenation of the embeddings of the context characters. Pei et al. (2014) also used neural tensor model (Socher et al., 2013b) to capture the complicated interactions between tags and context characters. But the interactions depend on the number of the tensor slices, which cannot be too large due to the model complexity. The experiments also show that the model of (Pei et al., 2014) greatly benefits from the further bigram feature embeddings, which shows that their model cannot even handle the interactions of the consecutive characters. Different with them, our model just has a small improvement with the bigram feature embeddings, which indicates that our approach has well modeled the complicated combinations of the context characters, and does not need much help of further feature engineering.",
+                "cite_spans": [
+                    {
+                        "start": 163,
+                        "end": 174,
+                        "text": "(Xue, 2003)",
+                        "ref_id": "BIBREF20"
+                    },
+                    {
+                        "start": 192,
+                        "end": 216,
+                        "text": "(Collobert et al., 2011)",
+                        "ref_id": "BIBREF3"
+                    },
+                    {
+                        "start": 262,
+                        "end": 282,
+                        "text": "(Zheng et al., 2013;",
+                        "ref_id": "BIBREF24"
+                    },
+                    {
+                        "start": 283,
+                        "end": 299,
+                        "text": "Qi et al., 2014)",
+                        "ref_id": "BIBREF10"
+                    },
+                    {
+                        "start": 412,
+                        "end": 429,
+                        "text": "Pei et al. (2014)",
+                        "ref_id": "BIBREF8"
+                    },
+                    {
+                        "start": 460,
+                        "end": 482,
+                        "text": "(Socher et al., 2013b)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 723,
+                        "end": 741,
+                        "text": "(Pei et al., 2014)",
+                        "ref_id": "BIBREF8"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "6"
+            },
+            {
+                "text": ", c -1 , c 0 , c +1 , c +2 bigram feature c -1 \u2022 c 0 , c 0 \u2022 c +1 trigram feature c -2 \u2022c -1 \u2022c 0 , c -1 \u2022c 0 \u2022c +1 , c 0 \u2022 c +1 \u2022 c +2",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "6"
+            },
+            {
+                "text": "More recently, Cho et al. (2014a) also proposed a gated recursive convolutional neural network in machine translation task to solve the problem of varying lengths of sentences. However, their approach only models the update gate, which can not tell whether the information is from the current state or from sub notes in update stage without reset gate. Instead, our approach models two kinds of gates, reset gate and update gate, by incorporat-ing which we can better model the combinations of context characters via selection function of reset gate and collection function of update gate.",
+                "cite_spans": [
+                    {
+                        "start": 15,
+                        "end": 33,
+                        "text": "Cho et al. (2014a)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "6"
+            },
+            {
+                "text": "In this paper, we propose a gated recursive neural network (GRNN) to explicitly model the combinations of the characters for Chinese word segmentation task. Each neuron in GRNN can be regarded as a different combination of the input characters. Thus, the whole GRNN has an ability to simulate the design of the sophisticated features in traditional methods. Experiments show that our proposed model outperforms the state-of-the-art methods on three popular benchmark datasets.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion",
+                "sec_num": "7"
+            },
+            {
+                "text": "Despite Chinese word segmentation being a specific case, our model can be easily generalized and applied to other sequence labeling tasks. In future work, we would like to investigate our proposed GRNN on other sequence labeling tasks.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion",
+                "sec_num": "7"
+            },
+            {
+                "text": "https://github.com/xpqiu/fnlp/",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "http://taku910.github.io/crfpp/ * The result is from our own implementation of the corresponding method.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            }
+        ],
+        "back_matter": [
+            {
+                "text": "We would like to thank the anonymous reviewers for their valuable comments. This work was partially funded by the National Natural Science Foundation of China (61472088, 61473092), the National High Technology Research and Development Program of China (2015AA015408), Shanghai Science and Technology Development Funds (14ZR1403200), Shanghai Leading Academic Discipline Project (B114).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Acknowledgments",
+                "sec_num": null
+            }
+        ],
+        "bib_entries": {
+            "BIBREF0": {
+                "ref_id": "b0",
+                "title": "On the properties of neural machine translation: Encoder-decoder approaches",
+                "authors": [
+                    {
+                        "first": "Kyunghyun",
+                        "middle": [],
+                        "last": "Cho",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Bart",
+                        "middle": [],
+                        "last": "Van Merrienboer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dzmitry",
+                        "middle": [],
+                        "last": "Bahdanau",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yoshua",
+                        "middle": [],
+                        "last": "Bengio",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "Proceedings of Workshop on Syntax, Semantics and Structure in Statistical Translation",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Kyunghyun Cho, Bart van Merrienboer, Dzmitry Bah- danau, and Yoshua Bengio. 2014a. On the proper- ties of neural machine translation: Encoder-decoder approaches. In Proceedings of Workshop on Syntax, Semantics and Structure in Statistical Translation.",
+                "links": null
+            },
+            "BIBREF1": {
+                "ref_id": "b1",
+                "title": "Caglar Gulcehre, Fethi Bougares, Holger Schwenk, and Yoshua Bengio. 2014b. Learning phrase representations using rnn encoder-decoder for statistical machine translation",
+                "authors": [
+                    {
+                        "first": "Kyunghyun",
+                        "middle": [],
+                        "last": "Cho",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Bart",
+                        "middle": [],
+                        "last": "Van Merrienboer",
+                        "suffix": ""
+                    }
+                ],
+                "year": null,
+                "venue": "Proceedings of EMNLP",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Kyunghyun Cho, Bart van Merrienboer, Caglar Gul- cehre, Fethi Bougares, Holger Schwenk, and Yoshua Bengio. 2014b. Learning phrase representations using rnn encoder-decoder for statistical machine translation. In Proceedings of EMNLP.",
+                "links": null
+            },
+            "BIBREF2": {
+                "ref_id": "b2",
+                "title": "Empirical evaluation of gated recurrent neural networks on sequence modeling",
+                "authors": [
+                    {
+                        "first": "Junyoung",
+                        "middle": [],
+                        "last": "Chung",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Caglar",
+                        "middle": [],
+                        "last": "Gulcehre",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kyunghyun",
+                        "middle": [],
+                        "last": "Cho",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yoshua",
+                        "middle": [],
+                        "last": "Bengio",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1412.3555"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Junyoung Chung, Caglar Gulcehre, KyungHyun Cho, and Yoshua Bengio. 2014. Empirical evaluation of gated recurrent neural networks on sequence model- ing. arXiv preprint arXiv:1412.3555.",
+                "links": null
+            },
+            "BIBREF3": {
+                "ref_id": "b3",
+                "title": "Natural language processing (almost) from scratch",
+                "authors": [
+                    {
+                        "first": "Ronan",
+                        "middle": [],
+                        "last": "Collobert",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jason",
+                        "middle": [],
+                        "last": "Weston",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "L\u00e9on",
+                        "middle": [],
+                        "last": "Bottou",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Michael",
+                        "middle": [],
+                        "last": "Karlen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Koray",
+                        "middle": [],
+                        "last": "Kavukcuoglu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Pavel",
+                        "middle": [],
+                        "last": "Kuksa",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2011,
+                "venue": "The Journal of Machine Learning Research",
+                "volume": "12",
+                "issue": "",
+                "pages": "2493--2537",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ronan Collobert, Jason Weston, L\u00e9on Bottou, Michael Karlen, Koray Kavukcuoglu, and Pavel Kuksa. 2011. Natural language processing (almost) from scratch. The Journal of Machine Learning Research, 12:2493-2537.",
+                "links": null
+            },
+            "BIBREF4": {
+                "ref_id": "b4",
+                "title": "Adaptive subgradient methods for online learning and stochastic optimization",
+                "authors": [
+                    {
+                        "first": "John",
+                        "middle": [],
+                        "last": "Duchi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Elad",
+                        "middle": [],
+                        "last": "Hazan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yoram",
+                        "middle": [],
+                        "last": "Singer",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2011,
+                "venue": "The Journal of Machine Learning Research",
+                "volume": "12",
+                "issue": "",
+                "pages": "2121--2159",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "John Duchi, Elad Hazan, and Yoram Singer. 2011. Adaptive subgradient methods for online learning and stochastic optimization. The Journal of Machine Learning Research, 12:2121-2159.",
+                "links": null
+            },
+            "BIBREF5": {
+                "ref_id": "b5",
+                "title": "The second international Chinese word segmentation bakeoff",
+                "authors": [
+                    {
+                        "first": "T",
+                        "middle": [],
+                        "last": "Emerson",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2005,
+                "venue": "Proceedings of the Fourth SIGHAN Workshop on Chinese Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "123--133",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "T. Emerson. 2005. The second international Chi- nese word segmentation bakeoff. In Proceedings of the Fourth SIGHAN Workshop on Chinese Language Processing, pages 123-133. Jeju Island, Korea.",
+                "links": null
+            },
+            "BIBREF6": {
+                "ref_id": "b6",
+                "title": "Reducing the dimensionality of data with neural networks",
+                "authors": [
+                    {
+                        "first": "Geoffrey",
+                        "middle": [
+                            "E"
+                        ],
+                        "last": "Hinton",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ruslan",
+                        "middle": [
+                            "R"
+                        ],
+                        "last": "Salakhutdinov",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2006,
+                "venue": "Science",
+                "volume": "313",
+                "issue": "5786",
+                "pages": "504--507",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Geoffrey E Hinton and Ruslan R Salakhutdinov. 2006. Reducing the dimensionality of data with neural net- works. Science, 313(5786):504-507.",
+                "links": null
+            },
+            "BIBREF7": {
+                "ref_id": "b7",
+                "title": "Efficient estimation of word representations in vector space",
+                "authors": [
+                    {
+                        "first": "Tomas",
+                        "middle": [],
+                        "last": "Mikolov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kai",
+                        "middle": [],
+                        "last": "Chen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Greg",
+                        "middle": [],
+                        "last": "Corrado",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jeffrey",
+                        "middle": [],
+                        "last": "Dean",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1301.3781"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Tomas Mikolov, Kai Chen, Greg Corrado, and Jef- frey Dean. 2013. Efficient estimation of word representations in vector space. arXiv preprint arXiv:1301.3781.",
+                "links": null
+            },
+            "BIBREF8": {
+                "ref_id": "b8",
+                "title": "Maxmargin tensor neural network for chinese word segmentation",
+                "authors": [
+                    {
+                        "first": "Wenzhe",
+                        "middle": [],
+                        "last": "Pei",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tao",
+                        "middle": [],
+                        "last": "Ge",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chang",
+                        "middle": [],
+                        "last": "Baobao",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "Proceedings of ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Wenzhe Pei, Tao Ge, and Chang Baobao. 2014. Max- margin tensor neural network for chinese word seg- mentation. In Proceedings of ACL.",
+                "links": null
+            },
+            "BIBREF9": {
+                "ref_id": "b9",
+                "title": "Recursive distributed representations",
+                "authors": [
+                    {
+                        "first": "B",
+                        "middle": [],
+                        "last": "Jordan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Pollack",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1990,
+                "venue": "Artificial Intelligence",
+                "volume": "46",
+                "issue": "1",
+                "pages": "77--105",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jordan B Pollack. 1990. Recursive distributed repre- sentations. Artificial Intelligence, 46(1):77-105.",
+                "links": null
+            },
+            "BIBREF10": {
+                "ref_id": "b10",
+                "title": "Deep learning for character-based information extraction",
+                "authors": [
+                    {
+                        "first": "Yanjun",
+                        "middle": [],
+                        "last": "Qi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "G",
+                        "middle": [],
+                        "last": "Sujatha",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ronan",
+                        "middle": [],
+                        "last": "Das",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jason",
+                        "middle": [],
+                        "last": "Collobert",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Weston",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "Advances in Information Retrieval",
+                "volume": "",
+                "issue": "",
+                "pages": "668--674",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Yanjun Qi, Sujatha G Das, Ronan Collobert, and Jason Weston. 2014. Deep learning for character-based information extraction. In Advances in Information Retrieval, pages 668-674. Springer.",
+                "links": null
+            },
+            "BIBREF11": {
+                "ref_id": "b11",
+                "title": "FudanNLP: A toolkit for Chinese natural language processing",
+                "authors": [
+                    {
+                        "first": "Xipeng",
+                        "middle": [],
+                        "last": "Qiu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Qi",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xuanjing",
+                        "middle": [],
+                        "last": "Huang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "Proceedings of Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Xipeng Qiu, Qi Zhang, and Xuanjing Huang. 2013. FudanNLP: A toolkit for Chinese natural language processing. In Proceedings of Annual Meeting of the Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF12": {
+                "ref_id": "b12",
+                "title": "Overview of the NLPCC 2015 shared task: Chinese word segmentation and POS tagging for micro-blog texts",
+                "authors": [
+                    {
+                        "first": "Xipeng",
+                        "middle": [],
+                        "last": "Qiu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Liusong",
+                        "middle": [],
+                        "last": "Peng Qian",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xuanjing",
+                        "middle": [],
+                        "last": "Yin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Huang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1505.07599"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Xipeng Qiu, Peng Qian, Liusong Yin, and Xuan- jing Huang. 2015. Overview of the NLPCC 2015 shared task: Chinese word segmentation and POS tagging for micro-blog texts. arXiv preprint arXiv:1505.07599.",
+                "links": null
+            },
+            "BIBREF13": {
+                "ref_id": "b13",
+                "title": "(online) subgradient methods for structured prediction",
+                "authors": [
+                    {
+                        "first": "J",
+                        "middle": [],
+                        "last": "Nathan D Ratliff",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Martin",
+                        "middle": [
+                            "A"
+                        ],
+                        "last": "Andrew Bagnell",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Zinkevich",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2007,
+                "venue": "Eleventh International Conference on Artificial Intelligence and Statistics (AIStats)",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Nathan D Ratliff, J Andrew Bagnell, and Martin A Zinkevich. 2007. (online) subgradient methods for structured prediction. In Eleventh International Conference on Artificial Intelligence and Statistics (AIStats).",
+                "links": null
+            },
+            "BIBREF14": {
+                "ref_id": "b14",
+                "title": "Parsing with compositional vector grammars",
+                "authors": [
+                    {
+                        "first": "Richard",
+                        "middle": [],
+                        "last": "Socher",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "John",
+                        "middle": [],
+                        "last": "Bauer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [
+                            "D"
+                        ],
+                        "last": "Manning",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Andrew",
+                        "middle": [
+                            "Y"
+                        ],
+                        "last": "Ng",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "Proceedings of the ACL conference",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Richard Socher, John Bauer, Christopher D Manning, and Andrew Y Ng. 2013a. Parsing with compo- sitional vector grammars. In In Proceedings of the ACL conference. Citeseer.",
+                "links": null
+            },
+            "BIBREF15": {
+                "ref_id": "b15",
+                "title": "Reasoning with neural tensor networks for knowledge base completion",
+                "authors": [
+                    {
+                        "first": "Richard",
+                        "middle": [],
+                        "last": "Socher",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Danqi",
+                        "middle": [],
+                        "last": "Chen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [
+                            "D"
+                        ],
+                        "last": "Manning",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Andrew",
+                        "middle": [],
+                        "last": "Ng",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "Advances in Neural Information Processing Systems",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Richard Socher, Danqi Chen, Christopher D Manning, and Andrew Ng. 2013b. Reasoning with neural ten- sor networks for knowledge base completion. In Ad- vances in Neural Information Processing Systems.",
+                "links": null
+            },
+            "BIBREF16": {
+                "ref_id": "b16",
+                "title": "Dropout: A simple way to prevent neural networks from overfitting",
+                "authors": [
+                    {
+                        "first": "Nitish",
+                        "middle": [],
+                        "last": "Srivastava",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Geoffrey",
+                        "middle": [],
+                        "last": "Hinton",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alex",
+                        "middle": [],
+                        "last": "Krizhevsky",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ilya",
+                        "middle": [],
+                        "last": "Sutskever",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ruslan",
+                        "middle": [],
+                        "last": "Salakhutdinov",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "The Journal of Machine Learning Research",
+                "volume": "15",
+                "issue": "1",
+                "pages": "1929--1958",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Nitish Srivastava, Geoffrey Hinton, Alex Krizhevsky, Ilya Sutskever, and Ruslan Salakhutdinov. 2014. Dropout: A simple way to prevent neural networks from overfitting. The Journal of Machine Learning Research, 15(1):1929-1958.",
+                "links": null
+            },
+            "BIBREF17": {
+                "ref_id": "b17",
+                "title": "Enhancing Chinese word segmentation using unlabeled data",
+                "authors": [
+                    {
+                        "first": "Weiwei",
+                        "middle": [],
+                        "last": "Sun",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jia",
+                        "middle": [],
+                        "last": "Xu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2011,
+                "venue": "Proceedings of the Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "970--979",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Weiwei Sun and Jia Xu. 2011. Enhancing Chinese word segmentation using unlabeled data. In Pro- ceedings of the Conference on Empirical Methods in Natural Language Processing, pages 970-979. As- sociation for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF18": {
+                "ref_id": "b18",
+                "title": "Learning structured prediction models: A large margin approach",
+                "authors": [
+                    {
+                        "first": "Ben",
+                        "middle": [],
+                        "last": "Taskar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Vassil",
+                        "middle": [],
+                        "last": "Chatalbashev",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Daphne",
+                        "middle": [],
+                        "last": "Koller",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Carlos",
+                        "middle": [],
+                        "last": "Guestrin",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2005,
+                "venue": "Proceedings of the international conference on Machine learning",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ben Taskar, Vassil Chatalbashev, Daphne Koller, and Carlos Guestrin. 2005. Learning structured pre- diction models: A large margin approach. In Pro- ceedings of the international conference on Machine learning.",
+                "links": null
+            },
+            "BIBREF19": {
+                "ref_id": "b19",
+                "title": "The Penn Chinese TreeBank: Phrase structure annotation of a large corpus",
+                "authors": [
+                    {
+                        "first": "Huihsin",
+                        "middle": [],
+                        "last": "Tseng",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Pichuan",
+                        "middle": [],
+                        "last": "Chang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Galen",
+                        "middle": [],
+                        "last": "Andrew",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Daniel",
+                        "middle": [],
+                        "last": "Jurafsky",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [],
+                        "last": "Manning",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2005,
+                "venue": "Proceedings of the fourth SIGHAN workshop on Chinese language Processing",
+                "volume": "171",
+                "issue": "",
+                "pages": "207--238",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Huihsin Tseng, Pichuan Chang, Galen Andrew, Daniel Jurafsky, and Christopher Manning. 2005. A condi- tional random field word segmenter for sighan bake- off 2005. In Proceedings of the fourth SIGHAN workshop on Chinese language Processing, volume 171. Naiwen Xue, Fei Xia, Fu-Dong Chiou, and Martha Palmer. 2005. The Penn Chinese TreeBank: Phrase structure annotation of a large corpus. Natural lan- guage engineering, 11(2):207-238.",
+                "links": null
+            },
+            "BIBREF20": {
+                "ref_id": "b20",
+                "title": "Chinese word segmentation as character tagging",
+                "authors": [
+                    {
+                        "first": "N",
+                        "middle": [],
+                        "last": "Xue",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2003,
+                "venue": "Computational Linguistics and Chinese Language Processing",
+                "volume": "8",
+                "issue": "1",
+                "pages": "29--48",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "N. Xue. 2003. Chinese word segmentation as charac- ter tagging. Computational Linguistics and Chinese Language Processing, 8(1):29-48.",
+                "links": null
+            },
+            "BIBREF21": {
+                "ref_id": "b21",
+                "title": "Chinese comma disambiguation for discourse analysis",
+                "authors": [
+                    {
+                        "first": "Yaqin",
+                        "middle": [],
+                        "last": "Yang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nianwen",
+                        "middle": [],
+                        "last": "Xue",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2012,
+                "venue": "Proceedings of the 50th Annual Meeting of the Association for Computational Linguistics: Long Papers",
+                "volume": "1",
+                "issue": "",
+                "pages": "786--794",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Yaqin Yang and Nianwen Xue. 2012. Chinese comma disambiguation for discourse analysis. In Proceed- ings of the 50th Annual Meeting of the Associa- tion for Computational Linguistics: Long Papers- Volume 1, pages 786-794. Association for Compu- tational Linguistics.",
+                "links": null
+            },
+            "BIBREF22": {
+                "ref_id": "b22",
+                "title": "Chinese segmentation with a word-based perceptron algorithm",
+                "authors": [
+                    {
+                        "first": "Yue",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Stephen",
+                        "middle": [],
+                        "last": "Clark",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2007,
+                "venue": "ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Yue Zhang and Stephen Clark. 2007. Chinese segmen- tation with a word-based perceptron algorithm. In ACL.",
+                "links": null
+            },
+            "BIBREF23": {
+                "ref_id": "b23",
+                "title": "Exploring representations from unlabeled data with co-training for Chinese word segmentation",
+                "authors": [
+                    {
+                        "first": "Longkai",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Houfeng",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xu",
+                        "middle": [],
+                        "last": "Sun",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mairgup",
+                        "middle": [],
+                        "last": "Mansur",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "Proceedings of the 2013 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Longkai Zhang, Houfeng Wang, Xu Sun, and Mairgup Mansur. 2013. Exploring representations from un- labeled data with co-training for Chinese word seg- mentation. In Proceedings of the 2013 Conference on Empirical Methods in Natural Language Process- ing.",
+                "links": null
+            },
+            "BIBREF24": {
+                "ref_id": "b24",
+                "title": "Deep learning for chinese word segmentation and pos tagging",
+                "authors": [
+                    {
+                        "first": "Xiaoqing",
+                        "middle": [],
+                        "last": "Zheng",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hanyang",
+                        "middle": [],
+                        "last": "Chen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tianyu",
+                        "middle": [],
+                        "last": "Xu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "EMNLP",
+                "volume": "",
+                "issue": "",
+                "pages": "647--657",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Xiaoqing Zheng, Hanyang Chen, and Tianyu Xu. 2013. Deep learning for chinese word segmentation and pos tagging. In EMNLP, pages 647-657.",
+                "links": null
+            }
+        },
+        "ref_entries": {
+            "FIGREF0": {
+                "num": null,
+                "text": "Figure 2: General architecture of neural model for Chinese word segmentation.",
+                "uris": null,
+                "fig_num": "2",
+                "type_str": "figure"
+            },
+            "FIGREF1": {
+                "num": null,
+                "text": "Figure 3: Architecture of Gated Recursive Neural Network for Chinese word segmentation.",
+                "uris": null,
+                "fig_num": "3",
+                "type_str": "figure"
+            },
+            "FIGREF2": {
+                "num": null,
+                "text": "Figure 4: Our proposed gated recursive unit.",
+                "uris": null,
+                "fig_num": "4",
+                "type_str": "figure"
+            },
+            "FIGREF3": {
+                "num": null,
+                "text": "Figure 5: Performance of different models with or without layer-wise training strategy on PKU development set.",
+                "uris": null,
+                "fig_num": "5",
+                "type_str": "figure"
+            },
+            "TABREF2": {
+                "content": "<table><tr><td>Window size</td><td>k = 5</td></tr><tr><td colspan=\"2\">Character embedding size d = 50</td></tr><tr><td>Initial learning rate</td><td>\u03b1 = 0.3</td></tr><tr><td>Margin loss discount</td><td>\u03b7 = 0.2</td></tr><tr><td>Regularization</td><td>\u03bb = 10 -4</td></tr><tr><td colspan=\"2\">Dropout rate on input layer p = 20%</td></tr></table>",
+                "type_str": "table",
+                "text": "via experiments on development set. In addition, we set the batch size to 20. And we Hyper-parameter settings.",
+                "html": null,
+                "num": null
+            },
+            "TABREF3": {
+                "content": "<table><tr><td>models</td><td>without layer-wise P R F</td><td colspan=\"3\">with layer-wise P R F</td></tr><tr><td colspan=\"2\">GRNN (1 layer) 90.7 89.6 90.2</td><td>-</td><td>-</td><td>-</td></tr><tr><td colspan=\"5\">GRNN (2 layers) 96.0 95.6 95.8 96.0 95.6 95.8</td></tr><tr><td colspan=\"5\">GRNN (3 layers) 95.9 95.4 95.7 96.0 95.7 95.9</td></tr><tr><td colspan=\"5\">GRNN (4 layers) 95.6 95.2 95.4 96.1 95.7 95.9</td></tr><tr><td colspan=\"5\">GRNN (5 layers) 95.3 94.7 95.0 96.1 95.7 95.9</td></tr></table>",
+                "type_str": "table",
+                "text": "Performance of different models with or without layer-wise training strategy on PKU test set.",
+                "html": null,
+                "num": null
+            },
+            "TABREF4": {
+                "content": "<table><tr><td>models</td><td>P</td><td>PKU R</td><td>F</td><td>P</td><td>MSRA R</td><td>F</td><td>P</td><td>CTB6 R</td><td>F</td></tr><tr><td colspan=\"10\">(Zheng et al., 2013) 92.8 92.0 92.4 92.9 93.6 93.3 94.0* 93.1* 93.6*</td></tr><tr><td>(Pei et al., 2014)</td><td colspan=\"9\">93.7 93.4 93.5 94.6 94.2 94.4 94.4* 93.4* 93.9*</td></tr><tr><td>GRNN</td><td colspan=\"7\">96.0 95.7 95.9 96.3 96.1 96.2 95.4</td><td>95.2</td><td>95.3</td></tr><tr><td>models</td><td>P</td><td>PKU R</td><td>F</td><td>P</td><td>MSRA R</td><td>F</td><td>P</td><td>CTB6 R</td><td>F</td></tr><tr><td>+Pre-train</td><td/><td/><td/><td/><td/><td/><td/><td/><td/></tr><tr><td colspan=\"10\">(Zheng et al., 2013) 93.5 92.2 92.8 94.2 93.7 93.9 93.9* 93.4* 93.7*</td></tr><tr><td>(Pei et al., 2014)</td><td colspan=\"9\">94.4 93.6 94.0 95.2 94.6 94.9 94.2* 93.7* 94.0*</td></tr><tr><td>GRNN</td><td colspan=\"7\">96.3 95.9 96.1 96.2 96.3 96.2 95.8</td><td>95.4</td><td>95.6</td></tr><tr><td>+bigram</td><td/><td/><td/><td/><td/><td/><td/><td/><td/></tr><tr><td>GRNN</td><td colspan=\"7\">96.6 96.2 96.4 97.5 97.3 97.4 95.9</td><td>95.7</td><td>95.8</td></tr><tr><td>+Pre-train+bigram</td><td/><td/><td/><td/><td/><td/><td/><td/><td/></tr><tr><td>(Pei et al., 2014)</td><td>-</td><td>95.2</td><td>-</td><td>-</td><td>97.2</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>GRNN</td><td colspan=\"7\">96.5 96.3 96.4 97.4 97.8 97.6 95.8</td><td>95.7</td><td>95.8</td></tr></table>",
+                "type_str": "table",
+                "text": "Performances on PKU, MSRA and CTB6 test sets with random initialized character embeddings.",
+                "html": null,
+                "num": null
+            },
+            "TABREF5": {
+                "content": "<table><tr><td>models</td><td colspan=\"3\">PKU MSRA CTB6</td></tr><tr><td>(Tseng et al., 2005)</td><td colspan=\"2\">95.0 96.4</td><td>-</td></tr><tr><td colspan=\"3\">(Zhang and Clark, 2007) 95.1 97.2</td><td>-</td></tr><tr><td>(Sun and Xu, 2011)</td><td>-</td><td>-</td><td>95.7</td></tr><tr><td>(Zhang et al., 2013)</td><td colspan=\"2\">96.1 97.4</td><td>-</td></tr><tr><td>This work</td><td colspan=\"3\">96.4 97.6 95.8</td></tr><tr><td colspan=\"4\">Table 5: Comparison of GRNN with the state-of-</td></tr><tr><td colspan=\"4\">the-art methods on PKU, MSRA and CTB6 test</td></tr><tr><td>sets.</td><td/><td/><td/></tr><tr><td>5.2</td><td/><td/><td/></tr></table>",
+                "type_str": "table",
+                "text": "Performances on PKU, MSRA and CTB6 test sets with pre-trained and bigram character embeddings.",
+                "html": null,
+                "num": null
+            },
+            "TABREF6": {
+                "content": "<table><tr><td>We use the NLPCC 2015 dataset 1 (Qiu et al., 2015)</td></tr><tr><td>to evaluate our model on micro-blog texts. The</td></tr><tr><td>NLPCC 2015 data are provided by the shared task</td></tr><tr><td>in the 4th CCF Conference on Natural Language</td></tr><tr><td>Processing &amp; Chinese Computing (NLPCC 2015):</td></tr><tr><td>Chinese Word Segmentation and POS Tagging for</td></tr><tr><td>micro-blog Text. Different with the popular used</td></tr><tr><td>newswire dataset, the NLPCC 2015 dataset is col-</td></tr><tr><td>lected from Sina Weibo 2 , which consists of the</td></tr><tr><td>relatively informal texts from micro-blog with the</td></tr><tr><td>various topics, such as finance, sports, entertain-</td></tr><tr><td>ment, and so on. The information of the dataset is</td></tr></table>",
+                "type_str": "table",
+                "text": "",
+                "html": null,
+                "num": null
+            },
+            "TABREF7": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "To train our model, we also use the first 90% sentences of the training data as training set and the rest 10% sentences as development set.",
+                "html": null,
+                "num": null
+            },
+            "TABREF8": {
+                "content": "<table><tr><td>. Recently, re-</td></tr></table>",
+                "type_str": "table",
+                "text": "Statistical information of NLPCC 2015 dataset.",
+                "html": null,
+                "num": null
+            },
+            "TABREF9": {
+                "content": "<table><tr><td>models</td><td>P</td><td>R</td><td>F</td></tr><tr><td>CRF++</td><td colspan=\"3\">93.3 93.2 93.3</td></tr><tr><td>FNLP</td><td colspan=\"3\">94.1 93.9 94.0</td></tr><tr><td colspan=\"4\">This work 94.7 94.8 94.8</td></tr></table>",
+                "type_str": "table",
+                "text": "Templates of CRF++ and FNLP.",
+                "html": null,
+                "num": null
+            },
+            "TABREF10": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "Performances on NLPCC 2015 dataset.",
+                "html": null,
+                "num": null
+            }
+        }
+    }
+}

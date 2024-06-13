@@ -1,0 +1,2535 @@
+{
+    "paper_id": "2020",
+    "header": {
+        "generated_with": "S2ORC 1.0.0",
+        "date_generated": "2023-06-16T12:27:40.804309Z"
+    },
+    "title": "Simplify the Usage of Lexicon in Chinese NER",
+    "authors": [
+        {
+            "first": "Ruotian",
+            "middle": [],
+            "last": "Ma",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "Shanghai Key Laboratory of Intelligent Information Processing",
+                "institution": "Fudan University",
+                "location": {}
+            },
+            "email": ""
+        },
+        {
+            "first": "Minlong",
+            "middle": [],
+            "last": "Peng",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "Shanghai Key Laboratory of Intelligent Information Processing",
+                "institution": "Fudan University",
+                "location": {}
+            },
+            "email": "mlpeng16@fudan.edu.cn"
+        },
+        {
+            "first": "Qi",
+            "middle": [],
+            "last": "Zhang",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "Shanghai Key Laboratory of Intelligent Information Processing",
+                "institution": "Fudan University",
+                "location": {}
+            },
+            "email": ""
+        },
+        {
+            "first": "Zhongyu",
+            "middle": [],
+            "last": "Wei",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "Fudan University",
+                "location": {}
+            },
+            "email": "zywei@fudan.edu.cn"
+        },
+        {
+            "first": "Xuanjing",
+            "middle": [],
+            "last": "Huang",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "Shanghai Key Laboratory of Intelligent Information Processing",
+                "institution": "Fudan University",
+                "location": {}
+            },
+            "email": "xjhuang@fudan.edu.cn"
+        }
+    ],
+    "year": "",
+    "venue": null,
+    "identifiers": {},
+    "abstract": "Recently, many works have tried to augment the performance of Chinese named entity recognition (NER) using word lexicons. As a representative, Lattice-LSTM (Zhang and Yang, 2018) has achieved new benchmark results on several public Chinese NER datasets.\nHowever, Lattice-LSTM has a complex model architecture. This limits its application in many industrial areas where real-time NER responses are needed.\nIn this work, we propose a simple but effective method for incorporating the word lexicon into the character representations. This method avoids designing a complicated sequence modeling architecture, and for any neural NER model, it requires only subtle adjustment of the character representation layer to introduce the lexicon information. Experimental studies on four benchmark Chinese NER datasets show that our method achieves an inference speed up to 6.15 times faster than those of state-ofthe-art methods, along with a better performance. The experimental results also show that the proposed method can be easily incorporated with pre-trained models like BERT. 1",
+    "pdf_parse": {
+        "paper_id": "2020",
+        "_pdf_hash": "",
+        "abstract": [
+            {
+                "text": "Recently, many works have tried to augment the performance of Chinese named entity recognition (NER) using word lexicons. As a representative, Lattice-LSTM (Zhang and Yang, 2018) has achieved new benchmark results on several public Chinese NER datasets.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            },
+            {
+                "text": "However, Lattice-LSTM has a complex model architecture. This limits its application in many industrial areas where real-time NER responses are needed.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            },
+            {
+                "text": "In this work, we propose a simple but effective method for incorporating the word lexicon into the character representations. This method avoids designing a complicated sequence modeling architecture, and for any neural NER model, it requires only subtle adjustment of the character representation layer to introduce the lexicon information. Experimental studies on four benchmark Chinese NER datasets show that our method achieves an inference speed up to 6.15 times faster than those of state-ofthe-art methods, along with a better performance. The experimental results also show that the proposed method can be easily incorporated with pre-trained models like BERT. 1",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            }
+        ],
+        "body_text": [
+            {
+                "text": "Named Entity Recognition (NER) is concerned with the identification of named entities, such as persons, locations, and organizations, in unstructured text. NER plays an important role in many downstream tasks, including knowledge base construction (Riedel et al., 2013) , information retrieval (Chen et al., 2015) , and question answering (Diefenbach et al., 2018) . In languages where words are naturally separated (e.g., English), NER has been conventionally formulated as a sequence labeling problem, and the state-of-the-art results have been achieved using neural-network-based models (Huang et al., 2015; Chiu and Nichols, 2016; Liu et al., 2018) .",
+                "cite_spans": [
+                    {
+                        "start": 248,
+                        "end": 269,
+                        "text": "(Riedel et al., 2013)",
+                        "ref_id": "BIBREF22"
+                    },
+                    {
+                        "start": 294,
+                        "end": 313,
+                        "text": "(Chen et al., 2015)",
+                        "ref_id": "BIBREF2"
+                    },
+                    {
+                        "start": 339,
+                        "end": 364,
+                        "text": "(Diefenbach et al., 2018)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 590,
+                        "end": 610,
+                        "text": "(Huang et al., 2015;",
+                        "ref_id": "BIBREF12"
+                    },
+                    {
+                        "start": 611,
+                        "end": 634,
+                        "text": "Chiu and Nichols, 2016;",
+                        "ref_id": "BIBREF3"
+                    },
+                    {
+                        "start": 635,
+                        "end": 652,
+                        "text": "Liu et al., 2018)",
+                        "ref_id": "BIBREF17"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Compared with NER in English, Chinese NER is more difficult since sentences in Chinese are not naturally segmented. Thus, a common practice for Chinese NER is to first perform word segmentation using an existing CWS system and then apply a word-level sequence labeling model to the segmented sentence (Yang et al., 2016; He and Sun, 2017b) . However, it is inevitable that the CWS system will incorrectly segment query sentences. This will result in errors in the detection of entity boundary and the prediction of entity category in NER. Therefore, some approaches resort to performing Chinese NER directly at the character level, which has been empirically proven to be effective (He and Wang, 2008; Liu et al., 2010; Li et al., 2014; Liu et al., 2019; Sui et al., 2019; Gui et al., 2019b; Ding et al., 2019) .",
+                "cite_spans": [
+                    {
+                        "start": 301,
+                        "end": 320,
+                        "text": "(Yang et al., 2016;",
+                        "ref_id": "BIBREF28"
+                    },
+                    {
+                        "start": 321,
+                        "end": 339,
+                        "text": "He and Sun, 2017b)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 682,
+                        "end": 701,
+                        "text": "(He and Wang, 2008;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 702,
+                        "end": 719,
+                        "text": "Liu et al., 2010;",
+                        "ref_id": "BIBREF19"
+                    },
+                    {
+                        "start": 720,
+                        "end": 736,
+                        "text": "Li et al., 2014;",
+                        "ref_id": "BIBREF16"
+                    },
+                    {
+                        "start": 737,
+                        "end": 754,
+                        "text": "Liu et al., 2019;",
+                        "ref_id": "BIBREF18"
+                    },
+                    {
+                        "start": 755,
+                        "end": 772,
+                        "text": "Sui et al., 2019;",
+                        "ref_id": "BIBREF23"
+                    },
+                    {
+                        "start": 773,
+                        "end": 791,
+                        "text": "Gui et al., 2019b;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 792,
+                        "end": 810,
+                        "text": "Ding et al., 2019)",
+                        "ref_id": "BIBREF5"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "A drawback of the purely character-based NER method is that the word information is not fully exploited. With this consideration, Zhang and Yang, (2018) proposed Lattice-LSTM for incorporating word lexicons into the character-based NER model. Moreover, rather than heuristically choosing a word for the character when it matches multiple words in the lexicon, the authors proposed to preserve all words that match the character, leaving the subsequent NER model to determine which word to apply. To realize this idea, they introduced an elaborate modification to the sequence modeling layer of the LSTM-CRF model (Huang et al., 2015) . Experimental studies on four Chinese NER datasets have verified the effectiveness of Lattice-LSTM.",
+                "cite_spans": [
+                    {
+                        "start": 130,
+                        "end": 152,
+                        "text": "Zhang and Yang, (2018)",
+                        "ref_id": "BIBREF30"
+                    },
+                    {
+                        "start": 613,
+                        "end": 633,
+                        "text": "(Huang et al., 2015)",
+                        "ref_id": "BIBREF12"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "However, the model architecture of Lattice-LSTM is quite complicated. In order to introduce lexicon information, Lattice-LSTM adds several additional edges between nonadjacent characters in the input sequence, which significantly slows its training and inference speeds. In addition, it is difficult to transfer the structure of Lattice-LSTM to other neural-network architectures (e.g., convolutional neural networks and transformers) that may be more suitable for some specific tasks.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "In this work, we propose a simpler method to realize the idea of Lattice-LSTM, i.e., incorporating all the matched words for each character to a character-based NER model. The first principle of our model design is to achieve a fast inference speed. To this end, we propose to encode lexicon information in the character representations, and we design the encoding scheme to preserve as much of the lexicon matching results as possible. Compared with Lattice-LSTM, our method avoids the need for a complicated model architecture, is easier to implement, and can be quickly adapted to any appropriate neural NER model by adjusting the character representation layer. In addition, ablation studies show the superiority of our method in incorporating more complete and distinct lexicon information, as well as introducing a more effective word-weighting strategy. The contributions of this work can be summarized as follows:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "\u2022 We propose a simple but effective method for incorporating word lexicons into the character representations for Chinese NER.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "\u2022 The proposed method is transferable to different sequence-labeling architectures and can be easily incorporated with pre-trained models like BERT (Devlin et al., 2018) .",
+                "cite_spans": [
+                    {
+                        "start": 148,
+                        "end": 169,
+                        "text": "(Devlin et al., 2018)",
+                        "ref_id": "BIBREF4"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "We performed experiments on four public Chinese NER datasets. The experimental results show that when implementing the sequence modeling layer with a single-layer Bi-LSTM, our method achieves considerable improvements over the state-of-theart methods in both inference speed and sequence labeling performance.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "In this section, we introduce several previous works that influenced our work, including the Softword technique and Lattice-LSTM.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Background",
+                "sec_num": "2"
+            },
+            {
+                "text": "The Softword technique was originally used for incorporating word segmentation information into downstream tasks (Zhao and Kit, 2008; Peng and Dredze, 2016) . It augments the character representation with the embedding of its corresponding segmentation label:",
+                "cite_spans": [
+                    {
+                        "start": 113,
+                        "end": 133,
+                        "text": "(Zhao and Kit, 2008;",
+                        "ref_id": "BIBREF31"
+                    },
+                    {
+                        "start": 134,
+                        "end": 156,
+                        "text": "Peng and Dredze, 2016)",
+                        "ref_id": "BIBREF21"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Softword Feature",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "x c j \u2190 [x c j ; e seg (seg(c j ))].",
+                        "eq_num": "(1)"
+                    }
+                ],
+                "section": "Softword Feature",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "Here, seg(c j ) \u2208 Y seg denotes the segmentation label of the character c j predicted by the word segmentor, e seg denotes the segmentation label embedding lookup table, and typically Y seg = {B, M, E, S}. However, gold segmentation is not provided in most datasets, and segmentation results obtained by a segmenter can be incorrect. Therefore, segmentation errors will inevitably be introduced through this approach.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Softword Feature",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "Lattice-LSTM designs to incorporate lexicon information into the character-based neural NER model. To achieve this purpose, lexicon matching is first performed on the input sentence. If the subsequence {c i , \u2022 \u2022 \u2022 , c j } of the sentence matches a word in the lexicon for i < j, a directed edge is added from c i to c j . All lexicon matching results related to a character are preserved by allowing the character to be connected with multiple other characters. Intrinsically, this practice converts the input form of a sentence from a chain into a graph.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Lattice-LSTM",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "In a normal LSTM layer, the hidden state h i and the memory cell c i of each time step is updated by:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Lattice-LSTM",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "h i , c i = f (h j-1 , c j-1 , x c j ),",
+                        "eq_num": "(2)"
+                    }
+                ],
+                "section": "Lattice-LSTM",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "However, in order to model the graph-based input, Lattice-LSTM introduces an elaborate modification to the normal LSTM. Specifically, let s < * ,j> denote the list of sub-sequences of sentence s that match the lexicon and end with c j , h < * ,j> denote the corresponding hidden state list {h i , \u2200s <i,j> \u2208 s < * ,j> }, and c < * ,j> denote the corresponding memory cell list {c i , \u2200s <i,j> \u2208 s < * ,j> }. In Lattice-LSTM, the hidden state h j and memory cell c j of c j are now updated as follows:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Lattice-LSTM",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "h j , c j = f (h j-1 , c j-1 , x c j , s < * ,j> , h < * ,j> , c < * ,j> ),",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Lattice-LSTM",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "(3) where f is a simplified representation of the function used by Lattice-LSTM to perform memory update.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Lattice-LSTM",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "From our perspective, there are two main advantages to Lattice-LSTM. First, it preserves all the possible lexicon matching results that are related to a character, which helps avoid the error propagation problem introduced by heuristically choosing a single matching result for each character. Second, it introduces pre-trained word embeddings to the system, which greatly enhances its performance.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Lattice-LSTM",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "However, efficiency problems exist in Lattice-LSTM. Compared with normal LSTM, Lattice-LSTM needs to additionally model s < * ,j> , h < * ,j> , and c < * ,j> for memory update, which slows the training and inference speeds. Additionally, due to the complicated implementation of f , it is difficult for Lattice-LSTM to process multiple sentences in parallel (in the published implementation of Lattice-LSTM, the batch size was set to 1). These problems limit its application in some industrial areas where real-time NER responses are needed.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Lattice-LSTM",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "In this work, we sought to retain the merits of Lattice-LSTM while overcoming its drawbacks. To this end, we propose a novel method in which lexicon information is introduced by simply adjusting the character representation layer of an NER model. We refer to this method as SoftLexicon. As shown in Figure 1 , the overall architecture of the proposed method is as follows. First, each character of the input sequence is mapped into a dense vector. Next, the SoftLexicon feature is constructed and added to the representation of each character. Then, these augmented character representations are put into the sequence modeling layer and the CRF layer to obtain the final predictions.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 306,
+                        "end": 307,
+                        "text": "1",
+                        "ref_id": "FIGREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Approach",
+                "sec_num": "3"
+            },
+            {
+                "text": "For a character-based Chinese NER model, the input sentence is seen as a character sequence s",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Character Representation Layer",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "= {c 1 , c 2 , \u2022 \u2022 \u2022 , c n } \u2208 V c",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Character Representation Layer",
+                "sec_num": "3.1"
+            },
+            {
+                "text": ", where V c is the character vocabulary. Each character c i is represented using a dense vector (embedding):",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Character Representation Layer",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "x c i = e c (c i ),",
+                        "eq_num": "(4)"
+                    }
+                ],
+                "section": "Character Representation Layer",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "where e c denotes the character embedding lookup table.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Character Representation Layer",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "Char + bichar. In addition, Zhang and Yang, (2018) has proved that character bigrams are useful for representing characters, especially for those methods not using word information. Therefore, it is common to augment the character representations with bigram embeddings:",
+                "cite_spans": [
+                    {
+                        "start": 28,
+                        "end": 50,
+                        "text": "Zhang and Yang, (2018)",
+                        "ref_id": "BIBREF30"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Character Representation Layer",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "x c i = [e c (c i ); e b (c i , c i+1 )],",
+                        "eq_num": "(5)"
+                    }
+                ],
+                "section": "Character Representation Layer",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "Match in the lexicon where e b denotes the bigram embedding lookup table.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Character Representation Layer",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "\u4e2d \u56fd \u8bed \u2f94 \u5b66 \u8bed\u2f94 (Language) \u8bed\u2f94\u5b66 (Linguistic) \u56fd\u8bed (National language) \u4e2d\u56fd\u8bed\u2f94 (Chinese language) \u4e2d\u56fd\u8bed (Chinese language) \u8bed (Language; Say) C3 \u8bed\u2f94 f 3,4 \u8bed\u2f94\u5b66 f 3,5 \u4e2d\u56fd\u8bed\u2f94 f 1,4 \u56fd\u8bed f 2,3 \u4e2d\u56fd\u8bed f 1,3 \u8bed f 3,",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Character Representation Layer",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "The problem with the purely character-based NER model is that it fails to exploit word information.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Incorporating Lexicon Information",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "To address this issue, we proposed two methods, as described below, to introduce the word information into the character representations. In the following, for any input sequence",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Incorporating Lexicon Information",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "s = {c 1 , c 2 , \u2022 \u2022 \u2022 , c n }, w i,j denotes its sub-sequence {c i , c i+1 , \u2022 \u2022 \u2022 , c j }.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Incorporating Lexicon Information",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "The first conducted method is an intuitive extension of the Softword method, called ExSoftword. Instead of choosing one segmentation result for each character, it proposes to retain all possible segmentation results obtained using the lexicon:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "ExSoftword Feature",
+                "sec_num": null
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "x c j \u2190 [x c j ; e seg (segs(c j )],",
+                        "eq_num": "(6)"
+                    }
+                ],
+                "section": "ExSoftword Feature",
+                "sec_num": null
+            },
+            {
+                "text": "where segs(c j ) denotes all segmentation labels related to c j , and e seg (segs(c j )) is a 5-dimensional multi-hot vector with each dimension corresponding to an item of {B, M, E, S, O}.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "ExSoftword Feature",
+                "sec_num": null
+            },
+            {
+                "text": "As an example presented in Figure 2 , the character c 7 (\"\u897f\") occurs in two words, w 5,8 (\"\u4e2d\u5c71\u897f\u8def\") and w 6,7 (\"\u5c71\u897f\"), that match the lexicon, and it occurs in the middle of \"\u4e2d \u5c71 \u897f \u8def\" and the end of \"\u5c71 \u897f\". Therefore, its corresponding segmentation result is {M, E}, and its character representation is enriched as follows: Here, the second and third dimensions of e seg (\u2022) are set to 1, and the rest dimensions are set to 0. The problem of this approach is that it cannot fully inherit the two merits of Lattice-LSTM. First, it fails to introduce pre-trained word embeddings. Second, it still losses information of the matching results. As shown in Figure 2 , the constructed ExSoftword feature for characters {c 5 , c 6 , c 7 , c 8 } is {{B}, {B, M, E}, {M, E}, {E}}. However, given this constructed sequence, there exists more than one corresponding matching results, such as {w 5,6 (\"\u4e2d\u5c71\"), w 5,7 (\"\u4e2d\u5c71\u897f\"), w 6,8 (\"\u5c71\u897f\u8def\")} and {w 5,6 (\"\u4e2d \u5c71\"), w 6,7 (\"\u5c71 \u897f\"), w 5,8 (\"\u4e2d \u5c71 \u897f \u8def\")}. Therefore, we cannot tell which is the correct result to be restored.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 34,
+                        "end": 35,
+                        "text": "2",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 654,
+                        "end": 655,
+                        "text": "2",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "ExSoftword Feature",
+                "sec_num": null
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "x c 7 \u2190 [x c 7 ; e seg ({M, E})].",
+                        "eq_num": "(7)"
+                    }
+                ],
+                "section": "ExSoftword Feature",
+                "sec_num": null
+            },
+            {
+                "text": "Based on the analysis on Exsoftword, we further developed the SoftLexicon method to incorporate the lexicon information. The SoftLexicon features are constructed in three steps.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "SoftLexicon",
+                "sec_num": null
+            },
+            {
+                "text": "Categorizing the matched words. First, to retain the segmentation information, all matched words of each character c i is categorized into four word sets \"BMES\", which is marked by the four segmentation labels. For each character c i in the input sequence = {c 1 , c 2 , \u2022 \u2022 \u2022 , c n }, the four set is constructed by:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "SoftLexicon",
+                "sec_num": null
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "B(c i ) = {w i,k , \u2200w i,k \u2208 L, i < k \u2264 n}, M(c i ) = {w j,k , \u2200w j,k \u2208 L, 1 \u2264 j < i < k \u2264 n}, E(c i ) = {w j,i , \u2200w j,i \u2208 L, 1 \u2264 j < i}, S(c i ) = {c i , \u2203c i \u2208 L}.",
+                        "eq_num": "(8)"
+                    }
+                ],
+                "section": "SoftLexicon",
+                "sec_num": null
+            },
+            {
+                "text": "Here, L denotes the lexicon we use in this work. Additionally, if a word set is empty, a special word \"NONE\" is added to the empty word set. An example of this categorization approach is shown in Figure 3 . Noted that in this way, not only we can introduce the word embedding, but also no information loss exists since the matching results can be exactly restored from the four word sets of the characters.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 203,
+                        "end": 204,
+                        "text": "3",
+                        "ref_id": "FIGREF2"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "SoftLexicon",
+                "sec_num": null
+            },
+            {
+                "text": "Condensing the word sets. After obtaining the \"BMES\" word sets for each character, each word set is then condensed into a fixed-dimensional vector. In this work, we explored two approaches for implementing this condensation.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "SoftLexicon",
+                "sec_num": null
+            },
+            {
+                "text": "The first implementation is the intuitive meanpooling method:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "SoftLexicon",
+                "sec_num": null
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "v s (S) = 1 |S| w\u2208S e w (w).",
+                        "eq_num": "(9)"
+                    }
+                ],
+                "section": "SoftLexicon",
+                "sec_num": null
+            },
+            {
+                "text": "Here, S denotes a word set and e w denotes the word embedding lookup table. However, as shown in Table 8 , the results of empirical studies revealed that this algorithm does not perform well. Therefore, a weighting algorithm is introduced to further leverage the word information. To maintain computational efficiency, we did not opt for a dynamic weighting algorithm like attention. Instead, we propose using the frequency of each word as an indication of its weight. Since the frequency of a word is a static value that can be obtained offline, this can greatly accelerate the calculation of the weight of each word.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 103,
+                        "end": 104,
+                        "text": "8",
+                        "ref_id": "TABREF9"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "SoftLexicon",
+                "sec_num": null
+            },
+            {
+                "text": "Specifically, let z(w) denote the frequency that a lexicon word w occurs in the statistical data, the weighted representation of the word set S is obtained as follows:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "SoftLexicon",
+                "sec_num": null
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "v s (S) = 4 Z w\u2208S z(w)e w (w),",
+                        "eq_num": "(10)"
+                    }
+                ],
+                "section": "SoftLexicon",
+                "sec_num": null
+            },
+            {
+                "text": "where",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "SoftLexicon",
+                "sec_num": null
+            },
+            {
+                "text": "Z = w\u2208B\u222aM\u222aE\u222aS z(w).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "SoftLexicon",
+                "sec_num": null
+            },
+            {
+                "text": "Here, weight normalization is performed on all words in the four word sets to make an overall comparison.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "SoftLexicon",
+                "sec_num": null
+            },
+            {
+                "text": "In this work, the statistical data set is constructed from a combination of training and developing data of the task. Of course, if there is unlabelled data in the task, the unlabeled data set can serve as the statistical data set. In addition, note that the frequency of w does not increase if w is covered by another sub-sequence that matches the lexicon. This prevents the problem in which the frequency of a shorter word is always less than the frequency of the longer word that covers it.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "SoftLexicon",
+                "sec_num": null
+            },
+            {
+                "text": "Combining with character representation. The final step is to combine the representations of four word sets into one fix-dimensional feature, and add it to the representation of each character. In order to retain as much information as possible, we choose to concatenate the representations of the four word sets, and the final representation of each character is obtained by:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "SoftLexicon",
+                "sec_num": null
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "e s (B, M, E, S) = [v s (B); v s (M); v s (E); v s (S)], x c \u2190 [x c ; e s (B, M, E, S)].",
+                        "eq_num": "(11)"
+                    }
+                ],
+                "section": "SoftLexicon",
+                "sec_num": null
+            },
+            {
+                "text": "Here, v s denotes the weighting function above.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "SoftLexicon",
+                "sec_num": null
+            },
+            {
+                "text": "With the lexicon information incorporated, the character representations are then put into the sequence modeling layer, which models the dependency between characters. Generic architectures for this layer including the bidirectional longshort term memory network(BiLSTM), the Convolutional Neural Network(CNN) and the transformer (Vaswani et al., 2017) . In this work, we implemented this layer with a single-layer Bi-LSTM.",
+                "cite_spans": [
+                    {
+                        "start": 330,
+                        "end": 352,
+                        "text": "(Vaswani et al., 2017)",
+                        "ref_id": "BIBREF24"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Sequence Modeling Layer",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "Here, we precisely show the definition of the forward LSTM:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Sequence Modeling Layer",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "\uf8ee \uf8ef \uf8ef \uf8f0 i t f t o t c t \uf8f9 \uf8fa \uf8fa \uf8fb = \uf8ee \uf8ef \uf8ef \uf8f0 \u03c3 \u03c3 \u03c3 tanh \uf8f9 \uf8fa \uf8fa \uf8fb W x c t h t-1 + b , c t = c t i t + c t-1 f t , h t = o t tanh(c t ). (",
+                        "eq_num": "12"
+                    }
+                ],
+                "section": "Sequence Modeling Layer",
+                "sec_num": "3.3"
+            },
+            {
+                "text": ")",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Sequence Modeling Layer",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "where \u03c3 is the element-wise sigmoid function and represents element-wise product. W and b are trainable parameters. The backward LSTM shares the same definition as the forward LSTM yet model the sequence in a reverse order. The concatenated hidden states at the i th step of the forward and backward LSTMs",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Sequence Modeling Layer",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "h i = [ - \u2192 h i ; \u2190 - h i ] forms the context-dependent representation of c i .",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Sequence Modeling Layer",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "On top of the sequence modeling layer, it is typical to apply a sequential conditional random field (CRF) (Lafferty et al., 2001) layer to perform label inference for the whole character sequence at once:",
+                "cite_spans": [
+                    {
+                        "start": 106,
+                        "end": 129,
+                        "text": "(Lafferty et al., 2001)",
+                        "ref_id": "BIBREF14"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Label Inference Layer",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "p(y|s; \u03b8) = n t=1 \u03c6 t (y t-1 , y t |s) y \u2208Ys n t=1 \u03c6 t (y t-1 , y t |s) . (13)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Label Inference Layer",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "Here, Y s denotes all possible label sequences of s, and \u03c6 t (y , y|s) = exp(w T y ,y h t + b y ,y ), where w y ,y and b y ,y are trainable parameters corresponding to the label pair (y , y), and \u03b8 denotes model parameters. For label inference, it searches for the label sequence y * with the highest conditional probability given the input sequence s:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Label Inference Layer",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "y * = y p(y|s; \u03b8),",
+                        "eq_num": "(14)"
+                    }
+                ],
+                "section": "Label Inference Layer",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "which can be efficiently solved using the Viterbi algorithm (Forney, 1973) .",
+                "cite_spans": [
+                    {
+                        "start": 60,
+                        "end": 74,
+                        "text": "(Forney, 1973)",
+                        "ref_id": "BIBREF7"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Label Inference Layer",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "Most experimental settings in this work followed the protocols of Lattice-LSTM (Zhang and Yang, 2018) , including tested datasets, compared baselines, evaluation metrics (P, R, F1), and so on.",
+                "cite_spans": [
+                    {
+                        "start": 79,
+                        "end": 101,
+                        "text": "(Zhang and Yang, 2018)",
+                        "ref_id": "BIBREF30"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiment Setup",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "To make this work self-completed, we concisely illustrate some primary settings of this work.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiment Setup",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "The methods were evaluated on four Chinese NER datasets, including OntoNotes (Weischedel et al., 2011) , MSRA (Levow, 2006) , Weibo NER (Peng 1 shows statistic information of these datasets. As for the lexicon, we used the same one as Lattice-LSTM, which contains 5.7k single-character words, 291.5k two-character words, 278.1k three-character words, and 129.1k other words. In addition, the pretrained character embeddings we used are also the same with Lattice-LSTM, which are pre-trained on Chinese Giga-Word using word2vec.",
+                "cite_spans": [
+                    {
+                        "start": 77,
+                        "end": 102,
+                        "text": "(Weischedel et al., 2011)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 110,
+                        "end": 123,
+                        "text": "(Levow, 2006)",
+                        "ref_id": "BIBREF15"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 142,
+                        "end": 143,
+                        "text": "1",
+                        "ref_id": "TABREF2"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Datasets",
+                "sec_num": null
+            },
+            {
+                "text": "In this work, we implement the sequence-labeling layer with Bi-LSTM. Most implementation details followed those of Lattice-LSTM, including character and word embedding sizes, dropout, embedding initialization, and LSTM layer number. Additionally, the hidden size was set to 200 for small datasets Weibo and Resume, and 300 for larger datasets OntoNotes and MSRA. The initial learning rate was set to 0.005 for Weibo and 0.0015 for the rest three datasets with Adamax (Kingma and Ba, 2014) step rule 2 .",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Implementation Detail",
+                "sec_num": null
+            },
+            {
+                "text": "Table 2 shows the inference speed of the Soft-Lexicon method when implementing the sequence modeling layer with a bi-LSTM layer. The speed was evaluated based on the average number of sentences processed by the model per second using a GPU (NVIDIA TITAN X). From the 2 Please refer to the attached source code for more implementation detail of this work and access https:// github.com/jiesutd/LatticeLSTM for pre-trained word and character embeddings. table, we can observe that when decoding with the same batch size (=1), the proposed method is considerably more efficient than Lattice-LSTM and LR-CNN, performing up to 6.15 times faster than Lattice-LSTM. The inference speeds of Soft-Lexicon(LSTM) with bichar are close to those without bichar, since we only concatenate an additional feature to the character representation. The inference speeds of the BERT-Tagger and SoftLexicon (LSTM) + BERT models are limited due to the deep layers of the BERT structure. However, the speeds of the SoftLexicon (LSTM) + BERT model are still faster than those of Lattice-LSTM and LR-CNN on all datasets.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 6,
+                        "end": 7,
+                        "text": "2",
+                        "ref_id": "TABREF4"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Computational Efficiency Study",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "To further illustrate the efficiency of the Soft-Lexicon method, we also conducted an experiment to evaluate its inference speed against sentences of different lengths, as shown in Table 4 . For a fair comparison, we set the batch size to 1 in all of the compared methods. The results show that the proposed method achieves significant improvement in speed over Lattice-LSTM and LR-CNN when processing short sentences. With the increase of sentence length, the proposed method is consistently faster than Lattice-LSTM and LR-CNN despite the speed degradation due to the recurrent architecture of LSTM. Overall, the proposed SoftLexicon method shows a great advantage over other methods in computational efficiency.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 187,
+                        "end": 188,
+                        "text": "4",
+                        "ref_id": "TABREF5"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Computational Efficiency Study",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "Tables 3-6 3 show the performances of our method against the compared baselines. In this study, the sequence modeling layer of our method was Models P R F1 feature. It even performs comparably with the word-based methods of the \"Gold seg\" group, verifying its effectiveness on OntoNotes.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Effectiveness Study",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "MSRA/Weibo/Resume. Tables 4, 5 and 6 show results on the MSRA, Weibo and Resume datasets, respectively. Compared methods include the best statistical models on these data set, which leveraged rich handcrafted features (Chen et al., 2006; Zhang et al., 2006; Zhou et al., 2013) , character embedding features (Lu et al., 2016; Peng and Dredze, 2016) , radical features (Dong et al., 2016) , cross-domain data, and semi-supervised data (He and Sun, 2017b) . From the tables, we can see that the performance of the proposed Softlexion method is significant better than that of Lattice-LSTM and other baseline methods on all three datasets. ",
+                "cite_spans": [
+                    {
+                        "start": 218,
+                        "end": 237,
+                        "text": "(Chen et al., 2006;",
+                        "ref_id": "BIBREF1"
+                    },
+                    {
+                        "start": 238,
+                        "end": 257,
+                        "text": "Zhang et al., 2006;",
+                        "ref_id": "BIBREF29"
+                    },
+                    {
+                        "start": 258,
+                        "end": 276,
+                        "text": "Zhou et al., 2013)",
+                        "ref_id": "BIBREF32"
+                    },
+                    {
+                        "start": 308,
+                        "end": 325,
+                        "text": "(Lu et al., 2016;",
+                        "ref_id": "BIBREF20"
+                    },
+                    {
+                        "start": 326,
+                        "end": 348,
+                        "text": "Peng and Dredze, 2016)",
+                        "ref_id": "BIBREF21"
+                    },
+                    {
+                        "start": 368,
+                        "end": 387,
+                        "text": "(Dong et al., 2016)",
+                        "ref_id": "BIBREF6"
+                    },
+                    {
+                        "start": 434,
+                        "end": 453,
+                        "text": "(He and Sun, 2017b)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Effectiveness Study",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "Table 7 shows the performance of the SoftLexicon method when implementing the sequence modeling layer with different neural architecture. From the table, we can first see that the LSTM-based architecture performed better than the CNN-and transformer-based architectures. In addition, our method with different sequence modeling layers consistently outperformed their corresponding Ex-Softword baselines. This confirms the superiority of our method in modeling lexicon information in different neural NER models.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 6,
+                        "end": 7,
+                        "text": "7",
+                        "ref_id": "TABREF8"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Transferability Study",
+                "sec_num": "4.4"
+            },
+            {
+                "text": "We also conducted experiments on the four datasets to further verify the effectiveness of SoftLexicon in combination with pre-trained model, the results of which are shown in Tables 3 4 5 6 . In these experiments, we first use a BERT encoder to obtain the contextual representations of each sequenc, and then concatenated them into the character representations. From the table, we can see that the SoftLexicon method with BERT outperforms the BERT tagger on all four datasets. These results show that the SoftLexicon method can be effectively combined with pre-trained model. Moreover, the results also verify the effectiveness of our method in utilizing lexicon information, which means it can complement the information obtained from the pre-trained model.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 182,
+                        "end": 183,
+                        "text": "3",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 184,
+                        "end": 185,
+                        "text": "4",
+                        "ref_id": "TABREF5"
+                    },
+                    {
+                        "start": 186,
+                        "end": 187,
+                        "text": "5",
+                        "ref_id": "TABREF6"
+                    },
+                    {
+                        "start": 188,
+                        "end": 189,
+                        "text": "6",
+                        "ref_id": "TABREF7"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Combining Pre-trained Model",
+                "sec_num": "4.5"
+            },
+            {
+                "text": "To investigate the contribution of each component of our method, we conducted ablation experiments on all four datasets, as shown in table 8 .",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 139,
+                        "end": 140,
+                        "text": "8",
+                        "ref_id": "TABREF9"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Ablation Study",
+                "sec_num": "4.6"
+            },
+            {
+                "text": "(1) In Lattice-LSTM, each character receives word information only from the words that begin or end with it. Thus, the information of the words that contain the character inside is ignored. However, the SoftLexicon prevents the loss of this information by incorporating the \"Middle\" group of words. In the \" -'M' group\" experiment, we removed the \"Middle\" group in SoftLexicon, as in Lattice-LSTM. The degradation in performance on all four datasets indicates the importance of the \"M\" group of words, and confirms the advantage of our method.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Ablation Study",
+                "sec_num": "4.6"
+            },
+            {
+                "text": "(2) Our method proposed to draw a clear distinction between the four \"BMES\" categories of matched words. To study the relative contribution of this design, we conducted experiments to remove this distinction, i.e., we simply added up all the weighted words regardless of their categories. The decline in performance verifies the significance of a clear distinction for different matched words.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Ablation Study",
+                "sec_num": "4.6"
+            },
+            {
+                "text": "(3) We proposed two strategies for pooling the four word sets in Section 3.2. In the \"-Weighted pooling\" experiment, the weighted pooling strategy was replaced with mean-pooling, which degrades the performance. Compared with mean-pooling, the weighting strategy not only succeeds in weighing different words by their significance, but also introduces the frequency information of each word in the statistical data, which is verified to be helpful.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Ablation Study",
+                "sec_num": "4.6"
+            },
+            {
+                "text": "(4) Although existing lexicon-based methods like Lattice-LSTM also use word weighting, unlike the proposed Soft-lexion method, they fail to perform weight normalization among all the matched words. For example, Lattice-LSTM only normalizes the weights inside the \"B\" group or the \"E\" group. In the \"-Overall weighting\" experiment, we performed weight normalization inside each \"BMES\" group as Lattice-LSTM does, and found the resulting performance to be degraded. This result shows that the ability to perform overall weight normalization among all matched words is also an advantage of our method.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Ablation Study",
+                "sec_num": "4.6"
+            },
+            {
+                "text": "In this work, we addressed the computational efficiency of utilizing word lexicons in Chinese NER. To obtain a high-performing Chinese NER system with a fast inference speed, we proposed a novel method to incorporate the lexicon information into the character representations. Experimental studies on four benchmark Chinese NER datasets reveal that our method can achieve a much faster inference speed and better performance than the compared state-of-the-art methods.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion",
+                "sec_num": "5"
+            },
+            {
+                "text": "In Table3-5, * indicates that the model uses external labeled data for semi-supervised learning. \u2020 means that the model also uses discrete features.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "A result in boldface indicates that it is statistically significantly better (p < 0.01 in pairwise t-test) than the others in the same box.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            }
+        ],
+        "back_matter": [
+            {
+                "text": "The authors wish to thank the anonymous reviewers for their helpful comments. This work was partially funded by China National Key RD Program (No. 2018YFB1005104, 2018YFC0831105, 2017YFB1002104), National Natural Science Foundation of China (No. 61976056, 61532011, 61751201), Shanghai Municipal Science and Technology Major Project (No.2018SHZDZX01), Science and Technology Commission of Shanghai Municipality Grant (No.18DZ1201000, 16JC1420401, 17JC1420200).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Acknowledgements",
+                "sec_num": null
+            },
+            {
+                "text": "Models P R F1Gold seg Yang et al., 2016 65.59 implemented with a single layer bidirectional LSTM.OntoNotes. Table 3 shows results 4 on the OntoNotes dataset, where gold word segmentation is provided for both training and testing data. The methods of the \"Gold seg\" and the \"Auto seg\" groups are all word-based, with the former input building on gold word segmentation results and the latter building on automatic word segmentation results by a segmenter trained on OntoNotes training data. The methods used in the \"No seg\" group are character-based. From the table, we can make several observations. First, when gold word segmentation was replaced by automatically generated word segmentation, the F1 score decreases from 75.77% to 71.70%. This reveals the problem of treating the predicted word segmentation result as the true result in the word-based Chinese NER. Second, the F1 score of the Char-based (LSTM)+ExSoftword model is greatly improved from that of the Char-based (LSTM) model. This indicates the feasibility of the naive ExSoftword method. However, it still greatly underperforms relative to Lattice-LSTM, which reveals its deficiency in utilizing word information. Lastly, the proposed SoftLexicon method outperforms Lattice-LSTM by 1.76% with respect to the F1 score, and obtains a greater improvement of 2.28% combining the bichar",
+                "cite_spans": [
+                    {
+                        "start": 22,
+                        "end": 45,
+                        "text": "Yang et al., 2016 65.59",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 114,
+                        "end": 115,
+                        "text": "3",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Input",
+                "sec_num": null
+            }
+        ],
+        "bib_entries": {
+            "BIBREF0": {
+                "ref_id": "b0",
+                "title": "Named entity recognition with bilingual constraints",
+                "authors": [
+                    {
+                        "first": "Wanxiang",
+                        "middle": [],
+                        "last": "Che",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mengqiu",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [
+                            "D"
+                        ],
+                        "last": "Manning",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ting",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "NAACL",
+                "volume": "",
+                "issue": "",
+                "pages": "52--62",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Wanxiang Che, Mengqiu Wang, Christopher D Man- ning, and Ting Liu. 2013. Named entity recognition with bilingual constraints. In NAACL, pages 52-62.",
+                "links": null
+            },
+            "BIBREF1": {
+                "ref_id": "b1",
+                "title": "Chinese named entity recognition with conditional probabilistic models",
+                "authors": [
+                    {
+                        "first": "Aitao",
+                        "middle": [],
+                        "last": "Chen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Fuchun",
+                        "middle": [],
+                        "last": "Peng",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Roy",
+                        "middle": [],
+                        "last": "Shan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Gordon",
+                        "middle": [],
+                        "last": "Sun",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2006,
+                "venue": "SIGHAN Workshop on Chinese Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Aitao Chen, Fuchun Peng, Roy Shan, and Gordon Sun. 2006. Chinese named entity recognition with conditional probabilistic models. In SIGHAN Workshop on Chinese Language Processing.",
+                "links": null
+            },
+            "BIBREF2": {
+                "ref_id": "b2",
+                "title": "Event extraction via dynamic multi-pooling convolutional neural networks",
+                "authors": [
+                    {
+                        "first": "Yubo",
+                        "middle": [],
+                        "last": "Chen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Liheng",
+                        "middle": [],
+                        "last": "Xu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kang",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Daojian",
+                        "middle": [],
+                        "last": "Zeng",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jun",
+                        "middle": [],
+                        "last": "Zhao",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "ACL-IJCNLP",
+                "volume": "1",
+                "issue": "",
+                "pages": "167--176",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Yubo Chen, Liheng Xu, Kang Liu, Daojian Zeng, and Jun Zhao. 2015. Event extraction via dynamic multi-pooling convolutional neural networks. In ACL-IJCNLP, volume 1, pages 167-176.",
+                "links": null
+            },
+            "BIBREF3": {
+                "ref_id": "b3",
+                "title": "Named entity recognition with bidirectional lstm-cnns",
+                "authors": [
+                    {
+                        "first": "Jason",
+                        "middle": [],
+                        "last": "Chiu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Eric",
+                        "middle": [],
+                        "last": "Nichols",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Transactions of the Association of Computational Linguistics",
+                "volume": "4",
+                "issue": "1",
+                "pages": "357--370",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jason Chiu and Eric Nichols. 2016. Named entity recognition with bidirectional lstm-cnns. Transactions of the Association of Computational Linguistics, 4(1):357-370.",
+                "links": null
+            },
+            "BIBREF4": {
+                "ref_id": "b4",
+                "title": "Bert: Pre-training of deep bidirectional transformers for language understanding",
+                "authors": [
+                    {
+                        "first": "Jacob",
+                        "middle": [],
+                        "last": "Devlin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ming-Wei",
+                        "middle": [],
+                        "last": "Chang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kenton",
+                        "middle": [],
+                        "last": "Lee",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kristina",
+                        "middle": [],
+                        "last": "Toutanova",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "KAIS",
+                "volume": "55",
+                "issue": "3",
+                "pages": "529--569",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1810.04805"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Jacob Devlin, Ming-Wei Chang, Kenton Lee, and Kristina Toutanova. 2018. Bert: Pre-training of deep bidirectional transformers for language understanding. arXiv preprint arXiv:1810.04805. Dennis Diefenbach, Vanessa Lopez, Kamal Singh, and Pierre Maret. 2018. Core techniques of question answering systems over knowledge bases: a survey. KAIS, 55(3):529-569.",
+                "links": null
+            },
+            "BIBREF5": {
+                "ref_id": "b5",
+                "title": "A neural multidigraph model for chinese ner with gazetteers",
+                "authors": [
+                    {
+                        "first": "Ruixue",
+                        "middle": [],
+                        "last": "Ding",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Pengjun",
+                        "middle": [],
+                        "last": "Xie",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xiaoyan",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Wei",
+                        "middle": [],
+                        "last": "Lu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Linlin",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Luo",
+                        "middle": [],
+                        "last": "Si",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "1462--1467",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ruixue Ding, Pengjun Xie, Xiaoyan Zhang, Wei Lu, Linlin Li, and Luo Si. 2019. A neural multi- digraph model for chinese ner with gazetteers. In Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics, pages 1462-1467.",
+                "links": null
+            },
+            "BIBREF6": {
+                "ref_id": "b6",
+                "title": "Characterbased lstm-crf with radical-level features for chinese named entity recognition",
+                "authors": [
+                    {
+                        "first": "Chuanhai",
+                        "middle": [],
+                        "last": "Dong",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jiajun",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chengqing",
+                        "middle": [],
+                        "last": "Zong",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Masanori",
+                        "middle": [],
+                        "last": "Hattori",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hui",
+                        "middle": [],
+                        "last": "Di",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Natural Language Understanding and Intelligent Applications",
+                "volume": "",
+                "issue": "",
+                "pages": "239--250",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Chuanhai Dong, Jiajun Zhang, Chengqing Zong, Masanori Hattori, and Hui Di. 2016. Character- based lstm-crf with radical-level features for chinese named entity recognition. In Natural Language Understanding and Intelligent Applications, pages 239-250. Springer.",
+                "links": null
+            },
+            "BIBREF7": {
+                "ref_id": "b7",
+                "title": "The viterbi algorithm",
+                "authors": [
+                    {
+                        "first": "David",
+                        "middle": [],
+                        "last": "Forney",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1973,
+                "venue": "Proceedings of the IEEE",
+                "volume": "61",
+                "issue": "3",
+                "pages": "268--278",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "G David Forney. 1973. The viterbi algorithm. Proceedings of the IEEE, 61(3):268-278.",
+                "links": null
+            },
+            "BIBREF8": {
+                "ref_id": "b8",
+                "title": "2019a. Cnn-based chinese ner with lexicon rethinking",
+                "authors": [
+                    {
+                        "first": "Tao",
+                        "middle": [],
+                        "last": "Gui",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ruotian",
+                        "middle": [],
+                        "last": "Ma",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Qi",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Lujun",
+                        "middle": [],
+                        "last": "Zhao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yu-Gang",
+                        "middle": [],
+                        "last": "Jiang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xuanjing",
+                        "middle": [],
+                        "last": "Huang",
+                        "suffix": ""
+                    }
+                ],
+                "year": null,
+                "venue": "Proceedings of the 28th International Joint Conference on Artificial Intelligence",
+                "volume": "",
+                "issue": "",
+                "pages": "4982--4988",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Tao Gui, Ruotian Ma, Qi Zhang, Lujun Zhao, Yu-Gang Jiang, and Xuanjing Huang. 2019a. Cnn-based chinese ner with lexicon rethinking. In Proceedings of the 28th International Joint Conference on Artificial Intelligence, pages 4982-4988. AAAI Press.",
+                "links": null
+            },
+            "BIBREF9": {
+                "ref_id": "b9",
+                "title": "A lexicon-based graph neural network for chinese ner",
+                "authors": [
+                    {
+                        "first": "Tao",
+                        "middle": [],
+                        "last": "Gui",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yicheng",
+                        "middle": [],
+                        "last": "Zou",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Qi",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Minlong",
+                        "middle": [],
+                        "last": "Peng",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jinlan",
+                        "middle": [],
+                        "last": "Fu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zhongyu",
+                        "middle": [],
+                        "last": "Wei",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xuan-Jing",
+                        "middle": [],
+                        "last": "Huang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing (EMNLP-IJCNLP)",
+                "volume": "",
+                "issue": "",
+                "pages": "1039--1049",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Tao Gui, Yicheng Zou, Qi Zhang, Minlong Peng, Jinlan Fu, Zhongyu Wei, and Xuan-Jing Huang. 2019b. A lexicon-based graph neural network for chinese ner. In Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing (EMNLP-IJCNLP), pages 1039-1049.",
+                "links": null
+            },
+            "BIBREF10": {
+                "ref_id": "b10",
+                "title": "F-score driven max margin neural network for named entity recognition in chinese social media",
+                "authors": [
+                    {
+                        "first": "Hangfeng",
+                        "middle": [],
+                        "last": "He",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xu",
+                        "middle": [],
+                        "last": "Sun",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Proceedings of the 15th Conference of the European Chapter",
+                "volume": "2",
+                "issue": "",
+                "pages": "713--718",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Hangfeng He and Xu Sun. 2017a. F-score driven max margin neural network for named entity recognition in chinese social media. In Proceedings of the 15th Conference of the European Chapter of the Association for Computational Linguistics: Volume 2, Short Papers, pages 713-718.",
+                "links": null
+            },
+            "BIBREF11": {
+                "ref_id": "b11",
+                "title": "A unified model for cross-domain and semi-supervised named entity recognition in chinese social media",
+                "authors": [
+                    {
+                        "first": "Hangfeng",
+                        "middle": [],
+                        "last": "He",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xu",
+                        "middle": [],
+                        "last": "Sun",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2008,
+                "venue": "Proceedings of the Sixth SIGHAN Workshop on Chinese Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Hangfeng He and Xu Sun. 2017b. A unified model for cross-domain and semi-supervised named entity recognition in chinese social media. In AAAI. Jingzhou He and Houfeng Wang. 2008. Chinese named entity recognition and word segmentation based on character. In Proceedings of the Sixth SIGHAN Workshop on Chinese Language Processing.",
+                "links": null
+            },
+            "BIBREF12": {
+                "ref_id": "b12",
+                "title": "Bidirectional lstm-crf models for sequence tagging",
+                "authors": [
+                    {
+                        "first": "Zhiheng",
+                        "middle": [],
+                        "last": "Huang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Wei",
+                        "middle": [],
+                        "last": "Xu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kai",
+                        "middle": [],
+                        "last": "Yu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1508.01991"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Zhiheng Huang, Wei Xu, and Kai Yu. 2015. Bidirec- tional lstm-crf models for sequence tagging. arXiv preprint arXiv:1508.01991.",
+                "links": null
+            },
+            "BIBREF13": {
+                "ref_id": "b13",
+                "title": "Adam: A method for stochastic optimization",
+                "authors": [
+                    {
+                        "first": "P",
+                        "middle": [],
+                        "last": "Diederik",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jimmy",
+                        "middle": [],
+                        "last": "Kingma",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Ba",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1412.6980"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Diederik P Kingma and Jimmy Ba. 2014. Adam: A method for stochastic optimization. arXiv preprint arXiv:1412.6980.",
+                "links": null
+            },
+            "BIBREF14": {
+                "ref_id": "b14",
+                "title": "Conditional random fields: Probabilistic models for segmenting and labeling sequence data",
+                "authors": [
+                    {
+                        "first": "John",
+                        "middle": [],
+                        "last": "Lafferty",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Andrew",
+                        "middle": [],
+                        "last": "Mccallum",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Fernando Cn",
+                        "middle": [],
+                        "last": "Pereira",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2001,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "John Lafferty, Andrew McCallum, and Fernando CN Pereira. 2001. Conditional random fields: Prob- abilistic models for segmenting and labeling se- quence data.",
+                "links": null
+            },
+            "BIBREF15": {
+                "ref_id": "b15",
+                "title": "The third international chinese language processing bakeoff: Word segmentation and named entity recognition",
+                "authors": [
+                    {
+                        "first": "Gina-Anne",
+                        "middle": [],
+                        "last": "Levow",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2006,
+                "venue": "SIGHAN Workshop on Chinese Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "108--117",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Gina-Anne Levow. 2006. The third international chinese language processing bakeoff: Word segmen- tation and named entity recognition. In SIGHAN Workshop on Chinese Language Processing, pages 108-117.",
+                "links": null
+            },
+            "BIBREF16": {
+                "ref_id": "b16",
+                "title": "Comparison of the impact of word segmentation on name tagging for chinese and japanese",
+                "authors": [
+                    {
+                        "first": "Haibo",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Masato",
+                        "middle": [],
+                        "last": "Hagiwara",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Qi",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Heng",
+                        "middle": [],
+                        "last": "Ji",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "LREC",
+                "volume": "",
+                "issue": "",
+                "pages": "2532--2536",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Haibo Li, Masato Hagiwara, Qi Li, and Heng Ji. 2014. Comparison of the impact of word segmentation on name tagging for chinese and japanese. In LREC, pages 2532-2536.",
+                "links": null
+            },
+            "BIBREF17": {
+                "ref_id": "b17",
+                "title": "Empower sequence labeling with task-aware neural language model. AAAI Conference on Artificial Intelligence",
+                "authors": [
+                    {
+                        "first": "Liyuan",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jingbo",
+                        "middle": [],
+                        "last": "Shang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xiang",
+                        "middle": [],
+                        "last": "Ren",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Frank",
+                        "middle": [],
+                        "last": "Xu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Huan",
+                        "middle": [],
+                        "last": "Gui",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jian",
+                        "middle": [],
+                        "last": "Peng",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jiawei",
+                        "middle": [],
+                        "last": "Han",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Liyuan Liu, Jingbo Shang, Xiang Ren, Frank Xu, Huan Gui, Jian Peng, and Jiawei Han. 2018. Empower sequence labeling with task-aware neural language model. AAAI Conference on Artificial Intelligence.",
+                "links": null
+            },
+            "BIBREF18": {
+                "ref_id": "b18",
+                "title": "An encoding strategy based wordcharacter lstm for chinese ner",
+                "authors": [
+                    {
+                        "first": "Wei",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tongge",
+                        "middle": [],
+                        "last": "Xu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Qinghua",
+                        "middle": [],
+                        "last": "Xu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jiayu",
+                        "middle": [],
+                        "last": "Song",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yueran",
+                        "middle": [],
+                        "last": "Zu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 2019 Conference of the North American Chapter",
+                "volume": "1",
+                "issue": "",
+                "pages": "2379--2389",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Wei Liu, Tongge Xu, Qinghua Xu, Jiayu Song, and Yueran Zu. 2019. An encoding strategy based word- character lstm for chinese ner. In Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies, Volume 1 (Long and Short Papers), pages 2379-2389.",
+                "links": null
+            },
+            "BIBREF19": {
+                "ref_id": "b19",
+                "title": "Chinese named entity recognition with a sequence labeling approach: based on characters",
+                "authors": [
+                    {
+                        "first": "Zhangxun",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Conghui",
+                        "middle": [],
+                        "last": "Zhu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tiejun",
+                        "middle": [],
+                        "last": "Zhao",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2010,
+                "venue": "Advanced intelligent computing theories and applications. With aspects of artificial intelligence",
+                "volume": "",
+                "issue": "",
+                "pages": "634--640",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Zhangxun Liu, Conghui Zhu, and Tiejun Zhao. 2010. Chinese named entity recognition with a sequence labeling approach: based on characters, or based on words? In Advanced intelligent computing theories and applications. With aspects of artificial intelligence, pages 634-640. Springer.",
+                "links": null
+            },
+            "BIBREF20": {
+                "ref_id": "b20",
+                "title": "Named entity recognition for chinese social media with jointly trained embeddings",
+                "authors": [
+                    {
+                        "first": "Yanan",
+                        "middle": [],
+                        "last": "Lu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yue",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dong-Hong",
+                        "middle": [],
+                        "last": "Ji",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "LREC. Nanyun Peng and Mark Dredze",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Yanan Lu, Yue Zhang, and Dong-Hong Ji. 2016. Multi- prototype chinese character embedding. In LREC. Nanyun Peng and Mark Dredze. 2015. Named entity recognition for chinese social media with jointly trained embeddings. In EMNLP.",
+                "links": null
+            },
+            "BIBREF21": {
+                "ref_id": "b21",
+                "title": "Improving named entity recognition for chinese social media with word segmentation representation learning",
+                "authors": [
+                    {
+                        "first": "Nanyun",
+                        "middle": [],
+                        "last": "Peng",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mark",
+                        "middle": [],
+                        "last": "Dredze",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Nanyun Peng and Mark Dredze. 2016. Improving named entity recognition for chinese social media with word segmentation representation learning. In ACL, page 149.",
+                "links": null
+            },
+            "BIBREF22": {
+                "ref_id": "b22",
+                "title": "Relation extraction with matrix factorization and universal schemas",
+                "authors": [
+                    {
+                        "first": "Sebastian",
+                        "middle": [],
+                        "last": "Riedel",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Limin",
+                        "middle": [],
+                        "last": "Yao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Andrew",
+                        "middle": [],
+                        "last": "Mccallum",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Benjamin",
+                        "middle": [
+                            "M"
+                        ],
+                        "last": "Marlin",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "Proceedings of the 2013 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies",
+                "volume": "",
+                "issue": "",
+                "pages": "74--84",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Sebastian Riedel, Limin Yao, Andrew McCallum, and Benjamin M Marlin. 2013. Relation extraction with matrix factorization and universal schemas. In Proceedings of the 2013 Conference of the North American Chapter of the Association for Computa- tional Linguistics: Human Language Technologies, pages 74-84.",
+                "links": null
+            },
+            "BIBREF23": {
+                "ref_id": "b23",
+                "title": "Leverage lexical knowledge for chinese named entity recognition via collaborative graph network",
+                "authors": [
+                    {
+                        "first": "Dianbo",
+                        "middle": [],
+                        "last": "Sui",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yubo",
+                        "middle": [],
+                        "last": "Chen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kang",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jun",
+                        "middle": [],
+                        "last": "Zhao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Shengping",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing (EMNLP-IJCNLP)",
+                "volume": "",
+                "issue": "",
+                "pages": "3821--3831",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Dianbo Sui, Yubo Chen, Kang Liu, Jun Zhao, and Shengping Liu. 2019. Leverage lexical knowledge for chinese named entity recognition via collaborative graph network. In Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing (EMNLP-IJCNLP), pages 3821-3831.",
+                "links": null
+            },
+            "BIBREF24": {
+                "ref_id": "b24",
+                "title": "Attention is all you need",
+                "authors": [
+                    {
+                        "first": "Ashish",
+                        "middle": [],
+                        "last": "Vaswani",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Noam",
+                        "middle": [],
+                        "last": "Shazeer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Niki",
+                        "middle": [],
+                        "last": "Parmar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jakob",
+                        "middle": [],
+                        "last": "Uszkoreit",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Llion",
+                        "middle": [],
+                        "last": "Jones",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Aidan",
+                        "middle": [
+                            "N"
+                        ],
+                        "last": "Gomez",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "\u0141ukasz",
+                        "middle": [],
+                        "last": "Kaiser",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Illia",
+                        "middle": [],
+                        "last": "Polosukhin",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Advances in Neural Information Processing Systems",
+                "volume": "",
+                "issue": "",
+                "pages": "5998--6008",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N Gomez, \u0141ukasz Kaiser, and Illia Polosukhin. 2017. Attention is all you need. In Advances in Neural Information Processing Systems, pages 5998-6008.",
+                "links": null
+            },
+            "BIBREF25": {
+                "ref_id": "b25",
+                "title": "Effective bilingual constraints for semi-supervised learning of named entity recognizers",
+                "authors": [
+                    {
+                        "first": "Mengqiu",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Wanxiang",
+                        "middle": [],
+                        "last": "Che",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [
+                            "D"
+                        ],
+                        "last": "Manning",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "AAAI",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Mengqiu Wang, Wanxiang Che, and Christopher D Manning. 2013. Effective bilingual constraints for semi-supervised learning of named entity recogniz- ers. In AAAI.",
+                "links": null
+            },
+            "BIBREF27": {
+                "ref_id": "b27",
+                "title": "Linguistic Data Consortium",
+                "authors": [],
+                "year": null,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "LDC2011T03, Philadelphia, Penn.: Linguistic Data Consortium.",
+                "links": null
+            },
+            "BIBREF28": {
+                "ref_id": "b28",
+                "title": "Combining discrete and neural features for sequence labeling",
+                "authors": [
+                    {
+                        "first": "Jie",
+                        "middle": [],
+                        "last": "Yang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zhiyang",
+                        "middle": [],
+                        "last": "Teng",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Meishan",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yue",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "CICLing",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jie Yang, Zhiyang Teng, Meishan Zhang, and Yue Zhang. 2016. Combining discrete and neural features for sequence labeling. In CICLing.",
+                "links": null
+            },
+            "BIBREF29": {
+                "ref_id": "b29",
+                "title": "Word segmentation and named entity recognition for sighan bakeoff3",
+                "authors": [
+                    {
+                        "first": "Suxiang",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ying",
+                        "middle": [],
+                        "last": "Qin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Juan",
+                        "middle": [],
+                        "last": "Wen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xiaojie",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2006,
+                "venue": "SIGHAN Workshop on Chinese Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "158--161",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Suxiang Zhang, Ying Qin, Juan Wen, and Xiaojie Wang. 2006. Word segmentation and named entity recognition for sighan bakeoff3. In SIGHAN Workshop on Chinese Language Processing, pages 158-161.",
+                "links": null
+            },
+            "BIBREF30": {
+                "ref_id": "b30",
+                "title": "Chinese ner using lattice lstm",
+                "authors": [
+                    {
+                        "first": "Yue",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jie",
+                        "middle": [],
+                        "last": "Yang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 56th Annual Meeting of the Association for Computational Linguistics (ACL)",
+                "volume": "",
+                "issue": "",
+                "pages": "1554--1564",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Yue Zhang and Jie Yang. 2018. Chinese ner using lattice lstm. Proceedings of the 56th Annual Meeting of the Association for Computational Linguistics (ACL), 1554-1564.",
+                "links": null
+            },
+            "BIBREF31": {
+                "ref_id": "b31",
+                "title": "Unsupervised segmentation helps supervised learning of character tagging for word segmentation and named entity recognition",
+                "authors": [
+                    {
+                        "first": "Hai",
+                        "middle": [],
+                        "last": "Zhao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chunyu",
+                        "middle": [],
+                        "last": "Kit",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2008,
+                "venue": "Proceedings of the Sixth SIGHAN Workshop on Chinese Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Hai Zhao and Chunyu Kit. 2008. Unsupervised segmentation helps supervised learning of character tagging for word segmentation and named entity recognition. In Proceedings of the Sixth SIGHAN Workshop on Chinese Language Processing.",
+                "links": null
+            },
+            "BIBREF32": {
+                "ref_id": "b32",
+                "title": "Chinese named entity recognition via joint identification and categorization",
+                "authors": [
+                    {
+                        "first": "Junsheng",
+                        "middle": [],
+                        "last": "Zhou",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Weiguang",
+                        "middle": [],
+                        "last": "Qu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Fen",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "Chinese journal of electronics",
+                "volume": "22",
+                "issue": "2",
+                "pages": "225--230",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Junsheng Zhou, Weiguang Qu, and Fen Zhang. 2013. Chinese named entity recognition via joint identification and categorization. Chinese journal of electronics, 22(2):225-230.",
+                "links": null
+            }
+        },
+        "ref_entries": {
+            "FIGREF0": {
+                "num": null,
+                "text": "Figure 1: The overall architecture of the proposed method.",
+                "uris": null,
+                "fig_num": "1",
+                "type_str": "figure"
+            },
+            "FIGREF2": {
+                "num": null,
+                "text": "Figure 3: The SoftLexicon method.",
+                "uris": null,
+                "fig_num": "3",
+                "type_str": "figure"
+            },
+            "FIGREF3": {
+                "num": null,
+                "text": "Figure 4: Inference speed against sentence length. We use a same batch size of 1 for a fair speed comparison.",
+                "uris": null,
+                "fig_num": "4",
+                "type_str": "figure"
+            },
+            "TABREF2": {
+                "content": "<table><tr><td>Datasets</td><td>Type</td><td>Train</td><td>Dev</td><td>Test</td></tr><tr><td>OntoNotes</td><td>Sentence Char</td><td colspan=\"3\">15.7k 491.9k 200.5k 208.1k 4.3k 4.3k</td></tr><tr><td>MSRA</td><td>Sentence Char</td><td>46.4k 2169.9k</td><td>--</td><td>4.4k 172.6k</td></tr><tr><td>Weibo</td><td>Sentence Char</td><td>1.4k 73.8k</td><td>0.27k 14.5</td><td>0.27k 14.8k</td></tr><tr><td>Resume</td><td>Sentence Char</td><td>3.8k 124.1k</td><td>0.46 13.9k</td><td>0.48k 15.1k</td></tr></table>",
+                "type_str": "table",
+                "text": "Statistics of datasets.",
+                "html": null,
+                "num": null
+            },
+            "TABREF4": {
+                "content": "<table><tr><td>and Dredze, 2015; He and Sun, 2017a), and</td></tr><tr><td>Resume NER (Zhang and Yang, 2018). OntoNotes</td></tr><tr><td>and MSRA are from the newswire domain, where</td></tr><tr><td>gold-standard segmentation is available for training</td></tr><tr><td>data. For OntoNotes, gold segmentation is also</td></tr><tr><td>available for development and testing data. Weibo</td></tr><tr><td>NER and Resume NER are from social media and</td></tr><tr><td>resume, respectively. There is no gold standard</td></tr><tr><td>segmentation in these two datasets. Table</td></tr></table>",
+                "type_str": "table",
+                "text": "Inference speed (average sentences per second, the larger the better) of our method with LSTM layer compared with Lattice-LSTM, LR-CNN and BERT.",
+                "html": null,
+                "num": null
+            },
+            "TABREF5": {
+                "content": "<table><tr><td>Chen et al., 2006</td><td colspan=\"3\">91.22 81.71 86.20</td></tr><tr><td>Zhang et al. 2006  *</td><td colspan=\"3\">92.20 90.18 91.18</td></tr><tr><td>Zhou et al. 2013</td><td colspan=\"3\">91.86 88.75 90.28</td></tr><tr><td>Lu et al. 2016</td><td>-</td><td>-</td><td>87.94</td></tr><tr><td>Dong et al. 2016</td><td colspan=\"3\">91.28 90.62 90.95</td></tr><tr><td>Char-based (LSTM)</td><td colspan=\"3\">90.74 86.96 88.81</td></tr><tr><td>+ bichar+softword</td><td colspan=\"3\">92.97 90.80 91.87</td></tr><tr><td>+ ExSoftword</td><td colspan=\"3\">90.77 87.23 88.97</td></tr><tr><td>+ bichar+ExSoftword</td><td colspan=\"3\">93.21 91.57 92.38</td></tr><tr><td>Lattice-LSTM</td><td colspan=\"3\">93.57 92.79 93.18</td></tr><tr><td>LR-CNN (Gui et al., 2019)</td><td colspan=\"3\">94.50 92.93 93.71</td></tr><tr><td>SoftLexicon (LSTM)</td><td colspan=\"3\">94.63 92.70 93.66</td></tr><tr><td colspan=\"4\">SoftLexicon (LSTM) + bichar 94.73 93.40 94.06</td></tr><tr><td>BERT-Tagger</td><td colspan=\"3\">93.40 94.12 93.76</td></tr><tr><td>BERT + LSTM + CRF</td><td colspan=\"3\">95.06 94.61 94.83</td></tr><tr><td colspan=\"4\">SoftLexicon (LSTM) + BERT 95.75 95.10 95.42</td></tr><tr><td>Models</td><td>NE</td><td>NM</td><td>Overall</td></tr><tr><td>Peng and Dredze, 2015</td><td colspan=\"2\">51.96 61.05</td><td>56.05</td></tr><tr><td>Peng and Dredze, 2016  *</td><td colspan=\"2\">55.28 62.97</td><td>58.99</td></tr><tr><td>He and Sun, 2017a</td><td colspan=\"2\">50.60 59.32</td><td>54.82</td></tr><tr><td>He and Sun, 2017b  *</td><td colspan=\"2\">54.50 62.17</td><td>58.23</td></tr><tr><td>Char-based (LSTM)</td><td colspan=\"2\">46.11 55.29</td><td>52.77</td></tr><tr><td>+ bichar+softword</td><td colspan=\"2\">50.55 60.11</td><td>56.75</td></tr><tr><td>+ ExSoftword</td><td colspan=\"2\">44.65 55.19</td><td>52.42</td></tr><tr><td>+ bichar+ExSoftword</td><td colspan=\"2\">58.93 53.38</td><td>56.02</td></tr><tr><td>Lattice-LSTM</td><td colspan=\"2\">53.04 62.25</td><td>58.79</td></tr><tr><td>LR-CNN (Gui et al., 2019)</td><td colspan=\"2\">57.14 66.67</td><td>59.92</td></tr><tr><td>SoftLexicon (LSTM)</td><td colspan=\"2\">59.08 62.22</td><td>61.42</td></tr><tr><td colspan=\"3\">SoftLexicon (LSTM) + bichar 58.12 64.20</td><td>59.81</td></tr><tr><td>BERT-Tagger</td><td colspan=\"2\">65.77 62.05</td><td>63.80</td></tr><tr><td>BERT + LSTM + CRF</td><td colspan=\"2\">69.65 64.62</td><td>67.33</td></tr><tr><td colspan=\"3\">SoftLexicon (LSTM) + BERT 70.94 67.02</td><td>70.50</td></tr></table>",
+                "type_str": "table",
+                "text": "Performance on MSRA.",
+                "html": null,
+                "num": null
+            },
+            "TABREF6": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "Performance on Weibo. NE, NM and Overall denote F1 scores for named entities, nominal entities (excluding named entities) and both, respectively.",
+                "html": null,
+                "num": null
+            },
+            "TABREF7": {
+                "content": "<table><tr><td>Models</td><td/><td>P</td><td>R</td><td>F1</td></tr><tr><td>Word-based (LSTM)</td><td/><td colspan=\"3\">93.72 93.44 93.58</td></tr><tr><td>+char+bichar</td><td/><td colspan=\"3\">94.07 94.42 94.24</td></tr><tr><td>Char-based (LSTM)</td><td/><td colspan=\"3\">93.66 93.31 93.48</td></tr><tr><td>+ bichar+softword</td><td/><td colspan=\"3\">94.53 94.29 94.41</td></tr><tr><td>+ ExSoftword</td><td/><td colspan=\"3\">95.29 94.42 94.85</td></tr><tr><td>+ bichar+ExSoftword</td><td/><td colspan=\"3\">96.14 94.72 95.43</td></tr><tr><td>Lattice-LSTM</td><td/><td colspan=\"3\">94.81 94.11 94.46</td></tr><tr><td colspan=\"2\">LR-CNN (Gui et al., 2019)</td><td colspan=\"3\">95.37 94.84 95.11</td></tr><tr><td>SoftLexicon (LSTM)</td><td/><td colspan=\"3\">95.30 95.77 95.53</td></tr><tr><td colspan=\"5\">SoftLexicon (LSTM) + bichar 95.71 95.77 95.74</td></tr><tr><td>BERT-Tagger</td><td/><td colspan=\"3\">94.87 96.50 95.68</td></tr><tr><td>BERT + LSTM + CRF</td><td/><td colspan=\"3\">95.75 95.28 95.51</td></tr><tr><td colspan=\"5\">SoftLexicon (LSTM) + BERT 96.08 96.13 96.11</td></tr><tr><td>Models</td><td colspan=\"4\">OntoNotes MSRA Weibo Resume</td></tr><tr><td>SoftLexicon (LSTM)</td><td>75.64</td><td>93.66</td><td>61.42</td><td>95.53</td></tr><tr><td>ExSoftword (CNN)</td><td>68.11</td><td>90.02</td><td>53.93</td><td>94.49</td></tr><tr><td>SoftLexicon (CNN)</td><td>74.08</td><td>92.19</td><td>59.65</td><td>95.02</td></tr><tr><td>ExSoftword (Transformer)</td><td>64.29</td><td>86.29</td><td>52.86</td><td>93.78</td></tr><tr><td>SoftLexicon (Transformer)</td><td>71.21</td><td>90.48</td><td>61.04</td><td>94.59</td></tr></table>",
+                "type_str": "table",
+                "text": "Performance on Resume.",
+                "html": null,
+                "num": null
+            },
+            "TABREF8": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "F1 score with different implementations of the sequence modeling layer. ExSoftword is the shorthand of Char-based+bichar+ExSoftword.",
+                "html": null,
+                "num": null
+            },
+            "TABREF9": {
+                "content": "<table><tr><td>Models</td><td colspan=\"4\">OntoNotes MSRA Weibo Resume</td></tr><tr><td>SoftLexicon (LSTM)</td><td>75.64</td><td>93.66</td><td>61.42</td><td>95.53</td></tr><tr><td>-\"M\" group</td><td>75.06</td><td>93.09</td><td>58.13</td><td>94.72</td></tr><tr><td>-Distinction</td><td>70.29</td><td>92.08</td><td>54.85</td><td>94.30</td></tr><tr><td>-Weighted pooling</td><td>72.57</td><td>92.76</td><td>57.72</td><td>95.33</td></tr><tr><td>-Overall weighting</td><td>74.28</td><td>93.16</td><td>59.55</td><td>94.92</td></tr></table>",
+                "type_str": "table",
+                "text": "An ablation study of the proposed model.",
+                "html": null,
+                "num": null
+            }
+        }
+    }
+}

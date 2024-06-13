@@ -1,0 +1,2173 @@
+{
+    "paper_id": "2021",
+    "header": {
+        "generated_with": "S2ORC 1.0.0",
+        "date_generated": "2023-06-16T12:00:53.348891Z"
+    },
+    "title": "Learning from Perturbations: Diverse and Informative Dialogue Generation with Inverse Adversarial Training",
+    "authors": [
+        {
+            "first": "Wangchunshu",
+            "middle": [],
+            "last": "Zhou",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "Beihang University",
+                "location": {
+                    "settlement": "Beijing",
+                    "country": "China"
+                }
+            },
+            "email": "zhouwangchunshu@buaa.edu.cn"
+        },
+        {
+            "first": "Qifei",
+            "middle": [],
+            "last": "Li",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "Beihang University",
+                "location": {
+                    "settlement": "Beijing",
+                    "country": "China"
+                }
+            },
+            "email": ""
+        },
+        {
+            "first": "Chenle",
+            "middle": [],
+            "last": "Li",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "Beihang University",
+                "location": {
+                    "settlement": "Beijing",
+                    "country": "China"
+                }
+            },
+            "email": ""
+        }
+    ],
+    "year": "",
+    "venue": null,
+    "identifiers": {},
+    "abstract": "In this paper, we propose Inverse Adversarial Training (IAT) algorithm for training neural dialogue systems to avoid generic responses and model dialogue history better. In contrast to standard adversarial training algorithms, IAT encourages the model to be sensitive to the perturbation in the dialogue history and therefore learning from perturbations. By giving higher rewards for responses whose output probability reduces more significantly when dialogue history is perturbed, the model is encouraged to generate more diverse and consistent responses. By penalizing the model when generating the same response given perturbed dialogue history, the model is forced to better capture dialogue history and generate more informative responses. Experimental results on two benchmark datasets show that our approach can better model dialogue history and generate more diverse and consistent responses. In addition, we point out a problem of the widely used maximum mutual information (MMI) based methods for improving the diversity of dialogue response generation models and demonstrate it empirically.",
+    "pdf_parse": {
+        "paper_id": "2021",
+        "_pdf_hash": "",
+        "abstract": [
+            {
+                "text": "In this paper, we propose Inverse Adversarial Training (IAT) algorithm for training neural dialogue systems to avoid generic responses and model dialogue history better. In contrast to standard adversarial training algorithms, IAT encourages the model to be sensitive to the perturbation in the dialogue history and therefore learning from perturbations. By giving higher rewards for responses whose output probability reduces more significantly when dialogue history is perturbed, the model is encouraged to generate more diverse and consistent responses. By penalizing the model when generating the same response given perturbed dialogue history, the model is forced to better capture dialogue history and generate more informative responses. Experimental results on two benchmark datasets show that our approach can better model dialogue history and generate more diverse and consistent responses. In addition, we point out a problem of the widely used maximum mutual information (MMI) based methods for improving the diversity of dialogue response generation models and demonstrate it empirically.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            }
+        ],
+        "body_text": [
+            {
+                "text": "In recent years, neural end-to-end dialogue response generation models (Sordoni et al., 2015; Serban et al., 2016; Bordes et al., 2016) has gained increasing popularity with the recent advancements of neural sequence-to-sequence (seq2seq) learning models (Sutskever et al., 2014; Vaswani et al., 2017) . While neural dialogue models can generate seemingly fluent responses, due to the over-simplified maximum likelihood estimation (MLE) training objective and the high frequency of generic responses in training corpora, they tend to produce dull and generic responses such as \"I don't know\" much more often than that humans generally do (Li et al., 2015) , which makes dialogue agents less engaging and ineffective.",
+                "cite_spans": [
+                    {
+                        "start": 71,
+                        "end": 93,
+                        "text": "(Sordoni et al., 2015;",
+                        "ref_id": "BIBREF14"
+                    },
+                    {
+                        "start": 94,
+                        "end": 114,
+                        "text": "Serban et al., 2016;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 115,
+                        "end": 135,
+                        "text": "Bordes et al., 2016)",
+                        "ref_id": "BIBREF1"
+                    },
+                    {
+                        "start": 255,
+                        "end": 279,
+                        "text": "(Sutskever et al., 2014;",
+                        "ref_id": "BIBREF15"
+                    },
+                    {
+                        "start": 280,
+                        "end": 301,
+                        "text": "Vaswani et al., 2017)",
+                        "ref_id": "BIBREF17"
+                    },
+                    {
+                        "start": 638,
+                        "end": 655,
+                        "text": "(Li et al., 2015)",
+                        "ref_id": "BIBREF5"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "In addition, recent research on whether neural dialogue systems use dialogue history effectively (Sankar et al., 2019) shows that most neural dialogue agents fail to take the dialogue history into account when generating responses. This problem makes neural dialogue systems tend to generate responses irrelevant to the current topic of the conversation and are not consistent with the dialogue history. This problem may also intensify the generic response problem, as dull responses are generally off-topic and irrelevant to the dialogue history.",
+                "cite_spans": [
+                    {
+                        "start": 97,
+                        "end": 118,
+                        "text": "(Sankar et al., 2019)",
+                        "ref_id": "BIBREF12"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "To address the above issues, in this paper, we propose Inverse Adversarial Training (IAT) algorithm for training neural dialogue systems to avoid generic responses and model dialogue history better, thus generating diverse and informative responses. Conventional adversarial training methods generally generate label-preserving adversarial inputs with carefully designed methods and train the model to generate the same output to enhance the model's robustness. In contrast, our approach perturbs in input dialogue history such that a good dialogue model should not generate the same output if the output is non-generic and relevant to the dialogue history. We name our proposed method as inverse adversarial training because it is related to conventional adversarial training methods which aim to improve the model's adversarial robustness but our proposed objective is motivated in the opposite direction. Note that our work is not directly related to TextGANs as well as their applications on dialogue response generation.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Specifically, the proposed inverse adversarial training assigns higher rewards to generated responses or ground-truth responses if their likeli-hood decreases more when the dialogue history is perturbed, and penalize the model when it generates responses whose likelihood is almost unchanged given either original or perturbed dialogue history as input. This encourages the model to generate more relevant and informative responses and capture dialogue history better. The proposed IAT algorithm can be used in both supervised and self-supervised fashion (with/without reference response), which can be viewed as a form of reward-augmented maximum likelihood (RAML) method (Norouzi et al., 2016) that improves the original MLE objective or a rewarding scheme for RL-based text generation algorithms. The inverse adversarial learning framework is also conceptually related to self-adversarial learning (Zhou et al., 2020) where the the comparison is made between different checkpoints of the same model to provide reward for RL training of the NLG model.",
+                "cite_spans": [
+                    {
+                        "start": 673,
+                        "end": 695,
+                        "text": "(Norouzi et al., 2016)",
+                        "ref_id": "BIBREF11"
+                    },
+                    {
+                        "start": 901,
+                        "end": 920,
+                        "text": "(Zhou et al., 2020)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "In addition, we identify a limitation of the widely-used maximum mutual information (MMI) based methods for improving the diversity of dialogue response generation models. This will be discussed in detail in section 2.1 and empirically demonstrated in section 4.2.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "We conduct experiments on two dialogue datasets, OpenSubtitiles and DailyDialog, to demonstrate the effectiveness of the proposed approach. Experimental results show IAT helps neural dialogue systems model dialogue history better and generate more diverse and informative responses.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Neural dialogue models tend to generate generic or dull responses such as I don't know which are not engaging for the users (Sordoni et al., 2015) . This behavior can be ascribed to the high frequency of generic responses in the training corpus and the over-simplified MLE training objective. How to avoid generic responses and to make the dialogue agent more engaging has been a long-standing problem. Previous work attempts to address this problem with different approaches: 1) Li et al. (2015) propose a diversitypromoting objective based on Maximum Mutual Information (MMI). Given source S and target T , their approach first generates N-best lists based on P (T |S) and then rerank the list by combin-ing p(T |S) and \u03bbp(S|T ); 2) Zhang et al. (2018b) propose to directly optimize p(S|T ) together with p(T |S) with an Adversarial Information Maximization objective; and 3) adversarial learning (Li et al., 2017a) and dual adversarial learning (Cui et al., 2019) based on the intuition that real responses are of high diversity, thus can be distinguished from generated responses which are often dull and generic. There are also other methods using distributional constraints of the target responses (Baheti et al., 2018; Cs\u00e1ky et al., 2019) or commonsense knowledge (Wu et al., 2020) .",
+                "cite_spans": [
+                    {
+                        "start": 124,
+                        "end": 146,
+                        "text": "(Sordoni et al., 2015)",
+                        "ref_id": "BIBREF14"
+                    },
+                    {
+                        "start": 480,
+                        "end": 496,
+                        "text": "Li et al. (2015)",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 735,
+                        "end": 755,
+                        "text": "Zhang et al. (2018b)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 899,
+                        "end": 917,
+                        "text": "(Li et al., 2017a)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 948,
+                        "end": 966,
+                        "text": "(Cui et al., 2019)",
+                        "ref_id": "BIBREF3"
+                    },
+                    {
+                        "start": 1204,
+                        "end": 1225,
+                        "text": "(Baheti et al., 2018;",
+                        "ref_id": "BIBREF0"
+                    },
+                    {
+                        "start": 1226,
+                        "end": 1245,
+                        "text": "Cs\u00e1ky et al., 2019)",
+                        "ref_id": "BIBREF2"
+                    },
+                    {
+                        "start": 1271,
+                        "end": 1288,
+                        "text": "(Wu et al., 2020)",
+                        "ref_id": "BIBREF18"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Dull Response Problem",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "While shown to be effective in several datasets, these approaches suffer from several drawbacks. For the first two approaches, while the MMI objective may lead to larger mutual information, it often does not actually result in more informative and engaging responses according to our observations. For example, given a dialog context: \"What have you done with him in the bar last night?\" The top response re-ranked by the MMI objective is \"I have done nothing with him in the bar last night.\", which is non-informative and less natural compared with the response \"Nothing at all.\" generated by a standard seq2seq dialogue model. This is also confirmed in the experiment section. We suspect this phenomenon is caused by the term p(S|T ) in the MMI objective. It encourages generating responses that make the last utterance in the dialogue history have a high likelihood given the generated responses. While a truly informative response may yield a high p(S|T ), the model can easily find a \"shortcut\" to cheat this objective by simply copying a portion of tokens in the last utterance, which is likely to have high p(S|T ) as well as p(T |S). The adversarial learning based dialogue model is notoriously hard to train and may suffer from the problem of mode collapse, which decreases the diversity of generated responses.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Dull Response Problem",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "In contrast, our proposed IAT approach is based on the intuition that a diverse, relevant, and consistent response should be sensitive to the perturbation in the dialogue history, which is from a different perspective and may be complementary with the aforementioned approaches.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Dull Response Problem",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "Recently, Sankar et al. (2019) evaluated whether existing neural dialogue systems use dialogue history effectively by perturbing dialogue history and observing the variation of model out-put. They corrupted the dialogue history with both utterance-level and word-level perturbation and see whether and how much the output perplexity decreases. Their experimental results show that end-to-end neural dialogue systems are generally non-sensitive to the perturbation of dialogue history, suggesting that they may perform poorly in modeling dialogue history. Previous work (Serban et al., 2016; Zhao et al., 2017) improves the context modeling ability with modification in model architectures. In contrast, our approach employs a novel training objective to enhance the dialogue history modeling ability, which is orthogonal and may be complementary with them.",
+                "cite_spans": [
+                    {
+                        "start": 10,
+                        "end": 30,
+                        "text": "Sankar et al. (2019)",
+                        "ref_id": "BIBREF12"
+                    },
+                    {
+                        "start": 569,
+                        "end": 590,
+                        "text": "(Serban et al., 2016;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 591,
+                        "end": 609,
+                        "text": "Zhao et al., 2017)",
+                        "ref_id": "BIBREF22"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Dialogue History Modeling",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "In this section, we describe the proposed inverse adversarial training algorithm in detail. We first describe how we perturb the dialogue history and then formally introduce the inverse adversarial training algorithm.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inverse Adversarial Training",
+                "sec_num": "3"
+            },
+            {
+                "text": "Following previous study (Sankar et al., 2019) , we perturb the dialogue history in both utterance and word level and apply them jointly during training.",
+                "cite_spans": [
+                    {
+                        "start": 25,
+                        "end": 46,
+                        "text": "(Sankar et al., 2019)",
+                        "ref_id": "BIBREF12"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Perturbation Approaches",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "Utterance-level Perturbations We consider the following operations 1) Shuf that shuffles the sequence of utterances in the dialog history, 2) Rev that reverses the order of utterances in the history (but maintains word order within each utterance) 3) Drop that completely drops certain utterances, 4) Truncate that truncates the dialog history to contain only the k most recent utterances where k \u2264 n, where n is the length of dialog history, and 5) Repl that randomly replaces each utterance in the dialogue history by another utterance in the dataset with a probability of 30%, which resembles the negative sampling (Mikolov et al., 2013 ) approach1 .",
+                "cite_spans": [
+                    {
+                        "start": 618,
+                        "end": 639,
+                        "text": "(Mikolov et al., 2013",
+                        "ref_id": "BIBREF10"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Perturbation Approaches",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "Word-level perturbations We consider similar operations but at the word level within every utterance 1) word-shuffle that randomly shuffles the words within an utterance 2) reverse that reverses the ordering of words, 3) word-drop that drops 30% of the words uniformly 4) noun-drop that drops all nouns, 5) verb-drop that drops all verbs, and 6) word-repl that replace 30% of words with a random word in the vocabulary uniformly.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Perturbation Approaches",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "We explain the role of different perturbations and their potential effects briefly. The Shuf and Rev perturbations change the chronological order of utterances. Inverse adversarial training with these kinds of perturbation may help the model to capture some common-senses about the chronological order of utterances. The Drop and Repl perturbations may help the model to capture some kinds of casual effects. Finally, the Truncate perturbation may help the model capture long-term and multi-turns dialogue history better.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Perturbation Approaches",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "In contrast to the adversarial training objective which maximize the likelihood of generating the same output given perturbed input, the inverse adversarial training objective maximizes the reduction of the likelihood of generating the same output when the input is perturbed, which is opposite to the conventional adversarial training.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inverse Adversarial Training",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "A straightforward approach is to maximize the likelihood of generating ground-truth responses given original dialogue history while minimizing this likelihood when given perturbed dialogue history. However, this approach suffers from several problems: First, as a previous study (Sankar et al., 2019) has shown, neural dialogue models generally capture the perturbation in the dialogue history poorly, which is suggested by the fact that the output embeddings of the encoder are very similar when given original and perturbed input dialogue histories. This results in training the decoder to simultaneously maximize and minimize the likelihood of the same output given very similar input, which is undesirable and makes the training ineffective. The second problem is that this training objective does not capture the variation of likelihood and thus treats relevant and engaging responses equally with dull and generic responses. This is undesirable as we only want to maximize/minimize the likelihood for relevant and engaging responses when conditioning on original/perturbed dialogue history and dull responses should be avoided in both cases.",
+                "cite_spans": [
+                    {
+                        "start": 279,
+                        "end": 300,
+                        "text": "(Sankar et al., 2019)",
+                        "ref_id": "BIBREF12"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inverse Adversarial Training",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "In this paper, we propose a sequence-level objective which is able to capture the variation of the likelihood of responses given original or perturbed input. This makes it possible to model dialogue history better and avoid generic response problem at the same time. The idea is to evaluate generated sentences based on the variation of the likelihood of responses given original or perturbed dialogue history and use this variation as rewards for training the dialogue model.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inverse Adversarial Training",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "Given original dialogue history X and perturbed dialogue history X , the reward R(Y |X, X ) of generating response Y , which is a sequence of n tokens y i , i \u2208 1, 2, ..., n, is measured by how much Y is more likely to be generated by the dialogue model given X compared with that given X , which is computed by the difference of negative log-likelihood losses (NLL) in two cases, as described below.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inverse Adversarial Training",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "NLL orig = - n i=1 log P (y i |y <i , X)",
+                        "eq_num": "(1)"
+                    }
+                ],
+                "section": "Inverse Adversarial Training",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "NLL adv = - n i=1 log P (y i |y <i , X ) (2) R(Y |X, X ) = NLL adv -NLL orig (3)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inverse Adversarial Training",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "Intuitively, the reward R would be high when the response Y is engaging and relevant to the dialogue history. A generic response should be assigned with a low or even negative reward as it is irrelevant to the dialogue history. The inverse adversarial training objective is to generate responses to maximize its reward. With likelihood ratio (Sutton et al., 2000) , we can formulate the gradient of the objective function for dialogue response generator G \u03b8 as:",
+                "cite_spans": [
+                    {
+                        "start": 342,
+                        "end": 363,
+                        "text": "(Sutton et al., 2000)",
+                        "ref_id": "BIBREF16"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inverse Adversarial Training",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "\u2207 \u03b8 J(\u03b8) = Y n i=1 \u2207 \u03b8 log G \u03b8 (yi|y<i, X) \u2022 R(Y |X, X )",
+                        "eq_num": "(4)"
+                    }
+                ],
+                "section": "Inverse Adversarial Training",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "The above training objective encourages the dialogue model to generate non-generic responses and model dialogue history better by giving higher rewards when generating good responses based on original dialogue history.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inverse Adversarial Training",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "Similarly, we would also want to penalize the dialogue model when it generates the same response given perturbed dialogue history to explicitly force the dialogue system to effectively model the dialogue history. We propose to model this penalty with a max-margin reward scheme. Given margin M, the penalty P(Y |X, X ) of generating Y is computed by",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inverse Adversarial Training",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "P(Y |X, X ) = min(0, NLL adv -NLLorig -M) (5)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inverse Adversarial Training",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "The insight behind equation 5 is that when the variation of likelihood of generating Y given X and X is large enough (i.e. NLL orig -NLL adv -M > 0), the model should be considered successfully captured the perturbation in the dialogue history and should not be penalized. In contrast, when the variation is not large enough, we penalize the dialogue agent for generating Y giving X because a small variation of likelihood implicates: (1) the dialogue agent models dialogue history poorly and (2) the generated responses Y may be irrelevant to the dialogue history X and thus be generic and non-informative. The corresponding gradient can be formulated as:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inverse Adversarial Training",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "\u2207 \u03b8 J (\u03b8) = Y n i=1 \u2207 \u03b8 log G \u03b8 (yi|y<i, X ) \u2022 P(Y |X, X ) (6)",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inverse Adversarial Training",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "The penalty and reward are combined by directly summing up the gradient in Eq (4) and Eq (6). The proposed inverse adversarial training algorithm can be applied in both supervised fashion where responses Y are ground-truth responses in the dataset and self-supervised fashion where Y is generated by the dialogue model itself. The only difference between the self-supervised and supervised version is whether the reference responses are generated (self-supervised) or ground-truth responses (supervised). The supervised inverse adversarial training can be viewed as a reward function algorithm for RAML (Norouzi et al., 2016) training that assigns higher rewards for \"good\" training examples that help our model to generate relevant responses and learn to model dialogue history better. The self-supervised inverse adversarial training, in contrast, allows the model to explore freely and train the model with policy gradient (Sutton et al., 2000) , a reinforcement learning approach.",
+                "cite_spans": [
+                    {
+                        "start": 603,
+                        "end": 625,
+                        "text": "(Norouzi et al., 2016)",
+                        "ref_id": "BIBREF11"
+                    },
+                    {
+                        "start": 926,
+                        "end": 947,
+                        "text": "(Sutton et al., 2000)",
+                        "ref_id": "BIBREF16"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inverse Adversarial Training",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "To validate the effectiveness of the proposed inverse adversarial training algorithm, we conduct experiments in order to answer the following two research questions:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "4"
+            },
+            {
+                "text": "(1) Do inverse adversarial training help neural dialogue systems model dialogue history better?",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "4"
+            },
+            {
+                "text": "(2) Do inverse adversarial training help neural dialogue models generate more diverse, engaging, and informative dialogue responses?",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "4"
+            },
+            {
+                "text": "Datasets We employ two datasets in our experiments. The first dataset is the OpenSubtitles corpus (Lison and Tiedemann, 2016) which is a large, open-domain dataset containing scripts of movie characters. Following previous work, we consider each turn in the dataset as the target response and the two previous sentences as the dialogue history. We remove the pairs whose response is shorter than 5 words and randomly sample 1,800K, 500K, and 12K dialogue turns for training, validation, and testing, respectively.",
+                "cite_spans": [
+                    {
+                        "start": 98,
+                        "end": 125,
+                        "text": "(Lison and Tiedemann, 2016)",
+                        "ref_id": "BIBREF8"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experimental Settings",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "We employ the DailyDialog dataset (Li et al., 2017b) as the second dataset which consists of dialogues that resemble daily conversations across multiple topics. It comprises of 13k dialogues, which is much smaller compared with the Open-Subtitles dataset. However, it has an average of 7.9 turns per dialog, which is more suitable for evaluating whether the proposed approach is able to improve the model's ability of modeling longterm dialogue history.",
+                "cite_spans": [
+                    {
+                        "start": 34,
+                        "end": 52,
+                        "text": "(Li et al., 2017b)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experimental Settings",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "Compared Models We build dialogue systems with seq2seq (Sutskever et al., 2014) models. Following previous work (Li et al., 2017a (Li et al., , 2015)) , we employ LSTM-based seq2seq model for the Open-Subtitles dataset. For the DailyDialog dataset, we employ the transformer (Vaswani et al., 2017) model which yields superior results in preliminary experiments while shown to perform poorly in modeling dialogue history (Sankar et al., 2019) . Specifically, following previous work (Xu et al., 2018) , we set the hidden size to 256, embedding size to 128, vocabulary size to 50K, and batch size to 64 for the proposed models and the baselines. We use the Adam optimizer with the initial learning rate 0.1 for model training.",
+                "cite_spans": [
+                    {
+                        "start": 55,
+                        "end": 79,
+                        "text": "(Sutskever et al., 2014)",
+                        "ref_id": "BIBREF15"
+                    },
+                    {
+                        "start": 112,
+                        "end": 129,
+                        "text": "(Li et al., 2017a",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 130,
+                        "end": 150,
+                        "text": "(Li et al., , 2015))",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 275,
+                        "end": 297,
+                        "text": "(Vaswani et al., 2017)",
+                        "ref_id": "BIBREF17"
+                    },
+                    {
+                        "start": 420,
+                        "end": 441,
+                        "text": "(Sankar et al., 2019)",
+                        "ref_id": "BIBREF12"
+                    },
+                    {
+                        "start": 482,
+                        "end": 499,
+                        "text": "(Xu et al., 2018)",
+                        "ref_id": "BIBREF19"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experimental Settings",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "We compare the dialogue model trained with the proposed inverse adversarial learning algorithm with the following baseline methods (all compared models are using the same backbone architecture):",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experimental Settings",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "\u2022 Seq2Seq: The vanilla seq2seq dialogue model trained with MLE objective.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experimental Settings",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "\u2022 Seq2Seq + MMI: The dialogue model using mutual information method (Li et al., 2015) , which substracts the score of the target sequence log p(T |S) by its language model score log p(T ) (MMI-anti) or by a backward generation score log p(S|T ) (MMI-bidi) for decoding.",
+                "cite_spans": [
+                    {
+                        "start": 68,
+                        "end": 85,
+                        "text": "(Li et al., 2015)",
+                        "ref_id": "BIBREF5"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experimental Settings",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "\u2022 Seq2Seq + Adversarial Learning: A dialogue model trained with adversarial learning objective (Li et al., 2017a) . The model is pretrained with MLE objective and then finetuned with adversarial learning.",
+                "cite_spans": [
+                    {
+                        "start": 95,
+                        "end": 113,
+                        "text": "(Li et al., 2017a)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experimental Settings",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "\u2022 Seq2Seq + DS: A strong baseline using distributional constraints over the generated responses (Baheti et al., 2018) .",
+                "cite_spans": [
+                    {
+                        "start": 96,
+                        "end": 117,
+                        "text": "(Baheti et al., 2018)",
+                        "ref_id": "BIBREF0"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experimental Settings",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "\u2022 CVAE: A dialogue response generation model using conditional VAE (Zhao et al., 2017) to improve the discourse-level diversity of generated responses.",
+                "cite_spans": [
+                    {
+                        "start": 67,
+                        "end": 86,
+                        "text": "(Zhao et al., 2017)",
+                        "ref_id": "BIBREF22"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experimental Settings",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "Our models are pretrained with the MLE objective until the validation perplexity stops decreasing. We then apply the inverse adversarial training algorithm for continual training. During training, reference responses are either generated responses or ground-truth responses in self-supervised and supervised inverse-adversarial training respectively. We combine both supervised and self-supervised inverse adversarial training by alternatively switching between these two objectives for each training iteration.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experimental Settings",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "Evaluation Metrics We employ different automated evaluation metrics to respectively answer the three research questions introduced at the beginning of this section. To evaluate how well dialogue systems are able to model dialogue history, we adopt the approach proposed by Sankar et al. (2019) , which measures the increases in perplexity when the model is fed with perturbed dialogue history instead of original dialogue history. We report the result in both utterance-level and wordlevel perturbation.",
+                "cite_spans": [
+                    {
+                        "start": 273,
+                        "end": 293,
+                        "text": "Sankar et al. (2019)",
+                        "ref_id": "BIBREF12"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experimental Settings",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "To evaluate if inverse adversarial learning can effectively reduce the generic response problem, following Li et al. (2015) , we evaluate the diversity of generated responses by calculating the number of distinct unigrams, bigrams, and trigrams in generated responses. The value is scaled by the total number of generated tokens to avoid favoring long sentences, which are shown as distinct-1, distinct-2, and distinct-3 in Table 2 . Lastly, we compare the percentage of stopwords2 of the responses generated by each model (smaller values that are closer to the distribution of human conversations are preferred). We also report the token-level overlap between the generated response and the last utterance in the dialog history to demonstrate the \"shortcut\"problem of MMI-based methods decribed in Section 2.1.",
+                "cite_spans": [
+                    {
+                        "start": 107,
+                        "end": 123,
+                        "text": "Li et al. (2015)",
+                        "ref_id": "BIBREF5"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 430,
+                        "end": 431,
+                        "text": "2",
+                        "ref_id": "TABREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Experimental Settings",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "As our approach is training in an \"opposite\" direction compared to conventional adversarial training employed to enhance the robustness of trained models, we also conduct experiments to evaluate the robustness of the dialogue response generation models with respect to non labelchanging adversarial dialogue history. Similar to the method of evaluating the dialogue his- tory modeling ability, we measure the perplexity changes when the model is given a different but meaning-preserving dialogue history, which is constructed by performing word substitution with a BERT-based lexical substitution method (Zhou et al., 2019) and paraphrase generation (Kumar et al., 2020) as word-level and utterance-level perturbation respectively on the original dialogue history, as the input.",
+                "cite_spans": [
+                    {
+                        "start": 604,
+                        "end": 623,
+                        "text": "(Zhou et al., 2019)",
+                        "ref_id": "BIBREF23"
+                    },
+                    {
+                        "start": 650,
+                        "end": 670,
+                        "text": "(Kumar et al., 2020)",
+                        "ref_id": "BIBREF4"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experimental Settings",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "In addition, as demonstrated by Liu et al. (2016) ; Zhou and Xu (2020) , automated metrics are notoriously poor for evaluating dialogue systems. We thus conduct a human evaluation to better evaluate the effectiveness of the proposed algorithm. For human evaluation, we invite 20 human annotators which are all graduate students with good English proficiency to evaluate the quality of the model. Following Zhang et al. (2018a) , we ask human annotators to interact with compared models for 50 utterances with each compared dialogue system and evaluate the fluency, consistency, and diversity of the model (scored between 1-5). Fluency measures how likely the generated text is produced by human. Consistency measures how likely the generated text is related to the input dialogue history, which corresponds to the first research question. Diversity measures how much the generated text provides specific information, rather than \"dull\" and repeated information, which corresponds to the second research question.",
+                "cite_spans": [
+                    {
+                        "start": 32,
+                        "end": 49,
+                        "text": "Liu et al. (2016)",
+                        "ref_id": "BIBREF9"
+                    },
+                    {
+                        "start": 52,
+                        "end": 70,
+                        "text": "Zhou and Xu (2020)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 406,
+                        "end": 426,
+                        "text": "Zhang et al. (2018a)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Method",
+                "sec_num": null
+            },
+            {
+                "text": "Results on dialogue history modeling We first present the results on dialogue history modeling ability. The results are shown in Table 1 . We can see that the dialogue model trained with the proposed inverse adversarial training algorithm per- forms significantly better than the compared baselines as the perplexity dramatically increases when the input dialogue history is perturbed. This is not surprising as our approach is the first learning objective which explicitly forces the dialogue system to better model dialogue history. In contrast, the MMI criterion and the adversarial learning objective do not significantly influence the dialogue history modeling ability of dialogue systems. The dialogue model based on CVAE models dialogue history better than other baselines while still under-performs our approach.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 135,
+                        "end": 136,
+                        "text": "1",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Experimental Results",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "Reults on diversity The results of the diversity of responses generated by compared models are shown in Table 2 . We can see that both the Maximum Mutual Information objective and the proposed inverse adversarial learning succeed in improving the diversity of generated responses. In contrast, the adversarial learning objective hardly improves the diversity, which may be due to the instability of adversarial learning on text generation. While the MMI objective yields slightly larger improvements on distinct n-gram based metrics, their approach is used only for re-ranking during inference, which is orthogonal and may be complementary to the proposed approach. In addition, as described in section 2.1, the MMI objective may favor non-engaging responses that simply repeats the last utterance in the dialogue history. This is empirically demonstrated by their high overlap with the last utterance in the dialog history, as measured by the \"overlap\" metric. In contrast, our approach does not suffer from this problem and also generate fewer stopwords compared to the MMI-based methods. In addition, our approach also outperforms the strong baselines including that using distributional constraint and CVAE, demonstrating its effectiveness in improving the diversity of generated responses.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 110,
+                        "end": 111,
+                        "text": "2",
+                        "ref_id": "TABREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Experimental Results",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "Results on adversarial robustness We also conduct experiments to test the robustness of the dialogue model trained with the proposed inverse adversarial training objective. The results are shown in Table 3 . We see that the increase in the perplexity of ground-truth responses under our model is roughly the same with the baseline transformer model and the other compared mod- els. This suggests that our proposed IAT objective does not harm the adversarial robustness.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 204,
+                        "end": 205,
+                        "text": "3",
+                        "ref_id": "TABREF2"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Experimental Results",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "Human evaluation We conduct a human evaluation of compared models on the DailyDialog dataset. The results are shown in Table 4 . We can see that the proposed inverse adversarial training objective substantially improves the consistency of the dialogue model over all compared baselines, which confirms its ability to train dialogue agents to model dialogue history better. As for the diversity of generated responses, we find that human annotators do not prefer the responses selected by the MMI objective over that generated by the baseline model with a large margin. We find that this is mainly because the MMI objective prefers repeating tokens which appear in the last utterance and human annotators find it non-informativeness. In contrast, our approach yields even larger improvements in the diversity of the generated responses. We do not find the adversarial learning method improves the diversity of dialogue models, which may be due to the problem of mode collapse in adversarial learning. The over-all fluency of compared models is roughly the same, which may be because they are all trained or pretrained with MLE objective.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 125,
+                        "end": 126,
+                        "text": "4",
+                        "ref_id": "TABREF3"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Experimental Results",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "To better compare and analyze the inverse adversarial training objective, we conduct a qualitative analysis of dialogue responses generated by different compared models. The samples are presented in Table 5 . We can see that the vanilla transformerbased dialogue response generation model tends to generate irrelevant and generic responses. Applying the MMI objective for re-ranking successfully avoids those generic responses. However, it leads to another kind of non-informative response that repeats the majority of tokens in the latest utterance, which is also quite unnatural. In contrast, dialogue models trained with the proposed inverse adversarial training objective tend to generate more diverse responses which are also more relevant to the dialogue history.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 205,
+                        "end": 206,
+                        "text": "5",
+                        "ref_id": "TABREF4"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Qualitative Analysis",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "To better understand the relative importance of different components in the proposed inverse adver-sarial training objective, we conduct an ablation study with human evaluation to compare different model variants against the full model. The results are shown in Table 6 . We can find that both supervised-only and self-supervised-only variant of the proposed inverse adversarial training algorithm can improve the consistency and the diversity of dialogue models. However, self-supervised inverse adversarial training seems to sacrifice the fluency of generated responses for better diversity and consistency as the model trained without the self-supervised objective are considered to be more fluent by human annotators. The usefulness of the reward and the penalty objectives is also demonstrated by human evaluation. Concretely, we find that the reward described in Eq.( 3) contributes more to the diversity of generated responses. This may be because it assigns high rewards for relevant and specific responses and negative rewards for generic responses. In contrast, the penalty in Eq.( 5) helps the dialogue system model dialogue history better and leads to more consistent responses by punishing the dialogue model when generating the same responses given perturbed dialogue history. As for different perturbation approaches, we find that both utterance-level and token-level contributes to the performance improvements. Also, we find that utterance-level perturbation may be more effective for improving the consistency of generated responses. We suspect this may be because the ability of the dialogue model to distinguish utterancelevel perturbation is more important for better dialogue history modeling.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 268,
+                        "end": 269,
+                        "text": "6",
+                        "ref_id": "TABREF6"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Ablation Study",
+                "sec_num": "4.4"
+            },
+            {
+                "text": "In this work, we introduce inverse adversarial training (IAT) algorithm that is able to simultaneously reduce the dull response problem and help neural dialogue systems model dialogue history better. IAT measures the relevance and consistency of responses by the difference of their likelihood conditioning on either original and perturbed dialogue history. In this way, it is able to prevent the dialogue system from preferring generic responses, even they are often of high frequency in the training corpora. Our method also encourages the dialogue agent to model dialogue history better by penalizing the model when generating the same responses given perturbed dialogue history. Experimental results on two benchmark datasets show that the proposed inverse adversarial training algorithm helps dialogue models capture dialogue history better and generate more diverse and consistent responses. We also identify a limitation of the widely-used MMI based methods for improving the diversity of dialogue response generation models and empirically demonstrate the existence of this problem through our experimetns.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion",
+                "sec_num": "5"
+            },
+            {
+                "text": "This work does not involve collection and release of data, nor inference of information or judgments about individuals. However, dialogue systems may have a social impact and we believe that making dialogue agent able to generate more meaningful and consistent responses are beneficial. We also agree that general control on the bias or unfairness of neural dialogue agents is important.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Boarder Impact",
+                "sec_num": null
+            },
+            {
+                "text": "We believe this can be done from both the perspective of data collection and training algorithms. We believe our proposed training algorithm will likely not contribute to any ethical concern of chat robots.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Boarder Impact",
+                "sec_num": null
+            },
+            {
+                "text": "The first four kinds of perturbation is originally proposed in(Sankar et al.,",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "2019) and the last is proposed in this paper.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "Stopword List from https://www.ranks. nl/stopwords. We appended punctuations to this list.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            }
+        ],
+        "back_matter": [
+            {
+                "text": "We thank the anonymous reviewers for their valuable comments.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Acknowledgments",
+                "sec_num": null
+            }
+        ],
+        "bib_entries": {
+            "BIBREF0": {
+                "ref_id": "b0",
+                "title": "Generating more interesting responses in neural conversation models with distributional constraints",
+                "authors": [
+                    {
+                        "first": "Ashutosh",
+                        "middle": [],
+                        "last": "Baheti",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alan",
+                        "middle": [],
+                        "last": "Ritter",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jiwei",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Bill",
+                        "middle": [],
+                        "last": "Dolan",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "3970--3980",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/D18-1431"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Ashutosh Baheti, Alan Ritter, Jiwei Li, and Bill Dolan. 2018. Generating more interesting responses in neural conversation models with distributional con- straints. In Proceedings of the 2018 Conference on Empirical Methods in Natural Language Process- ing, pages 3970-3980, Brussels, Belgium. Associ- ation for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF1": {
+                "ref_id": "b1",
+                "title": "Learning end-to-end goal-oriented dialog",
+                "authors": [
+                    {
+                        "first": "Antoine",
+                        "middle": [],
+                        "last": "Bordes",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Y-Lan",
+                        "middle": [],
+                        "last": "Boureau",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jason",
+                        "middle": [],
+                        "last": "Weston",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1605.07683"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Antoine Bordes, Y-Lan Boureau, and Jason Weston. 2016. Learning end-to-end goal-oriented dialog. arXiv preprint arXiv:1605.07683.",
+                "links": null
+            },
+            "BIBREF2": {
+                "ref_id": "b2",
+                "title": "Improving neural conversational models with entropy-based data filtering",
+                "authors": [
+                    {
+                        "first": "Rich\u00e1rd",
+                        "middle": [],
+                        "last": "Cs\u00e1ky",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Patrik",
+                        "middle": [],
+                        "last": "Purgai",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "G\u00e1bor",
+                        "middle": [],
+                        "last": "Recski",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "5650--5669",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/P19-1567"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Rich\u00e1rd Cs\u00e1ky, Patrik Purgai, and G\u00e1bor Recski. 2019. Improving neural conversational models with entropy-based data filtering. In Proceedings of the 57th Annual Meeting of the Association for Com- putational Linguistics, pages 5650-5669, Florence, Italy. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF3": {
+                "ref_id": "b3",
+                "title": "Dal: Dual adversarial learning for dialogue generation",
+                "authors": [
+                    {
+                        "first": "Shaobo",
+                        "middle": [],
+                        "last": "Cui",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Rongzhong",
+                        "middle": [],
+                        "last": "Lian",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Di",
+                        "middle": [],
+                        "last": "Jiang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yuanfeng",
+                        "middle": [],
+                        "last": "Song",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Siqi",
+                        "middle": [],
+                        "last": "Bao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yong",
+                        "middle": [],
+                        "last": "Jiang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Shaobo Cui, Rongzhong Lian, Di Jiang, Yuanfeng Song, Siqi Bao, and Yong Jiang. 2019. Dal: Dual adversarial learning for dialogue generation.",
+                "links": null
+            },
+            "BIBREF4": {
+                "ref_id": "b4",
+                "title": "Syntax-guided controlled generation of paraphrases",
+                "authors": [
+                    {
+                        "first": "Ashutosh",
+                        "middle": [],
+                        "last": "Kumar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kabir",
+                        "middle": [],
+                        "last": "Ahuja",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Raghuram",
+                        "middle": [],
+                        "last": "Vadapalli",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Partha",
+                        "middle": [],
+                        "last": "Talukdar",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "Transactions of the Association for Computational Linguistics",
+                "volume": "8",
+                "issue": "",
+                "pages": "330--345",
+                "other_ids": {
+                    "DOI": [
+                        "10.1162/tacl_a_00318"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Ashutosh Kumar, Kabir Ahuja, Raghuram Vadapalli, and Partha Talukdar. 2020. Syntax-guided con- trolled generation of paraphrases. Transactions of the Association for Computational Linguistics, 8:330-345.",
+                "links": null
+            },
+            "BIBREF5": {
+                "ref_id": "b5",
+                "title": "A diversity-promoting objective function for neural conversation models",
+                "authors": [
+                    {
+                        "first": "Jiwei",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Michel",
+                        "middle": [],
+                        "last": "Galley",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chris",
+                        "middle": [],
+                        "last": "Brockett",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jianfeng",
+                        "middle": [],
+                        "last": "Gao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Bill",
+                        "middle": [],
+                        "last": "Dolan",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1510.03055"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Jiwei Li, Michel Galley, Chris Brockett, Jianfeng Gao, and Bill Dolan. 2015. A diversity-promoting objec- tive function for neural conversation models. arXiv preprint arXiv:1510.03055.",
+                "links": null
+            },
+            "BIBREF6": {
+                "ref_id": "b6",
+                "title": "Adversarial learning for neural dialogue generation",
+                "authors": [
+                    {
+                        "first": "Jiwei",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Will",
+                        "middle": [],
+                        "last": "Monroe",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tianlin",
+                        "middle": [],
+                        "last": "Shi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "S\u00e9bastien",
+                        "middle": [],
+                        "last": "Jean",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alan",
+                        "middle": [],
+                        "last": "Ritter",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dan",
+                        "middle": [],
+                        "last": "Jurafsky",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1701.06547"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Jiwei Li, Will Monroe, Tianlin Shi, S\u00e9bastien Jean, Alan Ritter, and Dan Jurafsky. 2017a. Adversar- ial learning for neural dialogue generation. arXiv preprint arXiv:1701.06547.",
+                "links": null
+            },
+            "BIBREF7": {
+                "ref_id": "b7",
+                "title": "Dailydialog: A manually labelled multi-turn dialogue dataset",
+                "authors": [
+                    {
+                        "first": "Yanran",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hui",
+                        "middle": [],
+                        "last": "Su",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xiaoyu",
+                        "middle": [],
+                        "last": "Shen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Wenjie",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ziqiang",
+                        "middle": [],
+                        "last": "Cao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Shuzi",
+                        "middle": [],
+                        "last": "Niu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1710.03957"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Yanran Li, Hui Su, Xiaoyu Shen, Wenjie Li, Ziqiang Cao, and Shuzi Niu. 2017b. Dailydialog: A man- ually labelled multi-turn dialogue dataset. arXiv preprint arXiv:1710.03957.",
+                "links": null
+            },
+            "BIBREF8": {
+                "ref_id": "b8",
+                "title": "Opensubtitles2016: Extracting large parallel corpora from movie and tv subtitles",
+                "authors": [
+                    {
+                        "first": "Pierre",
+                        "middle": [],
+                        "last": "Lison",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "J\u00f6rg",
+                        "middle": [],
+                        "last": "Tiedemann",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Pierre Lison and J\u00f6rg Tiedemann. 2016. Opensub- titles2016: Extracting large parallel corpora from movie and tv subtitles.",
+                "links": null
+            },
+            "BIBREF9": {
+                "ref_id": "b9",
+                "title": "How not to evaluate your dialogue system: An empirical study of unsupervised evaluation metrics for dialogue response generation",
+                "authors": [
+                    {
+                        "first": "Chia-Wei",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ryan",
+                        "middle": [],
+                        "last": "Lowe",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Michael",
+                        "middle": [],
+                        "last": "Iulian V Serban",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Laurent",
+                        "middle": [],
+                        "last": "Noseworthy",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Joelle",
+                        "middle": [],
+                        "last": "Charlin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Pineau",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1603.08023"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Chia-Wei Liu, Ryan Lowe, Iulian V Serban, Michael Noseworthy, Laurent Charlin, and Joelle Pineau. 2016. How not to evaluate your dialogue system: An empirical study of unsupervised evaluation met- rics for dialogue response generation. arXiv preprint arXiv:1603.08023.",
+                "links": null
+            },
+            "BIBREF10": {
+                "ref_id": "b10",
+                "title": "Distributed representations of words and phrases and their compositionality",
+                "authors": [
+                    {
+                        "first": "Tomas",
+                        "middle": [],
+                        "last": "Mikolov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ilya",
+                        "middle": [],
+                        "last": "Sutskever",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kai",
+                        "middle": [],
+                        "last": "Chen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Greg",
+                        "middle": [
+                            "S"
+                        ],
+                        "last": "Corrado",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jeff",
+                        "middle": [],
+                        "last": "Dean",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "Advances in neural information processing systems",
+                "volume": "",
+                "issue": "",
+                "pages": "3111--3119",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Tomas Mikolov, Ilya Sutskever, Kai Chen, Greg S Cor- rado, and Jeff Dean. 2013. Distributed representa- tions of words and phrases and their compositional- ity. In Advances in neural information processing systems, pages 3111-3119.",
+                "links": null
+            },
+            "BIBREF11": {
+                "ref_id": "b11",
+                "title": "Reward augmented maximum likelihood for neural structured prediction",
+                "authors": [
+                    {
+                        "first": "Mohammad",
+                        "middle": [],
+                        "last": "Norouzi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Samy",
+                        "middle": [],
+                        "last": "Bengio",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Navdeep",
+                        "middle": [],
+                        "last": "Jaitly",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mike",
+                        "middle": [],
+                        "last": "Schuster",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yonghui",
+                        "middle": [],
+                        "last": "Wu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dale",
+                        "middle": [],
+                        "last": "Schuurmans",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Advances In Neural Information Processing Systems",
+                "volume": "",
+                "issue": "",
+                "pages": "1723--1731",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Mohammad Norouzi, Samy Bengio, Navdeep Jaitly, Mike Schuster, Yonghui Wu, Dale Schuurmans, et al. 2016. Reward augmented maximum likeli- hood for neural structured prediction. In Advances In Neural Information Processing Systems, pages 1723-1731.",
+                "links": null
+            },
+            "BIBREF12": {
+                "ref_id": "b12",
+                "title": "Christopher Pal, Sarath Chandar, and Yoshua Bengio",
+                "authors": [
+                    {
+                        "first": "Chinnadhurai",
+                        "middle": [],
+                        "last": "Sankar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sandeep",
+                        "middle": [],
+                        "last": "Subramanian",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Do neural dialog systems use the conversation history effectively? an empirical study",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1906.01603"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Chinnadhurai Sankar, Sandeep Subramanian, Christo- pher Pal, Sarath Chandar, and Yoshua Bengio. 2019. Do neural dialog systems use the conversation his- tory effectively? an empirical study. arXiv preprint arXiv:1906.01603.",
+                "links": null
+            },
+            "BIBREF13": {
+                "ref_id": "b13",
+                "title": "Building end-to-end dialogue systems using generative hierarchical neural network models",
+                "authors": [
+                    {
+                        "first": "Alessandro",
+                        "middle": [],
+                        "last": "Iulian V Serban",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yoshua",
+                        "middle": [],
+                        "last": "Sordoni",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Aaron",
+                        "middle": [],
+                        "last": "Bengio",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Joelle",
+                        "middle": [],
+                        "last": "Courville",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Pineau",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Thirtieth AAAI Conference on Artificial Intelligence",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Iulian V Serban, Alessandro Sordoni, Yoshua Bengio, Aaron Courville, and Joelle Pineau. 2016. Building end-to-end dialogue systems using generative hier- archical neural network models. In Thirtieth AAAI Conference on Artificial Intelligence.",
+                "links": null
+            },
+            "BIBREF14": {
+                "ref_id": "b14",
+                "title": "A neural network approach to context-sensitive generation of conversational responses",
+                "authors": [
+                    {
+                        "first": "Alessandro",
+                        "middle": [],
+                        "last": "Sordoni",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Michel",
+                        "middle": [],
+                        "last": "Galley",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Michael",
+                        "middle": [],
+                        "last": "Auli",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chris",
+                        "middle": [],
+                        "last": "Brockett",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yangfeng",
+                        "middle": [],
+                        "last": "Ji",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Margaret",
+                        "middle": [],
+                        "last": "Mitchell",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jian-Yun",
+                        "middle": [],
+                        "last": "Nie",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jianfeng",
+                        "middle": [],
+                        "last": "Gao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Bill",
+                        "middle": [],
+                        "last": "Dolan",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1506.06714"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Alessandro Sordoni, Michel Galley, Michael Auli, Chris Brockett, Yangfeng Ji, Margaret Mitchell, Jian-Yun Nie, Jianfeng Gao, and Bill Dolan. 2015. A neural network approach to context-sensitive gen- eration of conversational responses. arXiv preprint arXiv:1506.06714.",
+                "links": null
+            },
+            "BIBREF15": {
+                "ref_id": "b15",
+                "title": "Sequence to sequence learning with neural networks",
+                "authors": [
+                    {
+                        "first": "Ilya",
+                        "middle": [],
+                        "last": "Sutskever",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Oriol",
+                        "middle": [],
+                        "last": "Vinyals",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Quoc V",
+                        "middle": [],
+                        "last": "Le",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "Advances in neural information processing systems",
+                "volume": "",
+                "issue": "",
+                "pages": "3104--3112",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ilya Sutskever, Oriol Vinyals, and Quoc V Le. 2014. Sequence to sequence learning with neural net- works. In Advances in neural information process- ing systems, pages 3104-3112.",
+                "links": null
+            },
+            "BIBREF16": {
+                "ref_id": "b16",
+                "title": "Policy gradient methods for reinforcement learning with function approximation",
+                "authors": [
+                    {
+                        "first": "David",
+                        "middle": [
+                            "A"
+                        ],
+                        "last": "Richard S Sutton",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Mcallester",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "P",
+                        "middle": [],
+                        "last": "Satinder",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yishay",
+                        "middle": [],
+                        "last": "Singh",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Mansour",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2000,
+                "venue": "Advances in neural information processing systems",
+                "volume": "",
+                "issue": "",
+                "pages": "1057--1063",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Richard S Sutton, David A McAllester, Satinder P Singh, and Yishay Mansour. 2000. Policy gradi- ent methods for reinforcement learning with func- tion approximation. In Advances in neural informa- tion processing systems, pages 1057-1063.",
+                "links": null
+            },
+            "BIBREF17": {
+                "ref_id": "b17",
+                "title": "Attention is all you need",
+                "authors": [
+                    {
+                        "first": "Ashish",
+                        "middle": [],
+                        "last": "Vaswani",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Noam",
+                        "middle": [],
+                        "last": "Shazeer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Niki",
+                        "middle": [],
+                        "last": "Parmar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jakob",
+                        "middle": [],
+                        "last": "Uszkoreit",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Llion",
+                        "middle": [],
+                        "last": "Jones",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Aidan",
+                        "middle": [
+                            "N"
+                        ],
+                        "last": "Gomez",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "\u0141ukasz",
+                        "middle": [],
+                        "last": "Kaiser",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Illia",
+                        "middle": [],
+                        "last": "Polosukhin",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Advances in neural information processing systems",
+                "volume": "",
+                "issue": "",
+                "pages": "5998--6008",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N Gomez, \u0141ukasz Kaiser, and Illia Polosukhin. 2017. Attention is all you need. In Advances in neural information pro- cessing systems, pages 5998-6008.",
+                "links": null
+            },
+            "BIBREF18": {
+                "ref_id": "b18",
+                "title": "Diverse and informative dialogue generation with context-specific commonsense knowledge awareness",
+                "authors": [
+                    {
+                        "first": "Sixing",
+                        "middle": [],
+                        "last": "Wu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ying",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dawei",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yang",
+                        "middle": [],
+                        "last": "Zhou",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zhonghai",
+                        "middle": [],
+                        "last": "Wu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "ACL",
+                "volume": "",
+                "issue": "",
+                "pages": "5811--5820",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Sixing Wu, Ying Li, Dawei Zhang, Yang Zhou, and Zhonghai Wu. 2020. Diverse and informative di- alogue generation with context-specific common- sense knowledge awareness. In ACL, pages 5811- 5820. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF19": {
+                "ref_id": "b19",
+                "title": "Diversity-promoting gan: A crossentropy based generative adversarial network for diversified text generation",
+                "authors": [
+                    {
+                        "first": "Jingjing",
+                        "middle": [],
+                        "last": "Xu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xuancheng",
+                        "middle": [],
+                        "last": "Ren",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Junyang",
+                        "middle": [],
+                        "last": "Lin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xu",
+                        "middle": [],
+                        "last": "Sun",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "3940--3949",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jingjing Xu, Xuancheng Ren, Junyang Lin, and Xu Sun. 2018. Diversity-promoting gan: A cross- entropy based generative adversarial network for di- versified text generation. In Proceedings of the 2018 Conference on Empirical Methods in Natural Lan- guage Processing, pages 3940-3949.",
+                "links": null
+            },
+            "BIBREF20": {
+                "ref_id": "b20",
+                "title": "Personalizing dialogue agents: I have a dog, do you have pets too? arXiv preprint",
+                "authors": [
+                    {
+                        "first": "Saizheng",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Emily",
+                        "middle": [],
+                        "last": "Dinan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jack",
+                        "middle": [],
+                        "last": "Urbanek",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Arthur",
+                        "middle": [],
+                        "last": "Szlam",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Douwe",
+                        "middle": [],
+                        "last": "Kiela",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jason",
+                        "middle": [],
+                        "last": "Weston",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1801.07243"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Saizheng Zhang, Emily Dinan, Jack Urbanek, Arthur Szlam, Douwe Kiela, and Jason Weston. 2018a. Personalizing dialogue agents: I have a dog, do you have pets too? arXiv preprint arXiv:1801.07243.",
+                "links": null
+            },
+            "BIBREF21": {
+                "ref_id": "b21",
+                "title": "Generating informative and diverse conversational responses via adversarial information maximization",
+                "authors": [
+                    {
+                        "first": "Yizhe",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Michel",
+                        "middle": [],
+                        "last": "Galley",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jianfeng",
+                        "middle": [],
+                        "last": "Gao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zhe",
+                        "middle": [],
+                        "last": "Gan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xiujun",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chris",
+                        "middle": [],
+                        "last": "Brockett",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Bill",
+                        "middle": [],
+                        "last": "Dolan",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Advances in Neural Information Processing Systems 31",
+                "volume": "",
+                "issue": "",
+                "pages": "1810--1820",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Yizhe Zhang, Michel Galley, Jianfeng Gao, Zhe Gan, Xiujun Li, Chris Brockett, and Bill Dolan. 2018b. Generating informative and diverse conversational responses via adversarial information maximization. In S. Bengio, H. Wallach, H. Larochelle, K. Grau- man, N. Cesa-Bianchi, and R. Garnett, editors, Ad- vances in Neural Information Processing Systems 31, pages 1810-1820. Curran Associates, Inc.",
+                "links": null
+            },
+            "BIBREF22": {
+                "ref_id": "b22",
+                "title": "Learning discourse-level diversity for neural dialog models using conditional variational autoencoders",
+                "authors": [
+                    {
+                        "first": "Tiancheng",
+                        "middle": [],
+                        "last": "Zhao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ran",
+                        "middle": [],
+                        "last": "Zhao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Maxine",
+                        "middle": [],
+                        "last": "Eskenazi",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Proceedings of the 55th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "1",
+                "issue": "",
+                "pages": "654--664",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/P17-1061"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Tiancheng Zhao, Ran Zhao, and Maxine Eskenazi. 2017. Learning discourse-level diversity for neural dialog models using conditional variational autoen- coders. In Proceedings of the 55th Annual Meet- ing of the Association for Computational Linguis- tics (Volume 1: Long Papers), pages 654-664, Van- couver, Canada. Association for Computational Lin- guistics.",
+                "links": null
+            },
+            "BIBREF23": {
+                "ref_id": "b23",
+                "title": "Bert-based lexical substitution",
+                "authors": [
+                    {
+                        "first": "Wangchunshu",
+                        "middle": [],
+                        "last": "Zhou",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tao",
+                        "middle": [],
+                        "last": "Ge",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ke",
+                        "middle": [],
+                        "last": "Xu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Furu",
+                        "middle": [],
+                        "last": "Wei",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ming",
+                        "middle": [],
+                        "last": "Zhou",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "3368--3373",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Wangchunshu Zhou, Tao Ge, Ke Xu, Furu Wei, and Ming Zhou. 2019. Bert-based lexical substitution. In Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics, pages 3368-3373.",
+                "links": null
+            },
+            "BIBREF24": {
+                "ref_id": "b24",
+                "title": "Self-adversarial learning with comparative discrimination for text generation",
+                "authors": [
+                    {
+                        "first": "Wangchunshu",
+                        "middle": [],
+                        "last": "Zhou",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tao",
+                        "middle": [],
+                        "last": "Ge",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ke",
+                        "middle": [],
+                        "last": "Xu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Furu",
+                        "middle": [],
+                        "last": "Wei",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ming",
+                        "middle": [],
+                        "last": "Zhou",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "8th International Conference on Learning Representations",
+                "volume": "2020",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Wangchunshu Zhou, Tao Ge, Ke Xu, Furu Wei, and Ming Zhou. 2020. Self-adversarial learning with comparative discrimination for text generation. In 8th International Conference on Learning Represen- tations, ICLR 2020, Addis Ababa, Ethiopia, April 26-30, 2020. OpenReview.net.",
+                "links": null
+            },
+            "BIBREF25": {
+                "ref_id": "b25",
+                "title": "Learning to compare for better training and evaluation of open domain natural language generation models",
+                "authors": [
+                    {
+                        "first": "Wangchunshu",
+                        "middle": [],
+                        "last": "Zhou",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ke",
+                        "middle": [],
+                        "last": "Xu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "AAAI",
+                "volume": "",
+                "issue": "",
+                "pages": "9717--9724",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Wangchunshu Zhou and Ke Xu. 2020. Learning to compare for better training and evaluation of open domain natural language generation models. In AAAI, pages 9717-9724. AAAI Press.",
+                "links": null
+            }
+        },
+        "ref_entries": {
+            "FIGREF0": {
+                "num": null,
+                "text": "Figure 1: Illustration of IAT. Our algorithm assigns high reward and low penalty when the dialogue model generates relevant and engaging responses given original and perturbed dialogue history respectively. The reward and penalty are respectively decreased and increased when the dialogue model generates dull responses. Note that both dull responses and engaging responses are gold human-written reference responses. They are not labeled in the dataset but automatically detected by the difference of their generation likelihood when given original and perturbed dialogue history. (Best view in color.)",
+                "uris": null,
+                "fig_num": "1",
+                "type_str": "figure"
+            },
+            "TABREF1": {
+                "content": "<table><tr><td>Method</td><td colspan=\"11\">DailyDialog Dist-1 Dist-2 Dist-3 overlap stop-word Dist-1 Dist-2 Dist-3 overlap stop-word OpenSubtitles</td></tr><tr><td>Seq2Seq</td><td/><td/><td/><td/><td/><td/><td/><td/><td/><td/></tr><tr><td>-base model</td><td/><td>2.32</td><td>6.28</td><td>9.43</td><td>15.6</td><td>67.4</td><td>1.72</td><td>5.37</td><td>7.64</td><td>22.5</td><td>77.8</td></tr><tr><td colspan=\"5\">-+ MMI-anti 4.15  *  11.27  *  19.61  *</td><td>26.7</td><td>62.4</td><td>3.45</td><td>11.35</td><td>18.12</td><td>30.1</td><td>74.2</td></tr><tr><td colspan=\"3\">-+ MMI-bidi 3.52</td><td>9.29</td><td>17.43</td><td>31.5</td><td>63.1</td><td colspan=\"3\">3.52  *  12.11  *  18.56  *</td><td>37.8</td><td>74.7</td></tr><tr><td>-+ AL</td><td/><td>2.25</td><td>6.01</td><td>9.39</td><td>16.1</td><td>66.8</td><td>2.97</td><td>5.44</td><td>7.46</td><td>23.5</td><td>76.4</td></tr><tr><td>-+ DS</td><td/><td>3.19</td><td>7.84</td><td>11.61</td><td>18.4</td><td>61.5</td><td>3.05</td><td>6.30</td><td>11.59</td><td>21.3</td><td>71.2</td></tr><tr><td>-+ CVAE</td><td/><td>3.59</td><td>9.41</td><td>12.93</td><td>17.7</td><td>61.1</td><td>3.35</td><td>10.13</td><td>17.02</td><td>22.5</td><td>71.4</td></tr><tr><td>-+ IAT</td><td/><td>3.72</td><td>9.81</td><td>14.93</td><td>15.4  *</td><td>60.9</td><td>3.29</td><td>10.16</td><td>17.30</td><td>20.8  *</td><td>70.9  *</td></tr><tr><td>Method</td><td/><td colspan=\"4\">DailyDialog OpenSubtitles</td><td/><td/><td/><td/><td/></tr><tr><td>Seq2Seq</td><td/><td/><td/><td/><td/><td/><td/><td/><td/><td/></tr><tr><td colspan=\"2\">-base model</td><td colspan=\"2\">0.75(0.41)</td><td colspan=\"2\">0.42(0.29)</td><td/><td/><td/><td/><td/></tr><tr><td>-+ MMI</td><td/><td>-</td><td/><td>-</td><td/><td/><td/><td/><td/><td/></tr><tr><td>-+ AL</td><td/><td colspan=\"2\">0.83(0.47)</td><td colspan=\"2\">0.49(0.34)</td><td/><td/><td/><td/><td/></tr><tr><td>-+ DS</td><td/><td colspan=\"2\">0.78(0.44)</td><td colspan=\"2\">0.46(0.33)</td><td/><td/><td/><td/><td/></tr><tr><td>-+ IAT</td><td/><td colspan=\"2\">0.77(0.45)</td><td colspan=\"2\">0.44(0.31)</td><td/><td/><td/><td/><td/></tr></table>",
+                "type_str": "table",
+                "text": "Results of the diversity of generated responses of compared models. We report the average value of 5 runs on both datasets. * denotes statistically significant with p-value < 0.01.",
+                "html": null,
+                "num": null
+            },
+            "TABREF2": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "Results on the adversarial robustness of compared models, which is measured by the difference between perplexity of gold responses when receiving original dialogue history and receiving nonlabel changing adversarial dialogue history. AL denotes adversarial learning and IAT denotes inverse adversarial training.",
+                "html": null,
+                "num": null
+            },
+            "TABREF3": {
+                "content": "<table><tr><td>Method</td><td colspan=\"3\">Fluency Consistency Diversity</td></tr><tr><td>Seq2Seq</td><td/><td/><td/></tr><tr><td>-base model</td><td>2.83</td><td>2.69</td><td>3.05</td></tr><tr><td>-+ MMI-anti</td><td>2.73</td><td>2.78</td><td>3.10</td></tr><tr><td>-+ MMI-bidi</td><td>2.80</td><td>2.82</td><td>3.02</td></tr><tr><td>-+ AL</td><td>2.77</td><td>2.69</td><td>2.91</td></tr><tr><td>-+ DS</td><td>2.85</td><td>2.88</td><td>3.12</td></tr><tr><td>-+ CVAE</td><td>2.93</td><td>2.91</td><td>3.19</td></tr><tr><td>-+ IAT</td><td>3.02  *</td><td>3.05  *</td><td>3.34  *</td></tr></table>",
+                "type_str": "table",
+                "text": "Human evaluation results of compared model on the DailyDialog dataset. The Kappa score between human annotators is 0.73. * denotes statistically significant with p-value < 0.05.",
+                "html": null,
+                "num": null
+            },
+            "TABREF4": {
+                "content": "<table><tr><td>Seq2Seq</td><td>I don't know about what you are talking about.</td></tr><tr><td>+MMI-anti</td><td>I have seen a car in London.</td></tr><tr><td>+MMI-bidi</td><td>I haven't seen your company car, have you ?</td></tr><tr><td>+DS</td><td>No, I haven't seen a car.</td></tr><tr><td>+CVAE</td><td>No, I think no.</td></tr><tr><td>+IAT</td><td>No, I don't think we can arrive on time.</td></tr><tr><td>Source</td><td>Your throat is inflamed . And your tongue is heavily coated . You have all the symptoms of influenza .</td></tr><tr><td>Seq2Seq</td><td>I agree with that you have just said.</td></tr><tr><td>+MMI-anti</td><td>I want to have all the influenza.</td></tr><tr><td>+MMI-bidi</td><td>I do not want to have the influenza and the throat.</td></tr><tr><td>+DS</td><td>Oh That's too bad.</td></tr><tr><td>+CVAE</td><td>That's a sad thing.</td></tr><tr><td>+IAT</td><td>oh what should I do for my tougue?</td></tr><tr><td>Source</td><td>Good evening , madam . Can I help you ? Yes . I bought this sheet here yesterday .</td></tr><tr><td>Seq2Seq</td><td>I want to buy a sheet too.</td></tr><tr><td>+MMI-anti</td><td>What is the color of the shirt you bought yesterday?</td></tr><tr><td>+MMI-bidi</td><td>What is wrong with this sheet bought here yesterday?</td></tr><tr><td>+DS</td><td>What problem about the sheet?</td></tr><tr><td>+DS</td><td>What do you think of the sheet?</td></tr><tr><td>+IAT</td><td>Anything wrong with the sheet?</td></tr></table>",
+                "type_str": "table",
+                "text": "Sourcehow long will it take us to drive to London ? ... ok . You haven't seen my company car , have you ? Case study of dialogue responses generated by different compared models.",
+                "html": null,
+                "num": null
+            },
+            "TABREF6": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "Ablation study results of compared model on the DailyDialog dataset. AL denotes adversarial learning and IAT denotes inverse adversarial training.",
+                "html": null,
+                "num": null
+            }
+        }
+    }
+}

@@ -1,0 +1,2359 @@
+{
+    "paper_id": "2021",
+    "header": {
+        "generated_with": "S2ORC 1.0.0",
+        "date_generated": "2023-06-16T12:30:10.994983Z"
+    },
+    "title": "A Relation-Oriented Clustering Method for Open Relation Extraction",
+    "authors": [
+        {
+            "first": "Jun",
+            "middle": [],
+            "last": "Zhao",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "Fudan University",
+                "location": {
+                    "settlement": "Shanghai",
+                    "country": "China"
+                }
+            },
+            "email": ""
+        },
+        {
+            "first": "Tao",
+            "middle": [],
+            "last": "Gui",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "Fudan University",
+                "location": {}
+            },
+            "email": "tgui@fudan.edu.cn"
+        },
+        {
+            "first": "Qi",
+            "middle": [],
+            "last": "Zhang",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "Fudan University",
+                "location": {
+                    "settlement": "Shanghai",
+                    "country": "China"
+                }
+            },
+            "email": ""
+        },
+        {
+            "first": "Yaqian",
+            "middle": [],
+            "last": "Zhou",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "Fudan University",
+                "location": {
+                    "settlement": "Shanghai",
+                    "country": "China"
+                }
+            },
+            "email": "zhouyaqian@fudan.edu.cn"
+        },
+        {
+            "first": "Mark",
+            "middle": [],
+            "last": "Zuckberg",
+            "suffix": "",
+            "affiliation": {},
+            "email": ""
+        }
+    ],
+    "year": "",
+    "venue": null,
+    "identifiers": {},
+    "abstract": "The clustering-based unsupervised relation discovery method has gradually become one of the important methods of open relation extraction (OpenRE). However, high-dimensional vectors can encode complex linguistic information which leads to the problem that the derived clusters cannot explicitly align with the relational semantic classes. In this work, we propose a relationoriented clustering model and use it to identify the novel relations in the unlabeled data. Specifically, to enable the model to learn to cluster relational data, our method leverages the readily available labeled data of pre-defined relations to learn a relationoriented representation.\nWe minimize distance between the instance with same relation by gathering the instances towards their corresponding relation centroids to form a cluster structure, so that the learned representation is cluster-friendly. To reduce the clustering bias on predefined classes, we optimize the model by minimizing a joint objective on both labeled and unlabeled data. Experimental results show that our method reduces the error rate by 29.2% and 15.7%, on two datasets respectively, compared with current SOTA methods.",
+    "pdf_parse": {
+        "paper_id": "2021",
+        "_pdf_hash": "",
+        "abstract": [
+            {
+                "text": "The clustering-based unsupervised relation discovery method has gradually become one of the important methods of open relation extraction (OpenRE). However, high-dimensional vectors can encode complex linguistic information which leads to the problem that the derived clusters cannot explicitly align with the relational semantic classes. In this work, we propose a relationoriented clustering model and use it to identify the novel relations in the unlabeled data. Specifically, to enable the model to learn to cluster relational data, our method leverages the readily available labeled data of pre-defined relations to learn a relationoriented representation.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            },
+            {
+                "text": "We minimize distance between the instance with same relation by gathering the instances towards their corresponding relation centroids to form a cluster structure, so that the learned representation is cluster-friendly. To reduce the clustering bias on predefined classes, we optimize the model by minimizing a joint objective on both labeled and unlabeled data. Experimental results show that our method reduces the error rate by 29.2% and 15.7%, on two datasets respectively, compared with current SOTA methods.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            }
+        ],
+        "body_text": [
+            {
+                "text": "Relation extraction (RE), a crucial basic task in the field of information extraction, is of the utmost practical interest to various fields including web search (Xiong et al., 2017) , knowledge base completion (Bordes et al., 2013) , and question answering (Yu et al., 2017) . However, conventional RE paradigms such as supervision and distant supervision are generally designed for pre-defined relations, which cannot deal with new emerging relations in the real world.",
+                "cite_spans": [
+                    {
+                        "start": 162,
+                        "end": 182,
+                        "text": "(Xiong et al., 2017)",
+                        "ref_id": "BIBREF23"
+                    },
+                    {
+                        "start": 211,
+                        "end": 232,
+                        "text": "(Bordes et al., 2013)",
+                        "ref_id": "BIBREF0"
+                    },
+                    {
+                        "start": 258,
+                        "end": 275,
+                        "text": "(Yu et al., 2017)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Under this background, open relation extraction (OpenRE) has been widely studied for its use Figure 1 : Although both instances S 2 and S 3 express founded relation while S 1 expresses CEO relation, the distance between S 1 and S 2 is still smaller than that between S 2 and S 3 . This is because there may be more similar surface information (e.g. word overlapping) or syntactic structure between S 1 and S 2 , thus the derived clusters cannot explicitly align with relations.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 100,
+                        "end": 101,
+                        "text": "1",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "in extracting new emerging relational types from open-domain corpora. The approaches used to handle open relations roughly fall into one of two groups. The first group is open information extraction (OpenIE) (Etzioni et al., 2008; Yates et al., 2007; Fader et al., 2011) , which directly extracts related phrases as representations of different relational types. However, if not properly canonicalized, the extracted relational facts can be redundant and ambiguous. The second group is unsupervised relation discovery (Yao et al., 2011; Shinyama and Sekine, 2006; Simon et al., 2019) . In this type of research, much attention has been focused on unsupervised clustering-based RE methods, which cluster and recognize relations from high-dimensional representations (Elsahar et al., 2017) . Recently, the self-supervised signals in pretrained language model are further exploited for clustering optimization (Hu et al., 2020) .",
+                "cite_spans": [
+                    {
+                        "start": 208,
+                        "end": 230,
+                        "text": "(Etzioni et al., 2008;",
+                        "ref_id": "BIBREF4"
+                    },
+                    {
+                        "start": 231,
+                        "end": 250,
+                        "text": "Yates et al., 2007;",
+                        "ref_id": "BIBREF25"
+                    },
+                    {
+                        "start": 251,
+                        "end": 270,
+                        "text": "Fader et al., 2011)",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 518,
+                        "end": 536,
+                        "text": "(Yao et al., 2011;",
+                        "ref_id": "BIBREF24"
+                    },
+                    {
+                        "start": 537,
+                        "end": 563,
+                        "text": "Shinyama and Sekine, 2006;",
+                        "ref_id": "BIBREF15"
+                    },
+                    {
+                        "start": 564,
+                        "end": 583,
+                        "text": "Simon et al., 2019)",
+                        "ref_id": "BIBREF16"
+                    },
+                    {
+                        "start": 765,
+                        "end": 787,
+                        "text": "(Elsahar et al., 2017)",
+                        "ref_id": "BIBREF3"
+                    },
+                    {
+                        "start": 907,
+                        "end": 924,
+                        "text": "(Hu et al., 2020)",
+                        "ref_id": "BIBREF11"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "However, many studies show that highdimensional embeddings can encode complex linguistic information such as morphological (Peters et al., 2018) , local syntactic (Hewitt and Manning, 2019) , and longer range semantic information (Jawahar et al., 2019) . Consequently, the distance of representation is not completely consistent with relational semantic similarity. Although Hu et al. (2020) use self-supervised signals to optimize clustering, there is still no guarantee that the learned clusters will explicitly align with the desired relational semantic classes (Xing et al., 2002) . As shown in Figure 1 , we use the method proposed by Hu et al. (2020) to get the instance representations. Although both instances S 2 and S 3 express the founded relation, the euclidean distance between them is larger than that between S 1 and S 2 , which express different relation. Obviously, the clustering algorithm tends to group instances S 1 and S 2 together, rather than S 2 and S 3 which express the same relation.",
+                "cite_spans": [
+                    {
+                        "start": 123,
+                        "end": 144,
+                        "text": "(Peters et al., 2018)",
+                        "ref_id": "BIBREF14"
+                    },
+                    {
+                        "start": 163,
+                        "end": 189,
+                        "text": "(Hewitt and Manning, 2019)",
+                        "ref_id": "BIBREF9"
+                    },
+                    {
+                        "start": 230,
+                        "end": 252,
+                        "text": "(Jawahar et al., 2019)",
+                        "ref_id": "BIBREF12"
+                    },
+                    {
+                        "start": 375,
+                        "end": 391,
+                        "text": "Hu et al. (2020)",
+                        "ref_id": "BIBREF11"
+                    },
+                    {
+                        "start": 565,
+                        "end": 584,
+                        "text": "(Xing et al., 2002)",
+                        "ref_id": "BIBREF22"
+                    },
+                    {
+                        "start": 640,
+                        "end": 656,
+                        "text": "Hu et al. (2020)",
+                        "ref_id": "BIBREF11"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 606,
+                        "end": 607,
+                        "text": "1",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "In this work, we propose a relation-oriented clustering method. To enable the model to learn to cluster relational data, pre-defined relations and their existing labeled instances are leveraged to optimize a non-linear mapping, which transforms high-dimensional entity pair representations into relation-oriented representations. Specifically, we minimize distance between the instances with same relation by gathering the instances representation towards their corresponding relation centroids to form the cluster structure, so that the learned representation is cluster-friendly. In order to reduce the clustering bias on the predefined classes, we iteratively train the entity pair representations by optimizing a joint objective function on the labeled and unlabeled subsets of the data, improving both the supervised classification of the labeled data, and the clustering of the unlabeled data. In addition, the proposed method can be easily extended to incremental learning by classifying the pre-defined and novel relations with a unified classifier, which is often desirable in real-world applications. Our experimental results show that our method outperforms current state-of-the-art methods for OpenRE. Our codes are publicly available at Github * .",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "To summarize, the main contributions of our work are as follows: (1) we propose a novel relation-oriented clustering method RoCORE to enable model to learn to cluster relational data;",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "(2) the proposed method achieves the incremental learning of unlabeled novel relations, which is often desirable in real-world applications; (3) experimental results show that our method reduces * https://github.com/Ac-Zyx/RoCORE. the error rate by 29.2% and 15.7%, on two realworld datasets respectively, compared with current state-of-the-art OpenRE methods.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Open Relation Extraction. To meet the needs of extracting new emerging relation types, many efforts have been undertaken to exploring methods for open relation extraction (OpenRE). The first line of research is Open Information Extraction (Etzioni et al., 2008; Yates et al., 2007; Fader et al., 2011) , in which relation phrases are extracted directly to represent different relation types. However, using surface forms to represent relations results in an associated lack of generality since many surface forms can express the same relation. Recently, unsupervised clustering-based RE methods is attracting lots of attentions. Elsahar et al. (2017) proposed to extract and cluster open relations by re-weighting word embeddings and using the types of named entities as additional features. Hu et al. (2020) proposed to exploit weak, self-supervised signals in pretrained language model for adaptive clustering on contextualized relational features. However, the self-supervised signals are sensitive to the initial representation (Gansbeke et al., 2020) and there is still no guarantee that the learned clusters will align with the relational semantic classes (Xing et al., 2002) . Wu et al. (2019) proposed the relation similarity metrics from labeled data, and then transfers the relational knowledge to identify novel relations in unlabeled data. Different from them, we propose a relation-oriented method explicitly clustering data based on relational information. Knowledge in High-Dimensional Vector. Pretrained static and contextual word representations can provide valuable prior knowledge for constructing relational representations (Soares et al., 2019; Elsahar et al., 2017) . Peters et al. (2018) showed that different neural architectures (e.g., LSTM, CNN, and Transformers) can hierarchically structure linguistic information that varies with network depth. Recently, many studies (Jawahar et al., 2019; Clark et al., 2019; Goldberg, 2019) have shown that such hierarchy also exists in pretraining models like BERT. These results suggest that high-dimensional embeddings, independent of model architecture, learn much about the structure of language. Directly clustering on these highdimensional embeddings should hardly produce ",
+                "cite_spans": [
+                    {
+                        "start": 239,
+                        "end": 261,
+                        "text": "(Etzioni et al., 2008;",
+                        "ref_id": "BIBREF4"
+                    },
+                    {
+                        "start": 262,
+                        "end": 281,
+                        "text": "Yates et al., 2007;",
+                        "ref_id": "BIBREF25"
+                    },
+                    {
+                        "start": 282,
+                        "end": 301,
+                        "text": "Fader et al., 2011)",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 629,
+                        "end": 650,
+                        "text": "Elsahar et al. (2017)",
+                        "ref_id": "BIBREF3"
+                    },
+                    {
+                        "start": 792,
+                        "end": 808,
+                        "text": "Hu et al. (2020)",
+                        "ref_id": "BIBREF11"
+                    },
+                    {
+                        "start": 1032,
+                        "end": 1055,
+                        "text": "(Gansbeke et al., 2020)",
+                        "ref_id": "BIBREF6"
+                    },
+                    {
+                        "start": 1162,
+                        "end": 1181,
+                        "text": "(Xing et al., 2002)",
+                        "ref_id": "BIBREF22"
+                    },
+                    {
+                        "start": 1184,
+                        "end": 1200,
+                        "text": "Wu et al. (2019)",
+                        "ref_id": "BIBREF21"
+                    },
+                    {
+                        "start": 1644,
+                        "end": 1665,
+                        "text": "(Soares et al., 2019;",
+                        "ref_id": "BIBREF17"
+                    },
+                    {
+                        "start": 1666,
+                        "end": 1687,
+                        "text": "Elsahar et al., 2017)",
+                        "ref_id": "BIBREF3"
+                    },
+                    {
+                        "start": 1690,
+                        "end": 1710,
+                        "text": "Peters et al. (2018)",
+                        "ref_id": "BIBREF14"
+                    },
+                    {
+                        "start": 1897,
+                        "end": 1919,
+                        "text": "(Jawahar et al., 2019;",
+                        "ref_id": "BIBREF12"
+                    },
+                    {
+                        "start": 1920,
+                        "end": 1939,
+                        "text": "Clark et al., 2019;",
+                        "ref_id": "BIBREF1"
+                    },
+                    {
+                        "start": 1940,
+                        "end": 1955,
+                        "text": "Goldberg, 2019)",
+                        "ref_id": "BIBREF7"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "Figure 2 : Overview of our RoCORE method. At the first step, we encode both the labeled and unlabeled instances in to entity pair representations. Then the entity pair representations are transformed to relation-oriented representations by gathering towards their relational centroids in the second step. Finally, based on the pseudo labels generated by clustering on unlabeled data, we optimize the entity pair representations and classifier by minimizing a joint objective function to reduce the clustering bias on predefined classes. The above three steps are performed iteratively to gradually improve model performance on novel relations. ideal clusters in our desired way, which motivates us to extend current unsupervised clustering-based RE methods to learn the representations tailored for clustering relational data.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 7,
+                        "end": 8,
+                        "text": "2",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Non-linear Decoder",
+                "sec_num": null
+            },
+            {
+                "text": "In this work, we propose a relation-oriented clustering method, which takes advantage of the relational information in the existing labeled data to enable model to learn to cluster relational data. In order to reduce the clustering bias on the predefined classes, we iteratively train the entity pair representations by optimizing a joint objective function on the labeled and unlabeled subsets of the data, improving both the supervised classification of the labeled data, and the clustering of the unlabeled data. The proposed method is shown in Figure 2 . Specifically, given an unlabeled dataset D u = {s u i } i=1,...,M of relational instances s u i , our goal is to automatically cluster the relational instances into a number of classes C u , which we assume to be known a priori. To enable the model to learn to cluster data, we incorporate a second labeled dataset of pre-defined relations D l = {(s i , y i )} i=1,...,N where y i \u2208 {1, ..., C } is the relational label for instance s i .",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 555,
+                        "end": 556,
+                        "text": "2",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Approach",
+                "sec_num": "3"
+            },
+            {
+                "text": "We approach the problem by learning a relationoriented representation, from which the derived clusters can be explicitly aligned with the desired relational semantic classes. As illustrated in Figure 2 , we learn the representation and optimize the model by performing three iterative steps:",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 200,
+                        "end": 201,
+                        "text": "2",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Method Overview",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "(1) First, we encode relation instances in D and D u using the entity pair encoder implemented as the pretrained BERT (Devlin et al., 2018) , which takes relation instances {s i } i=1,...,N , and {s u j } j=1,...,M , as input, and output relation representation h i , h u j . However, high-dimensional h can encode a mixture of various aspects of linguistic features and the derived clusters from h cannot explicit align with desired relational classes.",
+                "cite_spans": [
+                    {
+                        "start": 118,
+                        "end": 139,
+                        "text": "(Devlin et al., 2018)",
+                        "ref_id": "BIBREF2"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Method Overview",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "(2) To make the distance between the representations accurately reflect the relational semantic similarity, the obtained h i are transformed to lowdimensional relation-oriented representations h i by a non-linear mapping g. Under the supervision of labels y i in D , g is optimized by the gathering of h i towards their relational centroids to form a cluster structure, thereby we obtain h u j from unlabeled data using the optimized g and generate the pseudo labels \u0177u according to clustering on h u i .",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Method Overview",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "(3) Because using labeled data to guide the h towards their relational centroids will produce clustering bias on pre-defined relations, it is difficult to directly generate high-quality pseudo labels. To reduce the negative effect of errors in pseudo labels, we optimize classifier and entity pair representations by minimizing a joint objective function, containing terms for both pre-defined and novel relations, using respectively the given labels y and generated pseudo label \u0177u . Based on the refined entity pair representation h which encode more contextual relational information, the above three steps are performed iteratively to gradually improve the quality of pseudo labels \u0177u and model performance.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Method Overview",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "Given a relation instance s i = (x i , h i , t i ), which consists of a sentence x i = {x 1 , x 2 , ..., x n } and two entity spans h i = (s h , e h ), t i = (s t , e t ) marking the position of the entity pair, the entity pair encoder f aims to map relation instance s i to a fixed-length embedding h i = f (s i ) \u2208 R d that encode contextual information in s i . We adopt BERT (Devlin et al., 2018) as the implemention of our encoder f due to its strong performance on extracting contextual information. Formally:",
+                "cite_spans": [
+                    {
+                        "start": 379,
+                        "end": 400,
+                        "text": "(Devlin et al., 2018)",
+                        "ref_id": "BIBREF2"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Entity Pair Encoder",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "h r 1 , ..., h r n = BERT r (x 1 , ..., x n ) (1) h ent = MAXPOOL(h r s , ..., h r e ) (2) h i = h head \u2295 h tail ,",
+                        "eq_num": "(3)"
+                    }
+                ],
+                "section": "Entity Pair Encoder",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "where r is a hyperparameter that denotes the output layer of BERT. s and e represent start and end position of the corresponding entity respectively. \u2295 denotes the concatenation operator. This structure of entity pair representation encoder has been widely used in previous RE methods (Wang et al., 2021; Hu et al., 2020) .",
+                "cite_spans": [
+                    {
+                        "start": 285,
+                        "end": 304,
+                        "text": "(Wang et al., 2021;",
+                        "ref_id": "BIBREF20"
+                    },
+                    {
+                        "start": 305,
+                        "end": 321,
+                        "text": "Hu et al., 2020)",
+                        "ref_id": "BIBREF11"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Entity Pair Encoder",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "In order to make the distance between representation accurately reflect the relational semantic similarity, the obtained {h i } i=1,...,N are transformed to low-dimensional relation-oriented representations h i by a non-linear mapping g(\u2022) : R d \u2192 R m . Under the supervision of labels y i in D , g is optimized by the gathering of h i towards their relational centroids as follows:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Relation-Oriented Clustering Module",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "L center = 1 2N N i=1 h i -c y i 2 2 (4) c r = 1 |D r | i\u2208Dr h i ,",
+                        "eq_num": "(5)"
+                    }
+                ],
+                "section": "Relation-Oriented Clustering Module",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "where c r denotes the centroids of relation r.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Relation-Oriented Clustering Module",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "The center loss L center seems reasonable, but problematic. A global optimal solution to minimize L center is g(h i ) = 0, which is far from being desired. This motivates us to incorporate a reconstruction term to prevent the semantic space from collapsing. Specifically\" a decoding network d(\u2022) is used to map the representation h i back to the original representation h i .Thus, we can derive the following loss function:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Relation-Oriented Clustering Module",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "L C = 1 2N N i=1 (d(h i ), h i ) + \u03bbL center ,",
+                        "eq_num": "(6)"
+                    }
+                ],
+                "section": "Relation-Oriented Clustering Module",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "where both the encoder g(h i ) and decoder d(h i ) are implemented as DNN. The function (\u2022, \u2022) : R d \u2192 R is the least-squares loss (x, y) = xy 2 2 that measures the reconstruction error and other choices such as 1 -norm also can be considered. \u03bb is a hyper-parameter that balances the reconstruction error versus center loss.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Relation-Oriented Clustering Module",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "Finally, we obtain {h u j } j=1,...,M using the optimized g and generate pseudo labels \u0177u using k-means algorithm as follows:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Relation-Oriented Clustering Module",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "\u0177u = k-means(h u ),",
+                        "eq_num": "(7)"
+                    }
+                ],
+                "section": "Relation-Oriented Clustering Module",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "Based on the pseudo labels \u0177u generated by clustering, we can train the classifier and refine entity pair representation h to encode more contextual relation information. Since it's difficult to keep the order of clusters consistent in multiple clustering, instead of using standard cross entropy loss, we propose to use the pairwise similarities for novel relation learning.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Relation Classification Module",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "q ij = 1{\u0177 u i = \u0177u j },",
+                        "eq_num": "(8)"
+                    }
+                ],
+                "section": "Relation Classification Module",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "where the symbol q ij denotes whether s u i and s u j belong to the same cluster. If a pair is from the same cluster, the classifier \u03b7 u : R d \u2192 R C u outputs similar distributions, and vice-versa. Specifically, we use the pair-wise KL-divergence to evaluate the distance of two relation instances.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Relation Classification Module",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "Given a pair of instance s u i , s u j , their corresponding output distributions are defined as P = \u03b7 u (f (s u i )) and Q = \u03b7 u (f (s u j )). For the pair from the same cluster, the cost is described as:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Relation Classification Module",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "L + (s u i , s u j ) = D KL (P * ||Q) + D KL (Q * ||P) (9) D KL (P * ||Q) = C u c=1 p c log p c q c ,",
+                        "eq_num": "(10)"
+                    }
+                ],
+                "section": "Relation Classification Module",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "where P * denotes that P is assumed to be a constant and each KL-divergence factor D KL (P||Q) is a unary function whose gradient is simply \u2202D KL (P * ||Q)/\u2202Q. If s u i , s u j comes from different clusters, their output distributions are expected to be different, which can be defined as a hinge-loss function:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Relation Classification Module",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "L -(s u i , s u j ) = L h (D KL (P * ||Q), \u03c3)+ L h (D KL (Q * ||P), \u03c3)",
+                        "eq_num": "(11)"
+                    }
+                ],
+                "section": "Relation Classification Module",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "L h (e, \u03c3) = max(0, \u03c3 -e),",
+                        "eq_num": "(12)"
+                    }
+                ],
+                "section": "Relation Classification Module",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "and the total loss can be defined as a contrastive loss:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Relation Classification Module",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "L BCE (s u i , s u j ) = q i,j L + (s u i , s u j )+ (1 -q ij )L -(s u i , s u j ).",
+                        "eq_num": "(13)"
+                    }
+                ],
+                "section": "Relation Classification Module",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "Note that L BCE is a symmetric loss w.r.t. s u i ,s u j since P and Q are alternatively assumed to be constant in L + and L -. Finally, we get the prediction for a relation instance s u i as follows:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Relation Classification Module",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "\u0177u i = arg max y [\u03b7 u (f (s u i ))] y",
+                        "eq_num": "(14)"
+                    }
+                ],
+                "section": "Relation Classification Module",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "3.5 Training Methods",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Relation Classification Module",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "Because using labeled data to guide the h towards their relational centroids will produce clustering bias on pre-defined relations, it is difficult to directly generate high-quality pseudo labels \u0177u for novel relations. To reduce the negative effect of errors in pseudo labels, we incorporate a classifier \u03b7 : R d \u2192 R C l for pre-defined relations and refine h by minimizing a joint objective function, containing terms for both pre-defined and novel relations, using respectively the given labels y and generated pseudo label \u0177u as follows:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Iterative Joint Training",
+                "sec_num": "3.5.1"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "L CE = - 1 N N i=1 log\u03b7 y i (h i )",
+                        "eq_num": "(15)"
+                    }
+                ],
+                "section": "Iterative Joint Training",
+                "sec_num": "3.5.1"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "L CLS = L CE + L BCE . (",
+                        "eq_num": "16"
+                    }
+                ],
+                "section": "Iterative Joint Training",
+                "sec_num": "3.5.1"
+            },
+            {
+                "text": ")",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Iterative Joint Training",
+                "sec_num": "3.5.1"
+            },
+            {
+                "text": "The refined entity pair representation h encode more contextual relation information, which in turn promote clustering optimization and generate pseudo labels \u0177u with higher accuracy. We refine representation h and optimize clustering in a iterative manner to gradually improve the quality of the pseudo labels and model performance. This iterative procedure is detailed in Algorithm 1. ",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Iterative Joint Training",
+                "sec_num": "3.5.1"
+            },
+            {
+                "text": "\u0398 = \u0398 -\u03b7\u2207 \u0398 L CLS ; 8 \u03a8 = \u03a8 -\u03b7\u2207 \u03a8 L CLS ; 9 optimize clustering \u03a6 = \u03a6 -\u03b7\u2207 \u03a6 L C ;",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Iterative Joint Training",
+                "sec_num": "3.5.1"
+            },
+            {
+                "text": "10 until convergence;",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Iterative Joint Training",
+                "sec_num": "3.5.1"
+            },
+            {
+                "text": "In real-world settings, when facing a new sentence, we often don't know whether it belongs to predefined relations or novel relations. In this work, we explore the incremental learning of novel relations to enable \u03b7 l to discriminate both predefined and novel relations. Under incremental learning settings, we extend the classifier \u03b7 l to C u novel relation types, so that \u03b7 l : R d \u2192 R C l +C u . Then, the model is trained using cross-entropy loss instead of equation 15 as follows:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Incremental Learning Scheme",
+                "sec_num": "3.5.2"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "L CE = - 1 N N i=1 log\u03b7 y i (h i ) - \u00b5(t) M M j=1 log\u03b7 \u0177j (h j ),",
+                        "eq_num": "(17)"
+                    }
+                ],
+                "section": "Incremental Learning Scheme",
+                "sec_num": "3.5.2"
+            },
+            {
+                "text": "where we obtain \u0177j using equation 14 and the coefficient \u00b5(t) balances the cross entropy loss of pre-defined and novel relations. We implemented it as a ramp-up function \u00b5(t) = \u00b5 0 e -5(1-t T ) 2 where t is current epoch and T is the ramp-up length and coefficient \u00b5 0 \u2208 R + .",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Incremental Learning Scheme",
+                "sec_num": "3.5.2"
+            },
+            {
+                "text": "In this section, we describe the datasets for training and evaluating the proposed method. We also detail the baseline models for comparison.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experimental Setup",
+                "sec_num": "4"
+            },
+            {
+                "text": "Finally, we clarify the implementation details and hyperparameter configuration of our method.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experimental Setup",
+                "sec_num": "4"
+            },
+            {
+                "text": "We conduct experiments on two relation extraction datasets. FewRel. Few-Shot Relation Classification Dataset (Han et al., 2018) . FewRel is a human-annotated dataset containing 80 types of relations, each with 700 instances. We follow the setting in (Wu et al., 2019) to use the original train set of FewRel, which contains 64 relations, as labeled set with predefined relations, and the original validation set of FewRel, which contains 16 new relations, as the unlabeled set with novel relations to extract. 1,600 instances were randomly selected from the unlabeled set as the test set. The rest of labeled and unlabeled instances are considered as the train set. TACRED. The TAC Relation Extraction Dataset (Zhang et al., 2017) . TACRED is a humanannotated large-scale relation extraction dataset that covers 41 relation types. We remove the instances labeled as no_relation and use the remaining 21,773 instances for training and evaluation. Similar to the setting of FewRel, we select the 0-30 relation types as labeled set with pre-defined relations and the 31-40 relation types as unlabeled set with novel relations. We randomly selected 15% of the instances from the unlabeled set as the test set. The rest of the labeled and unlabeled instances are considered as the train set.",
+                "cite_spans": [
+                    {
+                        "start": 109,
+                        "end": 127,
+                        "text": "(Han et al., 2018)",
+                        "ref_id": "BIBREF8"
+                    },
+                    {
+                        "start": 250,
+                        "end": 267,
+                        "text": "(Wu et al., 2019)",
+                        "ref_id": "BIBREF21"
+                    },
+                    {
+                        "start": 710,
+                        "end": 730,
+                        "text": "(Zhang et al., 2017)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Datasets",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "To evaluate the effectiveness of our method, we select the following SOTA OpenRE models for comparison. Note that the first four methods are unsupervised and RSN as well as RSN-BERT leverages labeled data of predefined relations. HAC with Re-weighted Word Embeddings (RW-HAC) (Elsahar et al., 2017) . RW-HAC is a feature clustering method for OpenRE. The model contructs relational feature based on the weighted word embeddings as well as entity types. Discrete-state Variational Autoencoder (VAE) (Marcheggiani and Titov, 2016) . VAE is a reconstruction-based method for OpenRE. The model is optimized by reconstructing entities from pairing entities and predicted relations. Entity Based URE (Etype+) (Tran et al., 2020) ( Marcheggiani and Titov, 2016) is employed and two additional regularisers are used.",
+                "cite_spans": [
+                    {
+                        "start": 276,
+                        "end": 298,
+                        "text": "(Elsahar et al., 2017)",
+                        "ref_id": "BIBREF3"
+                    },
+                    {
+                        "start": 498,
+                        "end": 528,
+                        "text": "(Marcheggiani and Titov, 2016)",
+                        "ref_id": "BIBREF13"
+                    },
+                    {
+                        "start": 703,
+                        "end": 722,
+                        "text": "(Tran et al., 2020)",
+                        "ref_id": "BIBREF18"
+                    },
+                    {
+                        "start": 725,
+                        "end": 754,
+                        "text": "Marcheggiani and Titov, 2016)",
+                        "ref_id": "BIBREF13"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Compared Methods",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "Self-supervised Feature Learning for OpenRE (SelfORE) (Hu et al., 2020) . SelfORE exploits weak, self-supervised signals by leveraging large pretrained language model for adaptive clustering on contextualized relational features.",
+                "cite_spans": [
+                    {
+                        "start": 54,
+                        "end": 71,
+                        "text": "(Hu et al., 2020)",
+                        "ref_id": "BIBREF11"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Compared Methods",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "Relational Siamese Network (RSN) (Wu et al., 2019) . This method learns similarity metrics of relations from labeled data of pre-defined relations, and then transfer the relational knowledge to identify novel relations in unlabeled data.",
+                "cite_spans": [
+                    {
+                        "start": 33,
+                        "end": 50,
+                        "text": "(Wu et al., 2019)",
+                        "ref_id": "BIBREF21"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Compared Methods",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "A variant of RSN, the static word vector is replaced by the BERT embedding for fair comparison.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "RSN with BERT Embedding (RSN-BERT).",
+                "sec_num": null
+            },
+            {
+                "text": "Our entity pair encoder is implemented as the bert-base-uncased which consists of 12 layers and we use layer 8 as the output layer for best performance. Note that we only fine-tune the parameters of the output layer in the iterative training process to avoid overfitting. Non-linear mapping g( ",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Implementation Details",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "In this section, we present the experimental results of our model on two real-world datasets to demonstrate the effectiveness of our method. We also provide additional experimental results on hyperparameter analysis and relation representation visualization in appendix A and B. ",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Results and Analysis",
+                "sec_num": "5"
+            },
+            {
+                "text": "Table 2 reports model performances on FewRel, TACRED dataset, which shows that the proposed method achieves state-of-the-art results on OpenRE task. Benefitting from the valuable information in the labeled instances of pre-defined relations, RoCORE effectively learns the relation-oriented representation from which the derived clusters explicitly align with relational semantic classes, thereby outperforming previous clustering-based baseline such as SelfORE by a large margin. In addition, despite the fact that RSN and its variant RSN-BERT also leverage relational information in labeled data, the learning of similarity metrics and clustering are mutually independent. In our method, relation representation learning and cluster optimization are mutually dependent. Thus, the learned representations are tailored for clustering. As a result, our method outperforms RSN and RSN-BERT on the two datasets.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 6,
+                        "end": 7,
+                        "text": "2",
+                        "ref_id": "TABREF4"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Main Results",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "To study the contribution of each component in the proposed method, we conduct ablation experiments on the two datasets and display the results in the reconstruction term, the semantic space will collapse and the performance will be seriously hurt.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Ablation Study",
+                "sec_num": "5.2"
+            },
+            {
+                "text": "In addition, joint optimizing on both the labeled and unlabeled data is also very important. The initial pseudo labels for novel relations are not accurate due to the unwanted clustering bias on pre-defined relations. Without L CE , the error in pseudo labels will lead the refinement of the entity pair representation to a wrong direction, which affects the model performance.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Ablation Study",
+                "sec_num": "5.2"
+            },
+            {
+                "text": "In this subsection, we conduct experiments on two different datasets to explore the influence of predefined relation number on performance of our method. For FewRel dataset, following the setting in (Wu et al., 2019) , we change the number of pre-defined relations from 40 to 64 while fixing the total number of labeled instances to 25,000. Similarly, the settings for TACRED dataset is 18, 31 and 12, 000, respectively.",
+                "cite_spans": [
+                    {
+                        "start": 199,
+                        "end": 216,
+                        "text": "(Wu et al., 2019)",
+                        "ref_id": "BIBREF21"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "The Influence of Pre-defined Relation Number on Performance",
+                "sec_num": "5.3"
+            },
+            {
+                "text": "From figure 3 we can see the following: (1) The increase of pre-defined relation number do improve the generalization of our method on novel relations. The models trained on 64/31 relations slightly perform better than the models trained on 40/18 relations on FewRel/TACRED dataset (2) Our method constantly performs better than RSN and RSN-BERT with the number of predefined relations vary. This indicates the effectiveness of our method.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 12,
+                        "end": 13,
+                        "text": "3",
+                        "ref_id": "FIGREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "The Influence of Pre-defined Relation Number on Performance",
+                "sec_num": "5.3"
+            },
+            {
+                "text": "In real-world settings, pre-defined relations and novel relations of interest usually come from different domains. To study the model performance in cross-domain settings, we conducted experiments on two cross-domain tasks, i.e,: FewRel to TACRED and TACRED to FewRel. Pre-defined relations and their labeled instances come from the source domain training dataset, and we evaluate performance on the target domain testing dataset.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Cross Domain Analysis",
+                "sec_num": "5.4"
+            },
+            {
+                "text": "Table 4 shows the experimental results, from which we can observe that: (1) the change of domain increases the semantic gap between the predefined and novel relations. As the result of that, the performance of the model using labeled data of predefined relations is degraded.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 6,
+                        "end": 7,
+                        "text": "4",
+                        "ref_id": "TABREF7"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Cross Domain Analysis",
+                "sec_num": "5.4"
+            },
+            {
+                "text": "(2) compared with RSN and RSN-BERT, our method shows better generalization performance on novel relations, which shows that our proposed iterative joint training method effectively reduces the unwanted bias on source domain labeled data.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Cross Domain Analysis",
+                "sec_num": "5.4"
+            },
+            {
+                "text": "(3) In addition, when a model has the tendency to cluster multiple relation into one, an unbalanced PR value (i.e., high rec. and low prec. in RSN-BERT) will be produced, which is undesired in real-world applications.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Cross Domain Analysis",
+                "sec_num": "5.4"
+            },
+            {
+                "text": "In this subsection, we evaluate the effectiveness of our incremental learning scheme and explore the influence of the amount of labeled data on model performance. We use BERT with a linear softmax classifer as the baseline for comparison.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Incremental Learning of Novel Relations",
+                "sec_num": "5.5"
+            },
+            {
+                "text": "We train the baseline model using the labeled data of both pre-defined and novel relations, following the supervised learning paradigm. For our method, we still use only the labels of pre-defined relations.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Incremental Learning of Novel Relations",
+                "sec_num": "5.5"
+            },
+            {
+                "text": "From figure 4 we can observe the following: (1) The performance of the models improve gradually as labeled data increase. Our method can still maintain good performance when there is a lack of labeled data. This indicates that the proposed method is robust to the reduction of labeled data.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 12,
+                        "end": 13,
+                        "text": "4",
+                        "ref_id": "FIGREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Incremental Learning of Novel Relations",
+                "sec_num": "5.5"
+            },
+            {
+                "text": "(2) Our method achieves similar performance compared with the supervised baseline on two experiments, which use 40% labels of novel relations on FewRel dataset and 82% on TACRED respectively. It indicates that we successfully achieve the incremental learning of novel relations.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Incremental Learning of Novel Relations",
+                "sec_num": "5.5"
+            },
+            {
+                "text": "In this work, we introduce a relation-oriented clustering method that extends the current unsupervised clustering-based OpenRE method. The proposed method leverages the labeled data of pre-defined relations to learn a relation-oriented representation from which the derived clusters explicitly align with relational classes. Iterative joint training method effectively reduces the unwanted bias on labeled data. In addition, the proposed method can be easily extended to incremental learning of novel relations. Experimental results show that our method outperforms SOTA methods for OpenRE. ",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusions",
+                "sec_num": "6"
+            },
+            {
+                "text": "From the experimental results of ablation study, it can be seen that reconstruction loss and center loss have a great impact on the performance of the model. \u03bb is a key hyperparameter that balances the reconstruction loss versus center loss. In this section, we conduct experiments to study the influence of the value of \u03bb on the performance of the model. From Figure 5 we can see that: (1) When \u03bb gradually increases from 0, the center loss begins to affect the optimization. The model learns that instances with the same relation should be mapped to relatively close positions in the representation space, and the performance of the model gradually improves. (2) When the lambda exceeds a certain threshold, further increasing the \u03bb will leads to unwanted bias to the predefined relations, which will degrade the performance of the model.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 368,
+                        "end": 369,
+                        "text": "5",
+                        "ref_id": "FIGREF2"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "A Hyperparameter Analysis",
+                "sec_num": null
+            },
+            {
+                "text": "To intuitively show how the RoCORE method learns the constantly optimized relation-oriented representation, we visualize the relational representation with t-SNE (van der Maaten and Hinton, 2008) . The visualization results are shown in Figure 6 . It is apparent that, before training (left), the relational representations are distributed randomly at different locations in the semantic space. After pre-training (middle), the relational representations still are not tailored for the relations.",
+                "cite_spans": [
+                    {
+                        "start": 171,
+                        "end": 195,
+                        "text": "Maaten and Hinton, 2008)",
+                        "ref_id": "BIBREF19"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 244,
+                        "end": 245,
+                        "text": "6",
+                        "ref_id": "FIGREF3"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "B Relation Representation Visualization",
+                "sec_num": null
+            },
+            {
+                "text": "For example, the instances with blue and light green colors may have similar syntactic or surface features and clustering them directly will lead to a poor result. After training (right), the relational representations are well separated and the distribution is based on relation types.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "B Relation Representation Visualization",
+                "sec_num": null
+            },
+            {
+                "text": "In this section, the detailed results of ablation experiments and cross domain analysis are listed in Table 5 and Table 6 respectively.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 108,
+                        "end": 109,
+                        "text": "5",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 120,
+                        "end": 121,
+                        "text": "6",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "C Detailed Results of Other Experiments",
+                "sec_num": null
+            }
+        ],
+        "back_matter": [
+            {
+                "text": "The authors wish to thank the anonymous reviewers for their helpful comments. This work was partially funded by China National Key R&D Program (No. 2018YFB1005104), National Natural Science Foundation of China (No. 62076069, 61976056), Shanghai Municipal Science and Technology Major Project (No.2021SHZDZX0103).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Acknowledgements",
+                "sec_num": null
+            }
+        ],
+        "bib_entries": {
+            "BIBREF0": {
+                "ref_id": "b0",
+                "title": "Translating embeddings for modeling multirelational data",
+                "authors": [
+                    {
+                        "first": "Antoine",
+                        "middle": [],
+                        "last": "Bordes",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nicolas",
+                        "middle": [],
+                        "last": "Usunier",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alberto",
+                        "middle": [],
+                        "last": "Garcia-Dur\u00e1n",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jason",
+                        "middle": [],
+                        "last": "Weston",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Oksana",
+                        "middle": [],
+                        "last": "Yakhnenko",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "Proceedings of the 26th International Conference on Neural Information Processing Systems",
+                "volume": "2",
+                "issue": "",
+                "pages": "2787--2795",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Antoine Bordes, Nicolas Usunier, Alberto Garcia- Dur\u00e1n, Jason Weston, and Oksana Yakhnenko. 2013. Translating embeddings for modeling multi- relational data. In Proceedings of the 26th Interna- tional Conference on Neural Information Processing Systems -Volume 2, NIPS'13, page 2787-2795, Red Hook, NY, USA. Curran Associates Inc.",
+                "links": null
+            },
+            "BIBREF1": {
+                "ref_id": "b1",
+                "title": "What does BERT look at? an analysis of bert's attention",
+                "authors": [
+                    {
+                        "first": "Kevin",
+                        "middle": [],
+                        "last": "Clark",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Urvashi",
+                        "middle": [],
+                        "last": "Khandelwal",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Omer",
+                        "middle": [],
+                        "last": "Levy",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [
+                            "D"
+                        ],
+                        "last": "Manning",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Kevin Clark, Urvashi Khandelwal, Omer Levy, and Christopher D. Manning. 2019. What does BERT look at? an analysis of bert's attention. CoRR, abs/1906.04341.",
+                "links": null
+            },
+            "BIBREF2": {
+                "ref_id": "b2",
+                "title": "BERT: pre-training of deep bidirectional transformers for language understanding",
+                "authors": [
+                    {
+                        "first": "Jacob",
+                        "middle": [],
+                        "last": "Devlin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ming-Wei",
+                        "middle": [],
+                        "last": "Chang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kenton",
+                        "middle": [],
+                        "last": "Lee",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kristina",
+                        "middle": [],
+                        "last": "Toutanova",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jacob Devlin, Ming-Wei Chang, Kenton Lee, and Kristina Toutanova. 2018. BERT: pre-training of deep bidirectional transformers for language understanding. CoRR, abs/1810.04805.",
+                "links": null
+            },
+            "BIBREF3": {
+                "ref_id": "b3",
+                "title": "Unsupervised open relation extraction",
+                "authors": [
+                    {
+                        "first": "Hady",
+                        "middle": [],
+                        "last": "Elsahar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Elena",
+                        "middle": [],
+                        "last": "Demidova",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Simon",
+                        "middle": [],
+                        "last": "Gottschalk",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christophe",
+                        "middle": [],
+                        "last": "Gravier",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Frederique",
+                        "middle": [],
+                        "last": "Laforest",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "The Semantic Web: ESWC 2017 Satellite Events",
+                "volume": "",
+                "issue": "",
+                "pages": "12--16",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Hady Elsahar, Elena Demidova, Simon Gottschalk, Christophe Gravier, and Frederique Laforest. 2017. Unsupervised open relation extraction. In The Semantic Web: ESWC 2017 Satellite Events, pages 12-16, Cham. Springer International Publishing.",
+                "links": null
+            },
+            "BIBREF4": {
+                "ref_id": "b4",
+                "title": "Open information extraction from the web",
+                "authors": [
+                    {
+                        "first": "Oren",
+                        "middle": [],
+                        "last": "Etzioni",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Michele",
+                        "middle": [],
+                        "last": "Banko",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Stephen",
+                        "middle": [],
+                        "last": "Soderland",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Daniel",
+                        "middle": [
+                            "S"
+                        ],
+                        "last": "Weld",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2008,
+                "venue": "Commun. ACM",
+                "volume": "51",
+                "issue": "12",
+                "pages": "68--74",
+                "other_ids": {
+                    "DOI": [
+                        "10.1145/1409360.1409378"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Oren Etzioni, Michele Banko, Stephen Soderland, and Daniel S. Weld. 2008. Open information extraction from the web. Commun. ACM, 51(12):68-74.",
+                "links": null
+            },
+            "BIBREF5": {
+                "ref_id": "b5",
+                "title": "Identifying relations for open information extraction",
+                "authors": [
+                    {
+                        "first": "Anthony",
+                        "middle": [],
+                        "last": "Fader",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Stephen",
+                        "middle": [],
+                        "last": "Soderland",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Oren",
+                        "middle": [],
+                        "last": "Etzioni",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2011,
+                "venue": "Proceedings of the 2011 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "1535--1545",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Anthony Fader, Stephen Soderland, and Oren Etzioni. 2011. Identifying relations for open information extraction. In Proceedings of the 2011 Conference on Empirical Methods in Natural Language Process- ing, pages 1535-1545, Edinburgh, Scotland, UK. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF6": {
+                "ref_id": "b6",
+                "title": "Scan: Learning to classify images without labels",
+                "authors": [
+                    {
+                        "first": "Wouter",
+                        "middle": [],
+                        "last": "Van Gansbeke",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Simon",
+                        "middle": [],
+                        "last": "Vandenhende",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Stamatios",
+                        "middle": [],
+                        "last": "Georgoulis",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Marc",
+                        "middle": [],
+                        "last": "Proesmans",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Luc",
+                        "middle": [],
+                        "last": "Van Gool",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Wouter Van Gansbeke, Simon Vandenhende, Stamatios Georgoulis, Marc Proesmans, and Luc Van Gool. 2020. Scan: Learning to classify images without labels.",
+                "links": null
+            },
+            "BIBREF7": {
+                "ref_id": "b7",
+                "title": "Assessing bert's syntactic abilities",
+                "authors": [
+                    {
+                        "first": "Yoav",
+                        "middle": [],
+                        "last": "Goldberg",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Yoav Goldberg. 2019. Assessing bert's syntactic abilities. CoRR, abs/1901.05287.",
+                "links": null
+            },
+            "BIBREF8": {
+                "ref_id": "b8",
+                "title": "FewRel: A large-scale supervised few-shot relation classification dataset with state-of-the-art evaluation",
+                "authors": [
+                    {
+                        "first": "Xu",
+                        "middle": [],
+                        "last": "Han",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hao",
+                        "middle": [],
+                        "last": "Zhu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Pengfei",
+                        "middle": [],
+                        "last": "Yu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ziyun",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yuan",
+                        "middle": [],
+                        "last": "Yao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zhiyuan",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Maosong",
+                        "middle": [],
+                        "last": "Sun",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "4803--4809",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/D18-1514"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Xu Han, Hao Zhu, Pengfei Yu, Ziyun Wang, Yuan Yao, Zhiyuan Liu, and Maosong Sun. 2018. FewRel: A large-scale supervised few-shot relation classification dataset with state-of-the-art evaluation. In Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing, pages 4803-4809, Brussels, Belgium. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF9": {
+                "ref_id": "b9",
+                "title": "A structural probe for finding syntax in word representations",
+                "authors": [
+                    {
+                        "first": "John",
+                        "middle": [],
+                        "last": "Hewitt",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [
+                            "D"
+                        ],
+                        "last": "Manning",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/N19-1419"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "John Hewitt and Christopher D. Manning. 2019. A structural probe for finding syntax in word representations. In Proceedings of the 2019",
+                "links": null
+            },
+            "BIBREF10": {
+                "ref_id": "b10",
+                "title": "Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies",
+                "authors": [],
+                "year": null,
+                "venue": "Long and Short Papers",
+                "volume": "1",
+                "issue": "",
+                "pages": "4129--4138",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies, Volume 1 (Long and Short Papers), pages 4129-4138, Minneapolis, Minnesota. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF11": {
+                "ref_id": "b11",
+                "title": "Selfore: Selfsupervised relational feature learning for open relation extraction",
+                "authors": [
+                    {
+                        "first": "Xuming",
+                        "middle": [],
+                        "last": "Hu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chenwei",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yusong",
+                        "middle": [],
+                        "last": "Xu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Lijie",
+                        "middle": [],
+                        "last": "Wen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Philip",
+                        "middle": [
+                            "S"
+                        ],
+                        "last": "Yu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Xuming Hu, Chenwei Zhang, Yusong Xu, Lijie Wen, and Philip S. Yu. 2020. Selfore: Self- supervised relational feature learning for open relation extraction.",
+                "links": null
+            },
+            "BIBREF12": {
+                "ref_id": "b12",
+                "title": "What does BERT learn about the structure of language?",
+                "authors": [
+                    {
+                        "first": "Ganesh",
+                        "middle": [],
+                        "last": "Jawahar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Beno\u00eet",
+                        "middle": [],
+                        "last": "Sagot",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Djam\u00e9",
+                        "middle": [],
+                        "last": "Seddah",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "3651--3657",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/P19-1356"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Ganesh Jawahar, Beno\u00eet Sagot, and Djam\u00e9 Seddah. 2019. What does BERT learn about the structure of language? In Proceedings of the 57th Annual Meet- ing of the Association for Computational Linguistics, pages 3651-3657, Florence, Italy. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF13": {
+                "ref_id": "b13",
+                "title": "Discretestate variational autoencoders for joint discovery and factorization of relations",
+                "authors": [
+                    {
+                        "first": "Diego",
+                        "middle": [],
+                        "last": "Marcheggiani",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ivan",
+                        "middle": [],
+                        "last": "Titov",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Transactions of the Association for Computational Linguistics",
+                "volume": "4",
+                "issue": "",
+                "pages": "231--244",
+                "other_ids": {
+                    "DOI": [
+                        "10.1162/tacl_a_00095"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Diego Marcheggiani and Ivan Titov. 2016. Discrete- state variational autoencoders for joint discovery and factorization of relations. Transactions of the Association for Computational Linguistics, 4:231- 244.",
+                "links": null
+            },
+            "BIBREF14": {
+                "ref_id": "b14",
+                "title": "Dissecting contextual word embeddings: Architecture and representation",
+                "authors": [
+                    {
+                        "first": "Matthew",
+                        "middle": [],
+                        "last": "Peters",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mark",
+                        "middle": [],
+                        "last": "Neumann",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Luke",
+                        "middle": [],
+                        "last": "Zettlemoyer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Wen-Tau",
+                        "middle": [],
+                        "last": "Yih",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "1499--1509",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/D18-1179"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Matthew Peters, Mark Neumann, Luke Zettlemoyer, and Wen-tau Yih. 2018. Dissecting contextual word embeddings: Architecture and representation. In Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing, pages 1499-1509, Brussels, Belgium. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF15": {
+                "ref_id": "b15",
+                "title": "Preemptive information extraction using unrestricted relation discovery",
+                "authors": [
+                    {
+                        "first": "Yusuke",
+                        "middle": [],
+                        "last": "Shinyama",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Satoshi",
+                        "middle": [],
+                        "last": "Sekine",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2006,
+                "venue": "Proceedings of the Human Language Technology Conference of the NAACL, Main Conference",
+                "volume": "",
+                "issue": "",
+                "pages": "304--311",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Yusuke Shinyama and Satoshi Sekine. 2006. Pre- emptive information extraction using unrestricted relation discovery. In Proceedings of the Human Language Technology Conference of the NAACL, Main Conference, pages 304-311, New York City, USA. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF16": {
+                "ref_id": "b16",
+                "title": "Unsupervised information extraction: Regularizing discriminative approaches with relation distribution losses",
+                "authors": [
+                    {
+                        "first": "\u00c9tienne",
+                        "middle": [],
+                        "last": "Simon",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Vincent",
+                        "middle": [],
+                        "last": "Guigue",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Benjamin",
+                        "middle": [],
+                        "last": "Piwowarski",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "1378--1387",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/P19-1133"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "\u00c9tienne Simon, Vincent Guigue, and Benjamin Piwowarski. 2019. Unsupervised information extraction: Regularizing discriminative approaches with relation distribution losses. In Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics, pages 1378-1387, Florence, Italy. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF17": {
+                "ref_id": "b17",
+                "title": "Matching the blanks: Distributional similarity for relation learning",
+                "authors": [
+                    {
+                        "first": "Baldini",
+                        "middle": [],
+                        "last": "Livio",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nicholas",
+                        "middle": [],
+                        "last": "Soares",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jeffrey",
+                        "middle": [],
+                        "last": "Fitzgerald",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tom",
+                        "middle": [],
+                        "last": "Ling",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Kwiatkowski",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Livio Baldini Soares, Nicholas FitzGerald, Jeffrey Ling, and Tom Kwiatkowski. 2019. Matching the blanks: Distributional similarity for relation learning. CoRR, abs/1906.03158.",
+                "links": null
+            },
+            "BIBREF18": {
+                "ref_id": "b18",
+                "title": "Revisiting unsupervised relation extraction",
+                "authors": [
+                    {
+                        "first": "Phong",
+                        "middle": [],
+                        "last": "Thy Thy Tran",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sophia",
+                        "middle": [],
+                        "last": "Le",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Ananiadou",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "7498--7505",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/2020.acl-main.669"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Thy Thy Tran, Phong Le, and Sophia Ananiadou. 2020. Revisiting unsupervised relation extraction. In Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics, pages 7498-7505, Online. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF19": {
+                "ref_id": "b19",
+                "title": "Visualizing data using t-sne",
+                "authors": [
+                    {
+                        "first": "Laurens",
+                        "middle": [],
+                        "last": "Van Der Maaten",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Geoffrey",
+                        "middle": [],
+                        "last": "Hinton",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2008,
+                "venue": "Journal of Machine Learning Research",
+                "volume": "9",
+                "issue": "86",
+                "pages": "2579--2605",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Laurens van der Maaten and Geoffrey Hinton. 2008. Visualizing data using t-sne. Journal of Machine Learning Research, 9(86):2579-2605.",
+                "links": null
+            },
+            "BIBREF20": {
+                "ref_id": "b20",
+                "title": "ENPAR:enhancing entity and entity pair representations for joint entity relation extraction",
+                "authors": [
+                    {
+                        "first": "Yijun",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Changzhi",
+                        "middle": [],
+                        "last": "Sun",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yuanbin",
+                        "middle": [],
+                        "last": "Wu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hao",
+                        "middle": [],
+                        "last": "Zhou",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Lei",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Junchi",
+                        "middle": [],
+                        "last": "Yan",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2021,
+                "venue": "Proceedings of the 16th Conference of the European Chapter",
+                "volume": "",
+                "issue": "",
+                "pages": "2877--2887",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Yijun Wang, Changzhi Sun, Yuanbin Wu, Hao Zhou, Lei Li, and Junchi Yan. 2021. ENPAR:enhancing entity and entity pair representations for joint entity relation extraction. In Proceedings of the 16th Conference of the European Chapter of the Association for Computational Linguistics: Main Volume, pages 2877-2887, Online. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF21": {
+                "ref_id": "b21",
+                "title": "Open relation extraction: Relational knowledge transfer from supervised data to unsupervised data",
+                "authors": [
+                    {
+                        "first": "Ruidong",
+                        "middle": [],
+                        "last": "Wu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yuan",
+                        "middle": [],
+                        "last": "Yao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xu",
+                        "middle": [],
+                        "last": "Han",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ruobing",
+                        "middle": [],
+                        "last": "Xie",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zhiyuan",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Fen",
+                        "middle": [],
+                        "last": "Lin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Leyu",
+                        "middle": [],
+                        "last": "Lin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Maosong",
+                        "middle": [],
+                        "last": "Sun",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing (EMNLP-IJCNLP)",
+                "volume": "",
+                "issue": "",
+                "pages": "219--228",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/D19-1021"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Ruidong Wu, Yuan Yao, Xu Han, Ruobing Xie, Zhiyuan Liu, Fen Lin, Leyu Lin, and Maosong Sun. 2019. Open relation extraction: Relational knowl- edge transfer from supervised data to unsupervised data. In Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing (EMNLP-IJCNLP), pages 219-228, Hong Kong, China. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF22": {
+                "ref_id": "b22",
+                "title": "Distance metric learning, with application to clustering with side-information",
+                "authors": [
+                    {
+                        "first": "Eric",
+                        "middle": [
+                            "P"
+                        ],
+                        "last": "Xing",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Andrew",
+                        "middle": [
+                            "Y"
+                        ],
+                        "last": "Ng",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Michael",
+                        "middle": [
+                            "I"
+                        ],
+                        "last": "Jordan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Stuart",
+                        "middle": [],
+                        "last": "Russell",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2002,
+                "venue": "Proceedings of the 15th International Conference on Neural Information Processing Systems, NIPS'02",
+                "volume": "",
+                "issue": "",
+                "pages": "521--528",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Eric P. Xing, Andrew Y. Ng, Michael I. Jordan, and Stuart Russell. 2002. Distance metric learning, with application to clustering with side-information. In Proceedings of the 15th International Conference on Neural Information Processing Systems, NIPS'02, page 521-528, Cambridge, MA, USA. MIT Press.",
+                "links": null
+            },
+            "BIBREF23": {
+                "ref_id": "b23",
+                "title": "Explicit semantic ranking for academic search via knowledge graph embedding",
+                "authors": [
+                    {
+                        "first": "Chenyan",
+                        "middle": [],
+                        "last": "Xiong",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Russell",
+                        "middle": [],
+                        "last": "Power",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jamie",
+                        "middle": [],
+                        "last": "Callan",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Proceedings of the 26th International Conference on World Wide Web, WWW '17",
+                "volume": "",
+                "issue": "",
+                "pages": "1271--1279",
+                "other_ids": {
+                    "DOI": [
+                        "10.1145/3038912.3052558"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Chenyan Xiong, Russell Power, and Jamie Callan. 2017. Explicit semantic ranking for academic search via knowledge graph embedding. In Proceedings of the 26th International Conference on World Wide Web, WWW '17, page 1271-1279, Republic and Canton of Geneva, CHE. International World Wide Web Conferences Steering Committee.",
+                "links": null
+            },
+            "BIBREF24": {
+                "ref_id": "b24",
+                "title": "Structured relation discovery using generative models",
+                "authors": [
+                    {
+                        "first": "Limin",
+                        "middle": [],
+                        "last": "Yao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Aria",
+                        "middle": [],
+                        "last": "Haghighi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sebastian",
+                        "middle": [],
+                        "last": "Riedel",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Andrew",
+                        "middle": [],
+                        "last": "Mccallum",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2011,
+                "venue": "Proceedings of the 2011 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "1456--1466",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Limin Yao, Aria Haghighi, Sebastian Riedel, and Andrew McCallum. 2011. Structured relation discovery using generative models. In Proceedings of the 2011 Conference on Empirical Methods in Natural Language Processing, pages 1456- 1466, Edinburgh, Scotland, UK. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF25": {
+                "ref_id": "b25",
+                "title": "TextRunner: Open information extraction on the web",
+                "authors": [
+                    {
+                        "first": "Alexander",
+                        "middle": [],
+                        "last": "Yates",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Michele",
+                        "middle": [],
+                        "last": "Banko",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Matthew",
+                        "middle": [],
+                        "last": "Broadhead",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Michael",
+                        "middle": [],
+                        "last": "Cafarella",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Oren",
+                        "middle": [],
+                        "last": "Etzioni",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Stephen",
+                        "middle": [],
+                        "last": "Soderland",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2007,
+                "venue": "Proceedings of Human Language Technologies: The Annual Conference of the North American Chapter of the Association for Computational Linguistics (NAACL-HLT)",
+                "volume": "",
+                "issue": "",
+                "pages": "25--26",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Alexander Yates, Michele Banko, Matthew Broadhead, Michael Cafarella, Oren Etzioni, and Stephen Soderland. 2007. TextRunner: Open information extraction on the web. In Proceedings of Human Language Technologies: The Annual Conference of the North American Chapter of the Association for Computational Linguistics (NAACL-HLT), pages 25-26, Rochester, New York, USA. Association for Computational Linguistics.",
+                "links": null
+            }
+        },
+        "ref_entries": {
+            "FIGREF0": {
+                "num": null,
+                "text": "Figure 3: Clustering results with different numbers of pre-defined training relations.",
+                "uris": null,
+                "fig_num": "3",
+                "type_str": "figure"
+            },
+            "FIGREF1": {
+                "num": null,
+                "text": "Figure 4: Model performance with different amounts of labeled data.",
+                "uris": null,
+                "fig_num": "4",
+                "type_str": "figure"
+            },
+            "FIGREF2": {
+                "num": null,
+                "text": "Figure 5: Model performance with different \u03bb.",
+                "uris": null,
+                "fig_num": "5",
+                "type_str": "figure"
+            },
+            "FIGREF3": {
+                "num": null,
+                "text": "Figure 6: Visualization of the relation representation after t-SNE dimension reduction. The representations are colored with their ground-truth relation labels. These three sequentially illustrate the feature representation of initial sate, after reconstruction pre-training, and after training. All figures visualize the clustering result for 600 instances of randomly selected 6 novel relations on FewRel test dataset.",
+                "uris": null,
+                "fig_num": "6",
+                "type_str": "figure"
+            },
+            "TABREF0": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "",
+                "html": null,
+                "num": null
+            },
+            "TABREF1": {
+                "content": "<table><tr><td>2</td><td>Pre-train clustering network by</td></tr><tr><td/><td>minimize reconstruction loss</td></tr><tr><td/><td>\u03a6 = \u03a6 -\u03b7\u2207 \u03a6 (g(h i ), h i );</td></tr><tr><td colspan=\"2\">3 end</td></tr><tr><td colspan=\"2\">4 repeat</td></tr><tr><td>5</td><td>generate pseudo labels \u0177 by equation 7;</td></tr><tr><td>6</td><td>refine entity pair representation</td></tr><tr><td>7</td><td/></tr></table>",
+                "type_str": "table",
+                "text": "Algorithm 1: The RoCORE Method Input: novel relation dataset D u = {s u j }, predefined relation dataset D = {(s i , y i )}, model parameters \u0398, \u03a6, \u03a8 for Entity pair encoder, Relation-oriented clustering module, Relation classifiers, respectively, and learning rate \u03b7. 1 for epoch \u2190 1 to L do",
+                "html": null,
+                "num": null
+            },
+            "TABREF2": {
+                "content": "<table><tr><td>Hyper-parameters</td><td>value</td></tr><tr><td>optimizer</td><td>Adam</td></tr><tr><td>learning rate</td><td>1e-4</td></tr><tr><td>batch size</td><td>100</td></tr><tr><td>pre-training epochs L</td><td>10</td></tr><tr><td>BCE loss coefficient \u03c3</td><td>2</td></tr><tr><td>center loss coefficient \u03bb for FewRel</td><td>0.005</td></tr><tr><td colspan=\"2\">center loss coefficient \u03bb for TACRED 0.001</td></tr><tr><td>ramp-up coefficient \u00b5 0</td><td>1.0</td></tr><tr><td>ramp-up length T</td><td>10</td></tr></table>",
+                "type_str": "table",
+                "text": ". Etype+ is a simple and effective method relying only on entity types. The same link predictor as in Hyper-parameter settings.",
+                "html": null,
+                "num": null
+            },
+            "TABREF4": {
+                "content": "<table><tr><td>Dataset</td><td>Method</td><td>Prec.</td><td>B 3 Rec.</td><td>F 1</td><td>Hom.</td><td>V-measure Comp.</td><td>F 1</td><td>ARI</td></tr><tr><td/><td colspan=\"2\">VAE(Marcheggiani and Titov, 2016) 0.309</td><td>0.446</td><td>0.365</td><td>0.448</td><td>0.500</td><td>0.473</td><td>0.291</td></tr><tr><td/><td>RW-HAC(Elsahar et al., 2017)</td><td>0.256</td><td>0.492</td><td>0.337</td><td>0.391</td><td>0.485</td><td>0.433</td><td>0.250</td></tr><tr><td/><td>EType+(Tran et al., 2020)</td><td>0.238</td><td>0.485</td><td>0.319</td><td>0.364</td><td>0.463</td><td>0.408</td><td>0.249</td></tr><tr><td>FewRel</td><td>SelfORE(Hu et al., 2020)</td><td>0.672</td><td>0.685</td><td>0.678</td><td>0.779</td><td>0.788</td><td>0.783</td><td>0.647</td></tr><tr><td/><td>RSN(Wu et al., 2019)</td><td>0.486</td><td>0.742</td><td>0.589</td><td>0.644</td><td>0.787</td><td>0.708</td><td>0.453</td></tr><tr><td/><td>RSN-BERT</td><td>0.585</td><td>0.899</td><td>0.709</td><td>0.696</td><td>0.889</td><td>0.781</td><td>0.532</td></tr><tr><td/><td>RoCORE</td><td colspan=\"7\">0.752 17 0.846 09 0.796 11 0.838 10 0.883 06 0.860 07 0.709 23</td></tr><tr><td/><td colspan=\"2\">VAE(Marcheggiani and Titov, 2016) 0.247</td><td>0.564</td><td>0.343</td><td>0.208</td><td>0.362</td><td>0.264</td><td>0.159</td></tr><tr><td/><td>RW-HAC(Elsahar et al., 2017)</td><td>0.426</td><td>0.633</td><td>0.509</td><td>0.469</td><td>0.597</td><td>0.526</td><td>0.281</td></tr><tr><td/><td>EType+(Tran et al., 2020)</td><td>0.302</td><td>0.803</td><td>0.439</td><td>0.260</td><td>0.607</td><td>0.364</td><td>0.143</td></tr><tr><td>TACRED</td><td>SelfORE(Hu et al., 2020)</td><td>0.576</td><td>0.510</td><td>0.541</td><td>0.630</td><td>0.608</td><td>0.619</td><td>0.447</td></tr><tr><td/><td>RSN(Wu et al., 2019)</td><td>0.628</td><td>0.634</td><td>0.631</td><td>0.624</td><td>0.663</td><td>0.643</td><td>0.459</td></tr><tr><td/><td>RSN-BERT</td><td>0.795</td><td>0.878</td><td>0.834</td><td>0.849</td><td>0.870</td><td>0.859</td><td>0.756</td></tr></table>",
+                "type_str": "table",
+                "text": "RoCORE 0.871 42 0.849 37 0.860 35 0.895 32 0.881 20 0.888 24 0.812 64 Main results on two relation extraction datasets. The subscript represents the corresponding standard deviation (e.g., 0.796 11 indicates 0.796 \u00b1 0.011). Experimental results show that our method reduces the error rate by 29.2%(0.709\u21920.796) and 15.7%(0.834\u21920.860), on two datasets respectively.",
+                "html": null,
+                "num": null
+            },
+            "TABREF5": {
+                "content": "<table><tr><td>Dataset</td><td>Method</td><td>Prec.</td><td>Rec.</td><td>F 1</td></tr><tr><td/><td>w/o center loss</td><td>0.726</td><td/><td/></tr><tr><td>FewRel</td><td/><td/><td/><td/></tr></table>",
+                "type_str": "table",
+                "text": "The results show that the model performance is degraded if L center is removed, indicating that the guidance of supervision signals from predefined relations provide valuable information for learning the relation-oriented representations. It is worth noting that the reconstruction term has an important role in the clustering module. Without 32 0.774 31 0.749 31 w/o reconstruction 0.512 38 0.573 17 0.540 25 w/o CE 0.662 67 0.787 54 0.719 47 RoCORE 0.752 17 0.846 09 0.796 11 TACRED w/o center loss 0.818 57 0.842 37 0.830 41 w/o reconstruction 0.549 35 0.483 30 0.514 31 w/o CE 0.706 45 0.776 51 0.739 47 RoCORE 0.871 42 0.849 37 0.860 35",
+                "html": null,
+                "num": null
+            },
+            "TABREF6": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "Abalation study of our method. This table only lists the results of metric B 3 . For results of other metrics, please refer to the Table 5 in Appendix C.",
+                "html": null,
+                "num": null
+            },
+            "TABREF7": {
+                "content": "<table><tr><td>Task</td><td>Method</td><td>Prec.</td><td>Rec.</td><td>F 1</td></tr><tr><td/><td>RSN</td><td>0.349</td><td>0.590</td><td>0.439</td></tr><tr><td>F \u2192 T</td><td colspan=\"2\">RSN-BERT 0.337</td><td>0.866</td><td>0.486</td></tr><tr><td/><td>RoCORE</td><td colspan=\"3\">0.621 28 0.602 51 0.611 34</td></tr><tr><td/><td>RSN</td><td>0.225</td><td>0.529</td><td>0.316</td></tr><tr><td>T \u2192 F</td><td colspan=\"2\">RSN-BERT 0.261</td><td>0.861</td><td>0.400</td></tr><tr><td/><td>RoCORE</td><td colspan=\"3\">0.687 36 0.766 46 0.724 26</td></tr></table>",
+                "type_str": "table",
+                "text": "Results on two constructed cross-domain tasks. F means FewRel, which is from encyclopedia domain. T means TACRED, which is from news and web domain. This table only lists the results of metric B 3 . For results of other metrics, please refer to the Table 6 in Appendix C.",
+                "html": null,
+                "num": null
+            }
+        }
+    }
+}

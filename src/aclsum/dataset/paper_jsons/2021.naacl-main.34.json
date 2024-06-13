@@ -1,0 +1,3481 @@
+{
+    "paper_id": "2021",
+    "header": {
+        "generated_with": "S2ORC 1.0.0",
+        "date_generated": "2023-06-16T11:58:18.586585Z"
+    },
+    "title": "Aspect-Controlled Neural Argument Generation",
+    "authors": [
+        {
+            "first": "Benjamin",
+            "middle": [],
+            "last": "Schiller",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "Technical University of Darmstadt",
+                "location": {}
+            },
+            "email": ""
+        },
+        {
+            "first": "Johannes",
+            "middle": [],
+            "last": "Daxenberger",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "Technical University of Darmstadt",
+                "location": {}
+            },
+            "email": ""
+        },
+        {
+            "first": "Iryna",
+            "middle": [],
+            "last": "Gurevych",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "Technical University of Darmstadt",
+                "location": {}
+            },
+            "email": ""
+        }
+    ],
+    "year": "",
+    "venue": null,
+    "identifiers": {},
+    "abstract": "We rely on arguments in our daily lives to deliver our opinions and base them on evidence, making them more convincing in turn. However, finding and formulating arguments can be challenging. In this work, we present the Arg-CTRL-a language model for argument generation that can be controlled to generate sentence-level arguments for a given topic, stance, and aspect. We define argument aspect detection as a necessary method to allow this fine-granular control and crowdsource a dataset with 5,032 arguments annotated with aspects. Our evaluation shows that the Arg-CTRL is able to generate high-quality, aspectspecific arguments, applicable to automatic counter-argument generation. We publish the model weights and all datasets and code to train the Arg-CTRL. 1 Nuclear reactors produce radioactive waste ...",
+    "pdf_parse": {
+        "paper_id": "2021",
+        "_pdf_hash": "",
+        "abstract": [
+            {
+                "text": "We rely on arguments in our daily lives to deliver our opinions and base them on evidence, making them more convincing in turn. However, finding and formulating arguments can be challenging. In this work, we present the Arg-CTRL-a language model for argument generation that can be controlled to generate sentence-level arguments for a given topic, stance, and aspect. We define argument aspect detection as a necessary method to allow this fine-granular control and crowdsource a dataset with 5,032 arguments annotated with aspects. Our evaluation shows that the Arg-CTRL is able to generate high-quality, aspectspecific arguments, applicable to automatic counter-argument generation. We publish the model weights and all datasets and code to train the Arg-CTRL. 1 Nuclear reactors produce radioactive waste ...",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            }
+        ],
+        "body_text": [
+            {
+                "text": "Language models (Bengio et al., 2003) allow to generate text through learned distributions of a language and have been applied to a variety of areas like machine translation (Bahdanau et al., 2015) , summarization (Paulus et al., 2018) , or dialogue systems (Wen et al., 2017) . A rather new field for these models is the task of producing text with argumentative content (Wang and Ling, 2016) . We believe this technology can support humans in the challenging task of finding and formulating arguments. A politician might use this to prepare for a debate with a political opponent or for a press conference. It may be used to support students in writing argumentative essays or to enrich one-sided discussions with counter-arguments. In contrast to retrieval methods, generation allows to combine and stylistically adapt text (e.g. arguments) based on a given input (usually the beginning of a sentence). Current argument generation models, however, produce lengthy texts and allow the user little control over the aspect the argument should address (Hua et al., 2019; Hua and Wang, 2018) . We show that argument generation can be enhanced by allowing for a fine-grained control and limiting the argument to a single but concise sentence.",
+                "cite_spans": [
+                    {
+                        "start": 16,
+                        "end": 37,
+                        "text": "(Bengio et al., 2003)",
+                        "ref_id": "BIBREF3"
+                    },
+                    {
+                        "start": 174,
+                        "end": 197,
+                        "text": "(Bahdanau et al., 2015)",
+                        "ref_id": "BIBREF2"
+                    },
+                    {
+                        "start": 214,
+                        "end": 235,
+                        "text": "(Paulus et al., 2018)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 258,
+                        "end": 276,
+                        "text": "(Wen et al., 2017)",
+                        "ref_id": "BIBREF44"
+                    },
+                    {
+                        "start": 372,
+                        "end": 393,
+                        "text": "(Wang and Ling, 2016)",
+                        "ref_id": "BIBREF43"
+                    },
+                    {
+                        "start": 1051,
+                        "end": 1069,
+                        "text": "(Hua et al., 2019;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 1070,
+                        "end": 1089,
+                        "text": "Hua and Wang, 2018)",
+                        "ref_id": "BIBREF21"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Controllable language models like the CTRL (Keskar et al., 2019) allow to condition the model at training time to certain control codes. At inference, these can be used to direct the model's output with regard to content or style. We build upon this architecture to control argument generation based solely on a given topic, stance, and argument aspect. For instance, to enforce focus on the aspect of cancer for the topic of nuclear energy, we input a control code \"Nuclear Energy CON cancer\" that creates a contra argument discussing this aspect, for instance: \"Studies show that people living next to nuclear power plants have a higher risk of developing cancer.\".",
+                "cite_spans": [
+                    {
+                        "start": 43,
+                        "end": 64,
+                        "text": "(Keskar et al., 2019)",
+                        "ref_id": "BIBREF24"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "To obtain control codes from training data, we pre-define a set of topics to retrieve documents for and rely on an existing stance detection model to classify whether a sentence argues in favor (pro) or against (con) the given topic (Stab et al., 2018a) . Regarding argument aspect detection, however, past work has two drawbacks: it either uses simple rule-based extraction of verb-and noun-phrases (Fujii and Ishikawa, 2006) or the definition of aspects is based on target-concepts located within the same sentence (Gemechu and Reed, 2019) . Aspects as we require and define them are not bound to any part-of-speech tag and (1) hold the core reason upon which the conclusion/evidence is built and (2) encode the stance towards a general but not necessarily explicitly mentioned topic the argument discusses. For instance:",
+                "cite_spans": [
+                    {
+                        "start": 233,
+                        "end": 253,
+                        "text": "(Stab et al., 2018a)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 400,
+                        "end": 426,
+                        "text": "(Fujii and Ishikawa, 2006)",
+                        "ref_id": "BIBREF12"
+                    },
+                    {
+                        "start": 517,
+                        "end": 541,
+                        "text": "(Gemechu and Reed, 2019)",
+                        "ref_id": "BIBREF13"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Topic: Nuclear Energy Argument: Running nuclear reactors is costly as it involves long-time disposal of radioactive waste.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "The evidence of this argument is based upon the two underlined aspects. While these aspects encode a negative stance towards the topic of \"Nuclear Energy\", the topic itself is not mentioned explicitly in the argument.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Our final controlled argument generation pipeline (see Figure 1 ) works as follows: (1) We gather several million documents for eight different topics from two large data sources. All sentences are classified into pro-, con-, and non-arguments. We detect aspects of all arguments with a model trained on a novel dataset and concatenate arguments with the same topic, stance, and aspect into training documents. (2) We use the collected classified data to condition the Arg-CTRL on the topics, stances, and aspects of all gathered arguments.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 62,
+                        "end": 63,
+                        "text": "1",
+                        "ref_id": "FIGREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "(3) At inference, passing the control code [Topic] [Stance] [Aspect] to the model will generate an argument that follows these commands.",
+                "cite_spans": [
+                    {
+                        "start": 43,
+                        "end": 59,
+                        "text": "[Topic] [Stance]",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Our evaluation shows that the Arg-CTRL is able to produce aspect-specific, high-quality arguments, applicable to automatic counter-argument generation. The contributions are as follows: (i) We adapt and fine-tune the CTRL for aspect-controlled neural argument generation. (ii) We show that detecting argument aspects and conditioning the generation model on them are necessary steps to control the model's training process and its perspective while generating. (iii) We propose several methods to analyze and evaluate the quality of (controllable) argument generation models. (iv) We develop a new scheme to annotate argument aspects and release a dataset with 5,032 samples.",
+                "cite_spans": [
+                    {
+                        "start": 461,
+                        "end": 466,
+                        "text": "(iii)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Argument Aspect Detection Early work by Fujii and Ishikawa (2006) focuses mainly on Japanese and restricts aspects to noun-and verb-phrases, extracted via hand-crafted rules. Boltu\u017ei\u0107 and \u0160najder (2017) extract noun-phrases and aggregate them into concepts to analyze the microstructure of claims. Misra et al. (2015) introduce facets as low level issues, used to support or attack an argumentation. In that, facets are conceptually similar to aspects, but not explicitly phrased and instead seen as abstract concepts that define clusters of semantically similar text-spans of summaries. Bilu et al. (2019) define commonplace arguments that are valid in several situations for specified actions (e.g. \"ban\") and topics (e.g. \"smoking\"). These actions are similar to aspects, but limited in number and manually defined. Gemechu and Reed (2019) detect, amongst others, concepts and aspects in arguments with models trained on expert annotations. However, in their definition, aspects have to point to a target concept mentioned in the argument. In our definition, aspects refer to a general topic which is not necessarily part of the sentence and our annotation scheme is applicable by non-experts.",
+                "cite_spans": [
+                    {
+                        "start": 40,
+                        "end": 65,
+                        "text": "Fujii and Ishikawa (2006)",
+                        "ref_id": "BIBREF12"
+                    },
+                    {
+                        "start": 175,
+                        "end": 202,
+                        "text": "Boltu\u017ei\u0107 and \u0160najder (2017)",
+                        "ref_id": "BIBREF6"
+                    },
+                    {
+                        "start": 298,
+                        "end": 317,
+                        "text": "Misra et al. (2015)",
+                        "ref_id": "BIBREF30"
+                    },
+                    {
+                        "start": 588,
+                        "end": 606,
+                        "text": "Bilu et al. (2019)",
+                        "ref_id": "BIBREF4"
+                    },
+                    {
+                        "start": 819,
+                        "end": 842,
+                        "text": "Gemechu and Reed (2019)",
+                        "ref_id": "BIBREF13"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "The concept of framing dimensions (Boydstun et al., 2014) is close to argument aspects. In the field of argument mining, Ajjour et al. (2019) recently applied frames to label argument clusters. Yet, their method does not allow to detect frames. Other works present methods to automatically label sentences of news articles and online discussions with frames (Hartmann et al., 2019; Naderi and Hirst, 2017) . These methods are, however, limited to a small set of predefined frames that represent high-level concepts. Contrarily, we operate on a fine-grained span-level to detect aspects that are explicitly mentioned in arguments.",
+                "cite_spans": [
+                    {
+                        "start": 34,
+                        "end": 57,
+                        "text": "(Boydstun et al., 2014)",
+                        "ref_id": "BIBREF7"
+                    },
+                    {
+                        "start": 121,
+                        "end": 141,
+                        "text": "Ajjour et al. (2019)",
+                        "ref_id": "BIBREF0"
+                    },
+                    {
+                        "start": 358,
+                        "end": 381,
+                        "text": "(Hartmann et al., 2019;",
+                        "ref_id": "BIBREF18"
+                    },
+                    {
+                        "start": 382,
+                        "end": 405,
+                        "text": "Naderi and Hirst, 2017)",
+                        "ref_id": "BIBREF31"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "Argument Generation Early approaches rely on rules from argumentation theory and user preference models (Carenini and Moore, 2006; Zukerman et al., 1998) . In a more recent work, Sato et al. (2015) construct rules to find arguments in a large data source, which are then filtered and ordered with a neural network based ranker. Baff et al. (2019) use a clustering and regression approach to assemble discourse units (major claims, pro and con statements) to argumentative texts. However, most of these approaches rely on hand-crafted features and do not generalize well. Moreover, they all require permanent access to large data sources and are not able to generate new arguments.",
+                "cite_spans": [
+                    {
+                        "start": 104,
+                        "end": 130,
+                        "text": "(Carenini and Moore, 2006;",
+                        "ref_id": "BIBREF8"
+                    },
+                    {
+                        "start": 131,
+                        "end": 153,
+                        "text": "Zukerman et al., 1998)",
+                        "ref_id": "BIBREF48"
+                    },
+                    {
+                        "start": 179,
+                        "end": 197,
+                        "text": "Sato et al. (2015)",
+                        "ref_id": "BIBREF34"
+                    },
+                    {
+                        "start": 328,
+                        "end": 346,
+                        "text": "Baff et al. (2019)",
+                        "ref_id": "BIBREF1"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "Recently, research on generating arguments with language models gained more attention. Hua and Wang (2019) use a sequence to sequence model (Sutskever et al., 2014) to generate argumentative text by attending to the input and keyphrases automatically extracted for the input from, for example, Wikipedia. Other work focuses on generating argumentative dialogue (Le et al., 2018) and counterarguments (Hidey and McKeown, 2019; Hua et al., 2019) based on a given input sentence, or on generating summaries from a set of arguments (Wang and Ling, 2016) . Contrarily, we train a language model that does not require a sentence-level input for generation and allows for direct control over the topic, stance, and aspect of the produced argument. Xing et al. (2017) design a language model that attends to topic information to generate responses for chatbots. Dathathri et al. (2019) train two models that control the sentiment and topic of the output of pre-trained language models at inference. Gretz et al. (2020a) fine-tune GPT-2 on existing, labeled datasets to generate claims for given topics. However, the latter works do not explore generation for such a fine-grained and explicit control as proposed in this work. We show that argument generation requires the concept of argument aspects to shape the produced argument's perspective and to allow for diverse arguments for a topic of interest.",
+                "cite_spans": [
+                    {
+                        "start": 87,
+                        "end": 106,
+                        "text": "Hua and Wang (2019)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 140,
+                        "end": 164,
+                        "text": "(Sutskever et al., 2014)",
+                        "ref_id": "BIBREF39"
+                    },
+                    {
+                        "start": 361,
+                        "end": 378,
+                        "text": "(Le et al., 2018)",
+                        "ref_id": "BIBREF27"
+                    },
+                    {
+                        "start": 400,
+                        "end": 425,
+                        "text": "(Hidey and McKeown, 2019;",
+                        "ref_id": "BIBREF19"
+                    },
+                    {
+                        "start": 426,
+                        "end": 443,
+                        "text": "Hua et al., 2019)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 528,
+                        "end": 549,
+                        "text": "(Wang and Ling, 2016)",
+                        "ref_id": "BIBREF43"
+                    },
+                    {
+                        "start": 741,
+                        "end": 759,
+                        "text": "Xing et al. (2017)",
+                        "ref_id": "BIBREF46"
+                    },
+                    {
+                        "start": 854,
+                        "end": 877,
+                        "text": "Dathathri et al. (2019)",
+                        "ref_id": "BIBREF10"
+                    },
+                    {
+                        "start": 991,
+                        "end": 1011,
+                        "text": "Gretz et al. (2020a)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "2"
+            },
+            {
+                "text": "Argument aspect detection is necessary for our argument generation pipeline, as it allows for a finegrained control over the generation process. We create a new dataset, as existing approaches either rely on coarse-grained frames or cannot be applied by non-expert annonators in a scalable manner.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Argument Aspect Detection",
+                "sec_num": "3"
+            },
+            {
+                "text": "We base our new aspect detection dataset on the UKP Sentential Argument Mining Corpus (UKP-Corpus) by Stab et al. (2018b) , as it already contains sentence-level arguments and two of the control codes we aim to use: topics and stance labels. More precisely, it contains 25,474 manually labelled sentences for eight controversial topics in English. Each sample consists of a topic and a sentence, labelled as either being supporting, attacking, or no argument towards the given topic. As we are only interested in arguments, we do not consider the non-argumentative sentences.",
+                "cite_spans": [
+                    {
+                        "start": 102,
+                        "end": 121,
+                        "text": "Stab et al. (2018b)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Dataset Creation",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "Step 1: Preliminary annotations To ensure the feasibility of creating a dataset for this task, two experts (a post-doctoral researcher and an undergraduate student with NLP background) independently annotate 800 random samples (from four topics, 200 per topic) taken from the UKP-Corpus. The annotations are binary and on token-level, where multiple spans of tokens could be selected as aspects. The resulting inter-annotator agreement of this study is Krippendorff's \u03b1 u = .38. While this shows that the task is generally feasible, the agreement on exact token spans is rather low. Hence, in the following steps, we reduce the complexity of the annotation task.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Dataset Creation",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "Step 2: Annotation scheme Instead of free spanlevel annotations, we present annotators with a ranked list of aspect recommendations. To generate meaningful recommendations, we train a ranking model using the preliminary annotations (Step 1).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Dataset Creation",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "Step 2a: Data preparation for ranking To create training data for the ranker, we use a simple heuristic to calculate scores between 0 and 1 for all N-grams of a sentence by dividing the number of aspect tokens within an N-gram by its length N : # aspect tokens N \u2208 [0, 1]. Our analysis reveals that 96% (783 of 814) of all aspects in the preliminary annotation dataset only contain one to four tokens. We thus decide to ignore all candidates with more than four tokens. No other limitations or filtering mechanisms are applied.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Dataset Creation",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "Step 2b: Training the ranker We use BERT (Devlin et al., 2019) and MT-DNN2 (Liu et al., 2019) (base and large) to train a ranker. For training, we create five splits: (1) one in-topic split using a random subset from all four topics and (2) four cross-topic splits using a leave-one-topic-out strategy. The cross-topic setup allows us to estimate the ranker's performance on unseen topics of the UKP-Corpus.",
+                "cite_spans": [
+                    {
+                        "start": 41,
+                        "end": 62,
+                        "text": "(Devlin et al., 2019)",
+                        "ref_id": "BIBREF11"
+                    },
+                    {
+                        "start": 75,
+                        "end": 93,
+                        "text": "(Liu et al., 2019)",
+                        "ref_id": "BIBREF29"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Dataset Creation",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "A single data sample is represented by an argument and an 1-to 4-gram of this argument, separated by the BERT architecture's [SEP] token. This technique expands the 800 original samples of the dataset to around 80,336. The model is trained for 5 epochs, with a learning rate of 5 \u00d7 10 -5 , and a batch size of 8. We use the mean squared error as loss and take the recall@k to compare the models. The in-and cross-topic results of the bestperforming model (MT-DNN BASE ) are reported in Table 2 . All results are the average over runs with five different seeds (and over all four splits for the cross-topic experiments).",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 492,
+                        "end": 493,
+                        "text": "2",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Dataset Creation",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "Step 2c: Creating the annotation data For each of the four topics that are part of the preliminary annotation dataset, we use the in-topic model to predict aspects of 629 randomly chosen, unseen arguments from the UKP-Corpus. For the other four topics of the UKP-Corpus, we choose the best cross-topic model to predict aspects for the same amount of samples. To keep a recall of at least 80%, we choose the ten and fifteen highest-ranked aspect candidates for samples as predicted by the in-topic and cross-topic model, respectively. We remove aspect candidates that include punctuation, begin or end with stopwords, or contain digits.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Dataset Creation",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "Step 3: Annotation study We use Amazon Mechanical Turk to annotate each sample by eight different workers located in the US, paying $7.6 per hour (minimum wage is $7.25 per hour). Based on a subset of 232 samples, we compute an \u03b1 u of .67 between crowdworkers and experts (three doctoral researchers). Compared to the initial study, the new approach increases the inter-annotator agreement between experts by approx. 11 points (see App. A for further details on the annotation study). Based on this promising result, we create a dataset of 5,032 high-quality samples that are labelled with aspects, as well as with their original stance labels from the UKP-Corpus. We show the most frequent (lemmatized) aspects that appear in some topics in Table 1 .",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 748,
+                        "end": 749,
+                        "text": "1",
+                        "ref_id": "TABREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Dataset Creation",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "We create a cross-topic split with the data of two topics as test set (gun control, school uniforms), one topic as dev set (death penalty), and the remaining topics as train set and evaluate two models with it. First, we use the ranking approach described in Step 2a-2b to fine-tune MT-DNN BASE on the newly generated data (\"Ranker\"). At inference, we choose the top T aspects for each argument as candidates. We tune T on the dev set and find T = 2 to be the best choice. Second, we use BERT for sequence tagging (Wolf et al., 2020) and label all tokens of the samples with BIO tags. As previously done with the ranker, we experiment with BERT and MT-DNN weights and find BERT LARGE to be the best choice (trained for 5 epochs, with a learning rate of 1 \u00d7 10 -5 and a batch size of 32). We flatten the predictions for all test samples and calculate the F 1 , Precision, and Recall macro scores. All models are trained over five seeds and the averaged results are reported in Table 3 .",
+                "cite_spans": [
+                    {
+                        "start": 514,
+                        "end": 533,
+                        "text": "(Wolf et al., 2020)",
+                        "ref_id": "BIBREF45"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 982,
+                        "end": 983,
+                        "text": "3",
+                        "ref_id": "TABREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Evaluation",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "BERT LARGE predicts classes B and I with an F 1 of .65 and .53, hence aspects with more than one token are less well identified. A difference is to be expected, as the class balance of B's to I's is 2,768 to 2,103. While the ranker performs worse based on the shown metrics, it has a slightly higher recall for class I. We assume this is due to the fact that it generally ranks aspects with more than one token on top, i.e. there will often be at least one or more I's in the prediction. In contrast to that, BERT LARGE focuses more on shorter aspects, which is also in accordance with the average aspect length of 1.8 tokens per aspect in the dataset. In total, BERT LARGE outperforms the ranker by almost 6 percentage points in F 1 macro.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Evaluation",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "This section describes the data collection and preprocessing for the argument generation pipeline.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Data Collection Pipeline",
+                "sec_num": "4"
+            },
+            {
+                "text": "We aim to train a model that is able to transfer argumentative information concisely within a single sentence. We define such an argument as the combination of a topic and a sentence holding evidence with a specific stance towards this topic (Stab et al., 2018b) . Consequently, the following preprocessing steps ultimately target retrieval and classification of sentences. We notice that many sentences are not relevant with regard to the document's topic. To enforce topicrelevance, we decide to filter out all sentences that do not contain at least one token of the respective topic or its defined synonyms (see App. B). We use the ArgumenText API's6 argument and stance classification models (Stab et al., 2018a) to classify all sentences into argument or non-argument (F 1 macro = .7384), and remaining arguments into pro or con with regard to the topic (F 1 macro = .7661).",
+                "cite_spans": [
+                    {
+                        "start": 242,
+                        "end": 262,
+                        "text": "(Stab et al., 2018b)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 696,
+                        "end": 716,
+                        "text": "(Stab et al., 2018a)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Data Collection Pipeline",
+                "sec_num": "4"
+            },
+            {
+                "text": "Aspect Detection We detect aspects on all remaining arguments. To speed up the detection on millions of sentences, we use BERT BASE instead of BERT LARGE (see Table 3 ).",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 165,
+                        "end": 166,
+                        "text": "3",
+                        "ref_id": "TABREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Data Collection Pipeline",
+                "sec_num": "4"
+            },
+            {
+                "text": "Training Document Generation We create the final training documents for the argument generation model by concatenating all arguments that have the same topic, stance, and aspect (i.e. the same control code). Further, we aggregate all arguments that include an aspect with the same stem into the same document (e.g. arguments with cost and costs as aspect). To cope with limited hardware resources, we restrict the total number of arguments for each topic and stance to 100,000 (i.e. 1.6M over all eight topics). Also, as some aspects dominate by means of quantity of related arguments and others appear only rarely, we empirically determine an upper and lower bound of 1,500 and 15 arguments for each document, which still allows us to retrieve the above defined amount of training arguments.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Data Collection Pipeline",
+                "sec_num": "4"
+            },
+            {
+                "text": "In the following, we describe the architecture and the training process of the Arg-CTRL and analyze its performance.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model Training and Analysis",
+                "sec_num": "5"
+            },
+            {
+                "text": "Model The goal of a statistical language model is to learn the conditional probability of the next word given all (or a subset of) the previous ones (Bengio et al., 2003) . That is, for a sequence of tokens x = (x 1 , ..., x n ), the model learns p(x i |x <i ) where x i is the i-th word of sequence x. For this work, we use the 1.63 billion-parameter Conditional Transformer Language Model (CTRL) by Keskar et al. ( 2019), which is built on a transformerbased sequence to sequence architecture (Vaswani et al., 2017) . The CTRL has shown to produce high quality text, is general enough to be adapted for conditioning on the control codes we aim to use, and we do not need to pre-train the weights from scratch. Formally, the CTRL adds an extra condition to each sequence by prepending a control code c, hence learning p(x i |x <i , c). The control code is represented by a single token and can then be used to direct the model output at inference. We extend the model from its previous limit of a singletoken control code to accept multiple tokens. For The respective control code is prepended to each sequence of 256 subwords of a document.",
+                "cite_spans": [
+                    {
+                        "start": 149,
+                        "end": 170,
+                        "text": "(Bengio et al., 2003)",
+                        "ref_id": "BIBREF3"
+                    },
+                    {
+                        "start": 495,
+                        "end": 517,
+                        "text": "(Vaswani et al., 2017)",
+                        "ref_id": "BIBREF41"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Model and Training",
+                "sec_num": "5.1"
+            },
+            {
+                "text": "Generation At inference, we gather multiple generated arguments from a control code input by splitting the generated output text into sentences with NLTK (Bird et al., 2009) . We observe that for the first generated argument, the Arg-CTRL mostly outputs very short phrases, as it tries to incorporate the control code into a meaningful start of an argument. We prevent this by adding punctuation marks after each control code (e.g. a period or colon), signaling the model to start a new sentence. In this fashion, we generate proand con-arguments up to the pre-defined training split size 7 for each topic of the UKP-Corpus, resulting in 7,991 newly generated arguments. We do this with both models and use the generated arguments as a basis for the following analysis and evaluation methods. Examples of generated arguments can be found in Tables 4, 6 , and 7 (as part of the evaluation, see Section 7).",
+                "cite_spans": [
+                    {
+                        "start": 154,
+                        "end": 173,
+                        "text": "(Bird et al., 2009)",
+                        "ref_id": "BIBREF5"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 848,
+                        "end": 850,
+                        "text": "4,",
+                        "ref_id": "TABREF4"
+                    },
+                    {
+                        "start": 851,
+                        "end": 852,
+                        "text": "6",
+                        "ref_id": "TABREF7"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Analysis",
+                "sec_num": "5.2"
+            },
+            {
+                "text": "Results With no other previous work on explicit control of argument generation (to the best of our knowledge), we decide to proof our concept of aspect-controlled neural argument generation by 7 Not counting non-arguments from the splits.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Analysis",
+                "sec_num": "5.2"
+            },
+            {
+                "text": "comparing both generation models to a retrieval approach as a strong upper bound. The retrieval approach returns all arguments from the classified training data (see Section 4) that match a given topic, stance, and aspect. Both the retrieval and generation approaches are evaluated against reference data from debate portals and compared via METEOR (Lavie and Agarwal, 2007) and ROUGE-L (Lin, 2004) metrics. The retrieval approach has an advantage in this setup, as the arguments are also of human origin and aspects are always explicitly stated within a belonging argument.",
+                "cite_spans": [
+                    {
+                        "start": 349,
+                        "end": 374,
+                        "text": "(Lavie and Agarwal, 2007)",
+                        "ref_id": "BIBREF26"
+                    },
+                    {
+                        "start": 387,
+                        "end": 398,
+                        "text": "(Lin, 2004)",
+                        "ref_id": "BIBREF28"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Analysis",
+                "sec_num": "5.2"
+            },
+            {
+                "text": "The reference data was crawled from two debate portals 8 and consists of pro-and con-paragraphs discussing the eight topics of the UKP-Corpus. As the paragraphs may include non-arguments, we filter these out by classifying all sentences with the ArgumenText API into arguments and nonarguments. This leaves us with 349 pro-and 355 con-arguments over all topics (see App. D for the topic-wise distribution). Next, we detect all aspects in these arguments. Arguments with the same topic, stance, and aspect are then grouped and used as reference for arguments from the (a) generated arguments and (b) retrieval approach arguments if these hold the same topic, stance, and aspect. The results reveal that both the average METEOR and ROUGE-L scores are only marginally lower than the retrieval scores (METEOR is 0.5/1.1 points lower for the Arg-CTRL REDDIT /Arg-CTRL CC , see Table 5 ). It not only shows the strength of the architecture, but also the success in generating sound aspect-specific arguments with our approach. Overlap with Training Data We find arguments generated by the models to be genuine, i.e. demonstrating substantial differences to the training data. For each of the 7,991 generated arguments, we find the most similar argument in the training data based on the cosine similarity of their BERT embeddings (CLS token). The average cosine similarity of the most similar pairs for both the Arg-CTRL CC and Arg-CTRL REDDIT is .92. However, this value is misleading, as even highly similar samples still show clear differences. This is also evident when looking at the average edit distances of 343 (Arg-CTRL CC ) and 163 (Arg-CTRL REDDIT ) for the pairs with highest similarity. Further comparison of these pairs for their longest common (string) overlap reveals only 9% (Arg-CTRL CC ) and 11% (Arg-CTRL REDDIT ) overlap on average, mostly consisting of stopwords.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 878,
+                        "end": 879,
+                        "text": "5",
+                        "ref_id": "TABREF5"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Analysis",
+                "sec_num": "5.2"
+            },
+            {
+                "text": "For illustration, we show two examples of highly similar pairs in Table 6 . We compare all models by verifying whether or not the aspect used for generation (including synonyms and their stems and lemmas) can be found in the generated arguments. For the original models conditioned on aspects, this is true in 79% of Generated sentence: We do n't need more gun control laws when we already have enough restrictions on who can buy guns in this country .",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 72,
+                        "end": 73,
+                        "text": "6",
+                        "ref_id": "TABREF7"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Analysis",
+                "sec_num": "5.2"
+            },
+            {
+                "text": "Training sentence: We have some of the strongest gun laws in the country , but guns do n't respect boundaries any more than criminals do . Cosine similarity / edit distance / rel. overlap: 95.59 / 88 / 8% Generated sentence: The radioactivity of the spent fuel is a concern , as it can be used to make weapons and has been linked to cancer in humans . Training sentence: However , it does produce radioactive waste , which must be disposed of carefully as it can cause health problems and can be used to make nuclear weapons Cosine similarity / edit distance / rel. overlap: 92.40 / 99 / 17% the cases for Arg-CTRL REDDIT and in 74% of the cases for Arg-CTRL CC . For the model that was not conditioned on aspects, however, it is only true in 8% of the cases. It clearly shows the necessity to condition the model on aspects explicitly, implying the need for argument aspect detection, as the model is unable to learn generating aspect-related arguments otherwise. Moreover, without prior detection of aspects, we have no means for proper aggregation over aspects. We notice that for the model without prior knowledge of aspects, 79% of all aspects in the training data appear in only one argument. For these aspects, the model will likely not pick up a strong enough signal to learn them.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Generation in Absence of Aspects",
+                "sec_num": "6"
+            },
+            {
+                "text": "We evaluate the quality (intrinsic evaluation) of the Arg-CTRL and its performance on an exemplary task (extrinsic evaluation). As a basis, we use the 7,991 arguments generated in Section 5.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Evaluation",
+                "sec_num": "7"
+            },
+            {
+                "text": "Human Evaluation We conduct an expert evaluation on a subset of generated arguments with two researchers (field of expertise is natural language processing) not involved in this paper. Two aspects are evaluated: fluency and persuasiveness. We consider a sentence as fluent if it is grammatically correct (Hua et al., 2019) , i.e. contains neither semantic nor syntactic errors, and arrange this as a binary task. To reduce subjectivity for the persuasiveness evaluation, the experts do not annotate single arguments but instead compare pairs (Habernal and Gurevych, 2016) of generated and refer-ence data arguments (see Section 5.2). The experts could either choose one argument as being more persuasive or both as being equally persuasive. In total, the experts compared 100 (randomly sorted and ordered) argument pairs for persuasiveness and fluency (50 from both the Arg-CTRL REDDIT and the Arg-CTRL CC ). A pair of arguments always had the same topic and stance. For fluency, only the annotations made for generated arguments were extracted and taken into account. Averaged results of both experts show that in 33% of the cases, the generated argument is either more convincing (29%) or as convincing (4%) as the reference argument. Moreover, 83% of generated arguments are fluent. The inter-annotator agreement (Cohen, 1960) between the two experts is Cohen's \u03ba = .30 (percentage agreement: .62) for persuasiveness and \u03ba = .43 (percentage agreement: .72) for fluency, which can be interpreted as \"fair\" and \"moderate\" agreement, respectively (Landis and Koch, 1977) . As we compare to high-quality, curated data, the perceived persuasiveness of the generated arguments shows the potential of the work-further strengthened in the remainder of this section.",
+                "cite_spans": [
+                    {
+                        "start": 304,
+                        "end": 322,
+                        "text": "(Hua et al., 2019)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 542,
+                        "end": 571,
+                        "text": "(Habernal and Gurevych, 2016)",
+                        "ref_id": "BIBREF16"
+                    },
+                    {
+                        "start": 1316,
+                        "end": 1329,
+                        "text": "(Cohen, 1960)",
+                        "ref_id": "BIBREF9"
+                    },
+                    {
+                        "start": 1559,
+                        "end": 1570,
+                        "text": "Koch, 1977)",
+                        "ref_id": "BIBREF25"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Intrinsic Evaluation",
+                "sec_num": "7.1"
+            },
+            {
+                "text": "Argument Quality We introduce a novel method to evaluate generated arguments based on the argument quality detection approach proposed by Gretz et al. (2020b) . They create an argument quality dataset that contains around 30,000 arguments over 71 topics. For each argument, annotators were asked whether or not they would recommend a friend to use the displayed argument in a speech. The quality scores for each argument result from a weighted average (WA) or MACE Probability function of all annotations and range between 0 (lowest quality) and 1.0 (highest quality). We use the WA-score as label, the same model (BERT BASE ) and hyperparameters as given in the original paper, and reproduce the reported correlations of .52 (Pearson) and .48 (Spearman) on the test dataset (averaged over five different seeds). The model predicts an average argument quality of .71 for the Arg-CTRL REDDIT arguments, .75 for the training arguments of the UKP-Corpus, and even .76 for the Arg-CTRL CC arguments. It shows that our model is able to produce arguments that are generally on a similar quality level as arguments made by humans. The difference of 5 points between the Arg-CTRL CC and the Arg-CTRL REDDIT , however, shows that training on REDDIT data leads to a lower quality of generated arguments. Exemplary Human: Nuclear energy produces waste that stays radioactive for thousands of years and pollutes the environment. Arg-CTRLCC: (nuclear energy PRO waste .) The only thing that 's going to be left over is the spent fuel rods , which are not very radioactive and can be reprocessed [...] Arg-CTRLCC: (nuclear energy PRO radioactive .) The radioactivity of the waste is not a problem , because it will decay away in about 300 years or so [...] Arg-CTRLCC: (nuclear energy PRO environment .) The fact that the radioactive waste is not only stored in a safe manner , but also protected from any potential threat to human health or the environment for thousands of years [...] Human: School uniforms are expensive and affect the pupil's individuality. Arg-CTRLCC: (school uniforms PRO expensive .) The cost of the uniform is not that much more than a regular shirt and shorts [...] Arg-CTRLCC: (school uniforms PRO individuality .) The uniform is a symbol of unity and identity , which helps to foster an environment where students can feel comfortable about expressing their own individual style without being judged [...] Table 7 : Generated counter-arguments with the Arg-CTRL CC . Aspects in the initial argument are underlined and used for the counter-argument generation. Control code in brackets and \"[...]\" signals shortened text.",
+                "cite_spans": [
+                    {
+                        "start": 138,
+                        "end": 158,
+                        "text": "Gretz et al. (2020b)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 2414,
+                        "end": 2419,
+                        "text": "[...]",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 2426,
+                        "end": 2427,
+                        "text": "7",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Intrinsic Evaluation",
+                "sec_num": "7.1"
+            },
+            {
+                "text": "for three topics, we show the generated arguments with the highest and lowest argument quality in Table 4 (see App. E for the full table).",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 104,
+                        "end": 105,
+                        "text": "4",
+                        "ref_id": "TABREF4"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Intrinsic Evaluation",
+                "sec_num": "7.1"
+            },
+            {
+                "text": "Counter-Arguments",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Extrinsic Evaluation:",
+                "sec_num": "7.2"
+            },
+            {
+                "text": "Drafting counter-arguments is an important skill for debating, to provide constructive feedback, and to foster critical thinking. We lean onto the work of Wachsmuth et al. ( 2018) who describe a counterargument as discussing the same aspect as an initial argument, but with a switched stance. Hence, given our defined control codes, our model is especially fit for counter-argument generation. Unlike current models for this task, we do not require a specific dataset with argument and counterargument pairs (Hidey and McKeown, 2019; Hua et al., 2019) . Also, in contrast to the model by Hua and Wang (2019) that implicitly integrates inputrelated \"Keyphrases\" into the process of counterargument generation, our model is able to concentrate on every aspect of the input explicitly and with a separate argument, allowing for more transparency and interpretability over the process of counter-argument generation. We exemplary show how the combination of aspect detection and controlled argument generation can be successfully leveraged to tackle this task. For that, we manually compose initial arguments for the topics nuclear energy and school uniforms. Then, we automatically detect their aspects and generate a counterargument for each aspect by passing the topic, opposite stance of the original argument, and one of the aspects into the Arg-CTRL CC . For both topics, the Arg-CTRL CC produces meaningful counterarguments based on the detected aspects (see Table 7 ).",
+                "cite_spans": [
+                    {
+                        "start": 508,
+                        "end": 533,
+                        "text": "(Hidey and McKeown, 2019;",
+                        "ref_id": "BIBREF19"
+                    },
+                    {
+                        "start": 534,
+                        "end": 551,
+                        "text": "Hua et al., 2019)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 588,
+                        "end": 607,
+                        "text": "Hua and Wang (2019)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 1468,
+                        "end": 1469,
+                        "text": "7",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Extrinsic Evaluation:",
+                "sec_num": "7.2"
+            },
+            {
+                "text": "We apply the concept of controlled neural text generation to the domain of argument generation. Our Arg-CTRL is conditioned on topics, stances, and aspects and can reliably create arguments using these control codes. We show that arguments generated with our approach are genuine and of high argumentative and grammatical quality in general. Moreover, we show that our approach can be used to generate counter-arguments in a transparent and interpretable way. We fine-tune the Arg-CTRL on two different data sources and find that using mixed data from Common-Crawl results in a higher quality of generated arguments than using user discussions from Reddit-Comments. Further, we define argument aspect detection for controlled argument generation and introduce a novel annotation scheme to crowdsource argument aspect annotations, resulting in a high-quality dataset. We publish the model weights, data, and all code necessary to train the Arg-CTRL.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion",
+                "sec_num": "8"
+            },
+            {
+                "text": "Models for argument and claim generation have been discussed in our related work and are widely available. Gretz et al. (2020a) suggest that, in order to allow for a fine-grained control over claim/argument generation, aspect selection needs to be handled carefully, which is what we have focused on in this work. The dangers of misuse of language models like the CTRL have been extensively discussed by its authors (Keskar et al., 2019) . The ethical impact of these works has been weighed and deemed justifiable. Argument generation-and natural language generation as a whole-is subject to dual use. The technology can be used to create arguments that cannot be distinguished from human-made arguments. While our intentions are to support society, to foster diversity in debates, and to encourage research on this important topic, we are aware of the possibility of harmful applications this model can be used for. For instance, the model could be used to generate only opposing (or supporting) arguments on one of the pretrained topics and aspects and, as such, bias a debate into a certain direction. Also, bots could use the generated arguments to spread them via social media. The same is true, however, for argument search engines, which can be used by malicious parties to retrieve (and then spread) potentially harmful information.",
+                "cite_spans": [
+                    {
+                        "start": 107,
+                        "end": 127,
+                        "text": "Gretz et al. (2020a)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 416,
+                        "end": 437,
+                        "text": "(Keskar et al., 2019)",
+                        "ref_id": "BIBREF24"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Ethics Statement",
+                "sec_num": null
+            },
+            {
+                "text": "However, controllable argument generation can also be used to support finding and formulating (counter-)arguments for debates, for writing essays, to enrich one-sided discussions, and thus, to make discourse more diverse overall. For instance, anticipating opposing arguments is crucial for critical thinking, which is the foundation for any democratic society. The skill is extensively taught in school and university education. However, confirmation bias (or myside bias) (Stanovich et al., 2013) , i.e. the tendency to ignore opposing arguments, is an ever-present issue. Technologies like ours could be used to mitigate this issue by, for instance, automatically providing topic-and aspectspecific counter-arguments for all arguments of a given text (this has been shown for single arguments in Section 7.2). We believe that working on and providing access to such models is of major importance and, overall, a benefit to society.",
+                "cite_spans": [
+                    {
+                        "start": 474,
+                        "end": 498,
+                        "text": "(Stanovich et al., 2013)",
+                        "ref_id": "BIBREF38"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Ethics Statement",
+                "sec_num": null
+            },
+            {
+                "text": "Open-sourcing such language models also encourages the work on counter-measures to detect malicious use: While many works have been published on the topic of automatic fake news detection in texts (Kaliyar et al., 2020; Reis et al., 2019; Hanselowski et al., 2018; P\u00e9rez-Rosas et al., 2018) , the recent emergence of large-scale language models has also encouraged research to focus on detecting the creator of these texts (Varshney et al., 2020; Zellers et al., 2019) . The former approaches are aimed at detecting fake news in general, i.e. independent of who (or what) composed a text, whereas the latter approaches are designed to recognize if a text was written by a human or generated by a language model. We encourage the work on both types of methods. Ideally, social networks and news platforms would indicate if a statement was automatically generated in addition to its factual correctness.",
+                "cite_spans": [
+                    {
+                        "start": 197,
+                        "end": 219,
+                        "text": "(Kaliyar et al., 2020;",
+                        "ref_id": "BIBREF23"
+                    },
+                    {
+                        "start": 220,
+                        "end": 238,
+                        "text": "Reis et al., 2019;",
+                        "ref_id": "BIBREF33"
+                    },
+                    {
+                        "start": 239,
+                        "end": 264,
+                        "text": "Hanselowski et al., 2018;",
+                        "ref_id": "BIBREF17"
+                    },
+                    {
+                        "start": 265,
+                        "end": 290,
+                        "text": "P\u00e9rez-Rosas et al., 2018)",
+                        "ref_id": "BIBREF32"
+                    },
+                    {
+                        "start": 423,
+                        "end": 446,
+                        "text": "(Varshney et al., 2020;",
+                        "ref_id": "BIBREF40"
+                    },
+                    {
+                        "start": 447,
+                        "end": 468,
+                        "text": "Zellers et al., 2019)",
+                        "ref_id": "BIBREF47"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Ethics Statement",
+                "sec_num": null
+            },
+            {
+                "text": "Further, we point out some limitations of the Arg-CTRL that mitigate the risks discussed before. One of these limitations is that it cannot be used to generate arguments for unseen topics, which makes a widespread application (e.g. to produce fake news) rather unlikely (using an unseen topic as control code results in nonsensical repetitions of the input). The analysis in Section 6 of the paper shows that the model fails to produce aspectspecific sentences in 92% of the cases if it was not explicitly conditioned on them at training time. Even in case of success, the aspect has to exist in the training data. Also, the model is trained with balanced classes, i.e. both supporting and opposing arguments for each topic are seen with equal frequency to prevent possible bias into one or the other direction.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Ethics Statement",
+                "sec_num": null
+            },
+            {
+                "text": "To further restrict malicious use, we release the training data for the Arg-CTRLs with an additional clause that forbids use for any other than research purposes. Also, all the training datasets for the Arg-CTRLs will be accessible only via access control (e-mail, name, and purpose of use). Lastly, this work has been reviewed by the ethics committee of the Technical University of Darmstadt that issued a positive vote. page 833-838, USA. American Association for Artificial Intelligence.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Ethics Statement",
+                "sec_num": null
+            },
+            {
+                "text": "For the final crowdsourcing study, we use Amazon Mechanical Turk. Workers had to take a qualification test, have an acceptance rate of at least 95%, and location within the US. We paid $7.6 per hour (minimum wage is $7.25 per hour). Each data sample is annotated by eight crowdworkers. In case the ranker cut off the real aspect(s) from the list of candidates, crowdworkers could select any sequence up to four tokens from a second list.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "A Argument Aspect Annotation Study",
+                "sec_num": null
+            },
+            {
+                "text": "Figure 2 shows the annotation guidelines for the Amazon Mechanical Turk study. Figure 3 shows one example of a HIT with two aspects selected. Selected aspects are highlighted in the sentence. We did not allow to choose overlapping aspects. If the aspect was not found in the first list provided by the learned ranker, crowdworkers could choose from as second list with the remaining 1-4-grams of the sentence (aspect candidates starting or ending with stopwords, as well as candidates with punctuation and numbers, were removed from the list). Additional checkboxes were added to choose from if the sentence contained no aspect or the aspect was not explicitly mentioned. Figure 4 shows a ranked list of aspect candidates for an example.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 7,
+                        "end": 8,
+                        "text": "2",
+                        "ref_id": "FIGREF2"
+                    },
+                    {
+                        "start": 86,
+                        "end": 87,
+                        "text": "3",
+                        "ref_id": "FIGREF3"
+                    },
+                    {
+                        "start": 679,
+                        "end": 680,
+                        "text": "4",
+                        "ref_id": "FIGREF4"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "A Argument Aspect Annotation Study",
+                "sec_num": null
+            },
+            {
+                "text": "The structure of the final dataset is described in Section F. For reproducibility of results, we create fixed splits for in-and cross-topic experiments. 9 , we show the synonyms used for filtering prior to the argument and stance classification step. We filtered out all sentences that did not contain tokens from the topic they belong to or any synonyms defined for this topic.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 153,
+                        "end": 154,
+                        "text": "9",
+                        "ref_id": "TABREF11"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "A Argument Aspect Annotation Study",
+                "sec_num": null
+            },
+            {
+                "text": "All arguments of the training documents are tokenized with a BPE model (Sennrich et al., 2016) trained by the authors of the CTRL (Keskar et al., 2019) . Both the Arg-CTRL CC and the Arg-CTRL REDDIT are fine-tuned on a Tesla V100 with 32 GB of Memory. We mainly keep the default hyperparameters but reduce the batch size to 4 and train both models for 1 epoch. Each model takes around five days to train on the 1.6M training sentences.",
+                "cite_spans": [
+                    {
+                        "start": 71,
+                        "end": 94,
+                        "text": "(Sennrich et al., 2016)",
+                        "ref_id": "BIBREF35"
+                    },
+                    {
+                        "start": 130,
+                        "end": 151,
+                        "text": "(Keskar et al., 2019)",
+                        "ref_id": "BIBREF24"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "C Model Parameters and Details",
+                "sec_num": null
+            },
+            {
+                "text": "Table 10 shows the sources and number of arguments for all topics of the reference dataset. The dataset is used to compare the argument generation models to a retrieval approach. ",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 6,
+                        "end": 8,
+                        "text": "10",
+                        "ref_id": "TABREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "D Reference Data Statistics",
+                "sec_num": null
+            },
+            {
+                "text": "The argument aspect detection dataset contains a total of 5,032 samples in JSONL-format, i.e. each dataset sample has a separate line and can be parsed as JSON. A sample contains the keys:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "F Argument Aspect Detection Dataset",
+                "sec_num": null
+            },
+            {
+                "text": "\u2022 hash: Unique identifier.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "F Argument Aspect Detection Dataset",
+                "sec_num": null
+            },
+            {
+                "text": "\u2022 aspect_pos: List of string tuples \"(begin,length)\", marking the character position and length of each aspect within the argument.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "F Argument Aspect Detection Dataset",
+                "sec_num": null
+            },
+            {
+                "text": "\u2022 aspect_pos_string: The aspects as a list of strings.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "F Argument Aspect Detection Dataset",
+                "sec_num": null
+            },
+            {
+                "text": "\u2022 stance: Original stance label of the argument towards the topic, taken from the UKP-Corpus (Stab et al., 2018b) . Either \"Argument_for\" or \"Argument_against\".",
+                "cite_spans": [
+                    {
+                        "start": 93,
+                        "end": 113,
+                        "text": "(Stab et al., 2018b)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "F Argument Aspect Detection Dataset",
+                "sec_num": null
+            },
+            {
+                "text": "\u2022 topic: The topic of the argument.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "F Argument Aspect Detection Dataset",
+                "sec_num": null
+            },
+            {
+                "text": "\u2022 sentence: The argument.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "F Argument Aspect Detection Dataset",
+                "sec_num": null
+            },
+            {
+                "text": "For reproducibility, we define a fixed cross-topic split with the data of two topics as test set (gun control, school uniforms), the data of one topic as development set (death penalty), and the data of the remaining five topics as train set. We also create a fixed in-topic split by randomly taking 3,532 samples of all topics for training, 500 for development, and 1,000 for testing. ",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "F Argument Aspect Detection Dataset",
+                "sec_num": null
+            },
+            {
+                "text": "https://github.com/UKPLab/ controlled-argument-generation",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "BERT, fine-tuned on several NLP tasks via multi-task learning.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "https://commoncrawl.org",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "https://files.pushshift.io/reddit/ comments/",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "https://www.elastic.co",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "https://api.argumentsearch.com",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            }
+        ],
+        "back_matter": [
+            {
+                "text": "We thank Tilman Beck and Nandan Thakur for their support in the human evaluation (Section 7.1). This work has been supported by the German Research Foundation within the project \"Open Argument Mining\" (GU 798/25-1), associated with the Priority Program \"Robust Argumentation Machines (RATIO)\" (SPP-1999).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Acknowledgements",
+                "sec_num": null
+            },
+            {
+                "text": "In addition , we must continue developing safer technologies like small modular reactors which will help us meet our nation 's need for reliable , emission-free sources of low-emission energy while also creating jobs and providing solutions to some of the world s most pressing problems : climate change , food security and sustainable development . (0.96) nuclear energy CON leak . \" We are concerned about the possibility of further releases of radioactivity due to possible melting or cracking of fuel rods at the No . (0.47) death penalty CON inhuman . Amnesty International opposes the death penalty in all cases as the ultimate form of cruel , inhuman or degrading punishment and a violation of fundamental rights -the right to life and the prohibition of torture .(1.00) death penalty CON god . And yet , while the Church exhorts civil authorities . (0.41) school uniforms CON resources . The lack of a uniform system for the collection and use of data , as well as insufficient funding to collect it , are major barriers that limit access to information on student achievement in schools with high concentrations of students from low-income families . (0.92) school uniforms PRO fun : The kids are having a lot of fun . (0.38) gun control PRO homicides . In addition to being an effective crime deterrent and reducing suicides , research has shown that defensive firearm use prevents more than 80 percent of all gun-related violent crimes including homicides , robberies , assaults , rapes , and aggravated assaults [ 1 ] . (0.96) gun control PRO prevent ; You liberals need to wake up and smell the coffee . (0.43) marijuana legalization PRO safer : Legalizing cannabis will help reduce crime rates ( especially violent crimes ) and make society safer overall . (0.96) marijuana legalization PRO benefits . Decrease amount of police officers needed 6 . (0.37) minimum wage PRO poor : Raising the minimum wage will not only benefit those working full time but also reduce government expenditures on social services such as food stamps and Medicaid which disproportionately affect the poor . (0.97) minimum wage CON cost : If you raise the price of a Big Mac to $ 10 and then pay an extra dime or two per burger so that it 's still only $ 9 ... well , maybe your business is n't worth saving at all because there just wo n't be anyone willing to eat out after they 've had their fill ( unless perhaps they 're on welfare ) and now have no job and ca n't afford health care eitherbut I doubt very seriously that most people making those kinds of wages/salaries would suddenly decide not to work if forced to shoulder the added cost . (0.44) ",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "annex",
+                "sec_num": null
+            }
+        ],
+        "bib_entries": {
+            "BIBREF0": {
+                "ref_id": "b0",
+                "title": "Modeling frames in argumentation",
+                "authors": [
+                    {
+                        "first": "Yamen",
+                        "middle": [],
+                        "last": "Ajjour",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Milad",
+                        "middle": [],
+                        "last": "Alshomary",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Henning",
+                        "middle": [],
+                        "last": "Wachsmuth",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Benno",
+                        "middle": [],
+                        "last": "Stein",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing (EMNLP-IJCNLP)",
+                "volume": "",
+                "issue": "",
+                "pages": "2922--2932",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/D19-1290"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Yamen Ajjour, Milad Alshomary, Henning Wachsmuth, and Benno Stein. 2019. Modeling frames in ar- gumentation. In Proceedings of the 2019 Confer- ence on Empirical Methods in Natural Language Processing and the 9th International Joint Confer- ence on Natural Language Processing (EMNLP- IJCNLP), pages 2922-2932, Hong Kong, China. As- sociation for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF1": {
+                "ref_id": "b1",
+                "title": "Computational Argumentation Synthesis as a Language Modeling Task",
+                "authors": [
+                    {
+                        "first": "Roxanne",
+                        "middle": [
+                            "El"
+                        ],
+                        "last": "Baff",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Henning",
+                        "middle": [],
+                        "last": "Wachsmuth",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Khalid",
+                        "middle": [],
+                        "last": "Al-Khatib",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Manfred",
+                        "middle": [],
+                        "last": "Stede",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Benno",
+                        "middle": [],
+                        "last": "Stein",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "12th International Natural Language Generation Conference",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/W19-8607"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Roxanne El Baff, Henning Wachsmuth, Khalid Al- Khatib, Manfred Stede, and Benno Stein. 2019. Computational Argumentation Synthesis as a Lan- guage Modeling Task. In 12th International Natu- ral Language Generation Conference (INLG 2019). ACL.",
+                "links": null
+            },
+            "BIBREF2": {
+                "ref_id": "b2",
+                "title": "Neural machine translation by jointly learning to align and translate. 3rd International Conference on Learning Representations, ICLR 2015 -Conference Track Proceedings",
+                "authors": [
+                    {
+                        "first": "Dzmitry",
+                        "middle": [],
+                        "last": "Bahdanau",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kyung",
+                        "middle": [],
+                        "last": "",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hyun",
+                        "middle": [],
+                        "last": "Cho",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yoshua",
+                        "middle": [],
+                        "last": "Bengio",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "1--15",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Dzmitry Bahdanau, Kyung Hyun Cho, and Yoshua Bengio. 2015. Neural machine translation by jointly learning to align and translate. 3rd Inter- national Conference on Learning Representations, ICLR 2015 -Conference Track Proceedings, pages 1-15.",
+                "links": null
+            },
+            "BIBREF3": {
+                "ref_id": "b3",
+                "title": "A neural probabilistic language model",
+                "authors": [
+                    {
+                        "first": "Yoshua",
+                        "middle": [],
+                        "last": "Bengio",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "R\u00e9jean",
+                        "middle": [],
+                        "last": "Ducharme",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Pascal",
+                        "middle": [],
+                        "last": "Vincent",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christian",
+                        "middle": [],
+                        "last": "Jauvin",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2003,
+                "venue": "Journal of machine learning research",
+                "volume": "3",
+                "issue": "",
+                "pages": "1137--1155",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Yoshua Bengio, R\u00e9jean Ducharme, Pascal Vincent, and Christian Jauvin. 2003. A neural probabilistic lan- guage model. Journal of machine learning research, 3(Feb):1137-1155.",
+                "links": null
+            },
+            "BIBREF4": {
+                "ref_id": "b4",
+                "title": "Argument invention from first principles",
+                "authors": [
+                    {
+                        "first": "Yonatan",
+                        "middle": [],
+                        "last": "Bilu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ariel",
+                        "middle": [],
+                        "last": "Gera",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Daniel",
+                        "middle": [],
+                        "last": "Hershcovich",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Benjamin",
+                        "middle": [],
+                        "last": "Sznajder",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dan",
+                        "middle": [],
+                        "last": "Lahav",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Guy",
+                        "middle": [],
+                        "last": "Moshkowich",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Anael",
+                        "middle": [],
+                        "last": "Malet",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Assaf",
+                        "middle": [],
+                        "last": "Gavron",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Noam",
+                        "middle": [],
+                        "last": "Slonim",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "1013--1026",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/P19-1097"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Yonatan Bilu, Ariel Gera, Daniel Hershcovich, Ben- jamin Sznajder, Dan Lahav, Guy Moshkowich, Anael Malet, Assaf Gavron, and Noam Slonim. 2019. Argument invention from first principles. In Proceedings of the 57th Annual Meeting of the Asso- ciation for Computational Linguistics, pages 1013- 1026, Florence, Italy. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF5": {
+                "ref_id": "b5",
+                "title": "Natural Language Processing with Python, 1st edition",
+                "authors": [
+                    {
+                        "first": "Steven",
+                        "middle": [],
+                        "last": "Bird",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ewan",
+                        "middle": [],
+                        "last": "Klein",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Edward",
+                        "middle": [],
+                        "last": "Loper",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Steven Bird, Ewan Klein, and Edward Loper. 2009. Natural Language Processing with Python, 1st edi- tion. O'Reilly Media, Inc.",
+                "links": null
+            },
+            "BIBREF6": {
+                "ref_id": "b6",
+                "title": "Toward stance classification based on claim microstructures",
+                "authors": [
+                    {
+                        "first": "Filip",
+                        "middle": [],
+                        "last": "Boltu\u017ei\u0107",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jan",
+                        "middle": [],
+                        "last": "\u0160najder",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Proceedings of the 8th Workshop on Computational Approaches to Subjectivity, Sentiment and Social Media Analysis",
+                "volume": "",
+                "issue": "",
+                "pages": "74--80",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/W17-5210"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Filip Boltu\u017ei\u0107 and Jan \u0160najder. 2017. Toward stance classification based on claim microstructures. In Proceedings of the 8th Workshop on Computational Approaches to Subjectivity, Sentiment and Social Media Analysis, pages 74-80, Copenhagen, Den- mark. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF7": {
+                "ref_id": "b7",
+                "title": "Tracking the Development of Media Frames within and across Policy Issues",
+                "authors": [
+                    {
+                        "first": "Amber",
+                        "middle": [
+                            "E"
+                        ],
+                        "last": "Boydstun",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dallas",
+                        "middle": [],
+                        "last": "Card",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Justin",
+                        "middle": [],
+                        "last": "Gross",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Paul",
+                        "middle": [],
+                        "last": "Resnick",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Noah",
+                        "middle": [
+                            "A"
+                        ],
+                        "last": "Smith",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "DOI": [
+                        "10.1184/R1/6473780.v1"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Amber E. Boydstun, Dallas Card, Justin Gross, Paul Resnick, and Noah A. Smith. 2014. Tracking the De- velopment of Media Frames within and across Pol- icy Issues. Carnegie Mellon University.",
+                "links": null
+            },
+            "BIBREF8": {
+                "ref_id": "b8",
+                "title": "Generating and evaluating evaluative arguments",
+                "authors": [
+                    {
+                        "first": "Giuseppe",
+                        "middle": [],
+                        "last": "Carenini",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Johanna",
+                        "middle": [
+                            "D"
+                        ],
+                        "last": "Moore",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2006,
+                "venue": "Artificial Intelligence",
+                "volume": "170",
+                "issue": "11",
+                "pages": "925--952",
+                "other_ids": {
+                    "DOI": [
+                        "10.1016/j.artint.2006.05.003"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Giuseppe Carenini and Johanna D Moore. 2006. Gen- erating and evaluating evaluative arguments. Artifi- cial Intelligence, 170(11):925-952.",
+                "links": null
+            },
+            "BIBREF9": {
+                "ref_id": "b9",
+                "title": "A coefficient of agreement for nominal scales. Educational and psychological measurement",
+                "authors": [
+                    {
+                        "first": "Jacob",
+                        "middle": [],
+                        "last": "Cohen",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1960,
+                "venue": "",
+                "volume": "20",
+                "issue": "",
+                "pages": "37--46",
+                "other_ids": {
+                    "DOI": [
+                        "10.1177/001316446002000104"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Jacob Cohen. 1960. A coefficient of agreement for nominal scales. Educational and psychological mea- surement, 20(1):37-46.",
+                "links": null
+            },
+            "BIBREF10": {
+                "ref_id": "b10",
+                "title": "Plug and Play Language Models: A Simple Approach to Controlled Text Generation",
+                "authors": [
+                    {
+                        "first": "Sumanth",
+                        "middle": [],
+                        "last": "Dathathri",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Andrea",
+                        "middle": [],
+                        "last": "Madotto",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Janice",
+                        "middle": [],
+                        "last": "Lan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jane",
+                        "middle": [],
+                        "last": "Hung",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Eric",
+                        "middle": [],
+                        "last": "Frank",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Piero",
+                        "middle": [],
+                        "last": "Molino",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jason",
+                        "middle": [],
+                        "last": "Yosinski",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Rosanne",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Sumanth Dathathri, Andrea Madotto, Janice Lan, Jane Hung, Eric Frank, Piero Molino, Jason Yosinski, and Rosanne Liu. 2019. Plug and Play Language Mod- els: A Simple Approach to Controlled Text Genera- tion. arXiv, abs/1912.02164.",
+                "links": null
+            },
+            "BIBREF11": {
+                "ref_id": "b11",
+                "title": "BERT: Pre-training of deep bidirectional transformers for language understanding",
+                "authors": [
+                    {
+                        "first": "Jacob",
+                        "middle": [],
+                        "last": "Devlin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ming-Wei",
+                        "middle": [],
+                        "last": "Chang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kenton",
+                        "middle": [],
+                        "last": "Lee",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kristina",
+                        "middle": [],
+                        "last": "Toutanova",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies",
+                "volume": "1",
+                "issue": "",
+                "pages": "4171--4186",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/N19-1423"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Jacob Devlin, Ming-Wei Chang, Kenton Lee, and Kristina Toutanova. 2019. BERT: Pre-training of deep bidirectional transformers for language under- standing. In Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies, Volume 1 (Long and Short Papers), pages 4171-4186, Minneapolis, Minnesota. Associ- ation for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF12": {
+                "ref_id": "b12",
+                "title": "A system for summarizing and visualizing arguments in subjective documents: Toward supporting decision making",
+                "authors": [
+                    {
+                        "first": "Atsushi",
+                        "middle": [],
+                        "last": "Fujii",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tetsuya",
+                        "middle": [],
+                        "last": "Ishikawa",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2006,
+                "venue": "Proceedings of the Workshop on Sentiment and Subjectivity in Text, SST '06",
+                "volume": "",
+                "issue": "",
+                "pages": "15--22",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Atsushi Fujii and Tetsuya Ishikawa. 2006. A sys- tem for summarizing and visualizing arguments in subjective documents: Toward supporting decision making. In Proceedings of the Workshop on Senti- ment and Subjectivity in Text, SST '06, pages 15- 22, Stroudsburg, PA, USA. Association for Compu- tational Linguistics.",
+                "links": null
+            },
+            "BIBREF13": {
+                "ref_id": "b13",
+                "title": "Decompositional argument mining: A general purpose approach for argument graph construction",
+                "authors": [
+                    {
+                        "first": "Debela",
+                        "middle": [],
+                        "last": "Gemechu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chris",
+                        "middle": [],
+                        "last": "Reed",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "516--526",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/P19-1049"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Debela Gemechu and Chris Reed. 2019. Decompo- sitional argument mining: A general purpose ap- proach for argument graph construction. In Proceed- ings of the 57th Annual Meeting of the Association for Computational Linguistics, pages 516-526, Flo- rence, Italy. Association for Computational Linguis- tics.",
+                "links": null
+            },
+            "BIBREF14": {
+                "ref_id": "b14",
+                "title": "Edo Cohen-Karlik, and Noam Slonim. 2020a. The workweek is the best time to start a family -a study of gpt-2 based claim generation",
+                "authors": [
+                    {
+                        "first": "Shai",
+                        "middle": [],
+                        "last": "Gretz",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yonatan",
+                        "middle": [],
+                        "last": "Bilu",
+                        "suffix": ""
+                    }
+                ],
+                "year": null,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Shai Gretz, Yonatan Bilu, Edo Cohen-Karlik, and Noam Slonim. 2020a. The workweek is the best time to start a family -a study of gpt-2 based claim generation. arXiv, abs/2010.06185.",
+                "links": null
+            },
+            "BIBREF15": {
+                "ref_id": "b15",
+                "title": "Ranit Aharonov, and Noam Slonim. 2020b. A large-scale dataset for argument quality ranking: Construction and analysis",
+                "authors": [
+                    {
+                        "first": "Shai",
+                        "middle": [],
+                        "last": "Gretz",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Roni",
+                        "middle": [],
+                        "last": "Friedman",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Edo",
+                        "middle": [],
+                        "last": "Cohen-Karlik",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Assaf",
+                        "middle": [],
+                        "last": "Toledo",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Dan",
+                        "middle": [],
+                        "last": "Lahav",
+                        "suffix": ""
+                    }
+                ],
+                "year": null,
+                "venue": "Proceedings of the AAAI Conference on Artificial Intelligence",
+                "volume": "34",
+                "issue": "",
+                "pages": "7805--7813",
+                "other_ids": {
+                    "DOI": [
+                        "10.1609/aaai.v34i05.6285"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Shai Gretz, Roni Friedman, Edo Cohen-Karlik, As- saf Toledo, Dan Lahav, Ranit Aharonov, and Noam Slonim. 2020b. A large-scale dataset for argument quality ranking: Construction and analysis. Pro- ceedings of the AAAI Conference on Artificial Intel- ligence, 34(05):7805-7813.",
+                "links": null
+            },
+            "BIBREF16": {
+                "ref_id": "b16",
+                "title": "Which argument is more convincing? analyzing and predicting convincingness of web arguments using bidirectional LSTM",
+                "authors": [
+                    {
+                        "first": "Ivan",
+                        "middle": [],
+                        "last": "Habernal",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Iryna",
+                        "middle": [],
+                        "last": "Gurevych",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of the 54th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "1",
+                "issue": "",
+                "pages": "1589--1599",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/P16-1150"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Ivan Habernal and Iryna Gurevych. 2016. Which ar- gument is more convincing? analyzing and predict- ing convincingness of web arguments using bidi- rectional LSTM. In Proceedings of the 54th An- nual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers), pages 1589- 1599, Berlin, Germany. Association for Computa- tional Linguistics.",
+                "links": null
+            },
+            "BIBREF17": {
+                "ref_id": "b17",
+                "title": "A retrospective analysis of the fake news challenge stance-detection task",
+                "authors": [
+                    {
+                        "first": "Andreas",
+                        "middle": [],
+                        "last": "Hanselowski",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Pvs",
+                        "middle": [],
+                        "last": "Avinesh",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Benjamin",
+                        "middle": [],
+                        "last": "Schiller",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Felix",
+                        "middle": [],
+                        "last": "Caspelherr",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Debanjan",
+                        "middle": [],
+                        "last": "Chaudhuri",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christian",
+                        "middle": [
+                            "M"
+                        ],
+                        "last": "Meyer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Iryna",
+                        "middle": [],
+                        "last": "Gurevych",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 27th International Conference on Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "1859--1874",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Andreas Hanselowski, Avinesh PVS, Benjamin Schiller, Felix Caspelherr, Debanjan Chaudhuri, Christian M. Meyer, and Iryna Gurevych. 2018. A retrospective analysis of the fake news challenge stance-detection task. In Proceedings of the 27th International Conference on Computational Lin- guistics, pages 1859-1874, Santa Fe, New Mexico, USA. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF18": {
+                "ref_id": "b18",
+                "title": "Issue framing in online discussion fora",
+                "authors": [
+                    {
+                        "first": "Mareike",
+                        "middle": [],
+                        "last": "Hartmann",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tallulah",
+                        "middle": [],
+                        "last": "Jansen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Isabelle",
+                        "middle": [],
+                        "last": "Augenstein",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Anders",
+                        "middle": [],
+                        "last": "S\u00f8gaard",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies",
+                "volume": "1",
+                "issue": "",
+                "pages": "1401--1407",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/N19-1142"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Mareike Hartmann, Tallulah Jansen, Isabelle Augen- stein, and Anders S\u00f8gaard. 2019. Issue framing in online discussion fora. In Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies, Volume 1 (Long and Short Papers), pages 1401-1407, Minneapolis, Minnesota. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF19": {
+                "ref_id": "b19",
+                "title": "Fixed that for you: Generating contrastive claims with semantic edits",
+                "authors": [
+                    {
+                        "first": "Christopher",
+                        "middle": [],
+                        "last": "Hidey",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kathy",
+                        "middle": [],
+                        "last": "Mckeown",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies",
+                "volume": "1",
+                "issue": "",
+                "pages": "1756--1767",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/N19-1174"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Christopher Hidey and Kathy McKeown. 2019. Fixed that for you: Generating contrastive claims with se- mantic edits. In Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies, Volume 1 (Long and Short Papers), pages 1756-1767, Minneapolis, Minnesota. Associ- ation for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF20": {
+                "ref_id": "b20",
+                "title": "Argument generation with retrieval, planning, and realization",
+                "authors": [
+                    {
+                        "first": "Xinyu",
+                        "middle": [],
+                        "last": "Hua",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zhe",
+                        "middle": [],
+                        "last": "Hu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Lu",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "2661--2672",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/P19-1255"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Xinyu Hua, Zhe Hu, and Lu Wang. 2019. Argument generation with retrieval, planning, and realization. In Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics, pages 2661-2672, Florence, Italy. Association for Compu- tational Linguistics.",
+                "links": null
+            },
+            "BIBREF21": {
+                "ref_id": "b21",
+                "title": "Neural argument generation augmented with externally retrieved evidence",
+                "authors": [
+                    {
+                        "first": "Xinyu",
+                        "middle": [],
+                        "last": "Hua",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Lu",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 56th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "219--230",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/P18-1021"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Xinyu Hua and Lu Wang. 2018. Neural argument generation augmented with externally retrieved evi- dence. In Proceedings of the 56th Annual Meeting of the Association for Computational Linguistics (Vol- ume 1: Long Papers), pages 219-230, Melbourne, Australia. Association for Computational Linguis- tics.",
+                "links": null
+            },
+            "BIBREF22": {
+                "ref_id": "b22",
+                "title": "Sentence-level content planning and style specification for neural text generation",
+                "authors": [
+                    {
+                        "first": "Xinyu",
+                        "middle": [],
+                        "last": "Hua",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Lu",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing (EMNLP-IJCNLP)",
+                "volume": "",
+                "issue": "",
+                "pages": "591--602",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/D19-1055"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Xinyu Hua and Lu Wang. 2019. Sentence-level content planning and style specification for neural text gen- eration. In Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natu- ral Language Processing (EMNLP-IJCNLP), pages 591-602, Hong Kong, China. Association for Com- putational Linguistics.",
+                "links": null
+            },
+            "BIBREF23": {
+                "ref_id": "b23",
+                "title": "Fndnet -a deep convolutional neural network for fake news detection",
+                "authors": [
+                    {
+                        "first": "Rohit",
+                        "middle": [],
+                        "last": "Kumar Kaliyar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Anurag",
+                        "middle": [],
+                        "last": "Goswami",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "Cogn. Syst. Res",
+                "volume": "61",
+                "issue": "C",
+                "pages": "32--44",
+                "other_ids": {
+                    "DOI": [
+                        "10.1016/j.cogsys.2019.12.005"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Rohit Kumar Kaliyar, Anurag Goswami, Pratik Narang, and Soumendu Sinha. 2020. Fndnet -a deep con- volutional neural network for fake news detection. Cogn. Syst. Res., 61(C):32-44.",
+                "links": null
+            },
+            "BIBREF24": {
+                "ref_id": "b24",
+                "title": "Ctrl: A conditional transformer language model for controllable generation",
+                "authors": [
+                    {
+                        "first": "Nitish",
+                        "middle": [],
+                        "last": "Shirish Keskar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Bryan",
+                        "middle": [],
+                        "last": "Mccann",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Lav",
+                        "middle": [
+                            "R"
+                        ],
+                        "last": "Varshney",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Caiming",
+                        "middle": [],
+                        "last": "Xiong",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Richard",
+                        "middle": [],
+                        "last": "Socher",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Nitish Shirish Keskar, Bryan McCann, Lav R. Varsh- ney, Caiming Xiong, and Richard Socher. 2019. Ctrl: A conditional transformer language model for controllable generation. arXiv, abs/1909.05858.",
+                "links": null
+            },
+            "BIBREF25": {
+                "ref_id": "b25",
+                "title": "The measurement of observer agreement for categorical data",
+                "authors": [
+                    {
+                        "first": "J",
+                        "middle": [],
+                        "last": "",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Richard",
+                        "middle": [],
+                        "last": "Landis",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Gary",
+                        "middle": [
+                            "G"
+                        ],
+                        "last": "Koch",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1977,
+                "venue": "Biometrics",
+                "volume": "33",
+                "issue": "1",
+                "pages": "159--174",
+                "other_ids": {
+                    "DOI": [
+                        "10.2307/2529310"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "J. Richard Landis and Gary G. Koch. 1977. The mea- surement of observer agreement for categorical data. Biometrics, 33(1):159-174.",
+                "links": null
+            },
+            "BIBREF26": {
+                "ref_id": "b26",
+                "title": "Meteor: An automatic metric for mt evaluation with high levels of correlation with human judgments",
+                "authors": [
+                    {
+                        "first": "Alon",
+                        "middle": [],
+                        "last": "Lavie",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Abhaya",
+                        "middle": [],
+                        "last": "Agarwal",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2007,
+                "venue": "Proceedings of the Second Workshop on Statistical Machine Translation, StatMT '07",
+                "volume": "",
+                "issue": "",
+                "pages": "228--231",
+                "other_ids": {
+                    "DOI": [
+                        "10.3115/1626355.1626389"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Alon Lavie and Abhaya Agarwal. 2007. Meteor: An automatic metric for mt evaluation with high levels of correlation with human judgments. In Proceed- ings of the Second Workshop on Statistical Machine Translation, StatMT '07, page 228-231, USA. Asso- ciation for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF27": {
+                "ref_id": "b27",
+                "title": "Dave the debater: a retrieval-based and generative argumentative dialogue agent",
+                "authors": [
+                    {
+                        "first": "Thu",
+                        "middle": [],
+                        "last": "Dieu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Cam-Tu",
+                        "middle": [],
+                        "last": "Le",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kim",
+                        "middle": [
+                            "Anh"
+                        ],
+                        "last": "Nguyen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Nguyen",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 5th Workshop on Argument Mining",
+                "volume": "",
+                "issue": "",
+                "pages": "121--130",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/W18-5215"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Dieu Thu Le, Cam-Tu Nguyen, and Kim Anh Nguyen. 2018. Dave the debater: a retrieval-based and gen- erative argumentative dialogue agent. In Proceed- ings of the 5th Workshop on Argument Mining, pages 121-130, Brussels, Belgium. Association for Com- putational Linguistics.",
+                "links": null
+            },
+            "BIBREF28": {
+                "ref_id": "b28",
+                "title": "ROUGE: A package for automatic evaluation of summaries",
+                "authors": [
+                    {
+                        "first": "Chin-Yew",
+                        "middle": [],
+                        "last": "Lin",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2004,
+                "venue": "Text Summarization Branches Out",
+                "volume": "",
+                "issue": "",
+                "pages": "74--81",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Chin-Yew Lin. 2004. ROUGE: A package for auto- matic evaluation of summaries. In Text Summariza- tion Branches Out, pages 74-81, Barcelona, Spain. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF29": {
+                "ref_id": "b29",
+                "title": "Multi-task deep neural networks for natural language understanding",
+                "authors": [
+                    {
+                        "first": "Xiaodong",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Pengcheng",
+                        "middle": [],
+                        "last": "He",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Weizhu",
+                        "middle": [],
+                        "last": "Chen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jianfeng",
+                        "middle": [],
+                        "last": "Gao",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "4487--4496",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/P19-1441"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Xiaodong Liu, Pengcheng He, Weizhu Chen, and Jian- feng Gao. 2019. Multi-task deep neural networks for natural language understanding. In Proceedings of the 57th Annual Meeting of the Association for Com- putational Linguistics, pages 4487-4496, Florence, Italy. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF30": {
+                "ref_id": "b30",
+                "title": "Using summarization to discover argument facets in online idealogical dialog",
+                "authors": [
+                    {
+                        "first": "Amita",
+                        "middle": [],
+                        "last": "Misra",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Pranav",
+                        "middle": [],
+                        "last": "Anand",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jean",
+                        "middle": [
+                            "E"
+                        ],
+                        "last": "Fox Tree",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Marilyn",
+                        "middle": [],
+                        "last": "Walker",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Proceedings of the 2015 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies",
+                "volume": "",
+                "issue": "",
+                "pages": "430--440",
+                "other_ids": {
+                    "DOI": [
+                        "10.3115/v1/N15-1046"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Amita Misra, Pranav Anand, Jean E. Fox Tree, and Marilyn Walker. 2015. Using summarization to dis- cover argument facets in online idealogical dialog. In Proceedings of the 2015 Conference of the North American Chapter of the Association for Computa- tional Linguistics: Human Language Technologies, pages 430-440, Denver, Colorado. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF31": {
+                "ref_id": "b31",
+                "title": "Classifying frames at the sentence level in news articles",
+                "authors": [
+                    {
+                        "first": "Nona",
+                        "middle": [],
+                        "last": "Naderi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Graeme",
+                        "middle": [],
+                        "last": "Hirst",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Proceedings of the International Conference Recent Advances in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "536--542",
+                "other_ids": {
+                    "DOI": [
+                        "10.26615/978-954-452-049-6_070"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Nona Naderi and Graeme Hirst. 2017. Classifying frames at the sentence level in news articles. In Proceedings of the International Conference Recent Advances in Natural Language Processing, RANLP 2017, pages 536-542, Varna, Bulgaria. INCOMA Ltd. Romain Paulus, Caiming Xiong, and Richard Socher. 2018. A deep reinforced model for abstractive sum- marization. In 6th International Conference on Learning Representations, ICLR 2018, Vancouver, BC, Canada, April 30 -May 3, 2018, Conference Track Proceedings. OpenReview.net.",
+                "links": null
+            },
+            "BIBREF32": {
+                "ref_id": "b32",
+                "title": "Automatic detection of fake news",
+                "authors": [
+                    {
+                        "first": "Ver\u00f3nica",
+                        "middle": [],
+                        "last": "P\u00e9rez-Rosas",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Bennett",
+                        "middle": [],
+                        "last": "Kleinberg",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alexandra",
+                        "middle": [],
+                        "last": "Lefevre",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Rada",
+                        "middle": [],
+                        "last": "Mihalcea",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 27th International Conference on Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "3391--3401",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ver\u00f3nica P\u00e9rez-Rosas, Bennett Kleinberg, Alexandra Lefevre, and Rada Mihalcea. 2018. Automatic de- tection of fake news. In Proceedings of the 27th International Conference on Computational Linguis- tics, pages 3391-3401, Santa Fe, New Mexico, USA. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF33": {
+                "ref_id": "b33",
+                "title": "Supervised learning for fake news detection",
+                "authors": [
+                    {
+                        "first": "J",
+                        "middle": [
+                            "C S"
+                        ],
+                        "last": "Reis",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "A",
+                        "middle": [],
+                        "last": "Correia",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "F",
+                        "middle": [],
+                        "last": "Murai",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "A",
+                        "middle": [],
+                        "last": "Veloso",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "F",
+                        "middle": [],
+                        "last": "Benevenuto",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "IEEE Intelligent Systems",
+                "volume": "34",
+                "issue": "2",
+                "pages": "76--81",
+                "other_ids": {
+                    "DOI": [
+                        "10.1109/MIS.2019.2899143"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "J. C. S. Reis, A. Correia, F. Murai, A. Veloso, and F. Benevenuto. 2019. Supervised learning for fake news detection. IEEE Intelligent Systems, 34(2):76- 81.",
+                "links": null
+            },
+            "BIBREF34": {
+                "ref_id": "b34",
+                "title": "End-to-end argument generation system in debating",
+                "authors": [
+                    {
+                        "first": "Misa",
+                        "middle": [],
+                        "last": "Sato",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kohsuke",
+                        "middle": [],
+                        "last": "Yanai",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Toshinori",
+                        "middle": [],
+                        "last": "Miyoshi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Toshihiko",
+                        "middle": [],
+                        "last": "Yanase",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Makoto",
+                        "middle": [],
+                        "last": "Iwayama",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Qinghua",
+                        "middle": [],
+                        "last": "Sun",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yoshiki",
+                        "middle": [],
+                        "last": "Niwa",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Proceedings of ACL-IJCNLP 2015 System Demonstrations",
+                "volume": "",
+                "issue": "",
+                "pages": "109--114",
+                "other_ids": {
+                    "DOI": [
+                        "10.3115/v1/P15-4019"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Misa Sato, Kohsuke Yanai, Toshinori Miyoshi, Toshi- hiko Yanase, Makoto Iwayama, Qinghua Sun, and Yoshiki Niwa. 2015. End-to-end argument gener- ation system in debating. In Proceedings of ACL- IJCNLP 2015 System Demonstrations, pages 109- 114, Beijing, China. Association for Computational Linguistics and The Asian Federation of Natural Language Processing.",
+                "links": null
+            },
+            "BIBREF35": {
+                "ref_id": "b35",
+                "title": "Neural machine translation of rare words with subword units",
+                "authors": [
+                    {
+                        "first": "Rico",
+                        "middle": [],
+                        "last": "Sennrich",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Barry",
+                        "middle": [],
+                        "last": "Haddow",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alexandra",
+                        "middle": [],
+                        "last": "Birch",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of the 54th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "1",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/p16-1162"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Rico Sennrich, Barry Haddow, and Alexandra Birch. 2016. Neural machine translation of rare words with subword units. Proceedings of the 54th Annual Meeting of the Association for Computational Lin- guistics (Volume 1: Long Papers).",
+                "links": null
+            },
+            "BIBREF36": {
+                "ref_id": "b36",
+                "title": "ArgumenText: Searching for arguments in heterogeneous sources",
+                "authors": [
+                    {
+                        "first": "Christian",
+                        "middle": [],
+                        "last": "Stab",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Johannes",
+                        "middle": [],
+                        "last": "Daxenberger",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chris",
+                        "middle": [],
+                        "last": "Stahlhut",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tristan",
+                        "middle": [],
+                        "last": "Miller",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Benjamin",
+                        "middle": [],
+                        "last": "Schiller",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [],
+                        "last": "Tauchmann",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Steffen",
+                        "middle": [],
+                        "last": "Eger",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Iryna",
+                        "middle": [],
+                        "last": "Gurevych",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 2018 Conference of the North American Chapter of the Association for Computational Linguistics: Demonstrations",
+                "volume": "",
+                "issue": "",
+                "pages": "21--25",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/N18-5005"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Christian Stab, Johannes Daxenberger, Chris Stahlhut, Tristan Miller, Benjamin Schiller, Christopher Tauchmann, Steffen Eger, and Iryna Gurevych. 2018a. ArgumenText: Searching for arguments in heterogeneous sources. In Proceedings of the 2018 Conference of the North American Chapter of the Association for Computational Linguistics: Demon- strations, pages 21-25, New Orleans, Louisiana. As- sociation for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF37": {
+                "ref_id": "b37",
+                "title": "Pranav Rai, and Iryna Gurevych. 2018b. Cross-topic argument mining from heterogeneous sources",
+                "authors": [
+                    {
+                        "first": "Christian",
+                        "middle": [],
+                        "last": "Stab",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tristan",
+                        "middle": [],
+                        "last": "Miller",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Benjamin",
+                        "middle": [],
+                        "last": "Schiller",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "3664--3674",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/D18-1402"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Christian Stab, Tristan Miller, Benjamin Schiller, Pranav Rai, and Iryna Gurevych. 2018b. Cross-topic argument mining from heterogeneous sources. In Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing, Brussels, Belgium, October 31 -November 4, 2018, pages 3664-3674. Association for Computational Linguis- tics.",
+                "links": null
+            },
+            "BIBREF38": {
+                "ref_id": "b38",
+                "title": "Myside bias, rational thinking, and intelligence",
+                "authors": [
+                    {
+                        "first": "Keith",
+                        "middle": [
+                            "E"
+                        ],
+                        "last": "Stanovich",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Richard",
+                        "middle": [
+                            "F"
+                        ],
+                        "last": "West",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Maggie",
+                        "middle": [
+                            "E"
+                        ],
+                        "last": "Toplak",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2013,
+                "venue": "Current Directions in Psychological Science",
+                "volume": "22",
+                "issue": "4",
+                "pages": "259--264",
+                "other_ids": {
+                    "DOI": [
+                        "10.1177/0963721413480174"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Keith E. Stanovich, Richard F. West, and Maggie E. Toplak. 2013. Myside bias, rational thinking, and in- telligence. Current Directions in Psychological Sci- ence, 22(4):259-264.",
+                "links": null
+            },
+            "BIBREF39": {
+                "ref_id": "b39",
+                "title": "Sequence to sequence learning with neural networks",
+                "authors": [
+                    {
+                        "first": "Ilya",
+                        "middle": [],
+                        "last": "Sutskever",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Oriol",
+                        "middle": [],
+                        "last": "Vinyals",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Quoc V",
+                        "middle": [],
+                        "last": "Le",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2014,
+                "venue": "Advances in Neural Information Processing Systems",
+                "volume": "27",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ilya Sutskever, Oriol Vinyals, and Quoc V Le. 2014. Sequence to sequence learning with neural networks. In Advances in Neural Information Processing Sys- tems, volume 27. Curran Associates, Inc.",
+                "links": null
+            },
+            "BIBREF40": {
+                "ref_id": "b40",
+                "title": "Limits of detecting text generated by large-scale language models",
+                "authors": [
+                    {
+                        "first": "L",
+                        "middle": [
+                            "R"
+                        ],
+                        "last": "Varshney",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "N",
+                        "middle": [
+                            "Shirish"
+                        ],
+                        "last": "Keskar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "R",
+                        "middle": [],
+                        "last": "Socher",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "2020 Information Theory and Applications Workshop (ITA)",
+                "volume": "",
+                "issue": "",
+                "pages": "1--5",
+                "other_ids": {
+                    "DOI": [
+                        "10.1109/ITA50056.2020.9245012"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "L. R. Varshney, N. Shirish Keskar, and R. Socher. 2020. Limits of detecting text generated by large-scale lan- guage models. In 2020 Information Theory and Ap- plications Workshop (ITA), pages 1-5.",
+                "links": null
+            },
+            "BIBREF41": {
+                "ref_id": "b41",
+                "title": "Attention is all you need",
+                "authors": [
+                    {
+                        "first": "Ashish",
+                        "middle": [],
+                        "last": "Vaswani",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Noam",
+                        "middle": [],
+                        "last": "Shazeer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Niki",
+                        "middle": [],
+                        "last": "Parmar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jakob",
+                        "middle": [],
+                        "last": "Uszkoreit",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Llion",
+                        "middle": [],
+                        "last": "Jones",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Aidan",
+                        "middle": [
+                            "N"
+                        ],
+                        "last": "Gomez",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "\u0141 Ukasz",
+                        "middle": [],
+                        "last": "Kaiser",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Illia",
+                        "middle": [],
+                        "last": "Polosukhin",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Advances in Neural Information Processing Systems",
+                "volume": "30",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N Gomez, \u0141 ukasz Kaiser, and Illia Polosukhin. 2017. Attention is all you need. In Advances in Neural Information Pro- cessing Systems, volume 30. Curran Associates, Inc.",
+                "links": null
+            },
+            "BIBREF42": {
+                "ref_id": "b42",
+                "title": "Retrieval of the best counterargument without prior topic knowledge",
+                "authors": [
+                    {
+                        "first": "Shahbaz",
+                        "middle": [],
+                        "last": "Henning Wachsmuth",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Benno",
+                        "middle": [],
+                        "last": "Syed",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Stein",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 56th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "1",
+                "issue": "",
+                "pages": "241--251",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/P18-1023"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Henning Wachsmuth, Shahbaz Syed, and Benno Stein. 2018. Retrieval of the best counterargument with- out prior topic knowledge. In Proceedings of the 56th Annual Meeting of the Association for Com- putational Linguistics (Volume 1: Long Papers), pages 241-251, Melbourne, Australia. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF43": {
+                "ref_id": "b43",
+                "title": "Neural network-based abstract generation for opinions and arguments",
+                "authors": [
+                    {
+                        "first": "Lu",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Wang",
+                        "middle": [],
+                        "last": "Ling",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of the 2016 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies",
+                "volume": "",
+                "issue": "",
+                "pages": "47--57",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/N16-1007"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Lu Wang and Wang Ling. 2016. Neural network-based abstract generation for opinions and arguments. In Proceedings of the 2016 Conference of the North American Chapter of the Association for Computa- tional Linguistics: Human Language Technologies, pages 47-57, San Diego, California. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF44": {
+                "ref_id": "b44",
+                "title": "A network-based end-to-end trainable task-oriented dialogue system",
+                "authors": [
+                    {
+                        "first": "David",
+                        "middle": [],
+                        "last": "Tsung Hsien Wen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nikola",
+                        "middle": [],
+                        "last": "Vandyke",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Milica",
+                        "middle": [],
+                        "last": "Mrk\u0161\u00edc",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Lina",
+                        "middle": [
+                            "M"
+                        ],
+                        "last": "Ga\u0161\u00edc",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Pei",
+                        "middle": [
+                            "Hao"
+                        ],
+                        "last": "Rojas-Barahona",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Stefan",
+                        "middle": [],
+                        "last": "Su",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Steve",
+                        "middle": [],
+                        "last": "Ultes",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Young",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "EACL 2017 -Proceedings of Conference",
+                "volume": "1",
+                "issue": "",
+                "pages": "438--449",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/e17-1042"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Tsung Hsien Wen, David Vandyke, Nikola Mrk\u0161\u00edc, Mil- ica Ga\u0161\u00edc, Lina M. Rojas-Barahona, Pei Hao Su, Ste- fan Ultes, and Steve Young. 2017. A network-based end-to-end trainable task-oriented dialogue system. 15th Conference of the European Chapter of the Association for Computational Linguistics, EACL 2017 -Proceedings of Conference, 1:438-449.",
+                "links": null
+            },
+            "BIBREF45": {
+                "ref_id": "b45",
+                "title": "Transformers: State-of-the-art natural language processing",
+                "authors": [
+                    {
+                        "first": "Thomas",
+                        "middle": [],
+                        "last": "Wolf",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Lysandre",
+                        "middle": [],
+                        "last": "Debut",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Victor",
+                        "middle": [],
+                        "last": "Sanh",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Julien",
+                        "middle": [],
+                        "last": "Chaumond",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Clement",
+                        "middle": [],
+                        "last": "Delangue",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Anthony",
+                        "middle": [],
+                        "last": "Moi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Pierric",
+                        "middle": [],
+                        "last": "Cistac",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tim",
+                        "middle": [],
+                        "last": "Rault",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Remi",
+                        "middle": [],
+                        "last": "Louf",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Morgan",
+                        "middle": [],
+                        "last": "Funtowicz",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Joe",
+                        "middle": [],
+                        "last": "Davison",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sam",
+                        "middle": [],
+                        "last": "Shleifer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Clara",
+                        "middle": [],
+                        "last": "Patrick Von Platen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yacine",
+                        "middle": [],
+                        "last": "Ma",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Julien",
+                        "middle": [],
+                        "last": "Jernite",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Canwen",
+                        "middle": [],
+                        "last": "Plu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Teven",
+                        "middle": [],
+                        "last": "Xu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sylvain",
+                        "middle": [],
+                        "last": "Le Scao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mariama",
+                        "middle": [],
+                        "last": "Gugger",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Quentin",
+                        "middle": [],
+                        "last": "Drame",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alexander",
+                        "middle": [],
+                        "last": "Lhoest",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Rush",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "Proceedings of the 2020 Conference on Empirical Methods in Natural Language Processing: System Demonstrations",
+                "volume": "",
+                "issue": "",
+                "pages": "38--45",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/2020.emnlp-demos.6"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Thomas Wolf, Lysandre Debut, Victor Sanh, Julien Chaumond, Clement Delangue, Anthony Moi, Pier- ric Cistac, Tim Rault, Remi Louf, Morgan Funtow- icz, Joe Davison, Sam Shleifer, Patrick von Platen, Clara Ma, Yacine Jernite, Julien Plu, Canwen Xu, Teven Le Scao, Sylvain Gugger, Mariama Drame, Quentin Lhoest, and Alexander Rush. 2020. Trans- formers: State-of-the-art natural language process- ing. In Proceedings of the 2020 Conference on Em- pirical Methods in Natural Language Processing: System Demonstrations, pages 38-45, Online. Asso- ciation for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF46": {
+                "ref_id": "b46",
+                "title": "Topic aware neural response generation",
+                "authors": [
+                    {
+                        "first": "Chen",
+                        "middle": [],
+                        "last": "Xing",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Wei",
+                        "middle": [],
+                        "last": "Wu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yu",
+                        "middle": [],
+                        "last": "Wu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jie",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yalou",
+                        "middle": [],
+                        "last": "Huang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ming",
+                        "middle": [],
+                        "last": "Zhou",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Wei-Ying",
+                        "middle": [],
+                        "last": "Ma",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Proceedings of the AAAI Conference on Artificial Intelligence",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Chen Xing, Wei Wu, Yu Wu, Jie Liu, Yalou Huang, Ming Zhou, and Wei-Ying Ma. 2017. Topic aware neural response generation. In Proceedings of the AAAI Conference on Artificial Intelligence, vol- ume 31.",
+                "links": null
+            },
+            "BIBREF47": {
+                "ref_id": "b47",
+                "title": "Defending against neural fake news",
+                "authors": [
+                    {
+                        "first": "Rowan",
+                        "middle": [],
+                        "last": "Zellers",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ari",
+                        "middle": [],
+                        "last": "Holtzman",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hannah",
+                        "middle": [],
+                        "last": "Rashkin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yonatan",
+                        "middle": [],
+                        "last": "Bisk",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ali",
+                        "middle": [],
+                        "last": "Farhadi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Franziska",
+                        "middle": [],
+                        "last": "Roesner",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yejin",
+                        "middle": [],
+                        "last": "Choi",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Advances in Neural Information Processing Systems",
+                "volume": "32",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Rowan Zellers, Ari Holtzman, Hannah Rashkin, Yonatan Bisk, Ali Farhadi, Franziska Roesner, and Yejin Choi. 2019. Defending against neural fake news. In Advances in Neural Information Process- ing Systems, volume 32. Curran Associates, Inc.",
+                "links": null
+            },
+            "BIBREF48": {
+                "ref_id": "b48",
+                "title": "Bayesian reasoning in an abductive mechanism for argument generation and analysis",
+                "authors": [
+                    {
+                        "first": "Ingrid",
+                        "middle": [],
+                        "last": "Zukerman",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Richard",
+                        "middle": [],
+                        "last": "Mcconachy",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kevin",
+                        "middle": [
+                            "B"
+                        ],
+                        "last": "Korb",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1998,
+                "venue": "Proceedings of the Fifteenth National/Tenth Conference on Artificial Intelligence/Innovative Applications of Artificial Intelligence",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ingrid Zukerman, Richard McConachy, and Kevin B. Korb. 1998. Bayesian reasoning in an abductive mechanism for argument generation and analysis. In Proceedings of the Fifteenth National/Tenth Con- ference on Artificial Intelligence/Innovative Applica- tions of Artificial Intelligence, AAAI '98/IAAI '98,",
+                "links": null
+            }
+        },
+        "ref_entries": {
+            "FIGREF1": {
+                "num": null,
+                "text": "Figure 1: (1) Gather data from large data sources. Extract sentences, classify arguments, and detect aspects. Arguments sharing a topic & stance & aspect ( = control code) are concatenated into training documents. (2) The model is fine-tuned on each document with the control code prepended to each input sequence. (3) At inference, the model only needs a control code to generate an argument that follows the given topic & stance & aspect.",
+                "uris": null,
+                "fig_num": "1",
+                "type_str": "figure"
+            },
+            "FIGREF2": {
+                "num": null,
+                "text": "Figure 2: Guidelines for the final annotation study.",
+                "uris": null,
+                "fig_num": "2",
+                "type_str": "figure"
+            },
+            "FIGREF3": {
+                "num": null,
+                "text": "Figure 3: Example sentence of a HIT with two aspects selected.",
+                "uris": null,
+                "fig_num": "3",
+                "type_str": "figure"
+            },
+            "FIGREF4": {
+                "num": null,
+                "text": "Figure 4: Example sentence of a HIT with the list of ranked aspect candidates.",
+                "uris": null,
+                "fig_num": "4",
+                "type_str": "figure"
+            },
+            "TABREF0": {
+                "content": "<table><tr><td>Topic</td><td/><td colspan=\"3\">Five most frequent aspects (frequency)</td></tr><tr><td colspan=\"2\">Gun control</td><td colspan=\"3\">right (30), protect (18), background checks (17), gun violence (14), criminal (13)</td></tr><tr><td colspan=\"2\">Death penalty</td><td colspan=\"3\">cost (16), innocent (12), retribution (10), murder rate (9), deterrent (8)</td></tr><tr><td colspan=\"2\">Abortion</td><td colspan=\"3\">right (21), pain (10), choice (10), right to life (9), risk (9)</td></tr><tr><td colspan=\"5\">Marijuana legalization dangerous (16), cost (13), risk (12), harm (10), black market (9)</td></tr><tr><td colspan=\"2\">General aspects</td><td colspan=\"3\">dangerous (in 8 of 8 topics), cost / life / risk / safety (in 7 of 8 topics)</td></tr><tr><td>Setting</td><td colspan=\"4\">Rec@5 Rec@10 Rec@15 Rec@20</td></tr><tr><td>In-topic</td><td>0.7701</td><td>0.8468</td><td>0.8661</td><td>0.8925</td></tr><tr><td colspan=\"2\">Cross-topic 0.5951</td><td>0.7415</td><td>0.8164</td><td>0.8630</td></tr><tr><td colspan=\"5\">Table 2: In-and cross-topic Recall@k of the ranker</td></tr><tr><td colspan=\"3\">used for aspect recommendations.</td><td/><td/></tr></table>",
+                "type_str": "table",
+                "text": "The five most frequent aspects for four exemplary topics and overall.",
+                "html": null,
+                "num": null
+            },
+            "TABREF1": {
+                "content": "<table><tr><td>Model</td><td colspan=\"3\">F 1 macro Precision Recall</td></tr><tr><td>Majority (baseline)</td><td>.3085</td><td>.2871</td><td>.3333</td></tr><tr><td>Ranker</td><td>.6522</td><td>.6685</td><td>.6474</td></tr><tr><td>BERT BASE</td><td>.6980</td><td>.6927</td><td>.7040</td></tr><tr><td>BERT LARGE</td><td>.7100</td><td>.7240</td><td>.6993</td></tr></table>",
+                "type_str": "table",
+                "text": "Test set results of the models for aspect detection. Majority only predicts class O.",
+                "html": null,
+                "num": null
+            },
+            "TABREF3": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "cloning CON unrespectable . Cloning humans for reproductive purposes is unethical and unacceptable , but creating cloned embryos solely for research -which involves destroying them anyway -is downright criminal . (0.97) cloning CON disfavored . , cliques ) to them . (0.36) nuclear energy PRO safe . In addition , we must continue developing safer technologies like small modular reactors which will help us meet our nation 's need for reliable , emission-free sources of low-emission energy [...] . (0.96) nuclear energy CON leak . \" We are concerned about the possibility of further releases of radioactivity due to possible melting or cracking of fuel rods at the No . (0.47) marijuana legalization PRO safer : Legalizing cannabis will help reduce crime rates ( especially violent crimes ) and make society safer overall . (0.96) marijuana legalization PRO benefits . Decrease amount of police officers needed 6 . (0.37)",
+                "html": null,
+                "num": null
+            },
+            "TABREF4": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "Generated arguments of highest/lowest quality with Arg-CTRL CC . Bold text shows the used control code. Quality score in brackets as predicted by the argument quality model. \"[...]\" signals shortened text.decoding at inference, we use penalized sampling as proposed byKeskar et al. (2019). It defines a near-greedy sampling strategy that uses a penalty constant, effectively lowering the probability of previously generated tokens to prevent repetitions.Training The CTRL was trained on 140GB of data from several large resources like Wikipedia, subreddits, and news data. We base our experiments on the pre-trained weights for a sequence length of 256 and fine-tune (see App. C for technical details) two models: Arg-CTRL CC (on the CC data) and Arg-CTRL REDDIT (on the REDDIT data). All training documents are sampled randomly for training.",
+                "html": null,
+                "num": null
+            },
+            "TABREF5": {
+                "content": "<table><tr><td>8 procon.org and idebate.org</td></tr></table>",
+                "type_str": "table",
+                "text": "Comparison of retrieval and generation approach with reference data from debate portals.",
+                "html": null,
+                "num": null
+            },
+            "TABREF7": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "Training data vs. generated arguments: examples of most similar arguments. Underlines mark the longest common overlap between generated and training sentences.",
+                "html": null,
+                "num": null
+            },
+            "TABREF8": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "Table 8 lists the ElasticSearch queries we used to retrieve the initial training documents from CC and REDDIT. Combinations of topics and data sources that are not listed in the table required no expansion of the query to gather enough documents for training. In Table",
+                "html": null,
+                "num": null
+            },
+            "TABREF9": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "For all eight topics, we show the generated argument with the highest and lowest argument quality score in tables 11 (Arg-CTRL CC ) and 12 (Arg-CTRL REDDIT ). Text in bold shows the given control code, text afterwards represents the generated argument. Numbers in brackets after the text show the quality score as predicted by the argument quality model.",
+                "html": null,
+                "num": null
+            },
+            "TABREF10": {
+                "content": "<table><tr><td>Topic</td><td>Synonyms</td></tr><tr><td>School uniforms</td><td>uniform, college, outfit, dress, suit, jacket, cloth</td></tr><tr><td>Nuclear energy</td><td>fission, fusion</td></tr></table>",
+                "type_str": "table",
+                "text": "Synonyms added to the topic query to gather initial documents from ElasticSearch. For combinations of topics and data sources (i.e. REDDIT and CC) that are not listed, we only used the topic as search query. , atomic energy, nuclear power, atomic power, radioactive, radioactivity Marijuana legalization cannabis, legalization of marijuana, legal, illegal, law, weed, dope Cloning clone, cloned, duplicate, copy, reproduct, asexual Death penalty capital punishment, execution, electric chair, punishment, punish Minimum wage living wage, base pay, average wage, low income Abortion abort, termination, misbirth, birth control Gun control second amendment, ownership, arms reduction, arms limitation",
+                "html": null,
+                "num": null
+            },
+            "TABREF11": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "Topic synonyms to pre-filter sentences prior to argument and stance classification.abortion PRO reduce abortions : It 's been shown time after time that comprehensive sexual health services ( including free or cheap long term hormonal birth controls ) greatly reduces abortions by preventing unplanned pregnancies from happening in the first place . (0.99) abortion PRO crime . _r=0 & amp ; pagewanted=print & amp ; oref=slogin ) . (0.40) cloning PRO reproduction . The only way to increase the number of clones is through sexual reproduction , which increases genetic diversity and therefore reduces extinction rates . (0.85) cloning PRO awesome . But yeah , the clone skins look fucking awesome . (0.36) nuclear energy PRO safe . Nuclear is the only viable option for a large scale , reliable and safe form of energy production that can replace fossil fuels as our main energy source . (0.97) nuclear energy CON leak . Biofuel does n't need batteries 6 . (0.41) death penalty PRO save . The only way we can possibly make sure no innocents are executed is by abolishing the death penalty altogether -there 's just too much chance that at least one innocent person will die before their execution date was up and they were able to prove their innocence with DNA evidence and/or other exonerating circumstances . (0.95) death penalty PRO innocent person . Innocent people do n't deserve to live 2 . (0.43) school uniforms PRO fit . Dress codes exist to prevent distractions from other students while trying to teach kids appropriate attire which helps them learn proper social skills and fitting into society . (0.83) school uniforms PRO nice : It looks really nice on my college application . (0.37) gun control PRO prevent . Guns also help prevent tyranny by removing checks against government overreach into areas where the populace has little power . (0.95) gun control CON problem ; the guns are n't the real problems . (0.32) marijuana legalization CON bad : Alcohol is also very addictive and has been shown time after time to have negative effects on health yet it remains completely legal while cannabis gets demonized by law enforcement and politicians alike despite being less harmful than many prescription medications in every way imaginable . (0.93) marijuana legalization PRO buy . Get busted by police 5 . (0.36) minimum wage PRO poverty : Raising the minimum wage helps alleviate poverty as well as increase demand for goods and services from consumers . (0.93) minimum wage CON pay : They ca n't pay below minimum wage either . (0.41)",
+                "html": null,
+                "num": null
+            },
+            "TABREF12": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "Generated arguments with the Arg-CTRL REDDIT . Text in bold shows the given control code, text afterwards represents the generated argument. Numbers in brackets after the text show the quality score as predicted by the argument quality model.",
+                "html": null,
+                "num": null
+            }
+        }
+    }
+}

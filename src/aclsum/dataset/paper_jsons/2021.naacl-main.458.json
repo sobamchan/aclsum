@@ -1,0 +1,2938 @@
+{
+    "paper_id": "2021",
+    "header": {
+        "generated_with": "S2ORC 1.0.0",
+        "date_generated": "2023-06-16T12:02:52.876244Z"
+    },
+    "title": "Non-Autoregressive Translation by Learning Target Categorical Codes",
+    "authors": [
+        {
+            "first": "Yu",
+            "middle": [],
+            "last": "Bao",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "National Key Laboratory for Novel Software Technology",
+                "institution": "NiuTrans Co., Ltd",
+                "location": {
+                    "settlement": "Shenyang",
+                    "country": "China"
+                }
+            },
+            "email": "baoy@smail.nju.edu.cn"
+        },
+        {
+            "first": "Shujian",
+            "middle": [],
+            "last": "Huang",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "National Key Laboratory for Novel Software Technology",
+                "institution": "NiuTrans Co., Ltd",
+                "location": {
+                    "settlement": "Shenyang",
+                    "country": "China"
+                }
+            },
+            "email": "huangsj@nju.edu.cn"
+        },
+        {
+            "first": "Tong",
+            "middle": [],
+            "last": "Xiao",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "National Key Laboratory for Novel Software Technology",
+                "institution": "NiuTrans Co., Ltd",
+                "location": {
+                    "settlement": "Shenyang",
+                    "country": "China"
+                }
+            },
+            "email": "xiaotong@mail.neu.edu.cn"
+        },
+        {
+            "first": "Dongqi",
+            "middle": [],
+            "last": "Wang",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "National Key Laboratory for Novel Software Technology",
+                "institution": "NiuTrans Co., Ltd",
+                "location": {
+                    "settlement": "Shenyang",
+                    "country": "China"
+                }
+            },
+            "email": "wangdq@smail.nju.edu.cn"
+        },
+        {
+            "first": "Xinyu",
+            "middle": [],
+            "last": "Dai",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "National Key Laboratory for Novel Software Technology",
+                "institution": "NiuTrans Co., Ltd",
+                "location": {
+                    "settlement": "Shenyang",
+                    "country": "China"
+                }
+            },
+            "email": "daixinyu@nju.edu.cn"
+        },
+        {
+            "first": "Jiajun",
+            "middle": [],
+            "last": "Chen",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "National Key Laboratory for Novel Software Technology",
+                "institution": "NiuTrans Co., Ltd",
+                "location": {
+                    "settlement": "Shenyang",
+                    "country": "China"
+                }
+            },
+            "email": "chenjj@nju.edu.cn"
+        }
+    ],
+    "year": "",
+    "venue": null,
+    "identifiers": {},
+    "abstract": "Non-autoregressive Transformer is a promising text generation model. However, current non-autoregressive models still fall behind their autoregressive counterparts in translation quality. We attribute this accuracy gap to the lack of dependency modeling among decoder inputs. In this paper, we propose CNAT, which learns implicitly categorical codes as latent variables into the non-autoregressive decoding. The interaction among these categorical codes remedies the missing dependencies and improves the model capacity. Experiment results show that our model achieves comparable or better performance in machine translation tasks than several strong baselines.",
+    "pdf_parse": {
+        "paper_id": "2021",
+        "_pdf_hash": "",
+        "abstract": [
+            {
+                "text": "Non-autoregressive Transformer is a promising text generation model. However, current non-autoregressive models still fall behind their autoregressive counterparts in translation quality. We attribute this accuracy gap to the lack of dependency modeling among decoder inputs. In this paper, we propose CNAT, which learns implicitly categorical codes as latent variables into the non-autoregressive decoding. The interaction among these categorical codes remedies the missing dependencies and improves the model capacity. Experiment results show that our model achieves comparable or better performance in machine translation tasks than several strong baselines.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            }
+        ],
+        "body_text": [
+            {
+                "text": "Non-autoregressive Transformer (NAT, Gu et al., 2018; Wang et al., 2019; Lee et al., 2018; Ghazvininejad et al., 2019) is a promising text generation model for machine translation. It introduces the conditional independent assumption among the target language outputs and simultaneously generates the whole sentence, bringing in a remarkable efficiency improvement (more than 10\u00d7 speed-up) versus the autoregressive model. However, the NAT models still lay behind the autoregressive models in terms of BLEU (Papineni et al., 2002) for machine translation. We attribute the low-quality of NAT models to the lack of dependencies modeling for the target outputs, making it harder to model the generation of the target side translation.",
+                "cite_spans": [
+                    {
+                        "start": 37,
+                        "end": 53,
+                        "text": "Gu et al., 2018;",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 54,
+                        "end": 72,
+                        "text": "Wang et al., 2019;",
+                        "ref_id": "BIBREF25"
+                    },
+                    {
+                        "start": 73,
+                        "end": 90,
+                        "text": "Lee et al., 2018;",
+                        "ref_id": "BIBREF12"
+                    },
+                    {
+                        "start": 91,
+                        "end": 118,
+                        "text": "Ghazvininejad et al., 2019)",
+                        "ref_id": "BIBREF4"
+                    },
+                    {
+                        "start": 507,
+                        "end": 530,
+                        "text": "(Papineni et al., 2002)",
+                        "ref_id": "BIBREF16"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "A promising way is to model the dependencies of the target language by the latent variables. A line of research works (Kaiser et al., 2018; Roy et al., 2018; Shu et al., 2019; Ma et al., 2019) introduce latent variable modeling to the non-autoregressive Transformer and improves translation quality. The latent variables could be regarded as the springboard to bridge the modeling gap, introducing more informative decoder inputs than the previ-ously copied inputs. More specifically, the latentvariable based model first predicts a latent variable sequence conditioned on the source representation, where each variable represents a chunk of words. The model then simultaneously could generate all the target tokens conditioning on the latent sequence and the source representation since the target dependencies have been modeled into the latent sequence.",
+                "cite_spans": [
+                    {
+                        "start": 118,
+                        "end": 139,
+                        "text": "(Kaiser et al., 2018;",
+                        "ref_id": "BIBREF8"
+                    },
+                    {
+                        "start": 140,
+                        "end": 157,
+                        "text": "Roy et al., 2018;",
+                        "ref_id": "BIBREF19"
+                    },
+                    {
+                        "start": 158,
+                        "end": 175,
+                        "text": "Shu et al., 2019;",
+                        "ref_id": "BIBREF21"
+                    },
+                    {
+                        "start": 176,
+                        "end": 192,
+                        "text": "Ma et al., 2019)",
+                        "ref_id": "BIBREF14"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "However, due to the modeling complexity of the chunks, the above approaches always rely on a large number (more than 2 15 , Kaiser et al., 2018; Roy et al., 2018) of latent codes for discrete latent spaces, which may hurt the translation efficiencythe essential goal of non-autoregressive decoding. Akoury et al. (2019) introduce syntactic labels as a proxy to the learned discrete latent space and improve the NATs' performance. The syntactic label greatly reduces the search space of latent codes, leading to a better performance in both quality and speed. However, it needs an external syntactic parser to produce the reference syntactic tree, which may only be effective in limited scenarios. Thus, it is still challenging to model the dependency between latent variables for non-autoregressive decoding efficiently.",
+                "cite_spans": [
+                    {
+                        "start": 124,
+                        "end": 144,
+                        "text": "Kaiser et al., 2018;",
+                        "ref_id": "BIBREF8"
+                    },
+                    {
+                        "start": 145,
+                        "end": 162,
+                        "text": "Roy et al., 2018)",
+                        "ref_id": "BIBREF19"
+                    },
+                    {
+                        "start": 299,
+                        "end": 319,
+                        "text": "Akoury et al. (2019)",
+                        "ref_id": "BIBREF0"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "In this paper, we propose to learn a set of latent codes that can act like the syntactic label, which is learned without using the explicit syntactic trees. To learn these codes in an unsupervised way, we use each latent code to represent a fuzzy target category instead of a chunk as the previous research (Akoury et al., 2019) . More specifically, we first employ vector quantization (Roy et al., 2018) to discretize the target language to the latent space with a smaller number (less than 128) of latent variables, which can serve as the fuzzy word-class information each target language word. We then model the latent variables with conditional random fields (CRF, Lafferty et al., 2001; Sun et al., 2019) . To avoid the mismatch of the training and inference for latent variable modeling, we propose using a gated neural network to form the decoder inputs. Equipping it with scheduled sampling (Bengio et al., 2015) , the model works more robustly.",
+                "cite_spans": [
+                    {
+                        "start": 307,
+                        "end": 328,
+                        "text": "(Akoury et al., 2019)",
+                        "ref_id": "BIBREF0"
+                    },
+                    {
+                        "start": 386,
+                        "end": 404,
+                        "text": "(Roy et al., 2018)",
+                        "ref_id": "BIBREF19"
+                    },
+                    {
+                        "start": 669,
+                        "end": 691,
+                        "text": "Lafferty et al., 2001;",
+                        "ref_id": "BIBREF11"
+                    },
+                    {
+                        "start": 692,
+                        "end": 709,
+                        "text": "Sun et al., 2019)",
+                        "ref_id": "BIBREF22"
+                    },
+                    {
+                        "start": 899,
+                        "end": 920,
+                        "text": "(Bengio et al., 2015)",
+                        "ref_id": "BIBREF2"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Experiment results on WMT14 and IWSLT14 show that CNAT achieves the new state-of-theart performance without knowledge distillation.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "With the sequence-level knowledge distillation and reranking techniques, the CNAT is comparable to the current state-of-the-art iterative-based model while keeping a competitive decoding speedup.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Neural machine translation (NMT) is formulated as a conditional probability model p(y|x), which models a sentence y = {y 1 , y 2 , \u2022 \u2022 \u2022 , y m } in the target language given the input x = {x 1 , x 2 , \u2022 \u2022 \u2022 , x n } from the source language.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Background",
+                "sec_num": "2"
+            },
+            {
+                "text": "Gu et al. (2018) proposes Non-Autoregressive Transformer (NAT) for machine translation, breaking the dependency among target tokens, thus achieving simultaneous decoding for all tokens. For a source sentence, a non-autoregressive decoder factorizes the probability of its target sentence as:",
+                "cite_spans": [
+                    {
+                        "start": 3,
+                        "end": 16,
+                        "text": "et al. (2018)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Non-Autoregressive Neural Machine Translation",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "p(y|x) = m t=1 p(y t |x; \u03b8),",
+                        "eq_num": "(1)"
+                    }
+                ],
+                "section": "Non-Autoregressive Neural Machine Translation",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "where \u03b8 is the set of model parameters.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Non-Autoregressive Neural Machine Translation",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "NAT has a similar architecture to the autoregressive Transformer (AT, Vaswani et al., 2017) , which consists of a multi-head attention based encoder and decoder. The model first encodes the source sentence x 1:n as the contextual representation e 1:n , then employs an extra module to predict the target length and form the decoder inputs.",
+                "cite_spans": [
+                    {
+                        "start": 70,
+                        "end": 91,
+                        "text": "Vaswani et al., 2017)",
+                        "ref_id": "BIBREF23"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Non-Autoregressive Neural Machine Translation",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "\u2022 Length Prediction: Specifically, the length predictor in the bridge module predicts the target sequence length m by:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Non-Autoregressive Neural Machine Translation",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "m = n + arg max \u2206L p(\u2206 L | mean(e); \u03c6),",
+                        "eq_num": "(2)"
+                    }
+                ],
+                "section": "Non-Autoregressive Neural Machine Translation",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "where \u2206 L is the length difference between the target and source sentence, \u03c6 is the parameter of length predictor. \u2022 Inputs Initialization: With the target sequence length m, we can compute the decoder inputs h = h 1:m with Softcopy (Li et al., 2019; Wei et al., 2019) as:",
+                "cite_spans": [
+                    {
+                        "start": 233,
+                        "end": 250,
+                        "text": "(Li et al., 2019;",
+                        "ref_id": "BIBREF13"
+                    },
+                    {
+                        "start": 251,
+                        "end": 268,
+                        "text": "Wei et al., 2019)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Non-Autoregressive Neural Machine Translation",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "h j = n i w ij \u2022 e i and w ij = softmax(-|j -i|/\u03c4 ),",
+                        "eq_num": "(3)"
+                    }
+                ],
+                "section": "Non-Autoregressive Neural Machine Translation",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "where \u03c4 is a hyper-parameter to control the sharpness of the softmax function.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Non-Autoregressive Neural Machine Translation",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "With the computed decoder inputs h, NAT generates target sequences simultaneously by arg max yt p(y t |x; \u03b8) for each timestep t, effectively reduce computational overhead in decoding (see Figure 1b ). Though NAT achieves around 10\u00d7 speedup in machine translation than autoregressive models, it still suffers from potential performance degradation (Gu et al., 2018) . The results degrade since the removal of target dependencies prevents the decoder from leveraging the inherent sentence structure in prediction. Moreover, taking the copied source representation as decoder inputs implicitly assume that the source and target language share a similar order, which may not always be the case (Bao et al., 2019) .",
+                "cite_spans": [
+                    {
+                        "start": 348,
+                        "end": 365,
+                        "text": "(Gu et al., 2018)",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 691,
+                        "end": 709,
+                        "text": "(Bao et al., 2019)",
+                        "ref_id": "BIBREF1"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 196,
+                        "end": 198,
+                        "text": "1b",
+                        "ref_id": "FIGREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Non-Autoregressive Neural Machine Translation",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "To bridge the gap between non-autoregressive and autoregressive decoding, Kaiser et al. (2018) introduce the Latent Transformer (LT). It incorporates non-autoregressive decoding with conditional dependency as the latent variable to alleviate the degradation resulted from the absence of dependency:",
+                "cite_spans": [
+                    {
+                        "start": 74,
+                        "end": 94,
+                        "text": "Kaiser et al. (2018)",
+                        "ref_id": "BIBREF8"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Latent Transformer",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "p(y|x) = p(z|x; \u03c6) m t=1",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Latent Transformer",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "p(y t |z, x; \u03b8), (4) where z = {z 1 , \u2022 \u2022 \u2022 , z L } is the latent variable sequence and the L is the length of the latent sequence, \u03c6 and \u03b8 are the parameter of latent predictor and translation model, respectively.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Latent Transformer",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "The LT architecture stays unchanged from the origin NAT models, except for the latent predictor and decoder inputs. During inference, the Latent Transformer first autoregressively predicts the latent variables z, then non-autoregressively produces the entire target sentence y conditioned on the latent sequence z (see Figure 1c ). Ma et al. (2019) ; Shu et al. (2019) extend this idea and model z as the continuous latent variables, achieving a promising result, which replaces the autoregressive predictor with the iterative transformation layer.",
+                "cite_spans": [
+                    {
+                        "start": 332,
+                        "end": 348,
+                        "text": "Ma et al. (2019)",
+                        "ref_id": "BIBREF14"
+                    },
+                    {
+                        "start": 351,
+                        "end": 368,
+                        "text": "Shu et al. (2019)",
+                        "ref_id": "BIBREF21"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 326,
+                        "end": 328,
+                        "text": "1c",
+                        "ref_id": "FIGREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Latent Transformer",
+                "sec_num": "2.2"
+            },
+            {
+                "text": "In this section, we present our proposed CNAT, an extension to the Transformer incorporated with non-autoregressive decoding for target tokens and autoregressive decoding for latent sequences.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Approach",
+                "sec_num": "3"
+            },
+            {
+                "text": "In brief, CNAT follows the architecture of Latent Transformer (Kaiser et al., 2018) , except for the latent variable modeling (in \u00a7 3.1 and \u00a7 3.2) and inputs initialization (in \u00a7 3.3).",
+                "cite_spans": [
+                    {
+                        "start": 62,
+                        "end": 83,
+                        "text": "(Kaiser et al., 2018)",
+                        "ref_id": "BIBREF8"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Approach",
+                "sec_num": "3"
+            },
+            {
+                "text": "Categorical information has achieved great success in neural machine translation, such as partof-speech (POS) tag in autoregressive translation (Yang et al., 2019) and syntactic label in nonautoregressive translation (Akoury et al., 2019) .",
+                "cite_spans": [
+                    {
+                        "start": 144,
+                        "end": 163,
+                        "text": "(Yang et al., 2019)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 217,
+                        "end": 238,
+                        "text": "(Akoury et al., 2019)",
+                        "ref_id": "BIBREF0"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Modeling Target Categorical Information by Vector Quantization",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "Inspired by the broad application of categorical information, we propose to model the implicit categorical information of target words in a nonautoregressive Transformer. Each target sequence y = y 1:m will be assigned to a discrete latent variable sequence z = z 1:m . We assume that each z i will capture the fuzzy category of its token y i . Then, the conditional probability p(y|x) is factorized with respect to the categorical latent variable:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Modeling Target Categorical Information by Vector Quantization",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "p(y|x) = z p(z|x) \u2022 p(y|z, x).",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Modeling Target Categorical Information by Vector Quantization",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "(5) However, it is computationally intractable to sum all configurations of latent variables. Following the spirit of the latent based model (Kaiser et al., 2018; Roy et al., 2018) , we employ a vector quantized technique to maintain differentiability through the categorical modeling and learn the latent variables straightforward.",
+                "cite_spans": [
+                    {
+                        "start": 141,
+                        "end": 162,
+                        "text": "(Kaiser et al., 2018;",
+                        "ref_id": "BIBREF8"
+                    },
+                    {
+                        "start": 163,
+                        "end": 180,
+                        "text": "Roy et al., 2018)",
+                        "ref_id": "BIBREF19"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Modeling Target Categorical Information by Vector Quantization",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "Vector Quantization. The vector quantization based methods have a long history of being successfully in machine learning models. In vector quantization, each target representation repr(y i ) \u2208 R d model is passed through a discretization bottleneck using a nearest-neighbor lookup on embedding matrix Q \u2208 R K\u00d7d model , where K is the number of categorical codes.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Modeling Target Categorical Information by Vector Quantization",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "For each y i in the target sequence, we define its categorical variable z i and latent code q i as:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Modeling Target Categorical Information by Vector Quantization",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "z i = k, q i = Q k , and k = arg min j\u2208[K] || repr(y i ) -Q j || 2 , (6) where || \u2022 || 2 is the l 2 distance, [K] denote the set {1, 2, \u2022 \u2022 \u2022 , K}.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Modeling Target Categorical Information by Vector Quantization",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "Intuitively, we adopt the embedding of y as the target representation:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Modeling Target Categorical Information by Vector Quantization",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "repr(y i ) = embedding(y i )",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Modeling Target Categorical Information by Vector Quantization",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "where the embedding matrix of the target language is shared with the softmax layer of the decoder.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Modeling Target Categorical Information by Vector Quantization",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "Exponential Moving Average. Following the common practice of vector quantization, we also employ the exponential moving average (EMA) technique to regularize the categorical codes.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Modeling Target Categorical Information by Vector Quantization",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "Put simply, the EMA technique could be understood as basically the k-means clustering of the hidden states with a sort of momentum. We maintain an EMA over the following two quantities for each j \u2208 [K]: 1) the count c j measuring the number of target representations that have Q j as its nearest neighbor, and 2) Q j . The counts are updated over a mini-batch of targets {y 1 , y 2 , \u2022 \u2022 \u2022 , y m\u00d7B } with:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Modeling Target Categorical Information by Vector Quantization",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "c j = \u03bbc j + (1 -\u03bb) m\u00d7B i 1[z i = j],",
+                        "eq_num": "(7)"
+                    }
+                ],
+                "section": "Modeling Target Categorical Information by Vector Quantization",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "then, the latent code Q j being updated with:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Modeling Target Categorical Information by Vector Quantization",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "Q j = \u03bbQ j +(1-\u03bb) m\u00d7B i 1[z i = j] repr(y i ) c j ,",
+                        "eq_num": "(8)"
+                    }
+                ],
+                "section": "Modeling Target Categorical Information by Vector Quantization",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "where 1[\u2022] is the indicator function and \u03bb is a decay parameter, B is the size of the batch.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Modeling Target Categorical Information by Vector Quantization",
+                "sec_num": "3.1"
+            },
+            {
+                "text": "Our next insight is transferring the dependencies among the target outputs into the latent spaces.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Modeling Categorical Sequence with Conditional Random Fields",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "Since the categorical variable captures the fuzzy target class information, it can be a proxy of the target outputs. We further employ a structural prediction module instead of the standard autoregressive Transformer to model the latent sequence. The former can explicitly model the dependencies among the latent variables and performs exact decoding during inference.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Modeling Categorical Sequence with Conditional Random Fields",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "Conditional Random Fields. We employ a linear-chain conditional random fields (CRF, Lafferty et al., 2001) to model the categorical latent variables, which is the most common structural prediction model. Given the source input",
+                "cite_spans": [
+                    {
+                        "start": 84,
+                        "end": 106,
+                        "text": "Lafferty et al., 2001)",
+                        "ref_id": "BIBREF11"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Modeling Categorical Sequence with Conditional Random Fields",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "x = (x 1 , \u2022 \u2022 \u2022 , x n ) and its corresponding latent variable sequence z = (z 1 , \u2022 \u2022 \u2022 , z m",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Modeling Categorical Sequence with Conditional Random Fields",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "), the CRF model defines the probability of z as:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Modeling Categorical Sequence with Conditional Random Fields",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "p(z|x) = 1 Z(x) exp m i=1 s(z i , x, i) + m i=2 t(z i-1 , z i , x, i) ,",
+                        "eq_num": "(9)"
+                    }
+                ],
+                "section": "Modeling Categorical Sequence with Conditional Random Fields",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "where Z(x) is the normalize factor, s(z i , x, i) is the emit score of z i at the position i, and the",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Modeling Categorical Sequence with Conditional Random Fields",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "t(z i-1 , z i , x, i) is the transition score from z i-1 to z i .",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Modeling Categorical Sequence with Conditional Random Fields",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "Before computing the emit score and transition score in Eq. 9, we first take h = h 1:m as the inputs and compute the representation f = Transfer(h), where Transfer(\u2022) denotes a twolayer vanilla Transformer decoding function including a self-attention block, an encoder-decoder block followed by a feed-forward neural network block (Vaswani et al., 2017) .",
+                "cite_spans": [
+                    {
+                        "start": 331,
+                        "end": 353,
+                        "text": "(Vaswani et al., 2017)",
+                        "ref_id": "BIBREF23"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Modeling Categorical Sequence with Conditional Random Fields",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "We then compute the emit score and the transition score. For each position i, we compute the emit score with a linear transformation:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Modeling Categorical Sequence with Conditional Random Fields",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "s(z i , x, i) = (W T f i + b) z i where W \u2208 R d model \u00d7K and b \u2208 R K",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Modeling Categorical Sequence with Conditional Random Fields",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "are the parameters. We incorporate the positional context and compute its transition score with:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Modeling Categorical Sequence with Conditional Random Fields",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "M i d = Biaffine([f i-1 ; f i ]), M i = E T 1 M i d E 2 , t(z i-1 , z i , x, i) = M i z i-1 ,z i ,",
+                        "eq_num": "(10)"
+                    }
+                ],
+                "section": "Modeling Categorical Sequence with Conditional Random Fields",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "where Biaffine(\u2022) : R 2d model \u2192 R dt\u00d7dt is a biaffine neural network (Dozat and Manning, 2017 ), E 1 and E 2 \u2208 R dt\u00d7K are the transition matrix.",
+                "cite_spans": [
+                    {
+                        "start": 70,
+                        "end": 94,
+                        "text": "(Dozat and Manning, 2017",
+                        "ref_id": "BIBREF3"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Modeling Categorical Sequence with Conditional Random Fields",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "One potential issue is that the mismatch of the training and inference stage for the used categorical variables. Suppose we train the decoder with the quantized categorical variables z, which is inferred from the target reference. In that case, we may fail to achieve satisfactory performance with the predicted categorical variables during inference. We intuitively apply the gated neural network (denote as GateNet) to form the decoder inputs by fusing the copied decoder inputs h = h 1:m and the latent codes q = q 1:m , since the copied decoder inputs h is still informative to nonautoregressive decoding:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Fusing Source Inputs and Latent Codes via Gated Function",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "g i = \u03c3(FFN([h i ; q i ])), o i = h i * g i + q(z i ) * (1 -g i ),",
+                        "eq_num": "(11)"
+                    }
+                ],
+                "section": "Fusing Source Inputs and Latent Codes via Gated Function",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "where the FFN(\u2022) : R 2d model \u2192 R d model is a twolayer feed-forward neural networks and \u03c3(.) is the sigmoid function.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Fusing Source Inputs and Latent Codes via Gated Function",
+                "sec_num": "3.3"
+            },
+            {
+                "text": "While training, we first compute the reference z ref by the vector quantization and employ the EMA to update the quantized codes. The loss of the CRFbased predictor is computed with:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "L crf = -log p(z ref |x).",
+                        "eq_num": "(12)"
+                    }
+                ],
+                "section": "Training",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "To equip with the GateNet, we randomly mix the z ref and the predicted z pred as:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "z mix i = z pred i if p \u2265 \u03c4 z ref i if p < \u03c4 ,",
+                        "eq_num": "(13)"
+                    }
+                ],
+                "section": "Training",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "where p \u223c U[0, 1] and \u03c4 is the threshold we set 0.5 in our experiments. Grounding on the z mix , the non-autoregressive translation loss is computed with:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "L NAT = -log p(y|z mix , x; \u03b8).",
+                        "eq_num": "(14)"
+                    }
+                ],
+                "section": "Training",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "With the hyper-parameter \u03b1, the overall training loss is:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "EQUATION",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [
+                    {
+                        "start": 0,
+                        "end": 8,
+                        "text": "EQUATION",
+                        "ref_id": "EQREF",
+                        "raw_str": "L = L NAT + \u03b1L crf . (",
+                        "eq_num": "15"
+                    }
+                ],
+                "section": "Training",
+                "sec_num": "3.4"
+            },
+            {
+                "text": ")",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Training",
+                "sec_num": "3.4"
+            },
+            {
+                "text": "CNAT selects the best sequence by choosing the highest-probability latent sequence z with Viterbi decoding (Viterbi, 1967) , then generate the tokens with: ",
+                "cite_spans": [
+                    {
+                        "start": 107,
+                        "end": 122,
+                        "text": "(Viterbi, 1967)",
+                        "ref_id": "BIBREF24"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inference",
+                "sec_num": "3.5"
+            },
+            {
+                "text": "z * = arg max",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Inference",
+                "sec_num": "3.5"
+            },
+            {
+                "text": "Datasets. We conduct the experiments on the most widely used machine translation benchmarks: WMT14 English-German (WMT14 EN-DE, 4.5M pairs)1 and IWSLT14 German-English (IWSLT14, 160K pairs)2 . The datasets are processed with the Moses script (Koehn et al., 2007) , and the words are segmented into subword units using byte-pair encoding (Sennrich et al., 2016, BPE) . We use the shared subword embeddings between the source language and target language for the WMT datasets and the separated subword embeddings for the IWSLT14 dataset.",
+                "cite_spans": [
+                    {
+                        "start": 242,
+                        "end": 262,
+                        "text": "(Koehn et al., 2007)",
+                        "ref_id": "BIBREF10"
+                    },
+                    {
+                        "start": 337,
+                        "end": 365,
+                        "text": "(Sennrich et al., 2016, BPE)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "4"
+            },
+            {
+                "text": "Model Setting. In the case of IWSLT14 task, we use a small setting (d model = 256, d hidden = 512, p dropout = 0.1, n layer = 5 and n head = 4) for Transformer and NAT models. For the WMT tasks, we use the Transformer-base setting (d model = 512, d hidden = 512, p dropout = 0.3, n head = 8 and n layer = 6) of the Vaswani et al. (2017) . We set the hyperparameter \u03b1 used in Eq. 15 and \u03bb in Eq. 7-8 to 1.0 and 0.999, respectively. The categorical number K is set to 64 in our experiments. We implement our model based on the open-source framework of fairseq (Ott et al., 2019) .",
+                "cite_spans": [
+                    {
+                        "start": 315,
+                        "end": 336,
+                        "text": "Vaswani et al. (2017)",
+                        "ref_id": "BIBREF23"
+                    },
+                    {
+                        "start": 558,
+                        "end": 576,
+                        "text": "(Ott et al., 2019)",
+                        "ref_id": "BIBREF15"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "4"
+            },
+            {
+                "text": "Optimization. We optimize the parameter with the Adam (Kingma and Ba, 2015) with \u03b2 = (0.9, 0.98). We use inverse square root learning rate scheduling (Vaswani et al., 2017) for the WMT tasks and linear annealing schedule (Lee et al., 2018) from 3 \u00d7 10 -4 to 1 \u00d7 10 -5 for the IWSLT14 task. Each mini-batch consists of 2048 tokens for IWSLT14 and 32K tokens for WMT tasks.",
+                "cite_spans": [
+                    {
+                        "start": 150,
+                        "end": 172,
+                        "text": "(Vaswani et al., 2017)",
+                        "ref_id": "BIBREF23"
+                    },
+                    {
+                        "start": 221,
+                        "end": 239,
+                        "text": "(Lee et al., 2018)",
+                        "ref_id": "BIBREF12"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "4"
+            },
+            {
+                "text": "Distillation. Sequence-level knowledge distillation (Hinton et al., 2015) is applied to alleviate the multi-modality problem (Gu et al., 2018) while training. We follow previous studies on NAT (Gu et al., 2018; Lee et al., 2018; Wei et al., 2019) and use translations produced by a pre-trained autoregressive Transformer (Vaswani et al., 2017) as the training data.",
+                "cite_spans": [
+                    {
+                        "start": 52,
+                        "end": 73,
+                        "text": "(Hinton et al., 2015)",
+                        "ref_id": "BIBREF7"
+                    },
+                    {
+                        "start": 125,
+                        "end": 142,
+                        "text": "(Gu et al., 2018)",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 193,
+                        "end": 210,
+                        "text": "(Gu et al., 2018;",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 211,
+                        "end": 228,
+                        "text": "Lee et al., 2018;",
+                        "ref_id": "BIBREF12"
+                    },
+                    {
+                        "start": 229,
+                        "end": 246,
+                        "text": "Wei et al., 2019)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 321,
+                        "end": 343,
+                        "text": "(Vaswani et al., 2017)",
+                        "ref_id": "BIBREF23"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "4"
+            },
+            {
+                "text": "Reranking. We also include the results that come at reranked parallel decoding (Gu et al., 2018; Guo et al., 2019; Wang et al., 2019; Wei et al., 2019) , which generates several decoding candidates in parallel and selects the best via re-scoring using a Then, we use the pre-trained teacher to rank these sequences and identify the best overall output as the final output.",
+                "cite_spans": [
+                    {
+                        "start": 79,
+                        "end": 96,
+                        "text": "(Gu et al., 2018;",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 97,
+                        "end": 114,
+                        "text": "Guo et al., 2019;",
+                        "ref_id": "BIBREF6"
+                    },
+                    {
+                        "start": 115,
+                        "end": 133,
+                        "text": "Wang et al., 2019;",
+                        "ref_id": "BIBREF25"
+                    },
+                    {
+                        "start": 134,
+                        "end": 151,
+                        "text": "Wei et al., 2019)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "4"
+            },
+            {
+                "text": "Baselines. We compare the CNAT with several strong NAT baselines, including:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "4"
+            },
+            {
+                "text": "\u2022 The NAT builds upon latent variables: NAT-FT (Gu et al., 2018) , LT (Kaiser et al., 2018) , Syn-ST (Akoury et al., 2019) , LV-NAR (Shu et al., 2019) and Flowseq (Ma et al., 2019) .",
+                "cite_spans": [
+                    {
+                        "start": 47,
+                        "end": 64,
+                        "text": "(Gu et al., 2018)",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 70,
+                        "end": 91,
+                        "text": "(Kaiser et al., 2018)",
+                        "ref_id": "BIBREF8"
+                    },
+                    {
+                        "start": 101,
+                        "end": 122,
+                        "text": "(Akoury et al., 2019)",
+                        "ref_id": "BIBREF0"
+                    },
+                    {
+                        "start": 132,
+                        "end": 150,
+                        "text": "(Shu et al., 2019)",
+                        "ref_id": "BIBREF21"
+                    },
+                    {
+                        "start": 163,
+                        "end": 180,
+                        "text": "(Ma et al., 2019)",
+                        "ref_id": "BIBREF14"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "4"
+            },
+            {
+                "text": "\u2022 The NAT with extra autoregressive decoding or iterative refinement: NAT-DCRF (Sun et al., 2019) , IR-NAT (Lee et al., 2018) , and CMLM (Ghazvininejad et al., 2019) .",
+                "cite_spans": [
+                    {
+                        "start": 79,
+                        "end": 97,
+                        "text": "(Sun et al., 2019)",
+                        "ref_id": "BIBREF22"
+                    },
+                    {
+                        "start": 107,
+                        "end": 125,
+                        "text": "(Lee et al., 2018)",
+                        "ref_id": "BIBREF12"
+                    },
+                    {
+                        "start": 137,
+                        "end": 165,
+                        "text": "(Ghazvininejad et al., 2019)",
+                        "ref_id": "BIBREF4"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "4"
+            },
+            {
+                "text": "\u2022 The NAT with auxiliary training objectives: NAT-REG (Wang et al., 2019) , imitate-NAT (Wei et al., 2019) .",
+                "cite_spans": [
+                    {
+                        "start": 54,
+                        "end": 73,
+                        "text": "(Wang et al., 2019)",
+                        "ref_id": "BIBREF25"
+                    },
+                    {
+                        "start": 88,
+                        "end": 106,
+                        "text": "(Wei et al., 2019)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "4"
+            },
+            {
+                "text": "We compare the proposed CNAT against baselines both in terms of generating quality and inference speedup. For all our tasks, we obtain the performance of baselines by either directly using the performance figures reported in the previous works if they are available or producing them by using the open-source implementation of baseline algorithms on our datasets.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "4"
+            },
+            {
+                "text": "Metrics. We evaluate using the tokenized and cased BLEU scores (Papineni et al., 2002) . We highlight the best NAT result with bold text.",
+                "cite_spans": [
+                    {
+                        "start": 63,
+                        "end": 86,
+                        "text": "(Papineni et al., 2002)",
+                        "ref_id": "BIBREF16"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "4"
+            },
+            {
+                "text": "Translation Quality. First, we compare CNAT with the NAT models without using advanced techniques, such as knowledge distillation, reranking, slightly under the NAT-DCRF around 0.20 BLEU in EN-DE, which shows that the CNAT is comparable to the state-of-the-art NAT model. Also, we can see that a larger \"N\" leads to better results (N = 100 vs. N = 10 of NAT-FT, N = 19 vs. N = 9 of NAT-DCRF, etc.); however, it always comes at the degradation of decoding efficiency.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "We also compare our CNAT with the NAT models that employ an iterative decoding technique and list the results in Table 4 . The iterative-based non-autoregressive Transformer captures the target language's dependencies by iterative generating based on the previous iteration output, which is an important exploration for a non-autoregressive generation. With the iteration number increasing, the performance improving, the decoding speed-up dropping, whatever the IR-NAT or CMLM. We can see that the CNAT achieves a better result than the CMLM with four iterations and IR-NAT with ten iterations, even close to the CMLM with ten iterations while keeping the benefits of a one-shot generation.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 119,
+                        "end": 120,
+                        "text": "4",
+                        "ref_id": "TABREF3"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "Translation Efficiency. As depicted in Figure 2 , we validate the efficiency of CNAT. Put simply, the decoding speed is measured sentence-by-sentence, and the speed-up is computed by comparing it with the Transformer. Figure 2a and Figure 2b show the BLEU scores and decoding speed-up of NAT models. The former compares the pure NAT models. The latter compares NAT model inference with advanced decoding techniques (parallel reranking or iterative-based decoding) 3 .",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 46,
+                        "end": 47,
+                        "text": "2",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 225,
+                        "end": 227,
+                        "text": "2a",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 239,
+                        "end": 241,
+                        "text": "2b",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "We can see from Figure 2 that the point of 5755 CNAT is located on the top-right of the baselines.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 23,
+                        "end": 24,
+                        "text": "2",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "The CNAT outperforms our baselines in BLEU if speed-up is held, and in speed-up if BLEU is held, indicating CNAT outperforms previous state-ofthe-art NAT methods. Although iterative models like CMLM achieves competitive BLEU scores, they only maintain minor speed advantages over Transformer. In contrast, CNAT remarkably improves the inference speed while keeping a competitive performance.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "Effectiveness of Categorical Modeling. We further conduct the experiments on the test set of IWSLT14 to analyze the effectiveness of our categorical modeling and its influence on translation quality. We regard the categorical predictor as a sequence-level generation task and list its BLEU score in Table 5 .",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 305,
+                        "end": 306,
+                        "text": "5",
+                        "ref_id": "TABREF4"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "As see, a better latent prediction can yield a better translation. With the z ref as the latent sequence, the model achieves surprisingly good performance on this task, showing the usefulness of the learned categorical codes. We also can see that the CNAT decoding with reference length only slightly (0.44 BLEU) better than it with predicted length, indicat- Table 6 : Ablation study on the dev set of IWSLT14. Note that we train all of the configurations with knowledge distillation. \"AR\" denotes an autoregressive Transformer predictor. The line 8 is our NAT baseline.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 366,
+                        "end": 367,
+                        "text": "6",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "ing that the model is robust.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Results",
+                "sec_num": "4.1"
+            },
+            {
+                "text": "We further conduct the ablation study with different CNAT variant on dev set of IWSLT14.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Ablation Study",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "Influence of K. We can see the CRF with the categorical number K = 64 achieves the highest score (line 2). A smaller or larger K neither has a better result. The AR predictor may have a different tendency: with a larger K = 128, it achieves a better performance. However, a larger K may lead to a higher latency while inference, which is not the best for non-autoregressive decoding. In our experiments, the K = 64 can achieve the highperformance and be smaller enough to keep the low-latency during inference.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Ablation Study",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "CRF versus AR. Experiment results show that the CRF-based predictor is better than the AR predictor. We can see that the CRF-based predictor surpasses the Transformer predictor 3.5 BLEU (line 2 vs. line 5) with the GateNet; without the GateNet, the gap enlarges to 5.3 BLEU (line 4 vs. line 6). It is consistent with our intuition that CRF is better than Transformer to model the dependencies among latent variables on machine translation when the number of categories is small.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Ablation Study",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "GateNet. Without the GateNet, the CNAT with AR predictor degenerates a standard LT model with a smaller latent space. We can see its performance is even lower than the NAT-baselines (line 6 vs. line 8). Equipping with the GateNet and the schedule sampling, it outperforms the NAT baseline with a large margin (around 4.0 BLEU), showing that the GateNet mechanism plays an essential role in our proposed model.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Ablation Study",
+                "sec_num": "4.2"
+            },
+            {
+                "text": "To analyze the learned category, we further compute its relation to two off-the-shelf categorical information: the part-of-speech (POS) tags and the frequency-based clustered classes. For the former, we intuitively assign the POS tag of a word to its sub-words and compute the POS tag frequency for the latent codes. For the latter, we roughly assign the category of a subword according to its frequency. It needs to mention that the number of frequency-based classes is the same as that of the POS tags.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Code Study",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "Quantitative Results. We first compute the V-Measure (Rosenberg and Hirschberg, 2007) score between the latent categories to POS tags and subwords frequencies. The results are listed in Table 7 .",
+                "cite_spans": [
+                    {
+                        "start": 53,
+                        "end": 85,
+                        "text": "(Rosenberg and Hirschberg, 2007)",
+                        "ref_id": "BIBREF18"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 192,
+                        "end": 193,
+                        "text": "7",
+                        "ref_id": "TABREF6"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Code Study",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "Overall, the \"w/ POS tags\" achieves a higher V-Measure score, indicating that the latent codes are more related to the POS tags than sub-words frequencies. The homogeneity score (H-score) evaluates the purity of the category. We also can see that the former has a relatively higher H-score than the latter (0.70 vs. 0.62), which is consistent with our intuition.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Code Study",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "Case Analysis. As shown in Figure 3 , we also depict the POS tags distribution for the top 10 frequent latent variables on the test set of IWSLT14 4 . 4 More details can be found in Appendix B. We can see a sharp distribution for each latent variable, showing that our learned fuzzy classes are meaningful.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 34,
+                        "end": 35,
+                        "text": "3",
+                        "ref_id": "FIGREF3"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Code Study",
+                "sec_num": "4.3"
+            },
+            {
+                "text": "Non-autoregressive Machine Translation. Gu et al. (2018) first develop a non-autoregressive Transformer (NAT) for machine translation, which produces the outputs in parallel, and the inference speed is thus significantly boosted. Due to the missing of dependencies among the target outputs, the translation quality is largely sacrificed.",
+                "cite_spans": [
+                    {
+                        "start": 40,
+                        "end": 56,
+                        "text": "Gu et al. (2018)",
+                        "ref_id": "BIBREF5"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "5"
+            },
+            {
+                "text": "A line of work proposes to mitigate such performance degradation by enhancing the decoder inputs. Lee et al. (2018) propose a method of iterative refinement based on the previous outputs. Guo et al. (2019) enhance decoder input by introducing the phrase table in statistical machine translation and embedding transformation. There are also some work focuses on improving the decoder inputs' supervision, including imitation learning from autoregressive models (Wei et al., 2019) or regularizing the hidden state with backward reconstruction error (Wang et al., 2019) .",
+                "cite_spans": [
+                    {
+                        "start": 98,
+                        "end": 115,
+                        "text": "Lee et al. (2018)",
+                        "ref_id": "BIBREF12"
+                    },
+                    {
+                        "start": 188,
+                        "end": 205,
+                        "text": "Guo et al. (2019)",
+                        "ref_id": "BIBREF6"
+                    },
+                    {
+                        "start": 460,
+                        "end": 478,
+                        "text": "(Wei et al., 2019)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 547,
+                        "end": 566,
+                        "text": "(Wang et al., 2019)",
+                        "ref_id": "BIBREF25"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "5"
+            },
+            {
+                "text": "Another work proposes modeling the dependencies among target outputs, which is explicitly missed in the vanilla NAT models. Qian et al. (2020) ; Ghazvininejad et al. (2019) propose to model the target-side dependencies with a masked language model, modeling the directed dependencies between the observed target and the unobserved words. Different from their work, we model the target-side dependencies in the latent space, which follows the latent variable Transformer fashion.",
+                "cite_spans": [
+                    {
+                        "start": 124,
+                        "end": 142,
+                        "text": "Qian et al. (2020)",
+                        "ref_id": "BIBREF17"
+                    },
+                    {
+                        "start": 145,
+                        "end": 172,
+                        "text": "Ghazvininejad et al. (2019)",
+                        "ref_id": "BIBREF4"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "5"
+            },
+            {
+                "text": "Latent Variable Transformer. More close to our work is the latent variable Transformer, which takes the latent variable as inputs to modeling the target-side information. Shu et al. (2019) combine continuous latent variables and deterministic inference procedure to find the target sequence that maximizes the lower bound to the log-probability. Ma et al. (2019) propose to use generative flows to the model complex prior distribution. Kaiser et al. (2018) propose to autoregressively decode a shorter latent sequence encoded from the target sentence, then simultaneously generate the sentence from the latent sequence. Bao et al. (2019) model the target position of decode input as a latent variable and introduce a heuristic search algorithm to guide the position learning. Akoury et al. (2019) first autoregressively predict a chunked parse tree and then simultaneously generate the target tokens from the predicted syntax.",
+                "cite_spans": [
+                    {
+                        "start": 171,
+                        "end": 188,
+                        "text": "Shu et al. (2019)",
+                        "ref_id": "BIBREF21"
+                    },
+                    {
+                        "start": 346,
+                        "end": 362,
+                        "text": "Ma et al. (2019)",
+                        "ref_id": "BIBREF14"
+                    },
+                    {
+                        "start": 436,
+                        "end": 456,
+                        "text": "Kaiser et al. (2018)",
+                        "ref_id": "BIBREF8"
+                    },
+                    {
+                        "start": 620,
+                        "end": 637,
+                        "text": "Bao et al. (2019)",
+                        "ref_id": "BIBREF1"
+                    },
+                    {
+                        "start": 776,
+                        "end": 796,
+                        "text": "Akoury et al. (2019)",
+                        "ref_id": "BIBREF0"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "5"
+            },
+            {
+                "text": "We propose CNAT, which implicitly models the categorical codes of the target language, narrowing the performance gap between the nonautoregressive decoding and autoregressive decoding. Specifically, CNAT builds upon the latent Transformer and models the target-side categorical information with vector quantization and conditional random fields (CRF) model. We further employ a gated neural network to form the decoder inputs. Equipped with the scheduled sampling, CNAT works more robust. As a result, the CNAT achieves a significant improvement and moves closer to the performance of the Transformer on machine translation. For each latent variable, we list the top 3 frequent pos tags and their corresponding percentages.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusion",
+                "sec_num": "6"
+            },
+            {
+                "text": "https://drive.google.com/uc?export= download&id=0B_bZck-ksdkpM25jRUN2X2UxMm8",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "https://github.com/pytorch/fairseq",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "Our results are conducted on a single GeForce GTX 1080-TI GPU. Please note that the result in Figure2aand Figure2bmay be evaluated under different hardware settings, and it may not be fair to compare them directly.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            }
+        ],
+        "back_matter": [
+            {
+                "text": "We would like to thank the anonymous reviewers for their insightful comments. Shujian Huang is the corresponding author. This work is supported by the National Science Foundation of China ( 61772261), National Key R&D Program of China (No. 2019QY1806), the Fundamental Research Funds for the Central Universities (No. 14380076), and the program B for Outstanding Ph.D. candidate of Nanjing University.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Acknowledgments",
+                "sec_num": null
+            }
+        ],
+        "bib_entries": {
+            "BIBREF0": {
+                "ref_id": "b0",
+                "title": "Syntactically supervised transformers for faster neural machine translation",
+                "authors": [
+                    {
+                        "first": "Nader",
+                        "middle": [],
+                        "last": "Akoury",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kalpesh",
+                        "middle": [],
+                        "last": "Krishna",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mohit",
+                        "middle": [],
+                        "last": "Iyyer",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "1269--1281",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/P19-1122"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Nader Akoury, Kalpesh Krishna, and Mohit Iyyer. 2019. Syntactically supervised transformers for faster neu- ral machine translation. In Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics, pages 1269-1281, Florence, Italy. Asso- ciation for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF1": {
+                "ref_id": "b1",
+                "title": "Non-autoregressive transformer by position learning",
+                "authors": [
+                    {
+                        "first": "Yu",
+                        "middle": [],
+                        "last": "Bao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hao",
+                        "middle": [],
+                        "last": "Zhou",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jiangtao",
+                        "middle": [],
+                        "last": "Feng",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mingxuan",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Shujian",
+                        "middle": [],
+                        "last": "Huang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jiajun",
+                        "middle": [],
+                        "last": "Chen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Lei",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1911.10677"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Yu Bao, Hao Zhou, Jiangtao Feng, Mingxuan Wang, Shujian Huang, Jiajun Chen, and Lei Li. 2019. Non-autoregressive transformer by position learning. arXiv preprint arXiv:1911.10677.",
+                "links": null
+            },
+            "BIBREF2": {
+                "ref_id": "b2",
+                "title": "Scheduled sampling for sequence prediction with recurrent neural networks",
+                "authors": [
+                    {
+                        "first": "Samy",
+                        "middle": [],
+                        "last": "Bengio",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Oriol",
+                        "middle": [],
+                        "last": "Vinyals",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Navdeep",
+                        "middle": [],
+                        "last": "Jaitly",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Noam",
+                        "middle": [],
+                        "last": "Shazeer",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "Advances in Neural Information Processing Systems 28: Annual Conference on Neural Information Processing Systems",
+                "volume": "",
+                "issue": "",
+                "pages": "1171--1179",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Samy Bengio, Oriol Vinyals, Navdeep Jaitly, and Noam Shazeer. 2015. Scheduled sampling for sequence prediction with recurrent neural networks. In Ad- vances in Neural Information Processing Systems 28: Annual Conference on Neural Information Process- ing Systems 2015, December 7-12, 2015, Montreal, Quebec, Canada, pages 1171-1179.",
+                "links": null
+            },
+            "BIBREF3": {
+                "ref_id": "b3",
+                "title": "Deep biaffine attention for neural dependency parsing",
+                "authors": [
+                    {
+                        "first": "Timothy",
+                        "middle": [],
+                        "last": "Dozat",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [
+                            "D"
+                        ],
+                        "last": "Manning",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "5th International Conference on Learning Representations",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Timothy Dozat and Christopher D. Manning. 2017. Deep biaffine attention for neural dependency pars- ing. In 5th International Conference on Learning Representations, ICLR 2017, Toulon, France, April 24-26, 2017, Conference Track Proceedings. Open- Review.net.",
+                "links": null
+            },
+            "BIBREF4": {
+                "ref_id": "b4",
+                "title": "Mask-predict: Parallel decoding of conditional masked language models",
+                "authors": [
+                    {
+                        "first": "Marjan",
+                        "middle": [],
+                        "last": "Ghazvininejad",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Omer",
+                        "middle": [],
+                        "last": "Levy",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yinhan",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Luke",
+                        "middle": [],
+                        "last": "Zettlemoyer",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing (EMNLP-IJCNLP)",
+                "volume": "",
+                "issue": "",
+                "pages": "6112--6121",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/D19-1633"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Marjan Ghazvininejad, Omer Levy, Yinhan Liu, and Luke Zettlemoyer. 2019. Mask-predict: Parallel de- coding of conditional masked language models. In Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Lan- guage Processing (EMNLP-IJCNLP), pages 6112- 6121, Hong Kong, China. Association for Computa- tional Linguistics.",
+                "links": null
+            },
+            "BIBREF5": {
+                "ref_id": "b5",
+                "title": "Non-autoregressive neural machine translation",
+                "authors": [
+                    {
+                        "first": "Jiatao",
+                        "middle": [],
+                        "last": "Gu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "James",
+                        "middle": [],
+                        "last": "Bradbury",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Caiming",
+                        "middle": [],
+                        "last": "Xiong",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "O",
+                        "middle": [
+                            "K"
+                        ],
+                        "last": "Victor",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Richard",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Socher",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "6th International Conference on Learning Representations, ICLR 2018",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jiatao Gu, James Bradbury, Caiming Xiong, Victor O. K. Li, and Richard Socher. 2018. Non-autoregressive neural machine translation. In 6th International Con- ference on Learning Representations, ICLR 2018, Vancouver, BC, Canada, April 30 -May 3, 2018, Conference Track Proceedings. OpenReview.net.",
+                "links": null
+            },
+            "BIBREF6": {
+                "ref_id": "b6",
+                "title": "Non-autoregressive neural machine translation with enhanced decoder input",
+                "authors": [
+                    {
+                        "first": "Junliang",
+                        "middle": [],
+                        "last": "Guo",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xu",
+                        "middle": [],
+                        "last": "Tan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Di",
+                        "middle": [],
+                        "last": "He",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tao",
+                        "middle": [],
+                        "last": "Qin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Linli",
+                        "middle": [],
+                        "last": "Xu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tie-Yan",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "The Thirty-Third AAAI Conference on Artificial Intelligence, AAAI 2019, The Thirty-First Innovative Applications of Artificial Intelligence Conference, IAAI 2019, The Ninth AAAI Symposium on Educational Advances in Artificial Intelligence",
+                "volume": "2019",
+                "issue": "",
+                "pages": "3723--3730",
+                "other_ids": {
+                    "DOI": [
+                        "10.1609/aaai.v33i01.33013723"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Junliang Guo, Xu Tan, Di He, Tao Qin, Linli Xu, and Tie-Yan Liu. 2019. Non-autoregressive neural ma- chine translation with enhanced decoder input. In The Thirty-Third AAAI Conference on Artificial Intel- ligence, AAAI 2019, The Thirty-First Innovative Ap- plications of Artificial Intelligence Conference, IAAI 2019, The Ninth AAAI Symposium on Educational Advances in Artificial Intelligence, EAAI 2019, Hon- olulu, Hawaii, USA, January 27 -February 1, 2019, pages 3723-3730. AAAI Press.",
+                "links": null
+            },
+            "BIBREF7": {
+                "ref_id": "b7",
+                "title": "Distilling the knowledge in a neural network",
+                "authors": [
+                    {
+                        "first": "Geoffrey",
+                        "middle": [],
+                        "last": "Hinton",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Oriol",
+                        "middle": [],
+                        "last": "Vinyals",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jeff",
+                        "middle": [],
+                        "last": "Dean",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1503.02531"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Geoffrey Hinton, Oriol Vinyals, and Jeff Dean. 2015. Distilling the knowledge in a neural network. arXiv preprint arXiv:1503.02531.",
+                "links": null
+            },
+            "BIBREF8": {
+                "ref_id": "b8",
+                "title": "Fast decoding in sequence models using discrete latent variables",
+                "authors": [
+                    {
+                        "first": "Lukasz",
+                        "middle": [],
+                        "last": "Kaiser",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Samy",
+                        "middle": [],
+                        "last": "Bengio",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Aurko",
+                        "middle": [],
+                        "last": "Roy",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ashish",
+                        "middle": [],
+                        "last": "Vaswani",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Niki",
+                        "middle": [],
+                        "last": "Parmar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jakob",
+                        "middle": [],
+                        "last": "Uszkoreit",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Noam",
+                        "middle": [],
+                        "last": "Shazeer",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 35th International Conference on Machine Learning, ICML 2018, Stockholmsm\u00e4ssan",
+                "volume": "80",
+                "issue": "",
+                "pages": "2395--2404",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Lukasz Kaiser, Samy Bengio, Aurko Roy, Ashish Vaswani, Niki Parmar, Jakob Uszkoreit, and Noam Shazeer. 2018. Fast decoding in sequence models using discrete latent variables. In Proceedings of the 35th International Conference on Machine Learning, ICML 2018, Stockholmsm\u00e4ssan, Stockholm, Sweden, July 10-15, 2018, volume 80 of Proceedings of Ma- chine Learning Research, pages 2395-2404. PMLR.",
+                "links": null
+            },
+            "BIBREF9": {
+                "ref_id": "b9",
+                "title": "Adam: A method for stochastic optimization",
+                "authors": [
+                    {
+                        "first": "P",
+                        "middle": [],
+                        "last": "Diederik",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jimmy",
+                        "middle": [],
+                        "last": "Kingma",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Ba",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "3rd International Conference on Learning Representations, ICLR 2015",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Diederik P. Kingma and Jimmy Ba. 2015. Adam: A method for stochastic optimization. In 3rd Inter- national Conference on Learning Representations, ICLR 2015, San Diego, CA, USA, May 7-9, 2015, Conference Track Proceedings.",
+                "links": null
+            },
+            "BIBREF10": {
+                "ref_id": "b10",
+                "title": "Moses: Open source toolkit for statistical machine translation",
+                "authors": [
+                    {
+                        "first": "Philipp",
+                        "middle": [],
+                        "last": "Koehn",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hieu",
+                        "middle": [],
+                        "last": "Hoang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alexandra",
+                        "middle": [],
+                        "last": "Birch",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chris",
+                        "middle": [],
+                        "last": "Callison-Burch",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Marcello",
+                        "middle": [],
+                        "last": "Federico",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nicola",
+                        "middle": [],
+                        "last": "Bertoldi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Brooke",
+                        "middle": [],
+                        "last": "Cowan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Wade",
+                        "middle": [],
+                        "last": "Shen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christine",
+                        "middle": [],
+                        "last": "Moran",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Richard",
+                        "middle": [],
+                        "last": "Zens",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chris",
+                        "middle": [],
+                        "last": "Dyer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ond\u0159ej",
+                        "middle": [],
+                        "last": "Bojar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alexandra",
+                        "middle": [],
+                        "last": "Constantin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Evan",
+                        "middle": [],
+                        "last": "Herbst",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2007,
+                "venue": "Proceedings of the 45th Annual Meeting of the Association for Computational Linguistics Companion Volume Proceedings of the Demo and Poster Sessions",
+                "volume": "",
+                "issue": "",
+                "pages": "177--180",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Philipp Koehn, Hieu Hoang, Alexandra Birch, Chris Callison-Burch, Marcello Federico, Nicola Bertoldi, Brooke Cowan, Wade Shen, Christine Moran, Richard Zens, Chris Dyer, Ond\u0159ej Bojar, Alexandra Constantin, and Evan Herbst. 2007. Moses: Open source toolkit for statistical machine translation. In Proceedings of the 45th Annual Meeting of the As- sociation for Computational Linguistics Companion Volume Proceedings of the Demo and Poster Sessions, pages 177-180, Prague, Czech Republic. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF11": {
+                "ref_id": "b11",
+                "title": "Conditional random fields: Probabilistic models for segmenting and labeling sequence data",
+                "authors": [
+                    {
+                        "first": "John",
+                        "middle": [
+                            "D"
+                        ],
+                        "last": "Lafferty",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Andrew",
+                        "middle": [],
+                        "last": "Mccallum",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Fernando",
+                        "middle": [
+                            "C N"
+                        ],
+                        "last": "Pereira",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2001,
+                "venue": "Proceedings of the Eighteenth International Conference on Machine Learning (ICML",
+                "volume": "",
+                "issue": "",
+                "pages": "282--289",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "John D. Lafferty, Andrew McCallum, and Fernando C. N. Pereira. 2001. Conditional random fields: Probabilistic models for segmenting and labeling se- quence data. In Proceedings of the Eighteenth In- ternational Conference on Machine Learning (ICML 2001), Williams College, Williamstown, MA, USA, June 28 -July 1, 2001, pages 282-289. Morgan Kauf- mann.",
+                "links": null
+            },
+            "BIBREF12": {
+                "ref_id": "b12",
+                "title": "Deterministic non-autoregressive neural sequence modeling by iterative refinement",
+                "authors": [
+                    {
+                        "first": "Jason",
+                        "middle": [],
+                        "last": "Lee",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Elman",
+                        "middle": [],
+                        "last": "Mansimov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kyunghyun",
+                        "middle": [],
+                        "last": "Cho",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "1173--1182",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/D18-1149"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Jason Lee, Elman Mansimov, and Kyunghyun Cho. 2018. Deterministic non-autoregressive neural se- quence modeling by iterative refinement. In Proceed- ings of the 2018 Conference on Empirical Methods in Natural Language Processing, pages 1173-1182, Brussels, Belgium. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF13": {
+                "ref_id": "b13",
+                "title": "Hint-based training for nonautoregressive translation",
+                "authors": [
+                    {
+                        "first": "Zhuohan",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Di",
+                        "middle": [],
+                        "last": "He",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Fei",
+                        "middle": [],
+                        "last": "Tian",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tao",
+                        "middle": [],
+                        "last": "Qin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Liwei",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tie-Yan",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Zhuohan Li, Di He, Fei Tian, Tao Qin, Liwei Wang, and Tie-Yan Liu. 2019. Hint-based training for non- autoregressive translation. In NeuralIPS (to appear).",
+                "links": null
+            },
+            "BIBREF14": {
+                "ref_id": "b14",
+                "title": "FlowSeq: Nonautoregressive conditional sequence generation with generative flow",
+                "authors": [
+                    {
+                        "first": "Xuezhe",
+                        "middle": [],
+                        "last": "Ma",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chunting",
+                        "middle": [],
+                        "last": "Zhou",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xian",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Graham",
+                        "middle": [],
+                        "last": "Neubig",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Eduard",
+                        "middle": [],
+                        "last": "Hovy",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing (EMNLP-IJCNLP)",
+                "volume": "",
+                "issue": "",
+                "pages": "4282--4292",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/D19-1437"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Xuezhe Ma, Chunting Zhou, Xian Li, Graham Neu- big, and Eduard Hovy. 2019. FlowSeq: Non- autoregressive conditional sequence generation with generative flow. In Proceedings of the 2019 Confer- ence on Empirical Methods in Natural Language Pro- cessing and the 9th International Joint Conference on Natural Language Processing (EMNLP-IJCNLP), pages 4282-4292, Hong Kong, China. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF15": {
+                "ref_id": "b15",
+                "title": "fairseq: A fast, extensible toolkit for sequence modeling",
+                "authors": [
+                    {
+                        "first": "Myle",
+                        "middle": [],
+                        "last": "Ott",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sergey",
+                        "middle": [],
+                        "last": "Edunov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alexei",
+                        "middle": [],
+                        "last": "Baevski",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Angela",
+                        "middle": [],
+                        "last": "Fan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Sam",
+                        "middle": [],
+                        "last": "Gross",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nathan",
+                        "middle": [],
+                        "last": "Ng",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "David",
+                        "middle": [],
+                        "last": "Grangier",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Michael",
+                        "middle": [],
+                        "last": "Auli",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics (Demonstrations)",
+                "volume": "",
+                "issue": "",
+                "pages": "48--53",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/N19-4009"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Myle Ott, Sergey Edunov, Alexei Baevski, Angela Fan, Sam Gross, Nathan Ng, David Grangier, and Michael Auli. 2019. fairseq: A fast, extensible toolkit for sequence modeling. In Proceedings of the 2019 Con- ference of the North American Chapter of the Associa- tion for Computational Linguistics (Demonstrations), pages 48-53, Minneapolis, Minnesota. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF16": {
+                "ref_id": "b16",
+                "title": "Bleu: a method for automatic evaluation of machine translation",
+                "authors": [
+                    {
+                        "first": "Kishore",
+                        "middle": [],
+                        "last": "Papineni",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Salim",
+                        "middle": [],
+                        "last": "Roukos",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Todd",
+                        "middle": [],
+                        "last": "Ward",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Wei-Jing",
+                        "middle": [],
+                        "last": "Zhu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2002,
+                "venue": "Proceedings of the 40th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "311--318",
+                "other_ids": {
+                    "DOI": [
+                        "10.3115/1073083.1073135"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Kishore Papineni, Salim Roukos, Todd Ward, and Wei- Jing Zhu. 2002. Bleu: a method for automatic evalu- ation of machine translation. In Proceedings of the 40th Annual Meeting of the Association for Compu- tational Linguistics, pages 311-318, Philadelphia, Pennsylvania, USA. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF17": {
+                "ref_id": "b17",
+                "title": "Glancing transformer for non-autoregressive neural machine translation",
+                "authors": [
+                    {
+                        "first": "Lihua",
+                        "middle": [],
+                        "last": "Qian",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hao",
+                        "middle": [],
+                        "last": "Zhou",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yu",
+                        "middle": [],
+                        "last": "Bao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mingxuan",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Lin",
+                        "middle": [],
+                        "last": "Qiu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Weinan",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yong",
+                        "middle": [],
+                        "last": "Yu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Lei",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:2008.07905"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Lihua Qian, Hao Zhou, Yu Bao, Mingxuan Wang, Lin Qiu, Weinan Zhang, Yong Yu, and Lei Li. 2020. Glancing transformer for non-autoregressive neural machine translation. arXiv preprint arXiv:2008.07905.",
+                "links": null
+            },
+            "BIBREF18": {
+                "ref_id": "b18",
+                "title": "Vmeasure: A conditional entropy-based external cluster evaluation measure",
+                "authors": [
+                    {
+                        "first": "Andrew",
+                        "middle": [],
+                        "last": "Rosenberg",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Julia",
+                        "middle": [],
+                        "last": "Hirschberg",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2007,
+                "venue": "Proceedings of the 2007 Joint Conference on Empirical Methods in Natural Language Processing and Computational Natural Language Learning (EMNLP-CoNLL)",
+                "volume": "",
+                "issue": "",
+                "pages": "410--420",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Andrew Rosenberg and Julia Hirschberg. 2007. V- measure: A conditional entropy-based external clus- ter evaluation measure. In Proceedings of the 2007 Joint Conference on Empirical Methods in Natural Language Processing and Computational Natural Language Learning (EMNLP-CoNLL), pages 410- 420, Prague, Czech Republic. Association for Com- putational Linguistics.",
+                "links": null
+            },
+            "BIBREF19": {
+                "ref_id": "b19",
+                "title": "Towards a better understanding of vector quantized autoencoders",
+                "authors": [
+                    {
+                        "first": "Aurko",
+                        "middle": [],
+                        "last": "Roy",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ashish",
+                        "middle": [],
+                        "last": "Vaswani",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Niki",
+                        "middle": [],
+                        "last": "Parmar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Arvind",
+                        "middle": [],
+                        "last": "Neelakantan",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Aurko Roy, Ashish Vaswani, Niki Parmar, and Arvind Neelakantan. 2018. Towards a better understanding of vector quantized autoencoders. arXiv.",
+                "links": null
+            },
+            "BIBREF20": {
+                "ref_id": "b20",
+                "title": "Neural machine translation of rare words with subword units",
+                "authors": [
+                    {
+                        "first": "Rico",
+                        "middle": [],
+                        "last": "Sennrich",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Barry",
+                        "middle": [],
+                        "last": "Haddow",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alexandra",
+                        "middle": [],
+                        "last": "Birch",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of the 54th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "1",
+                "issue": "",
+                "pages": "1715--1725",
+                "other_ids": {
+                    "DOI": [
+                        "10.18653/v1/P16-1162"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Rico Sennrich, Barry Haddow, and Alexandra Birch. 2016. Neural machine translation of rare words with subword units. In Proceedings of the 54th Annual Meeting of the Association for Computational Lin- guistics (Volume 1: Long Papers), pages 1715-1725, Berlin, Germany. Association for Computational Lin- guistics.",
+                "links": null
+            },
+            "BIBREF21": {
+                "ref_id": "b21",
+                "title": "Latent-variable nonautoregressive neural machine translation with deterministic inference using a delta posterior",
+                "authors": [
+                    {
+                        "first": "Raphael",
+                        "middle": [],
+                        "last": "Shu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jason",
+                        "middle": [],
+                        "last": "Lee",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hideki",
+                        "middle": [],
+                        "last": "Nakayama",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kyunghyun",
+                        "middle": [],
+                        "last": "Cho",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {
+                    "arXiv": [
+                        "arXiv:1908.07181"
+                    ]
+                },
+                "num": null,
+                "urls": [],
+                "raw_text": "Raphael Shu, Jason Lee, Hideki Nakayama, and Kyunghyun Cho. 2019. Latent-variable non- autoregressive neural machine translation with de- terministic inference using a delta posterior. arXiv preprint arXiv:1908.07181.",
+                "links": null
+            },
+            "BIBREF22": {
+                "ref_id": "b22",
+                "title": "Fast structured decoding for sequence models",
+                "authors": [
+                    {
+                        "first": "Zhiqing",
+                        "middle": [],
+                        "last": "Sun",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zhuohan",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Haoqing",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Di",
+                        "middle": [],
+                        "last": "He",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zi",
+                        "middle": [],
+                        "last": "Lin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zhi-Hong",
+                        "middle": [],
+                        "last": "Deng",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Advances in Neural Information Processing Systems 32: Annual Conference on Neural Information Processing Systems",
+                "volume": "",
+                "issue": "",
+                "pages": "3011--3020",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Zhiqing Sun, Zhuohan Li, Haoqing Wang, Di He, Zi Lin, and Zhi-Hong Deng. 2019. Fast structured decod- ing for sequence models. In Advances in Neural Information Processing Systems 32: Annual Confer- ence on Neural Information Processing Systems 2019, NeurIPS 2019, December 8-14, 2019, Vancouver, BC, Canada, pages 3011-3020.",
+                "links": null
+            },
+            "BIBREF23": {
+                "ref_id": "b23",
+                "title": "Attention is all you need",
+                "authors": [
+                    {
+                        "first": "Ashish",
+                        "middle": [],
+                        "last": "Vaswani",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Noam",
+                        "middle": [],
+                        "last": "Shazeer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Niki",
+                        "middle": [],
+                        "last": "Parmar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jakob",
+                        "middle": [],
+                        "last": "Uszkoreit",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Llion",
+                        "middle": [],
+                        "last": "Jones",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Aidan",
+                        "middle": [
+                            "N"
+                        ],
+                        "last": "Gomez",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Lukasz",
+                        "middle": [],
+                        "last": "Kaiser",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Illia",
+                        "middle": [],
+                        "last": "Polosukhin",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Advances in Neural Information Processing Systems 30: Annual Conference on Neural Information Processing Systems",
+                "volume": "",
+                "issue": "",
+                "pages": "5998--6008",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Lukasz Kaiser, and Illia Polosukhin. 2017. Attention is all you need. In Advances in Neural Information Pro- cessing Systems 30: Annual Conference on Neural Information Processing Systems 2017, December 4-9, 2017, Long Beach, CA, USA, pages 5998-6008.",
+                "links": null
+            },
+            "BIBREF24": {
+                "ref_id": "b24",
+                "title": "Error bounds for convolutional codes and an asymptotically optimum decoding algorithm",
+                "authors": [
+                    {
+                        "first": "Andrew",
+                        "middle": [],
+                        "last": "Viterbi",
+                        "suffix": ""
+                    }
+                ],
+                "year": 1967,
+                "venue": "IEEE transactions on Information Theory",
+                "volume": "13",
+                "issue": "2",
+                "pages": "260--269",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Andrew Viterbi. 1967. Error bounds for convolutional codes and an asymptotically optimum decoding al- gorithm. IEEE transactions on Information Theory, 13(2):260-269.",
+                "links": null
+            },
+            "BIBREF25": {
+                "ref_id": "b25",
+                "title": "Non-autoregressive machine translation with auxiliary regularization",
+                "authors": [
+                    {
+                        "first": "Yiren",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Fei",
+                        "middle": [],
+                        "last": "Tian",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Di",
+                        "middle": [],
+                        "last": "He",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tao",
+                        "middle": [],
+                        "last": "Qin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chengxiang",
+                        "middle": [],
+                        "last": "Zhai",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tie-Yan",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "AAAI",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Yiren Wang, Fei Tian, Di He, Tao Qin, ChengXiang Zhai, and Tie-Yan Liu. 2019. Non-autoregressive machine translation with auxiliary regularization. In AAAI.",
+                "links": null
+            }
+        },
+        "ref_entries": {
+            "FIGREF0": {
+                "num": null,
+                "text": "Figure 1: Different inference process of different Transformer models.",
+                "uris": null,
+                "fig_num": "1",
+                "type_str": "figure"
+            },
+            "FIGREF1": {
+                "num": null,
+                "text": "z p(z|x; \u03b8), and y * = arg max y p(y|z * , x; \u03b8), where identifying y * only requires independently maximizing the local probability for each output position.",
+                "uris": null,
+                "fig_num": null,
+                "type_str": "figure"
+            },
+            "FIGREF3": {
+                "num": null,
+                "text": "Figure 3: The POS tags distribution for the top 10 frequent latent variables on the test set of IWSLT14. We list the top 3 frequent POS tags for each latent variable.",
+                "uris": null,
+                "fig_num": "3",
+                "type_str": "figure"
+            },
+            "TABREF0": {
+                "content": "<table><tr><td>Model</td><td colspan=\"2\">WMT14 EN-DE DE-EN</td><td>IWSLT14 DE-EN</td></tr><tr><td>LV-NAR</td><td>11.80</td><td>/</td><td>/</td></tr><tr><td>AXE CMLM</td><td>20.40</td><td>24.90</td><td>/</td></tr><tr><td>SynST</td><td>20.74</td><td>25.50</td><td>23.82</td></tr><tr><td>Flowseq</td><td>20.85</td><td>25.40</td><td>24.75</td></tr><tr><td>NAT (ours)</td><td>9.80</td><td>11.02</td><td>17.77</td></tr><tr><td>CNAT (ours)</td><td>21.30</td><td>25.73</td><td>29.81</td></tr></table>",
+                "type_str": "table",
+                "text": "Results of the NAT models with argmax decoding on test set of WMT14 and IWSLT14.pre-trained autoregressive model. Specifically, we first predict the target length m and generate output sequence with arg max decoding for each length candidate m \u2208 [ m-\u2206m, m+\u2206m] (\u2206m = 4 in our experiments, means there are N = 9 candidates), which was called length parallel decoding (LPD).",
+                "html": null,
+                "num": null
+            },
+            "TABREF2": {
+                "content": "<table><tr><td>: Results of NAT models with parallel decoding</td></tr><tr><td>on test set of WMT14. \"N\" means the number of candi-</td></tr><tr><td>dates to be re-ranked.</td></tr><tr><td>or iterative refinements. The results are listed in</td></tr><tr><td>Table 1. The CNAT achieves significant improve-</td></tr><tr><td>ments (around 11.5 BLEU in EN-DE, more than</td></tr><tr><td>14.5 BLEU in DE-EN) over the vanilla NAT, which</td></tr><tr><td>indicates that modeling categorical information</td></tr><tr><td>could improve the modeling capability of the NAT</td></tr><tr><td>model. Also, the CNAT achieves better results</td></tr><tr><td>than Flowseq and SynST, which demonstrates the</td></tr><tr><td>effectiveness of CNAT in modeling dependencies</td></tr><tr><td>between the target outputs.</td></tr><tr><td>The performance of the NAT models with ad-</td></tr><tr><td>vance techniques (sequence-level knowledge dis-</td></tr><tr><td>tillation or reranking) is listed in Table 2 and Ta-</td></tr><tr><td>ble 3. Coupling with the knowledge distillation</td></tr><tr><td>techniques, all NAT models achieve remarkable</td></tr><tr><td>improvements.</td></tr><tr><td>Our best results are obtained with length parallel</td></tr><tr><td>decoding, which employs a pretrained Transformer</td></tr><tr><td>to rerank the multiple parallels generated candi-</td></tr><tr><td>dates of different target lengths. Specifically, on a</td></tr><tr><td>large scale WMT14 dataset, CNAT surpasses the</td></tr><tr><td>NAT-DCRF by 0.71 BLEU score in DE-EN but</td></tr></table>",
+                "type_str": "table",
+                "text": "",
+                "html": null,
+                "num": null
+            },
+            "TABREF3": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "Results of NAT models with iterative refinements on test set of WMT14. \"Iteration\" means the number of iteration refinements.",
+                "html": null,
+                "num": null
+            },
+            "TABREF4": {
+                "content": "<table><tr><td/><td/><td/><td/><td/><td>Dec</td><td>5.0</td><td/><td>NAT-FT Flowseq</td></tr><tr><td colspan=\"4\">BLEU and Speed-UP (advance-decoding)</td><td/><td/><td/><td/><td>NAT-DCRF</td></tr><tr><td/><td colspan=\"4\">31.69 25.48 30.86 22.42 30.68 30.04 30.75</td><td/><td>0.0</td><td>20</td><td>23 CNAT</td><td>26</td><td>29</td><td>32</td><td>35</td></tr><tr><td>er</td><td>1.0</td><td/><td/><td/><td/><td/><td/><td>BLEU</td></tr><tr><td>10)</td><td>1.3</td><td/><td/><td/><td/><td/><td/></tr><tr><td>=10)</td><td/><td>1.5</td><td/><td/><td/><td>10.0</td><td/></tr><tr><td>=10)</td><td/><td>7.7</td><td/><td/><td/><td/><td/></tr><tr><td>(n=30) F 9)</td><td/><td>1.1</td><td>4.4</td><td>5.6</td><td>Decoding Speed-Up</td><td>5.0 7.5 2.5</td><td/><td>Transformer IR-NAT CMLM NAT-FT</td></tr><tr><td/><td/><td/><td/><td/><td/><td/><td/><td>Flowseq</td></tr><tr><td/><td/><td/><td/><td/><td/><td/><td/><td>NAT-DCRF</td></tr><tr><td/><td/><td/><td/><td/><td/><td>0.0</td><td/><td>CNAT</td></tr><tr><td/><td/><td/><td/><td/><td/><td/><td>20</td><td>23</td><td>26</td><td>29</td><td>32</td><td>35</td></tr><tr><td/><td/><td/><td/><td/><td/><td/><td/><td>BLEU</td></tr><tr><td/><td/><td colspan=\"2\">Latent BLEU</td><td>Translation BLEU</td><td/><td/><td colspan=\"2\">(b) NAT with advanced decoding techniques.</td></tr><tr><td colspan=\"2\">$\\z_\\text{ref}$</td><td>100</td><td/><td>59.50</td><td/><td/><td/></tr><tr><td colspan=\"2\">$m_\\text{ref}$</td><td>38.50 Figure 2: Methods</td><td/><td colspan=\"2\">32.56 32.25 Latent BLEU Translation BLEU</td><td/><td/></tr><tr><td/><td/><td colspan=\"2\">CNAT w/ zref</td><td>100.00</td><td>59.12</td><td/><td/></tr><tr><td/><td/><td colspan=\"2\">CNAT w/ mref</td><td>39.72</td><td>31.59</td><td/><td/></tr><tr><td/><td/><td>CNAT</td><td/><td>38.59</td><td>31.15</td><td/><td/></tr></table>",
+                "type_str": "table",
+                "text": "BLEU and decoding speed-up of NAT models on WMT14 DE-EN test set. Each point represents the decoding method run with its corresponding setting in Table2, Table3or Table 4. Results on the test of IWSLT14 to analyze the effectiveness of categorical modeling. \"w/ z ref \" denote CNAT generate the tokens condition on the latent sequence which is quantized from the reference target. \"w/ m ref \" denote the CNAT generate the tokens condition on the reference length.",
+                "html": null,
+                "num": null
+            },
+            "TABREF6": {
+                "content": "<table><tr><td>w/ POS tags</td><td>0.70</td><td>0.47</td><td>0.56</td></tr><tr><td colspan=\"2\">w/ Frequency 0.62</td><td>0.48</td><td>0.54</td></tr></table>",
+                "type_str": "table",
+                "text": "Clustering evaluation metrics on the test set of IWSLT14 to analyze the learned codes.",
+                "html": null,
+                "num": null
+            },
+            "TABREF7": {
+                "content": "<table><tr><td colspan=\"2\">Bingzhen Wei, Mingxuan Wang, Hao Zhou, Junyang</td></tr><tr><td colspan=\"2\">Lin, and Xu Sun. 2019. Imitation learning for non-</td></tr><tr><td colspan=\"2\">autoregressive neural machine translation. In Pro-</td></tr><tr><td colspan=\"2\">ceedings of the 57th Annual Meeting of the Asso-</td></tr><tr><td colspan=\"2\">ciation for Computational Linguistics, pages 1304-</td></tr><tr><td colspan=\"2\">1312, Florence, Italy. Association for Computational</td></tr><tr><td>Linguistics.</td><td/></tr><tr><td colspan=\"2\">Xuewen Yang, Yingru Liu, Dongliang Xie, Xin Wang,</td></tr><tr><td colspan=\"2\">and Niranjan Balasubramanian. 2019. Latent part-</td></tr><tr><td colspan=\"2\">of-speech sequences for neural machine translation.</td></tr><tr><td colspan=\"2\">In Proceedings of the 2019 Conference on Empirical</td></tr><tr><td colspan=\"2\">Methods in Natural Language Processing and the 9th</td></tr><tr><td colspan=\"2\">International Joint Conference on Natural Language</td></tr><tr><td colspan=\"2\">Processing (EMNLP-IJCNLP), pages 780-790, Hong</td></tr><tr><td colspan=\"2\">Kong, China. Association for Computational Linguis-</td></tr><tr><td>tics.</td><td/></tr><tr><td colspan=\"2\">A Non-Indo-European Translation</td></tr><tr><td>Dataset. Model</td><td>BLEU</td></tr><tr><td>Transformer</td><td>28.05</td></tr><tr><td>NAT</td><td>12.31</td></tr><tr><td>CNAT</td><td>22.16</td></tr><tr><td colspan=\"2\">B Learned Latent Codes</td></tr></table>",
+                "type_str": "table",
+                "text": "We apply the CNAT to the non-Indo-European translation tasks on the LDC Chinese-English 5 (denote as LDC ZH-EN, 1.30M sentence pairs) and MT02 test set of NIST ZH-EN dataset. We use NLPIRICTCLAS 6 and Moses tokenizer for Chinese and English tokenization, respectively. Results on the MT02 set of different models.Results. We can see than in Table8that our model can enhance the performance of NAT with a large margin(22.16 vs. 12.31).",
+                "html": null,
+                "num": null
+            },
+            "TABREF8": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "The distribution of pos tags for latent variables.",
+                "html": null,
+                "num": null
+            }
+        }
+    }
+}

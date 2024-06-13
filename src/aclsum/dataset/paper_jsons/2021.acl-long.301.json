@@ -1,0 +1,3425 @@
+{
+    "paper_id": "2021",
+    "header": {
+        "generated_with": "S2ORC 1.0.0",
+        "date_generated": "2023-06-16T12:21:48.953629Z"
+    },
+    "title": "A Neural Model for Joint Document and Snippet Ranking in Question Answering for Large Document Collections",
+    "authors": [
+        {
+            "first": "Dimitris",
+            "middle": [],
+            "last": "Pappas",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "Athens University of Economics and Business",
+                "location": {
+                    "country": "Greece"
+                }
+            },
+            "email": "pappasd@aueb.gr"
+        },
+        {
+            "first": "Ion",
+            "middle": [],
+            "last": "Androutsopoulos",
+            "suffix": "",
+            "affiliation": {
+                "laboratory": "",
+                "institution": "Athens University of Economics and Business",
+                "location": {
+                    "country": "Greece"
+                }
+            },
+            "email": ""
+        }
+    ],
+    "year": "",
+    "venue": null,
+    "identifiers": {},
+    "abstract": "Question answering (QA) systems for large document collections typically use pipelines that (i) retrieve possibly relevant documents, (ii) re-rank them, (iii) rank paragraphs or other snippets of the top-ranked documents, and (iv) select spans of the top-ranked snippets as exact answers. Pipelines are conceptually simple, but errors propagate from one component to the next, without later components being able to revise earlier decisions. We present an architecture for joint document and snippet ranking, the two middle stages, which leverages the intuition that relevant documents have good snippets and good snippets come from relevant documents. The architecture is general and can be used with any neural text relevance ranker. We experiment with two main instantiations of the architecture, based on POSIT-DRMM (PDRMM) and a BERT-based ranker. Experiments on biomedical data from BIOASQ show that our joint models vastly outperform the pipelines in snippet retrieval, the main goal for QA, with fewer trainable parameters, also remaining competitive in document retrieval. Furthermore, our joint PDRMM-based model is competitive with BERT-based models, despite using orders of magnitude fewer parameters. These claims are also supported by human evaluation on two test batches of BIOASQ. To test our key findings on another dataset, we modified the Natural Questions dataset so that it can also be used for document and snippet retrieval. Our joint PDRMM-based model again outperforms the corresponding pipeline in snippet retrieval on the modified Natural Questions dataset, even though it performs worse than the pipeline in document retrieval. We make our code and the modified Natural Questions dataset publicly available.",
+    "pdf_parse": {
+        "paper_id": "2021",
+        "_pdf_hash": "",
+        "abstract": [
+            {
+                "text": "Question answering (QA) systems for large document collections typically use pipelines that (i) retrieve possibly relevant documents, (ii) re-rank them, (iii) rank paragraphs or other snippets of the top-ranked documents, and (iv) select spans of the top-ranked snippets as exact answers. Pipelines are conceptually simple, but errors propagate from one component to the next, without later components being able to revise earlier decisions. We present an architecture for joint document and snippet ranking, the two middle stages, which leverages the intuition that relevant documents have good snippets and good snippets come from relevant documents. The architecture is general and can be used with any neural text relevance ranker. We experiment with two main instantiations of the architecture, based on POSIT-DRMM (PDRMM) and a BERT-based ranker. Experiments on biomedical data from BIOASQ show that our joint models vastly outperform the pipelines in snippet retrieval, the main goal for QA, with fewer trainable parameters, also remaining competitive in document retrieval. Furthermore, our joint PDRMM-based model is competitive with BERT-based models, despite using orders of magnitude fewer parameters. These claims are also supported by human evaluation on two test batches of BIOASQ. To test our key findings on another dataset, we modified the Natural Questions dataset so that it can also be used for document and snippet retrieval. Our joint PDRMM-based model again outperforms the corresponding pipeline in snippet retrieval on the modified Natural Questions dataset, even though it performs worse than the pipeline in document retrieval. We make our code and the modified Natural Questions dataset publicly available.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Abstract",
+                "sec_num": null
+            }
+        ],
+        "body_text": [
+            {
+                "text": "Question answering (QA) systems that search large document collections (Voorhees, 2001; Tsatsaro-nis et al., 2015; Chen et al., 2017) typically use pipelines operating at gradually finer text granularities. A fully-fledged pipeline includes components that (i) retrieve possibly relevant documents typically using conventional information retrieval (IR); (ii) re-rank the retrieved documents employing a computationally more expensive document ranker; (iii) rank the passages, sentences, or other 'snippets' of the top-ranked documents; and (iv) select spans of the top-ranked snippets as 'exact' answers. Recently, stages (ii)-(iv) are often pipelined neural models, trained individually (Hui et al., 2017; Pang et al., 2017; Lee et al., 2018; McDonald et al., 2018; Pandey et al., 2019; Mackenzie et al., 2020; Sekuli\u0107 et al., 2020) . Although pipelines are conceptually simple, errors propagate from one component to the next (Hosein et al., 2019) , without later components being able to revise earlier decisions. For example, once a document has been assigned a low relevance score, finding a particularly relevant snippet cannot change the document's score.",
+                "cite_spans": [
+                    {
+                        "start": 71,
+                        "end": 87,
+                        "text": "(Voorhees, 2001;",
+                        "ref_id": "BIBREF42"
+                    },
+                    {
+                        "start": 88,
+                        "end": 114,
+                        "text": "Tsatsaro-nis et al., 2015;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 115,
+                        "end": 133,
+                        "text": "Chen et al., 2017)",
+                        "ref_id": "BIBREF4"
+                    },
+                    {
+                        "start": 689,
+                        "end": 707,
+                        "text": "(Hui et al., 2017;",
+                        "ref_id": "BIBREF14"
+                    },
+                    {
+                        "start": 708,
+                        "end": 726,
+                        "text": "Pang et al., 2017;",
+                        "ref_id": "BIBREF31"
+                    },
+                    {
+                        "start": 727,
+                        "end": 744,
+                        "text": "Lee et al., 2018;",
+                        "ref_id": "BIBREF20"
+                    },
+                    {
+                        "start": 745,
+                        "end": 767,
+                        "text": "McDonald et al., 2018;",
+                        "ref_id": "BIBREF26"
+                    },
+                    {
+                        "start": 768,
+                        "end": 788,
+                        "text": "Pandey et al., 2019;",
+                        "ref_id": "BIBREF30"
+                    },
+                    {
+                        "start": 789,
+                        "end": 812,
+                        "text": "Mackenzie et al., 2020;",
+                        "ref_id": "BIBREF24"
+                    },
+                    {
+                        "start": 813,
+                        "end": 834,
+                        "text": "Sekuli\u0107 et al., 2020)",
+                        "ref_id": "BIBREF39"
+                    },
+                    {
+                        "start": 929,
+                        "end": 950,
+                        "text": "(Hosein et al., 2019)",
+                        "ref_id": "BIBREF13"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "We propose an architecture for joint document and snippet ranking, i.e., stages (ii) and (iii), which leverages the intuition that relevant documents have good snippets and good snippets come from relevant documents. We note that modern web search engines display the most relevant snippets of the top-ranked documents to help users quickly identify truly relevant documents and answers (Sultan et al., 2016; Xu et al., 2019; Yang et al., 2019a) . The top-ranked snippets can also be used as a starting point for multi-document query-focused summarization, as in the BIOASQ challenge (Tsatsaronis et al., 2015) . Hence, methods that identify good snippets are useful in several other applications, apart from QA. We also note that many neural models for stage (iv) have been proposed, often called QA or Machine Reading Comprehension (MRC) models (Kadlec et al., 2016; Cui et al., 2017; Zhang et al., 2020) , but they typically search for answers only in a particular, usually paragraph-sized snippet, which is given per question. For QA systems that search large document collections, stages (ii) and (iii) are also important, if not more important, but have been studied much less in recent years, and not in a single joint neural model.",
+                "cite_spans": [
+                    {
+                        "start": 387,
+                        "end": 408,
+                        "text": "(Sultan et al., 2016;",
+                        "ref_id": "BIBREF40"
+                    },
+                    {
+                        "start": 409,
+                        "end": 425,
+                        "text": "Xu et al., 2019;",
+                        "ref_id": "BIBREF44"
+                    },
+                    {
+                        "start": 426,
+                        "end": 445,
+                        "text": "Yang et al., 2019a)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 584,
+                        "end": 610,
+                        "text": "(Tsatsaronis et al., 2015)",
+                        "ref_id": "BIBREF41"
+                    },
+                    {
+                        "start": 847,
+                        "end": 868,
+                        "text": "(Kadlec et al., 2016;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 869,
+                        "end": 886,
+                        "text": "Cui et al., 2017;",
+                        "ref_id": "BIBREF5"
+                    },
+                    {
+                        "start": 887,
+                        "end": 906,
+                        "text": "Zhang et al., 2020)",
+                        "ref_id": "BIBREF50"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "The proposed joint architecture is general and can be used in conjunction with any neural text relevance ranker (Mitra and Craswell, 2018) . Given a query and N possibly relevant documents from stage (i), the neural text relevance ranker scores all the snippets of the N documents. Additional neural layers re-compute the score (ranking) of each document from the scores of its snippets. Other layers then revise the scores of the snippets taking into account the new scores of the documents. The entire model is trained to jointly predict document and snippet relevance scores. We experiment with two main instantiations of the proposed architecture, using POSIT-DRMM (McDonald et al., 2018) , hereafter called PDRMM, as the neural text ranker, or a BERT-based ranker (Devlin et al., 2019) . We show how both PDRMM and BERT can be used to score documents and snippets in pipelines, then how our architecture can turn them into models that jointly score documents and snippets.",
+                "cite_spans": [
+                    {
+                        "start": 112,
+                        "end": 138,
+                        "text": "(Mitra and Craswell, 2018)",
+                        "ref_id": "BIBREF27"
+                    },
+                    {
+                        "start": 669,
+                        "end": 692,
+                        "text": "(McDonald et al., 2018)",
+                        "ref_id": "BIBREF26"
+                    },
+                    {
+                        "start": 769,
+                        "end": 790,
+                        "text": "(Devlin et al., 2019)",
+                        "ref_id": "BIBREF7"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Experimental results on biomedical data from BIOASQ (Tsatsaronis et al., 2015) show the joint models vastly outperform the corresponding pipelines in snippet extraction, with fewer trainable parameters. Although our joint architecture is engineered to favor retrieving good snippets (as a near-final stage of QA), results show that the joint models are also competitive in document retrieval. We also show that our joint version of PDRMM, which has the fewest parameters of all models and does not use BERT, is competitive to BERT-based models, while also outperforming the best system of BIOASQ 6 (Brokos et al., 2018) in both document and snippet retrieval. These claims are also supported by human evaluation on two test batches of BIOASQ 7 (2019). To test our key findings on another dataset, we modified Natural Questions (Kwiatkowski et al., 2019) , which only includes questions and answer spans from a single document, so that it can be used for document and snippet retrieval. Again, our joint PDRMMbased model largely outperforms the corresponding pipeline in snippet retrieval on the modified Natural Questions, though it does not perform better than the pipeline in document retrieval, since the joint model is geared towards snippet retrieval, i.e., even though it is forced to extract snippets from fewer relevant documents. Finally, we show that all the neural pipelines and joint models we considered improve the BM25 ranking of traditional IR on both datasets. We make our code and the modified Natural Questions publicly available.1 2 Methods",
+                "cite_spans": [
+                    {
+                        "start": 52,
+                        "end": 78,
+                        "text": "(Tsatsaronis et al., 2015)",
+                        "ref_id": "BIBREF41"
+                    },
+                    {
+                        "start": 598,
+                        "end": 619,
+                        "text": "(Brokos et al., 2018)",
+                        "ref_id": "BIBREF3"
+                    },
+                    {
+                        "start": 827,
+                        "end": 853,
+                        "text": "(Kwiatkowski et al., 2019)",
+                        "ref_id": "BIBREF19"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Introduction",
+                "sec_num": "1"
+            },
+            {
+                "text": "Our starting point is POSIT-DRMM (McDonald et al., 2018) , or PDRMM, a differentiable extension of DRMM (Guo et al., 2016) that obtained the best document retrieval results in BIOASQ 6 (Brokos et al., 2018) . McDonald et al. (2018) also reported it performed better than DRMM and several other neural rankers, including PACRR (Hui et al., 2017) .",
+                "cite_spans": [
+                    {
+                        "start": 33,
+                        "end": 56,
+                        "text": "(McDonald et al., 2018)",
+                        "ref_id": "BIBREF26"
+                    },
+                    {
+                        "start": 104,
+                        "end": 122,
+                        "text": "(Guo et al., 2016)",
+                        "ref_id": "BIBREF11"
+                    },
+                    {
+                        "start": 185,
+                        "end": 206,
+                        "text": "(Brokos et al., 2018)",
+                        "ref_id": "BIBREF3"
+                    },
+                    {
+                        "start": 209,
+                        "end": 231,
+                        "text": "McDonald et al. (2018)",
+                        "ref_id": "BIBREF26"
+                    },
+                    {
+                        "start": 326,
+                        "end": 344,
+                        "text": "(Hui et al., 2017)",
+                        "ref_id": "BIBREF14"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Document Ranking with PDRMM",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "Given a query q = q 1 , . . . , q n of n query terms (q-terms) and a document d = d 1 , . . . , d m of m terms (d-terms), PDRMM computes contextsensitive term embeddings c(q i ) and c(d i ) from the static (e.g., WORD2VEC) embeddings e(q i ) and e(d i ) by applying two stacked convolutional layers with trigram filters, residuals (He et al., 2016) , and zero padding to q and d, respectively.2 PDRMM then computes three similarity matrices S 1 , S 2 , S 3 , each of dimensions n \u00d7 m (Fig. 1 ). Each element s i,j of S 1 is the cosine similarity between c(q i ) and c(d j ). S 2 is similar, but uses the static word embeddings e(q i ), e(d j ). S 3 uses one-hot vectors for q i , d j , signaling exact matches. Three row-wise pooling operators are then applied to S 1 , S 2 , S 3 : max-pooling (to obtain the similarity of the best match between the q-term of the row and any of the d-terms), average pooling (to obtain the average match), and average of k-max (to obtain the average similarity of the k best matches). 3 We thus obtain three scores from each row of each similarity matrix. By concatenating row-wise the scores from the three matrices, we obtain a new n \u00d7 9 matrix S (Fig. 1 ). Each row of S indicates how well the corresponding q-term matched any of the d-terms, using the three different views of the terms (onehot, static, context-aware embeddings). Each row of S is then passed to a Multi-Layer Perceptron (MLP) to obtain a single match score per q-term.",
+                "cite_spans": [
+                    {
+                        "start": 331,
+                        "end": 348,
+                        "text": "(He et al., 2016)",
+                        "ref_id": "BIBREF12"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 490,
+                        "end": 491,
+                        "text": "1",
+                        "ref_id": "FIGREF0"
+                    },
+                    {
+                        "start": 1189,
+                        "end": 1190,
+                        "text": "1",
+                        "ref_id": "FIGREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Document Ranking with PDRMM",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "Each context aware q-term embedding is also concatenated with the corresponding IDF score (bottom left of Fig. 1 ) and passed to another MLP that computes the importance of that q-term (words with low IDFs may be unimportant). Let v be the vector containing the n match scores of the q-terms, and u the vector with the corresponding n importance scores (bottom right of Fig. 1 ). The initial relevance score of the document is r(q, d) = v T u. Then r(q, d) is concatenated with four extra features: z-score normalized BM25 (Robertson and Zaragoza, 2009) ; percentage of q-terms with exact match in d (regular and IDF weighted); percentage of q-term bigrams matched in d. An MLP computes the final relevance r(q, d) from the 5 features.",
+                "cite_spans": [
+                    {
+                        "start": 523,
+                        "end": 553,
+                        "text": "(Robertson and Zaragoza, 2009)",
+                        "ref_id": "BIBREF36"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 111,
+                        "end": 112,
+                        "text": "1",
+                        "ref_id": "FIGREF0"
+                    },
+                    {
+                        "start": 375,
+                        "end": 376,
+                        "text": "1",
+                        "ref_id": "FIGREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Document Ranking with PDRMM",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "Neural rankers typically re-rank the top N documents of a conventional IR system. We use the same BM25-based IR system as McDonald et al. (2018) . PDRMM is trained on triples q, d, d , where d is a relevant document from the top N of q, and d is a random irrelevant document from the top N . We use hinge loss, requiring the relevance of d to exceed that of d by a margin. is the same as when scoring documents (Fig. 1 ), but the input is now the query (q) and a single sentence (s). Given a triple q, d, d used to train the document-scoring PDRMM, the sentence-scoring PDRMM is trained to predict the true class (relevant, irrelevant) of each sentence in d and d using cross entropy loss (with a sigmoid on r(q, s)). As when scoring documents, the initial relevance score r(q, s) is combined with extra features using an MLP, to obtain r(q, s). The extra features are now different: character length of q and s, number of shared tokens of q and s (with/without stop-words), sum of IDF scores of shared tokens (with/without stop-words), sum of IDF scores of shared tokens divided by sum of IDF scores of q-terms, number of shared token bigrams of q and s, BM25 score of s against the sentences of d and d , BM25 score of the document (d or d ) that contained s. The two PDRMM instances are trained separately.",
+                "cite_spans": [
+                    {
+                        "start": 122,
+                        "end": 144,
+                        "text": "McDonald et al. (2018)",
+                        "ref_id": "BIBREF26"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 417,
+                        "end": 418,
+                        "text": "1",
+                        "ref_id": "FIGREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Document Ranking with PDRMM",
+                "sec_num": "2.1"
+            },
+            {
+                "text": "Given a document d with sentences s 1 , . . . , s k and a query q, the joint document/snippet ranking version of PDRMM, called JPDRMM, processes separately each sentence s i of d, producing a relevance score r(q, s i ) per sentence, as when PDRMM scores sentences in the PDRMM+PDRMM pipeline. The highest sentence score max i r(q, s i ) is concatenated (Fig. 2 ) with the extra features that are used when PDRMM ranks documents, and an MLP produces the document's score. 4 JPDRMM then revises the sentence scores, by concatenating the score of each sentence with the document score and passing each pair of scores to a dense layer to compute a linear combination, which becomes the revised sentence score. Notice that JPDRMM is mostly based on scoring sentences, since the main goal for QA is to obtain good snippets (almost final answers). The document score is obtained from the score of the document's best sentence (and external features), but the sentence scores are revised, once the document score has been obtained. We use sentence-sized snippets, for compatibility with BIOASQ, but other snippet granularities (e.g., paragraph-sized) could also be used.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 359,
+                        "end": 360,
+                        "text": "2",
+                        "ref_id": "FIGREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Joint PDRMM-based Models for Document and Snippet Ranking",
+                "sec_num": "2.3"
+            },
+            {
+                "text": "JPDRMM is trained on triples q, d, d , where d, d are relevant and irrelevant documents, respectively, from the top N of query q, as in the original PDRMM; the ground truth now also indicates which sentences of the documents are relevant or irrelevant, as when training PDRMM to score sentences in PDRMM+PDRMM. We sum the hinge loss of d and d and the cross-entropy loss of each sentence. 5We also experiment with a JPDRMM version that uses a pre-trained BERT model (Devlin et al., 2019) to obtain input token embeddings (of wordpieces) instead of the more conventional pre-trained (e.g., WORD2VEC) word embeddings that JPDRMM uses otherwise. We call it BJPDRMM if BERT is finetuned when training JPDRMM, and BJPDRMM-NF if BERT is not fine-tuned. In another variant of BJP-DRMM, called BJPDRMM-ADAPT, the input embedding of each token is a linear combination of all the embeddings that BERT produces for that token at its different Transformer layers. The weights of the linear combination are learned via backpropagation. This allows BJPDRMM-ADAPT to learn which BERT layers it should mostly rely on when obtaining token embeddings. Previous work has reported that representations from different BERT layers may be more appropriate for different tasks (Rogers et al., 2020) . BJPDRMM-ADAPT-NF is the same as BJPDRMM-ADAPT, but BERT is not finetuned; the weights of the linear combination of embeddings from BERT layers are still learned.",
+                "cite_spans": [
+                    {
+                        "start": 466,
+                        "end": 487,
+                        "text": "(Devlin et al., 2019)",
+                        "ref_id": "BIBREF7"
+                    },
+                    {
+                        "start": 1253,
+                        "end": 1274,
+                        "text": "(Rogers et al., 2020)",
+                        "ref_id": "BIBREF37"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Joint PDRMM-based Models for Document and Snippet Ranking",
+                "sec_num": "2.3"
+            },
+            {
+                "text": "Ranking with BERT",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Pipelines and Joint Models Based on",
+                "sec_num": "2.4"
+            },
+            {
+                "text": "The BJPDRMM model we discussed above and its variants are essentially still JPDRMM, which in turn invokes the PDRMM ranker (Fig. 1 , 2); BERT is used only to obtain token embeddings that are fed to JPDRMM. Instead, in this subsection we use BERT as a ranker, replacing PDRMM.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 129,
+                        "end": 130,
+                        "text": "1",
+                        "ref_id": "FIGREF0"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Pipelines and Joint Models Based on",
+                "sec_num": "2.4"
+            },
+            {
+                "text": "For document ranking alone (when not cosidering snippets), we feed BERT with pairs of questions and documents (Fig. 3 ). BERT's top-layer embedding of the 'classification' token [CLS] is concatenated with external features (the same as when scoring documents with PDRMM, Section 2.1), and a dense layer again produces the document's score. We fine-tune the entire model using triples q, d, d with a hinge loss between d and d , as when training PDRMM to score documents. 6Our two pipelines that use BERT for document ranking, BERT+BCNN and BERT+PDRMM, are the same as PDRMM+BCNN and PDRMM+PDRMM (Section 2.2), respectively, but use the BERT ranker (Fig. 3 ) to score documents, instead of PDRMM. The joint JBERT model is the same as JPDRMM, but uses the BERT ranker (Fig. 3 ), now applied to sentences, instead of PDRMM (Fig. 1 ), to obtain the initial sentence scores. The top layers of Fig. 2 are then used, as in all joint models, to obtain the document score from the sentence scores and revise the sentence scores. Similarly to BJPDRMM, we also experimented with variations of JBERT, which do not fine-tune the parameters of BERT (JBERT-NF), use a linear combination (with trainable weights) of the [CLS] embeddings from all the BERT layers (JBERT-ADAPT), or both (JBERT-ADAPT-NF).",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 116,
+                        "end": 117,
+                        "text": "3",
+                        "ref_id": "FIGREF2"
+                    },
+                    {
+                        "start": 654,
+                        "end": 655,
+                        "text": "3",
+                        "ref_id": "FIGREF2"
+                    },
+                    {
+                        "start": 772,
+                        "end": 773,
+                        "text": "3",
+                        "ref_id": "FIGREF2"
+                    },
+                    {
+                        "start": 826,
+                        "end": 827,
+                        "text": "1",
+                        "ref_id": "FIGREF0"
+                    },
+                    {
+                        "start": 893,
+                        "end": 894,
+                        "text": "2",
+                        "ref_id": "FIGREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Pipelines and Joint Models Based on",
+                "sec_num": "2.4"
+            },
+            {
+                "text": "We include a BM25+BM25 pipeline to measure the improvement of the proposed models on conventional IR engines. This pipeline uses the question as a query to the IR engine and selects the N d documents with the highest BM25 scores. 7 The N d documents are then split into sentences and BM25 is re-computed, this time over all the sentences of the N d documents, to retrieve the N s best sentences. 2018), we experiment with data from BIOASQ (Tsatsaronis et al., 2015) , which provides English biomedical questions, relevant documents from MED-LINE/PUBMED 8 , and relevant snippets (sentences), prepared by biomedical experts. This is the only previous large-scale IR dataset we know of that includes both gold documents and gold snippets. We use the BIOASQ 7 ( 2019) training dataset, which contains 2,747 questions, with 11 gold documents and 14 gold snippets per question on average. We evaluate on test batches 1-5 (500 questions in total) of BIOASQ 7. 9 We measure Mean Average Precision (MAP) (Manning et al., 2008) for document and snippet retrieval, which are the official BIOASQ evaluation measures. The document collection contains approx. 18M articles (concatenated titles and abstracts only, discarding articles with no abstracts) from the MEDLINE/PUBMED 'baseline' 2018 dataset. In PDRMM and BCNN, we use the biomedical WORD2VEC embeddings of McDonald et al. (2018) . We use the GALAGO10 IR engine to obtain the top N = 100 documents per query. After re-ranking, we return N d = 10 documents and N s = 10 sentences, as required by BIOASQ. We train using Adam (Kingma and Ba, 2015) . Hyperparameters were tuned on held-out validation data.",
+                "cite_spans": [
+                    {
+                        "start": 439,
+                        "end": 465,
+                        "text": "(Tsatsaronis et al., 2015)",
+                        "ref_id": "BIBREF41"
+                    },
+                    {
+                        "start": 996,
+                        "end": 1018,
+                        "text": "(Manning et al., 2008)",
+                        "ref_id": "BIBREF25"
+                    },
+                    {
+                        "start": 1353,
+                        "end": 1375,
+                        "text": "McDonald et al. (2018)",
+                        "ref_id": "BIBREF26"
+                    },
+                    {
+                        "start": 1569,
+                        "end": 1590,
+                        "text": "(Kingma and Ba, 2015)",
+                        "ref_id": "BIBREF18"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "BM25+BM25 Baseline Pipeline",
+                "sec_num": "2.5"
+            },
+            {
+                "text": "Natural Questions data and setup Even though there was no other large-scale IR dataset providing multiple gold documents and snippets per question, we needed to test our best models on a second dataset, other than BIOASQ. Therefore we modified the Natural Questions dataset (Kwiatkowski et al., 2019) to a format closer to BIOASQ's. Each instance of Natural Questions consists of an HTML document of Wikipedia and a question. The answer to the question can always be found in the document as if a perfect retrieval engine were used. A short span of HTML source code is annotated by humans as a 'short answer' to the question. A longer span of HTML source code that includes the short answer is also annotated, as a 'long answer'. The long answer is most commonly a paragraph of the Wikipedia page. In the original dataset, more than 300,000 questions are provided along with their corresponding Wikipedia HTML documents, short answer and long answer spans. We modified Natural Questions to fit the BIOASQ setting. From every Wikipedia HTML document in the original dataset, we extracted the paragraphs and indexed each paragraph separately to an ElasticSearch11 index, which was then used as our retrieval engine. We discarded all the tables and figures of the HTML documents and any question that was answered by a paragraph containing a table. For every question, we apply a query to our retrieval engine and retrieve the first N = 100 paragraphs. We treat each paragraph as a document, similarly to the BIOASQ setting. For each question, the gold (correct) documents are the paragraphs (at most two per question) that were included in the long answers of the original dataset. The gold snippets are the sentences (at most two per question) that overlap with the short answers of the original dataset. We discard questions for which the retrieval engine did not manage to retrieve any of the gold paragraphs in its top 100 paragraphs. We ended up with 110,589 questions and 2,684,631 indexed paragraphs. Due to lack of computational resources, we only use 4,000 questions for training, 400 questions for development, and 400 questions for testing, but we make the entire modified Natural Questions dataset publicly available. Hyper-parameters were again tuned on held-out validation data. All other settings were as in the BIOASQ experiments.",
+                "cite_spans": [
+                    {
+                        "start": 274,
+                        "end": 300,
+                        "text": "(Kwiatkowski et al., 2019)",
+                        "ref_id": "BIBREF19"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experiments",
+                "sec_num": "3"
+            },
+            {
+                "text": "BioASQ results Table 1 reports document and snippet MAP scores on the BIOASQ dataset, along with the trainable parameters per method. For completeness, we also show recall at 10 scores, but we base the discussion below on MAP, the official measure of BIOASQ, which also considers the ranking of the 10 documents and snippets BIOASQ allows participants to return. In each zone, best scores shown in bold. In the 2nd and 3rd zones, we underline the results of the best pipeline, the results of JPDRMM, and the best results of the BJPDRMM and JBERT variants. The differences between the underlined MAP scores are statistically significant (p \u2264 0.01).",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 21,
+                        "end": 22,
+                        "text": "1",
+                        "ref_id": "TABREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Experimental Results",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "= 100 documents (or their snippets) that BM25 retrieved, moving all the relevant documents (or snippets) to the top. Sentence PDRMM is an ablation of JPDRMM without the top layers (Fig. 2 ); each sentence is scored using PDRMM, then each document inherits the highest score of its snippets.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 186,
+                        "end": 187,
+                        "text": "2",
+                        "ref_id": "FIGREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Experimental Results",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "PDRMM+BCNN and PDRMM+PDRMM use the same document ranker, hence the document MAP of these two pipelines is identical (7.47). However, PDRMM+PDRMM outperforms PDRMM+BCNN in snippet MAP (9.16 to 5.67), even though PDRMM has much fewer trainable parameters than BCNN, confirming that PDRMM can also score sentences and is a better sentence ranker than BCNN. PDRMM+BCNN was the best system in BIOASQ 6 for both documents and snippets, i.e., it is a strong baseline. Replacing PDRMM by BERT for document ranking in the two pipelines (BERT+BCNN and BERT+PDRMM) increases the document MAP by 1.32 points (from 7.47 to 8.79) with a marginal increase in snippet MAP for BERT+PDRMM (9.16 to 9.63) and a slightly larger increase for BERT+BCNN (5.67 to 6.07), at the expense of a massive increase in trainable parameters due to BERT (and computational cost to pre-train and fine-tune BERT). We were unable to include a BERT+BERT pipeline, which would use a second BERT ranker for sentences, with a total of approx. 220M trainable parameters, due to lack of computational resources.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Experimental Results",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "The main joint models (JPDRMM, BJPDRMM, JBERT) vastly outperform the pipelines in snippet extraction, the main goal for QA (obtaining 15.72, 16.82, 16 .29 snippet MAP, respectively), though their document MAP is slightly lower (6.69, 7.59, 7.93) compared to the pipelines (7.47, 8.79), but still competitive. This is not surprising, since the joint models are geared towards snippet retrieval (they directly score sentences, document scores are obtained from sentence scores). Human inspection of the retrieved documents and snippets, discussed below (Table 2 ), reveals that the document MAP of JPDRMM is actually higher than that of the best pipeline (BERT+PDRMM), but is penalized in Table 1 because of missing gold documents.",
+                "cite_spans": [
+                    {
+                        "start": 123,
+                        "end": 150,
+                        "text": "(obtaining 15.72, 16.82, 16",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 558,
+                        "end": 559,
+                        "text": "2",
+                        "ref_id": "TABREF2"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Experimental Results",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "JPDRMM, which has the fewest parameters of all neural models and does not use BERT at all, is competitive in snippet retrieval with models that employ BERT. More generally, the joint models use fewer parameters than comparable pipelines (see the zones of Table 1 ). Not fine-tuning BERT (-NF variants) leads to a further dramatic decrease in trainable parameters, at the expense of slightly lower document and snippet MAP (7.59 to 6.84, and 16.82 to 15.77, respectively, for BJPDRMM, and similarly for JBERT). Using linear combinations of token embeddings from all BERT layers (-ADAPT variants) harms both document and snippet MAP when fine-tuning BERT, but is beneficial in most cases when not fine-tuning BERT (-NF). The snippet MAP of BJPDRMM-NF increases from 15.77 to 17.35, and document MAP increases from 6.84 to 7.42. A similar increase is observed in the snippet MAP of JBERT-NF (15.99 to 16.53), but MAP decreases (7.90 to 7.84). In the second and third result zones of Table 1 , we underline the results of the best pipelines, the results of JPDRMM, and the results of the best BJPDRMM and JBERT variant. In each zone and column, the differences between the underlined MAP scores are statistically significant (p \u2264 0.01); we used single-tailed Approximate Randomization (Dror et al., 2018) , 10k iterations, randomly swapping in each iteration the rankings of 50% of queries. Removing the top layers of JPDRMM (Sentence PDRMM), clearly harms performance for both documents and snippets. The oracle scores indicate there is still scope for improvements in both documents and snippets.",
+                "cite_spans": [
+                    {
+                        "start": 1281,
+                        "end": 1300,
+                        "text": "(Dror et al., 2018)",
+                        "ref_id": "BIBREF8"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 261,
+                        "end": 262,
+                        "text": "1",
+                        "ref_id": "TABREF1"
+                    },
+                    {
+                        "start": 986,
+                        "end": 987,
+                        "text": "1",
+                        "ref_id": "TABREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Experimental Results",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "BioASQ results after expert inspection At the end of each BIOASQ annual contest, the biomedical experts who prepared the questions and their gold documents and snippets inspect the responses of the participants. If any of the documents and snippets returned by the participants are judged relevant to the corresponding questions, they are added to the gold responses. This process enhances the gold responses and avoids penalizing participants for responses that are actually relevant, but had been missed by the experts in the initial gold responses. However, it is unfair to use the post-contest enhanced gold responses to compare systems that participated in the contest to systems that did not, because the latter may also return documents and snippets that are actually relevant and are not included in the gold data, but the experts do not see these responses and they are not included in the gold ones. The results of Table 1 were computed on the initial gold responses of BIOASQ 7, before the post-contest revision, because not all of the methods of that table participated in BIOASQ 7. 12 In Table 2 , we show results on the revised postcontest gold responses of BIOASQ 7, for those of our methods that participated in the challenge. We show results on test batches 4 and 5 only (out of 5 batches in total), because these were the only two batches were all three of our methods participated together. Each batch comprises 100 questions. We also show the best results (after inspection) of our competitors in BIOASQ 7, for the same batches.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 931,
+                        "end": 932,
+                        "text": "1",
+                        "ref_id": "TABREF1"
+                    },
+                    {
+                        "start": 1107,
+                        "end": 1108,
+                        "text": "2",
+                        "ref_id": "TABREF2"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Experimental Results",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "A first striking observation in Table 2 is that all results improve substantially after expert inspection, i.e., all systems retrieved many relevant documents and snippets the experts had missed. Again, the two joint models (JPDRMM, BJPDRMM-NF) vastly outperform the BERT+PDRMM pipeline 12 Results without expert inspection can be obtained at any time, using the BIOASQ evaluation platform. Results with expert inspection can only be obtained during the challenge. in snippet MAP. As in Table 1 , before expert inspection the pipeline has slightly better document MAP than the joint models. However, after expert inspection JPDRMM exceeds the pipeline in document MAP by almost two points. BJPDRMM-NF performs two points better than JPDRMM in snippet MAP after expert inspection, though JPDRMM performs two points better in document MAP. After inspection, the document MAP of BJPDRMM-NF is also very close to the pipeline's. Table 2 confirms that JPDRMM is competitive with models that use BERT, despite having the fewest parameters. All of our methods clearly outperformed the competition.",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 38,
+                        "end": 39,
+                        "text": "2",
+                        "ref_id": "TABREF2"
+                    },
+                    {
+                        "start": 493,
+                        "end": 494,
+                        "text": "1",
+                        "ref_id": "TABREF1"
+                    },
+                    {
+                        "start": 931,
+                        "end": 932,
+                        "text": "2",
+                        "ref_id": "TABREF2"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Experimental Results",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "Natural Questions results Table 3 reports results on the modified Natural Questions dataset. We experiment with the best pipeline and joint model of Table 1 that did not use BERT (and are computationally much cheaper), i.e., PDRMM+PDRMM and JPDRMM, comparing them to the more conventional BM25+BM25 baseline. Since there are at most two relevant documents and snippets per question in this dataset, we measure Mean Reciprocal Rank (MRR) (Manning et al., 2008) , and Recall at top 1 and 2. Both PDRMM+PDRMM and JPDRMM clearly outperform the BM25+BM25 pipeline in both document and snippet retrieval. As in Table 1, the joint JPDRMM model outperforms the PDRMM+PDRMM pipeline in snippet retrieval, but the pipeline performs better in document retrieval. Again, this is unsurprising, since the joint models are geared towards snippet retrieval. We also note that JPDRMM uses half of the trainable parameters of PDRMM+PDRMM (Table 1 ). No comparison to previous work that used the original Natural Questions is possible, since the original dataset provides a single document per query (Section 3.1).",
+                "cite_spans": [
+                    {
+                        "start": 437,
+                        "end": 459,
+                        "text": "(Manning et al., 2008)",
+                        "ref_id": "BIBREF25"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 32,
+                        "end": 33,
+                        "text": "3",
+                        "ref_id": "TABREF3"
+                    },
+                    {
+                        "start": 155,
+                        "end": 156,
+                        "text": "1",
+                        "ref_id": "TABREF1"
+                    },
+                    {
+                        "start": 927,
+                        "end": 928,
+                        "text": "1",
+                        "ref_id": "TABREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Experimental Results",
+                "sec_num": "3.2"
+            },
+            {
+                "text": "Neural document ranking (Guo et al., 2016; Hui et al., 2017; Pang et al., 2017; Hui et al., 2018; McDonald et al., 2018) only recently managed to improve the rankings of conventional IR; see Lin (2019) for caveats. Document or passage ranking models based on BERT have also been proposed, with promising results, but most use only simplistic task-specific layers on top of BERT (Yang et al., 2019b; Nogueira and Cho, 2019) , similar to our use of BERT for document scoring (Fig. 3 ). An exception is the work of MacAvaney et al. ( 2019), who explored combining ELMO (Peters et al., 2018) and BERT (Devlin et al., 2019) ral IR models, namely PACRR (Hui et al., 2017) , DRMM (Guo et al., 2016) , KNRM (Dai et al., 2018) , CONVKNRM (Xiong et al., 2017) , an approach that we also explored here by combining BERT with PDRMM in BJPDRMM and JBERT. However, we retrieve both documents and snippets, whereas MacAvaney et al. ( 2019) retrieve only documents.",
+                "cite_spans": [
+                    {
+                        "start": 24,
+                        "end": 42,
+                        "text": "(Guo et al., 2016;",
+                        "ref_id": "BIBREF11"
+                    },
+                    {
+                        "start": 43,
+                        "end": 60,
+                        "text": "Hui et al., 2017;",
+                        "ref_id": "BIBREF14"
+                    },
+                    {
+                        "start": 61,
+                        "end": 79,
+                        "text": "Pang et al., 2017;",
+                        "ref_id": "BIBREF31"
+                    },
+                    {
+                        "start": 80,
+                        "end": 97,
+                        "text": "Hui et al., 2018;",
+                        "ref_id": "BIBREF15"
+                    },
+                    {
+                        "start": 98,
+                        "end": 120,
+                        "text": "McDonald et al., 2018)",
+                        "ref_id": "BIBREF26"
+                    },
+                    {
+                        "start": 191,
+                        "end": 201,
+                        "text": "Lin (2019)",
+                        "ref_id": "BIBREF22"
+                    },
+                    {
+                        "start": 378,
+                        "end": 398,
+                        "text": "(Yang et al., 2019b;",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 399,
+                        "end": 422,
+                        "text": "Nogueira and Cho, 2019)",
+                        "ref_id": "BIBREF29"
+                    },
+                    {
+                        "start": 566,
+                        "end": 587,
+                        "text": "(Peters et al., 2018)",
+                        "ref_id": "BIBREF32"
+                    },
+                    {
+                        "start": 597,
+                        "end": 618,
+                        "text": "(Devlin et al., 2019)",
+                        "ref_id": "BIBREF7"
+                    },
+                    {
+                        "start": 647,
+                        "end": 665,
+                        "text": "(Hui et al., 2017)",
+                        "ref_id": "BIBREF14"
+                    },
+                    {
+                        "start": 673,
+                        "end": 691,
+                        "text": "(Guo et al., 2016)",
+                        "ref_id": "BIBREF11"
+                    },
+                    {
+                        "start": 699,
+                        "end": 717,
+                        "text": "(Dai et al., 2018)",
+                        "ref_id": "BIBREF6"
+                    },
+                    {
+                        "start": 729,
+                        "end": 749,
+                        "text": "(Xiong et al., 2017)",
+                        "ref_id": "BIBREF43"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 479,
+                        "end": 480,
+                        "text": "3",
+                        "ref_id": "FIGREF2"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "4"
+            },
+            {
+                "text": "Models that directly retrieve documents by indexing neural document representations, rather than re-ranking documents retrieved by conventional IR, have also been proposed (Fan et al., 2018; Ai et al., 2018; Khattab and Zaharia, 2020) , but none addresses both document and snippet retrieval. Yang et al. (2019a) use BERT to encode, index, and directly retrieve snippets, but do not consider documents; indexing snippets is also computationally costly. Lee et al. (2019) propose a joint model for direct snippet retrieval (and indexing) and answer span selection, again without retrieving documents.",
+                "cite_spans": [
+                    {
+                        "start": 172,
+                        "end": 190,
+                        "text": "(Fan et al., 2018;",
+                        "ref_id": "BIBREF10"
+                    },
+                    {
+                        "start": 191,
+                        "end": 207,
+                        "text": "Ai et al., 2018;",
+                        "ref_id": "BIBREF1"
+                    },
+                    {
+                        "start": 208,
+                        "end": 234,
+                        "text": "Khattab and Zaharia, 2020)",
+                        "ref_id": "BIBREF16"
+                    },
+                    {
+                        "start": 293,
+                        "end": 312,
+                        "text": "Yang et al. (2019a)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 453,
+                        "end": 470,
+                        "text": "Lee et al. (2019)",
+                        "ref_id": "BIBREF21"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "4"
+            },
+            {
+                "text": "No previous work combined document and snippet retrieval in a joint neural model. This may be due to existing datasets, which do not provide both gold documents and gold snippets, with the exception of BIOASQ, which is however small by today's standards (2.7k training questions, Section 3.1). For example, Pang et al. (2017) used much larger clickthrough datasets from a Chinese search engine, as well as datasets from the 2007 and 2008 TREC Million Query tracks (Qin et al., 2010) , but these datasets do not contain gold snippets. SQUAD (Rajpurkar et al., 2016) and SQUAD v.2 (Rajpurkar et al., 2018) provide 100k and 150k questions, respectively, but for each question they require extracting an exact answer span from a single given Wikipedia paragraph; no snippet retrieval is performed, because the relevant (paragraph-sized) snippet is given. Ahmad et al. (2019) provide modified versions of SQUAD and Natural Questions, suitable for direct snippet retrieval, but do not consider document retrieval. SearchQA (Dunn et al., 2017) provides 140k questions, along with 50 snippets per question. The web pages the snippets were extracted from, however, are not included in the dataset, only their URLs, and crawling them may produce different document collections, since the contents of web pages often change, pages are removed etc. MS-MARCO (Nguyen et al., 2016) was constructed using 1M queries extracted from Bing's logs. For each question, the dataset includes the snippets returned by the search engine for the top-10 ranked web pages. However the gold answers to the questions are not spans of particular retrieved snippets, but were freely written by humans after reading the returned snippets. Hence, gold relevant snippets (or sentences) cannot be identified, making this dataset unsuitable for our purposes.",
+                "cite_spans": [
+                    {
+                        "start": 307,
+                        "end": 325,
+                        "text": "Pang et al. (2017)",
+                        "ref_id": "BIBREF31"
+                    },
+                    {
+                        "start": 464,
+                        "end": 482,
+                        "text": "(Qin et al., 2010)",
+                        "ref_id": "BIBREF33"
+                    },
+                    {
+                        "start": 540,
+                        "end": 568,
+                        "text": "(Rajpurkar et al., 2016) and",
+                        "ref_id": "BIBREF35"
+                    },
+                    {
+                        "start": 569,
+                        "end": 603,
+                        "text": "SQUAD v.2 (Rajpurkar et al., 2018)",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 851,
+                        "end": 870,
+                        "text": "Ahmad et al. (2019)",
+                        "ref_id": "BIBREF0"
+                    },
+                    {
+                        "start": 1017,
+                        "end": 1036,
+                        "text": "(Dunn et al., 2017)",
+                        "ref_id": "BIBREF9"
+                    },
+                    {
+                        "start": 1346,
+                        "end": 1367,
+                        "text": "(Nguyen et al., 2016)",
+                        "ref_id": "BIBREF28"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Related Work",
+                "sec_num": "4"
+            },
+            {
+                "text": "Our contributions can be summarized as follows:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusions and Future Work",
+                "sec_num": "5"
+            },
+            {
+                "text": "(1) We proposed an architecture to jointly rank documents and snippets with respect to a question, two particularly important stages in QA for large document collections; our architecture can be used with any neural text relevance model. (2) We instantiated the proposed architecture using a recent neural relevance model (PDRMM) and a BERTbased ranker. (3) Using biomedical data (from BIOASQ), we showed that the two resulting joint models (PDRMM-based and BERT-based) vastly outperform the corresponding pipelines in snippet re-trieval, the main goal in QA for document collections, using fewer parameters, and also remaining competitive in document retrieval. (4) We showed that the joint model (PDRMM-based) that does not use BERT is competitive with BERT-based models, outperforming the best BIOASQ 6 system; our joint models (PDRMM-and BERT-based) also outperformed all BIOASQ 7 competitors. ( 5) We provide a modified version of the Natural Questions dataset, suitable for document and snippet retrieval. ( 6) We showed that our joint PDRMM-based model also largely outperforms the corresponding pipeline on open-domain data (Natural Questions) in snippet retrieval, even though it performs worse than the pipeline in document retrieval. ( 7) We showed that all the neural pipelines and joint models we considered improve the traditional BM25 ranking on both datasets. (8) We make our code publicly available.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Conclusions and Future Work",
+                "sec_num": "5"
+            },
+            {
+                "text": "We hope to extend our models and datasets for stage (iv), i.e., to also identify exact answer spans within snippets (paragraphs), similar to the answer spans of SQUAD (Rajpurkar et al., 2016 (Rajpurkar et al., , 2018)) . This would lead to a multi-granular retrieval task, where systems would have to retrieve relevant documents, relevant snippets, and exact answer spans from the relevant snippets. BIOASQ already includes this multi-granular task, but exact answers are provided only for factoid questions and they are freely written by humans, as in MS-MARCO, with similar limitations. Hence, appropriately modified versions of the BIOASQ datasets are needed. Table 4 shows that further performance gains (6.80 to 7.85 document MAP, 15.42 to 17.34 snippet MAP) are possible by tuning the weights of the two losses. The best scores are obtained when using both the extra sentence and document features. However, the model performs reasonably well even when one of the two types of extra features is removed, with the exception of \u03bb snip = 10. The standard deviations of the MAP scores over the folds of the cross-validation indicate that the performance of the model is reasonably stable.",
+                "cite_spans": [
+                    {
+                        "start": 167,
+                        "end": 190,
+                        "text": "(Rajpurkar et al., 2016",
+                        "ref_id": "BIBREF35"
+                    },
+                    {
+                        "start": 191,
+                        "end": 218,
+                        "text": "(Rajpurkar et al., , 2018))",
+                        "ref_id": "BIBREF34"
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 669,
+                        "end": 670,
+                        "text": "4",
+                        "ref_id": "TABREF5"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Conclusions and Future Work",
+                "sec_num": "5"
+            },
+            {
+                "text": "We conducted an exploratory analysis of the retrieved snippets in the two datasets. For each dataset, we used the model with the best snippet retrieval performance, i.e., JPDRMM for the modified Natural Questions (Table 3 ) and BJPDRMM-ADAPT-NF for BIOASQ (Table 1 ).",
+                "cite_spans": [],
+                "ref_spans": [
+                    {
+                        "start": 220,
+                        "end": 221,
+                        "text": "3",
+                        "ref_id": "TABREF3"
+                    },
+                    {
+                        "start": 263,
+                        "end": 264,
+                        "text": "1",
+                        "ref_id": "TABREF1"
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Error Analysis and Limitations",
+                "sec_num": null
+            },
+            {
+                "text": "Both models struggle to retrieve the gold sentences when the answer is not explicitly mentioned in them. For example, the gold sentence for the question \"What is the most famous fountain in Rome?\" of the Natural Questions dataset is:",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Error Analysis and Limitations",
+                "sec_num": null
+            },
+            {
+                "text": "\"The Trevi Fountain (Italian: Fontana di Trevi) is a fountain in the Trevi district in Rome, Italy, designed by Italian architect Nicola Salvi and completed by Giuseppe Pannini.\"",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Error Analysis and Limitations",
+                "sec_num": null
+            },
+            {
+                "text": "Instead, the top sentence of JPDRMM is the following, which looks reasonably good, but mentions famous fountains (of a particular kind) near Rome.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Error Analysis and Limitations",
+                "sec_num": null
+            },
+            {
+                "text": "\"The most famous fountains of this kind were found in the Villa d'Este, at Tivoli near Rome, which featured a hillside of basins, fountains and jets of water, as well as a fountain which produced music by pouring water into a chamber, forcing air into a series of flute-like pipes.\".",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Error Analysis and Limitations",
+                "sec_num": null
+            },
+            {
+                "text": "To prefer the gold sentence, the model needs to know that Fontana di Trevi is also very famous, but this information is not included in the gold sentence itself, though it is included in the next sentence: \"Standing 26.3 metres (86 ft) high and 49.15 metres (161.3 ft) wide, it is the largest Baroque fountain in the city and one of the most famous fountains in the world.\"",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Error Analysis and Limitations",
+                "sec_num": null
+            },
+            {
+                "text": "Hence, some form of multi-hop QA (Yang et al., 2018; Bauer et al., 2018; Khot et al., 2019; Saxena et al., 2020) seems to be needed to combine the information that Fontana di Trevi is in Rome (explicitly mentioned in the gold sentence) with information from the next sentence and, more generally, other sentences even from different documents.",
+                "cite_spans": [
+                    {
+                        "start": 33,
+                        "end": 52,
+                        "text": "(Yang et al., 2018;",
+                        "ref_id": "BIBREF47"
+                    },
+                    {
+                        "start": 53,
+                        "end": 72,
+                        "text": "Bauer et al., 2018;",
+                        "ref_id": "BIBREF2"
+                    },
+                    {
+                        "start": 73,
+                        "end": 91,
+                        "text": "Khot et al., 2019;",
+                        "ref_id": "BIBREF17"
+                    },
+                    {
+                        "start": 92,
+                        "end": 112,
+                        "text": "Saxena et al., 2020)",
+                        "ref_id": "BIBREF38"
+                    }
+                ],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Error Analysis and Limitations",
+                "sec_num": null
+            },
+            {
+                "text": "In the case of the question \"What part of the body is affected by mesotheliomia?\" of the BIOASQ dataset, the gold sentence is: ''Malignant pleural mesothelioma (MPM) is a hard to treat malignancy arising from the mesothelial surface of the pleura.\"",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Error Analysis and Limitations",
+                "sec_num": null
+            },
+            {
+                "text": "Instead, the top sentence of BJPDRMM-ADAPT-NF is the following, which contains several words of the question, but not 'mesothelioma', which is the most important question term. \"For PTs specialized in acute care, geriatrics and pediatrics, the body part most commonly affected was the low back, while for PTs specialized in orthopedics and neurology, the body part most commonly affected was the neck.\"",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Error Analysis and Limitations",
+                "sec_num": null
+            },
+            {
+                "text": "In this case, the gold sentence does not explicitly convey that the pleura is a membrane that envelops each lung of the human body and, therefore, a part of the body. Again, this additional information can be found in other sentences.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Error Analysis and Limitations",
+                "sec_num": null
+            },
+            {
+                "text": "See http://nlp.cs.aueb.gr/publications. html for links to the code and data.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "McDonald et al. (2018) use a BILSTM encoder instead of convolutions. We prefer the latter, because they are faster, and we found that they do not degrade performance.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "We added average pooling to PDRMM to balance the other pooling operators that favor long documents.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "We also tried alternative mechanisms to obtain the document score from the sentence scores, including average of k-max sentence scores and hierarchical RNNs(Yang et al., 2016), but they led to no improvement.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "Additional experiments with JPDRMM, reported in the appendix, indicate that further performance gains are possible by tuning the weights of the two losses.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "We use the pre-trained uncased BERT BASE ofDevlin et al. (2019). The 'documents' of the BIOASQ dataset are concatenated titles and abstracts. Most question-document pairs do not exceed BERT's max. length limit of 512 wordpieces. If they do, we truncate documents. The same approach could be followed in the modified Natural Questions dataset, where 'documents' are Wikipedia paragraphs, but we did not experiment with BERT-based models on that dataset.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "In each experiment, the same IR engine and BM25 hyperparameters are used in all other methods. All BM25 hyperparameters are tuned on development",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "data. 8 https://www.ncbi.nlm.nih.gov",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "/pubmed 9 BIOASQ 8 (2020) was ongoing during this work, hence we could not use its data for comparisons. See also the discussion of BIOASQ results after expert inspection in",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "Section 3.2. 10 www.lemurproject.org/galago.php",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            },
+            {
+                "text": "www.elastic.co/products/elasticsearch",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "",
+                "sec_num": null
+            }
+        ],
+        "back_matter": [
+            {
+                "text": "We thank Ryan McDonald for his advice in earlier stages of this work.",
+                "cite_spans": [],
+                "ref_spans": [],
+                "eq_spans": [],
+                "section": "Acknowledgements",
+                "sec_num": null
+            },
+            {
+                "text": "Tuning the weights of the two losses and the effect of extra features in JPDRMMIn Table 1 , all joint models used the sum of the document and snippet loss (L = L doc + L snip ). By contrast, in Table 4 we use a linear combination L = L doc +\u03bb snip L snip and tune the hyper-parameter \u03bb snip \u2208 {10, 1, 0.1, 0.01}. We also try removing the extra document and/or sentence features (Fig. 1 -3) to check their effect. This experiment was performed only with JPDRMM, which is one of our best joint models and computationally much cheaper than methods that employ BERT. As in Table 1 , we use the BIOASQ data, but here we perform a 10-fold cross-validation on the union of the training and development subsets. This is why the results for \u03bb snip = 1 when using both the sentence and document extra features (row 4, in italics) are slightly different than the corresponding JPDRMM results of Table 1 (6.69 and 15.72, respectively) .",
+                "cite_spans": [
+                    {
+                        "start": 892,
+                        "end": 922,
+                        "text": "(6.69 and 15.72, respectively)",
+                        "ref_id": null
+                    }
+                ],
+                "ref_spans": [
+                    {
+                        "start": 88,
+                        "end": 89,
+                        "text": "1",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 200,
+                        "end": 201,
+                        "text": "4",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 384,
+                        "end": 385,
+                        "text": "1",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 575,
+                        "end": 576,
+                        "text": "1",
+                        "ref_id": null
+                    },
+                    {
+                        "start": 890,
+                        "end": 891,
+                        "text": "1",
+                        "ref_id": null
+                    }
+                ],
+                "eq_spans": [],
+                "section": "Appendix",
+                "sec_num": null
+            }
+        ],
+        "bib_entries": {
+            "BIBREF0": {
+                "ref_id": "b0",
+                "title": "ReQA: An evaluation for end-to-end answer retrieval models",
+                "authors": [
+                    {
+                        "first": "Amin",
+                        "middle": [],
+                        "last": "Ahmad",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Noah",
+                        "middle": [],
+                        "last": "Constant",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yinfei",
+                        "middle": [],
+                        "last": "Yang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Daniel",
+                        "middle": [],
+                        "last": "Cer",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 2nd Workshop on Machine Reading for Question Answering",
+                "volume": "",
+                "issue": "",
+                "pages": "137--146",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Amin Ahmad, Noah Constant, Yinfei Yang, and Daniel Cer. 2019. ReQA: An evaluation for end-to-end an- swer retrieval models. In Proceedings of the 2nd Workshop on Machine Reading for Question Answer- ing, pages 137-146, Hong Kong, China.",
+                "links": null
+            },
+            "BIBREF1": {
+                "ref_id": "b1",
+                "title": "A Neural Passage Model for Ad-hoc Document Retrieval",
+                "authors": [
+                    {
+                        "first": "Qingyao",
+                        "middle": [],
+                        "last": "Ai",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "O'",
+                        "middle": [],
+                        "last": "Brendan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "W",
+                        "middle": [
+                            "Bruce"
+                        ],
+                        "last": "Connor",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Croft",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Advances in Information Retrieval",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Qingyao Ai, Brendan O'Connor, and W. Bruce Croft. 2018. A Neural Passage Model for Ad-hoc Doc- ument Retrieval. In Advances in Information Re- trieval, Cham.",
+                "links": null
+            },
+            "BIBREF2": {
+                "ref_id": "b2",
+                "title": "Commonsense for generative multi-hop question answering tasks",
+                "authors": [
+                    {
+                        "first": "Lisa",
+                        "middle": [],
+                        "last": "Bauer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yicheng",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mohit",
+                        "middle": [],
+                        "last": "Bansal",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "4220--4230",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Lisa Bauer, Yicheng Wang, and Mohit Bansal. 2018. Commonsense for generative multi-hop question an- swering tasks. In Proceedings of the 2018 Confer- ence on Empirical Methods in Natural Language Processing, pages 4220-4230, Brussels, Belgium.",
+                "links": null
+            },
+            "BIBREF3": {
+                "ref_id": "b3",
+                "title": "AUEB at BioASQ 6: Document and Snippet Retrieval",
+                "authors": [
+                    {
+                        "first": "George",
+                        "middle": [],
+                        "last": "Brokos",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Polyvios",
+                        "middle": [],
+                        "last": "Liosis",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ryan",
+                        "middle": [],
+                        "last": "Mcdonald",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Dimitris Pappas, and Ion Androutsopoulos",
+                "volume": "",
+                "issue": "",
+                "pages": "30--39",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "George Brokos, Polyvios Liosis, Ryan McDonald, Dimitris Pappas, and Ion Androutsopoulos. 2018. AUEB at BioASQ 6: Document and Snippet Re- trieval. In Proceedings of the 6th BioASQ Workshop, pages 30-39, Brussels, Belgium.",
+                "links": null
+            },
+            "BIBREF4": {
+                "ref_id": "b4",
+                "title": "Reading Wikipedia to answer opendomain questions",
+                "authors": [
+                    {
+                        "first": "Danqi",
+                        "middle": [],
+                        "last": "Chen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Adam",
+                        "middle": [],
+                        "last": "Fisch",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jason",
+                        "middle": [],
+                        "last": "Weston",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Antoine",
+                        "middle": [],
+                        "last": "Bordes",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Proceedings of the 55th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "1",
+                "issue": "",
+                "pages": "1870--1879",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Danqi Chen, Adam Fisch, Jason Weston, and Antoine Bordes. 2017. Reading Wikipedia to answer open- domain questions. In Proceedings of the 55th An- nual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers), pages 1870- 1879, Vancouver, Canada.",
+                "links": null
+            },
+            "BIBREF5": {
+                "ref_id": "b5",
+                "title": "Attention-over-Attention Neural Networks for Reading Comprehension",
+                "authors": [
+                    {
+                        "first": "Yiming",
+                        "middle": [],
+                        "last": "Cui",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zhipeng",
+                        "middle": [],
+                        "last": "Chen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Si",
+                        "middle": [],
+                        "last": "Wei",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Shijin",
+                        "middle": [],
+                        "last": "Wang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ting",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Guoping",
+                        "middle": [],
+                        "last": "Hu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Proceedings of the 55th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "593--602",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Yiming Cui, Zhipeng Chen, Si Wei, Shijin Wang, Ting Liu, and Guoping Hu. 2017. Attention-over- Attention Neural Networks for Reading Comprehen- sion. In Proceedings of the 55th Annual Meeting of the Association for Computational Linguistics (Vol- ume 1: Long Papers), pages 593-602, Vancouver, Canada.",
+                "links": null
+            },
+            "BIBREF6": {
+                "ref_id": "b6",
+                "title": "Convolutional neural networks for soft-matching n-grams in ad-hoc search",
+                "authors": [
+                    {
+                        "first": "Zhuyun",
+                        "middle": [],
+                        "last": "Dai",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chenyan",
+                        "middle": [],
+                        "last": "Xiong",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jamie",
+                        "middle": [],
+                        "last": "Callan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zhiyuan",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the Eleventh ACM International Conference on Web Search and Data Mining",
+                "volume": "",
+                "issue": "",
+                "pages": "126--134",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Zhuyun Dai, Chenyan Xiong, Jamie Callan, and Zhiyuan Liu. 2018. Convolutional neural networks for soft-matching n-grams in ad-hoc search. In Pro- ceedings of the Eleventh ACM International Confer- ence on Web Search and Data Mining, pages 126- 134, Marina Del Rey, CA.",
+                "links": null
+            },
+            "BIBREF7": {
+                "ref_id": "b7",
+                "title": "BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding",
+                "authors": [
+                    {
+                        "first": "Jacob",
+                        "middle": [],
+                        "last": "Devlin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ming-Wei",
+                        "middle": [],
+                        "last": "Chang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kenton",
+                        "middle": [],
+                        "last": "Lee",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kristina",
+                        "middle": [],
+                        "last": "Toutanova",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 2019 Conference of the North American Chapter",
+                "volume": "1",
+                "issue": "",
+                "pages": "4171--4186",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jacob Devlin, Ming-Wei Chang, Kenton Lee, and Kristina Toutanova. 2019. BERT: Pre-training of Deep Bidirectional Transformers for Language Un- derstanding. In Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies, Volume 1 (Long and Short Papers), pages 4171-4186.",
+                "links": null
+            },
+            "BIBREF8": {
+                "ref_id": "b8",
+                "title": "The Hitchhiker's Guide to Testing Statistical Significance in Natural Language Processing",
+                "authors": [
+                    {
+                        "first": "Rotem",
+                        "middle": [],
+                        "last": "Dror",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Gili",
+                        "middle": [],
+                        "last": "Baumer",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 56th Annual Meeting of the ACL",
+                "volume": "1",
+                "issue": "",
+                "pages": "1383--1392",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Rotem Dror, Gili Baumer, Segev Shlomov, and Roi Re- ichart. 2018. The Hitchhiker's Guide to Testing Sta- tistical Significance in Natural Language Processing. In Proceedings of the 56th Annual Meeting of the ACL (Volume 1: Long Papers), pages 1383-1392.",
+                "links": null
+            },
+            "BIBREF9": {
+                "ref_id": "b9",
+                "title": "SearchQA: A New Q&A Dataset Augmented with Context from a Search Engine",
+                "authors": [
+                    {
+                        "first": "Matthew",
+                        "middle": [],
+                        "last": "Dunn",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Levent",
+                        "middle": [],
+                        "last": "Sagun",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mike",
+                        "middle": [],
+                        "last": "Higgins",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "V",
+                        "middle": [
+                            "Ugur"
+                        ],
+                        "last": "G\u00fcney",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Volkan",
+                        "middle": [],
+                        "last": "Cirik",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kyunghyun",
+                        "middle": [],
+                        "last": "Cho",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Matthew Dunn, Levent Sagun, Mike Higgins, V. Ugur G\u00fcney, Volkan Cirik, and Kyunghyun Cho. 2017. SearchQA: A New Q&A Dataset Augmented with Context from a Search Engine. ArXiv, abs/1704.05179.",
+                "links": null
+            },
+            "BIBREF10": {
+                "ref_id": "b10",
+                "title": "Modeling Diverse Relevance Patterns in Ad-Hoc Retrieval",
+                "authors": [
+                    {
+                        "first": "Yixing",
+                        "middle": [],
+                        "last": "Fan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jiafeng",
+                        "middle": [],
+                        "last": "Guo",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yanyan",
+                        "middle": [],
+                        "last": "Lan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jun",
+                        "middle": [],
+                        "last": "Xu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chengxiang",
+                        "middle": [],
+                        "last": "Zhai",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xueqi",
+                        "middle": [],
+                        "last": "Cheng",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "The 41st International ACM SIGIR Conference on Research & Development in Information Retrieval",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Yixing Fan, Jiafeng Guo, Yanyan Lan, Jun Xu, Chengx- iang Zhai, and Xueqi Cheng. 2018. Modeling Di- verse Relevance Patterns in Ad-Hoc Retrieval. In The 41st International ACM SIGIR Conference on Research & Development in Information Retrieval.",
+                "links": null
+            },
+            "BIBREF11": {
+                "ref_id": "b11",
+                "title": "A Deep Relevance Matching Model for Ad-hoc Retrieval",
+                "authors": [
+                    {
+                        "first": "Jiafeng",
+                        "middle": [],
+                        "last": "Guo",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yixing",
+                        "middle": [],
+                        "last": "Fan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Qingyao",
+                        "middle": [],
+                        "last": "Ai",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "W",
+                        "middle": [
+                            "Bruce"
+                        ],
+                        "last": "Croft",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of the 25th ACM International on Conference on Information and Knowledge Management",
+                "volume": "",
+                "issue": "",
+                "pages": "55--64",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jiafeng Guo, Yixing Fan, Qingyao Ai, and W. Bruce Croft. 2016. A Deep Relevance Matching Model for Ad-hoc Retrieval. In Proceedings of the 25th ACM International on Conference on Information and Knowledge Management, pages 55-64, Indi- anapolis, Indiana, USA.",
+                "links": null
+            },
+            "BIBREF12": {
+                "ref_id": "b12",
+                "title": "Deep Residual Learning for Image Recognition",
+                "authors": [
+                    {
+                        "first": "Kaiming",
+                        "middle": [],
+                        "last": "He",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xiangyu",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Shaoqing",
+                        "middle": [],
+                        "last": "Ren",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jian",
+                        "middle": [],
+                        "last": "Sun",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of the IEEE conference on computer vision and pattern recognition",
+                "volume": "",
+                "issue": "",
+                "pages": "770--778",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Kaiming He, Xiangyu Zhang, Shaoqing Ren, and Jian Sun. 2016. Deep Residual Learning for Image Recognition. In Proceedings of the IEEE conference on computer vision and pattern recognition, pages 770-778.",
+                "links": null
+            },
+            "BIBREF13": {
+                "ref_id": "b13",
+                "title": "Measuring domain portability and error propagation in biomedical QA",
+                "authors": [
+                    {
+                        "first": "Stefan",
+                        "middle": [],
+                        "last": "Hosein",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Daniel",
+                        "middle": [],
+                        "last": "Andor",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ryan",
+                        "middle": [],
+                        "last": "Mcdonald",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Joint European Conference on Machine Learning and Knowledge Discovery in Databases",
+                "volume": "",
+                "issue": "",
+                "pages": "686--694",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Stefan Hosein, Daniel Andor, and Ryan McDonald. 2019. Measuring domain portability and error prop- agation in biomedical QA. In Joint European Con- ference on Machine Learning and Knowledge Dis- covery in Databases, pages 686-694, Wurzburg, Germany.",
+                "links": null
+            },
+            "BIBREF14": {
+                "ref_id": "b14",
+                "title": "PACRR: A Position-Aware Neural IR Model for Relevance Matching",
+                "authors": [
+                    {
+                        "first": "Kai",
+                        "middle": [],
+                        "last": "Hui",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Andrew",
+                        "middle": [],
+                        "last": "Yates",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Klaus",
+                        "middle": [],
+                        "last": "Berberich",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Gerard",
+                        "middle": [],
+                        "last": "De",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Melo",
+                        "middle": [],
+                        "last": "",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Proceedings of the 2017 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "1049--1058",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Kai Hui, Andrew Yates, Klaus Berberich, and Gerard de Melo. 2017. PACRR: A Position-Aware Neu- ral IR Model for Relevance Matching. In Proceed- ings of the 2017 Conference on Empirical Methods in Natural Language Processing, pages 1049-1058, Copenhagen, Denmark.",
+                "links": null
+            },
+            "BIBREF15": {
+                "ref_id": "b15",
+                "title": "Co-PACRR: A context-aware neural IR model for ad-hoc retrieval",
+                "authors": [
+                    {
+                        "first": "Kai",
+                        "middle": [],
+                        "last": "Hui",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Andrew",
+                        "middle": [],
+                        "last": "Yates",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Klaus",
+                        "middle": [],
+                        "last": "Berberich",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Gerard",
+                        "middle": [],
+                        "last": "De",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Melo",
+                        "middle": [],
+                        "last": "",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of the 54th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "1",
+                "issue": "",
+                "pages": "908--918",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Kai Hui, Andrew Yates, Klaus Berberich, and Gerard de Melo. 2018. Co-PACRR: A context-aware neural IR model for ad-hoc retrieval. In Proceedings of the 11th ACM International Conference on Web Search and Data Mining, pages 279-287, Marina Del Rey, CA. Rudolf Kadlec, Martin Schmid, Ondrej Bajgar, and Jan Kleindienst. 2016. Text Understanding with the At- tention Sum Reader Network. In Proceedings of the 54th Annual Meeting of the Association for Compu- tational Linguistics (Volume 1: Long Papers), pages 908-918, Berlin, Germany.",
+                "links": null
+            },
+            "BIBREF16": {
+                "ref_id": "b16",
+                "title": "ColBERT: Efficient and Effective Passage Search via Contextualized Late Interaction over BERT",
+                "authors": [
+                    {
+                        "first": "Omar",
+                        "middle": [],
+                        "last": "Khattab",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Matei",
+                        "middle": [],
+                        "last": "Zaharia",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Omar Khattab and Matei Zaharia. 2020. ColBERT: Efficient and Effective Passage Search via Con- textualized Late Interaction over BERT. ArXiv, abs/2004.12832.",
+                "links": null
+            },
+            "BIBREF17": {
+                "ref_id": "b17",
+                "title": "What's missing: A knowledge gap guided approach for multi-hop question answering",
+                "authors": [
+                    {
+                        "first": "Tushar",
+                        "middle": [],
+                        "last": "Khot",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ashish",
+                        "middle": [],
+                        "last": "Sabharwal",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Peter",
+                        "middle": [],
+                        "last": "Clark",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing (EMNLP-IJCNLP)",
+                "volume": "",
+                "issue": "",
+                "pages": "2814--2828",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Tushar Khot, Ashish Sabharwal, and Peter Clark. 2019. What's missing: A knowledge gap guided approach for multi-hop question answering. In Proceedings of the 2019 Conference on Empirical Methods in Nat- ural Language Processing and the 9th International Joint Conference on Natural Language Processing (EMNLP-IJCNLP), pages 2814-2828, Hong Kong, China. Association for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF18": {
+                "ref_id": "b18",
+                "title": "Adam: A Method for Stochastic Optimization",
+                "authors": [
+                    {
+                        "first": "P",
+                        "middle": [],
+                        "last": "Diederik",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jimmy",
+                        "middle": [],
+                        "last": "Kingma",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Ba",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Diederik P. Kingma and Jimmy Ba. 2015. Adam: A Method for Stochastic Optimization. CoRR, abs/1412.6980.",
+                "links": null
+            },
+            "BIBREF19": {
+                "ref_id": "b19",
+                "title": "Natural Questions: a Benchmark for Question Answering Research",
+                "authors": [
+                    {
+                        "first": "Tom",
+                        "middle": [],
+                        "last": "Kwiatkowski",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jennimaria",
+                        "middle": [],
+                        "last": "Palomaki",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Olivia",
+                        "middle": [],
+                        "last": "Redfield",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Michael",
+                        "middle": [],
+                        "last": "Collins",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ankur",
+                        "middle": [],
+                        "last": "Parikh",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chris",
+                        "middle": [],
+                        "last": "Alberti",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Danielle",
+                        "middle": [],
+                        "last": "Epstein",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Illia",
+                        "middle": [],
+                        "last": "Polosukhin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Matthew",
+                        "middle": [],
+                        "last": "Kelcey",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jacob",
+                        "middle": [],
+                        "last": "Devlin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kenton",
+                        "middle": [],
+                        "last": "Lee",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kristina",
+                        "middle": [
+                            "N"
+                        ],
+                        "last": "Toutanova",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Llion",
+                        "middle": [],
+                        "last": "Jones",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ming-Wei",
+                        "middle": [],
+                        "last": "Chang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Andrew",
+                        "middle": [],
+                        "last": "Dai",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jakob",
+                        "middle": [],
+                        "last": "Uszkoreit",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Quoc",
+                        "middle": [],
+                        "last": "Le",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Slav",
+                        "middle": [],
+                        "last": "Petrov",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Transactions of the Association of Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Tom Kwiatkowski, Jennimaria Palomaki, Olivia Red- field, Michael Collins, Ankur Parikh, Chris Alberti, Danielle Epstein, Illia Polosukhin, Matthew Kelcey, Jacob Devlin, Kenton Lee, Kristina N. Toutanova, Llion Jones, Ming-Wei Chang, Andrew Dai, Jakob Uszkoreit, Quoc Le, and Slav Petrov. 2019. Natu- ral Questions: a Benchmark for Question Answering Research. Transactions of the Association of Com- putational Linguistics.",
+                "links": null
+            },
+            "BIBREF20": {
+                "ref_id": "b20",
+                "title": "Ranking paragraphs for improving answer recall in open-domain question answering",
+                "authors": [
+                    {
+                        "first": "Jinhyuk",
+                        "middle": [],
+                        "last": "Lee",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Seongjun",
+                        "middle": [],
+                        "last": "Yun",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hyunjae",
+                        "middle": [],
+                        "last": "Kim",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Miyoung",
+                        "middle": [],
+                        "last": "Ko",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jaewoo",
+                        "middle": [],
+                        "last": "Kang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "565--569",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jinhyuk Lee, Seongjun Yun, Hyunjae Kim, Miyoung Ko, and Jaewoo Kang. 2018. Ranking paragraphs for improving answer recall in open-domain ques- tion answering. In Proceedings of the 2018 Con- ference on Empirical Methods in Natural Language Processing, pages 565-569, Brussels, Belgium. As- sociation for Computational Linguistics.",
+                "links": null
+            },
+            "BIBREF21": {
+                "ref_id": "b21",
+                "title": "Latent retrieval for weakly supervised open domain question answering",
+                "authors": [
+                    {
+                        "first": "Kenton",
+                        "middle": [],
+                        "last": "Lee",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ming-Wei",
+                        "middle": [],
+                        "last": "Chang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kristina",
+                        "middle": [],
+                        "last": "Toutanova",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "6086--6096",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Kenton Lee, Ming-Wei Chang, and Kristina Toutanova. 2019. Latent retrieval for weakly supervised open domain question answering. In Proceedings of the 57th Annual Meeting of the Association for Com- putational Linguistics, pages 6086-6096, Florence, Italy.",
+                "links": null
+            },
+            "BIBREF22": {
+                "ref_id": "b22",
+                "title": "The Neural Hype and Comparisons Against Weak Baselines. SIGIR Forum",
+                "authors": [
+                    {
+                        "first": "Jimmy",
+                        "middle": [],
+                        "last": "Lin",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "",
+                "volume": "52",
+                "issue": "",
+                "pages": "40--51",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Jimmy Lin. 2019. The Neural Hype and Compar- isons Against Weak Baselines. SIGIR Forum, 52(2):40-51.",
+                "links": null
+            },
+            "BIBREF23": {
+                "ref_id": "b23",
+                "title": "CEDR: Contextualized Embeddings for Document Ranking",
+                "authors": [
+                    {
+                        "first": "Sean",
+                        "middle": [],
+                        "last": "Macavaney",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Andrew",
+                        "middle": [],
+                        "last": "Yates",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Arman",
+                        "middle": [],
+                        "last": "Cohan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nazli",
+                        "middle": [],
+                        "last": "Goharian",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Sean MacAvaney, Andrew Yates, Arman Cohan, and Nazli Goharian. 2019. CEDR: Contextual- ized Embeddings for Document Ranking. CoRR, abs/1904.07094.",
+                "links": null
+            },
+            "BIBREF24": {
+                "ref_id": "b24",
+                "title": "Efficiency Implications of Term Weighting for Passage Retrieval",
+                "authors": [
+                    {
+                        "first": "Joel",
+                        "middle": [],
+                        "last": "Mackenzie",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zhuyun",
+                        "middle": [],
+                        "last": "Dai",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Luke",
+                        "middle": [],
+                        "last": "Gallagher",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jamie",
+                        "middle": [],
+                        "last": "Callan",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "1821--1824",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Joel Mackenzie, Zhuyun Dai, Luke Gallagher, and Jamie Callan. 2020. Efficiency Implications of Term Weighting for Passage Retrieval, page 1821-1824. Association for Computing Machinery, New York, NY, USA.",
+                "links": null
+            },
+            "BIBREF25": {
+                "ref_id": "b25",
+                "title": "Introduction to Information Retrieval",
+                "authors": [
+                    {
+                        "first": "D",
+                        "middle": [],
+                        "last": "Christopher",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Prabhakar",
+                        "middle": [],
+                        "last": "Manning",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hinrich",
+                        "middle": [],
+                        "last": "Raghavan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "",
+                        "middle": [],
+                        "last": "Sch\u00fctze",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2008,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Christopher D. Manning, Prabhakar Raghavan, and Hinrich Sch\u00fctze. 2008. Introduction to Information Retrieval. Cambridge University Press.",
+                "links": null
+            },
+            "BIBREF26": {
+                "ref_id": "b26",
+                "title": "Deep Relevance Ranking Using Enhanced Document-Query Interactions",
+                "authors": [
+                    {
+                        "first": "Ryan",
+                        "middle": [],
+                        "last": "Mcdonald",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "George",
+                        "middle": [],
+                        "last": "Brokos",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "1849--1860",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ryan McDonald, George Brokos, and Ion Androut- sopoulos. 2018. Deep Relevance Ranking Using En- hanced Document-Query Interactions. In Proceed- ings of the 2018 Conference on Empirical Methods in Natural Language Processing, pages 1849-1860, Brussels, Belgium.",
+                "links": null
+            },
+            "BIBREF27": {
+                "ref_id": "b27",
+                "title": "An Introduction to Neural Information Retrieval",
+                "authors": [
+                    {
+                        "first": "Mitra",
+                        "middle": [],
+                        "last": "Bhaskar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Nick",
+                        "middle": [],
+                        "last": "Craswell",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Bhaskar Mitra and Nick Craswell. 2018. An Introduc- tion to Neural Information Retrieval. Now Publish- ers.",
+                "links": null
+            },
+            "BIBREF28": {
+                "ref_id": "b28",
+                "title": "MS MARCO: A Human Generated MAchine Reading COmprehension Dataset",
+                "authors": [
+                    {
+                        "first": "Tri",
+                        "middle": [],
+                        "last": "Nguyen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mir",
+                        "middle": [],
+                        "last": "Rosenberg",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xia",
+                        "middle": [],
+                        "last": "Song",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jianfeng",
+                        "middle": [],
+                        "last": "Gao",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Saurabh",
+                        "middle": [],
+                        "last": "Tiwary",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Rangan",
+                        "middle": [],
+                        "last": "Majumder",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Li",
+                        "middle": [],
+                        "last": "Deng",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Tri Nguyen, Mir Rosenberg, Xia Song, Jianfeng Gao, Saurabh Tiwary, Rangan Majumder, and Li Deng. 2016. MS MARCO: A Human Generated MA- chine Reading COmprehension Dataset. CoRR, abs/1611.09268.",
+                "links": null
+            },
+            "BIBREF29": {
+                "ref_id": "b29",
+                "title": "Passage Re-ranking with BERT",
+                "authors": [
+                    {
+                        "first": "Rodrigo",
+                        "middle": [],
+                        "last": "Nogueira",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kyunghyun",
+                        "middle": [],
+                        "last": "Cho",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Rodrigo Nogueira and Kyunghyun Cho. 2019. Passage Re-ranking with BERT. CoRR, abs/1901.04085.",
+                "links": null
+            },
+            "BIBREF30": {
+                "ref_id": "b30",
+                "title": "Information retrieval ranking using machine learning techniques",
+                "authors": [
+                    {
+                        "first": "S",
+                        "middle": [],
+                        "last": "Pandey",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "I",
+                        "middle": [],
+                        "last": "Mathur",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "N",
+                        "middle": [],
+                        "last": "Joshi",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "2019 Amity International Conference on Artificial Intelligence (AICAI)",
+                "volume": "",
+                "issue": "",
+                "pages": "86--92",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "S. Pandey, I. Mathur, and N. Joshi. 2019. Information retrieval ranking using machine learning techniques. In 2019 Amity International Conference on Artificial Intelligence (AICAI), pages 86-92.",
+                "links": null
+            },
+            "BIBREF31": {
+                "ref_id": "b31",
+                "title": "DeepRank: A New Deep Architecture for Relevance Ranking in Information Retrieval",
+                "authors": [
+                    {
+                        "first": "Liang",
+                        "middle": [],
+                        "last": "Pang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yanyan",
+                        "middle": [],
+                        "last": "Lan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jiafeng",
+                        "middle": [],
+                        "last": "Guo",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jun",
+                        "middle": [],
+                        "last": "Xu",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Proceedings of the 2017 ACM on Conference on Information and Knowledge Management",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Liang Pang, Yanyan Lan, Jiafeng Guo, Jun Xu, Jing- fang Xu, and Xueqi Cheng. 2017. DeepRank: A New Deep Architecture for Relevance Ranking in Information Retrieval. In Proceedings of the 2017 ACM on Conference on Information and Knowledge Management.",
+                "links": null
+            },
+            "BIBREF32": {
+                "ref_id": "b32",
+                "title": "Deep Contextualized Word Representations",
+                "authors": [
+                    {
+                        "first": "Matthew",
+                        "middle": [],
+                        "last": "Peters",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mark",
+                        "middle": [],
+                        "last": "Neumann",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Mohit",
+                        "middle": [],
+                        "last": "Iyyer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Matt",
+                        "middle": [],
+                        "last": "Gardner",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [],
+                        "last": "Clark",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kenton",
+                        "middle": [],
+                        "last": "Lee",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Luke",
+                        "middle": [],
+                        "last": "Zettlemoyer",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 2018 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies",
+                "volume": "",
+                "issue": "",
+                "pages": "2227--2237",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Matthew Peters, Mark Neumann, Mohit Iyyer, Matt Gardner, Christopher Clark, Kenton Lee, and Luke Zettlemoyer. 2018. Deep Contextualized Word Rep- resentations. In Proceedings of the 2018 Confer- ence of the North American Chapter of the Associ- ation for Computational Linguistics: Human Lan- guage Technologies, pages 2227-2237, New Or- leans, Louisiana.",
+                "links": null
+            },
+            "BIBREF33": {
+                "ref_id": "b33",
+                "title": "Letor: A benchmark collection for research on learning to rank for information retrieval",
+                "authors": [
+                    {
+                        "first": "Tao",
+                        "middle": [],
+                        "last": "Qin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Tie-Yan",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jun",
+                        "middle": [],
+                        "last": "Xu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hang",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2010,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Tao Qin, Tie-Yan Liu, Jun Xu, and Hang Li. 2010. Letor: A benchmark collection for research on learn- ing to rank for information retrieval. Inf. Retrieval.",
+                "links": null
+            },
+            "BIBREF34": {
+                "ref_id": "b34",
+                "title": "Know what you don't know: Unanswerable questions for SQuAD",
+                "authors": [
+                    {
+                        "first": "Pranav",
+                        "middle": [],
+                        "last": "Rajpurkar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Robin",
+                        "middle": [],
+                        "last": "Jia",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Percy",
+                        "middle": [],
+                        "last": "Liang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 56th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "2",
+                "issue": "",
+                "pages": "784--789",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Pranav Rajpurkar, Robin Jia, and Percy Liang. 2018. Know what you don't know: Unanswerable ques- tions for SQuAD. In Proceedings of the 56th Annual Meeting of the Association for Computational Lin- guistics (Volume 2: Short Papers), pages 784-789, Melbourne, Australia.",
+                "links": null
+            },
+            "BIBREF35": {
+                "ref_id": "b35",
+                "title": "SQuAD: 100,000+ questions for machine comprehension of text",
+                "authors": [
+                    {
+                        "first": "Pranav",
+                        "middle": [],
+                        "last": "Rajpurkar",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jian",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Konstantin",
+                        "middle": [],
+                        "last": "Lopyrev",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Percy",
+                        "middle": [],
+                        "last": "Liang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of the 2016 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "2383--2392",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Pranav Rajpurkar, Jian Zhang, Konstantin Lopyrev, and Percy Liang. 2016. SQuAD: 100,000+ questions for machine comprehension of text. In Proceedings of the 2016 Conference on Empirical Methods in Natu- ral Language Processing, pages 2383-2392, Austin, Texas.",
+                "links": null
+            },
+            "BIBREF36": {
+                "ref_id": "b36",
+                "title": "The probabilistic relevance framework: BM25 and beyond",
+                "authors": [
+                    {
+                        "first": "Stephen",
+                        "middle": [],
+                        "last": "Robertson",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hugo",
+                        "middle": [],
+                        "last": "Zaragoza",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2009,
+                "venue": "Foundations and Trends in Information Retrieval",
+                "volume": "3",
+                "issue": "4",
+                "pages": "333--389",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Stephen Robertson and Hugo Zaragoza. 2009. The probabilistic relevance framework: BM25 and be- yond. Foundations and Trends in Information Re- trieval, 3(4):333-389.",
+                "links": null
+            },
+            "BIBREF37": {
+                "ref_id": "b37",
+                "title": "A primer in BERTology: What we know about how BERT works",
+                "authors": [
+                    {
+                        "first": "Anna",
+                        "middle": [],
+                        "last": "Rogers",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Olga",
+                        "middle": [],
+                        "last": "Kovaleva",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Anna",
+                        "middle": [],
+                        "last": "Rumshisky",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "Transactions of the Association for Computational Linguistics",
+                "volume": "8",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Anna Rogers, Olga Kovaleva, and Anna Rumshisky. 2020. A primer in BERTology: What we know about how BERT works. Transactions of the Associ- ation for Computational Linguistics, 8.",
+                "links": null
+            },
+            "BIBREF38": {
+                "ref_id": "b38",
+                "title": "Improving multi-hop question answering over knowledge graphs using knowledge base embeddings",
+                "authors": [
+                    {
+                        "first": "Apoorv",
+                        "middle": [],
+                        "last": "Saxena",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Aditay",
+                        "middle": [],
+                        "last": "Tripathi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Partha",
+                        "middle": [],
+                        "last": "Talukdar",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "4498--4507",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Apoorv Saxena, Aditay Tripathi, and Partha Taluk- dar. 2020. Improving multi-hop question answering over knowledge graphs using knowledge base em- beddings. In Proceedings of the 58th Annual Meet- ing of the Association for Computational Linguistics, pages 4498-4507, Online.",
+                "links": null
+            },
+            "BIBREF39": {
+                "ref_id": "b39",
+                "title": "Longformer for MS MARCO Document Re-ranking Task",
+                "authors": [
+                    {
+                        "first": "Ivan",
+                        "middle": [],
+                        "last": "Sekuli\u0107",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Amir",
+                        "middle": [],
+                        "last": "Soleimani",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ivan Sekuli\u0107, Amir Soleimani, Mohammad Alianne- jadi, and Fabio Crestani. 2020. Longformer for MS MARCO Document Re-ranking Task. ArXiv, abs/2009.09392.",
+                "links": null
+            },
+            "BIBREF40": {
+                "ref_id": "b40",
+                "title": "A Joint Model for Answer Sentence Ranking and Answer Extraction",
+                "authors": [
+                    {
+                        "first": "Md",
+                        "middle": [],
+                        "last": "Arafat Sultan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Vittorio",
+                        "middle": [],
+                        "last": "Castelli",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Radu",
+                        "middle": [],
+                        "last": "Florian",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Transactions of the Association for Computational Linguistics",
+                "volume": "4",
+                "issue": "",
+                "pages": "113--125",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Md Arafat Sultan, Vittorio Castelli, and Radu Florian. 2016. A Joint Model for Answer Sentence Ranking and Answer Extraction. Transactions of the Associ- ation for Computational Linguistics, 4:113-125.",
+                "links": null
+            },
+            "BIBREF41": {
+                "ref_id": "b41",
+                "title": "An overview of the BioASQ Large-Scale Biomedical Semantic Indexing and Question Answering Competition",
+                "authors": [
+                    {
+                        "first": "G",
+                        "middle": [],
+                        "last": "Tsatsaronis",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "G",
+                        "middle": [],
+                        "last": "Balikas",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "P",
+                        "middle": [],
+                        "last": "Malakasiotis",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "I",
+                        "middle": [],
+                        "last": "Partalas",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "M",
+                        "middle": [],
+                        "last": "Zschunke",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "M",
+                        "middle": [
+                            "R"
+                        ],
+                        "last": "Alvers",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "D",
+                        "middle": [],
+                        "last": "Weissenborn",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "A",
+                        "middle": [],
+                        "last": "Krithara",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "S",
+                        "middle": [],
+                        "last": "Petridis",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "D",
+                        "middle": [],
+                        "last": "Polychronopoulos",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Y",
+                        "middle": [],
+                        "last": "Almirantis",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "J",
+                        "middle": [],
+                        "last": "Pavlopoulos",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "N",
+                        "middle": [],
+                        "last": "Baskiotis",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "P",
+                        "middle": [],
+                        "last": "Gallinari",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "T",
+                        "middle": [],
+                        "last": "Artieres",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "A",
+                        "middle": [],
+                        "last": "Ngonga",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "N",
+                        "middle": [],
+                        "last": "Heino",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "E",
+                        "middle": [],
+                        "last": "Gaussier",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "L",
+                        "middle": [],
+                        "last": "Barrio-Alvers",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "M",
+                        "middle": [],
+                        "last": "Schroeder",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "I",
+                        "middle": [],
+                        "last": "Androutsopoulos",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "G",
+                        "middle": [],
+                        "last": "Paliouras",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2015,
+                "venue": "BMC Bioinformatics",
+                "volume": "",
+                "issue": "138",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "G. Tsatsaronis, G. Balikas, P. Malakasiotis, I. Parta- las, M. Zschunke, M.R. Alvers, D. Weissenborn, A. Krithara, S. Petridis, D. Polychronopoulos, Y. Almirantis, J. Pavlopoulos, N. Baskiotis, P. Galli- nari, T. Artieres, A. Ngonga, N. Heino, E. Gaussier, L. Barrio-Alvers, M. Schroeder, I. Androutsopou- los, and G. Paliouras. 2015. An overview of the BioASQ Large-Scale Biomedical Semantic Index- ing and Question Answering Competition. BMC Bioinformatics, 16(138).",
+                "links": null
+            },
+            "BIBREF42": {
+                "ref_id": "b42",
+                "title": "The TREC question answering track",
+                "authors": [
+                    {
+                        "first": "Ellen",
+                        "middle": [
+                            "M"
+                        ],
+                        "last": "Voorhees",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2001,
+                "venue": "Natural Language Engineering",
+                "volume": "7",
+                "issue": "4",
+                "pages": "361--378",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Ellen M. Voorhees. 2001. The TREC question an- swering track. Natural Language Engineering, 7(4):361-378.",
+                "links": null
+            },
+            "BIBREF43": {
+                "ref_id": "b43",
+                "title": "End-to-end neural ad-hoc ranking with kernel pooling",
+                "authors": [
+                    {
+                        "first": "Chenyan",
+                        "middle": [],
+                        "last": "Xiong",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zhuyun",
+                        "middle": [],
+                        "last": "Dai",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jamie",
+                        "middle": [],
+                        "last": "Callan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Zhiyuan",
+                        "middle": [],
+                        "last": "Liu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Russell",
+                        "middle": [],
+                        "last": "Power",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2017,
+                "venue": "Proceedings of the 40th International ACM SIGIR Conference on Research and Development in Information Retrieval",
+                "volume": "",
+                "issue": "",
+                "pages": "55--64",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Chenyan Xiong, Zhuyun Dai, Jamie Callan, Zhiyuan Liu, and Russell Power. 2017. End-to-end neural ad-hoc ranking with kernel pooling. In Proceedings of the 40th International ACM SIGIR Conference on Research and Development in Information Retrieval, pages 55-64, Shinjuku, Tokyo, Japan.",
+                "links": null
+            },
+            "BIBREF44": {
+                "ref_id": "b44",
+                "title": "Passage Ranking with Weak Supervsion",
+                "authors": [
+                    {
+                        "first": "Peng",
+                        "middle": [],
+                        "last": "Xu",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xiaofei",
+                        "middle": [],
+                        "last": "Ma",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ramesh",
+                        "middle": [],
+                        "last": "Nallapati",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Bing",
+                        "middle": [],
+                        "last": "Xiang",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Peng Xu, Xiaofei Ma, Ramesh Nallapati, and Bing Xi- ang. 2019. Passage Ranking with Weak Supervsion. arxiv.",
+                "links": null
+            },
+            "BIBREF45": {
+                "ref_id": "b45",
+                "title": "2019a. End-to-End open-Domain Question Answering with BERTserini",
+                "authors": [
+                    {
+                        "first": "Wei",
+                        "middle": [],
+                        "last": "Yang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yaxiong",
+                        "middle": [],
+                        "last": "Xie",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Aileen",
+                        "middle": [],
+                        "last": "Lin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xingyu",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Luchen",
+                        "middle": [],
+                        "last": "Tan",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Kun",
+                        "middle": [],
+                        "last": "Xiong",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ming",
+                        "middle": [],
+                        "last": "Li",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jimmy",
+                        "middle": [],
+                        "last": "Lin",
+                        "suffix": ""
+                    }
+                ],
+                "year": null,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Wei Yang, Yaxiong Xie, Aileen Lin, Xingyu Li, Luchen Tan, Kun Xiong, Ming Li, and Jimmy Lin. 2019a. End-to-End open-Domain Question Answer- ing with BERTserini. CoRR, abs/1902.01718.",
+                "links": null
+            },
+            "BIBREF46": {
+                "ref_id": "b46",
+                "title": "Simple Applications of BERT for Ad Hoc Document Retrieval",
+                "authors": [
+                    {
+                        "first": "Wei",
+                        "middle": [],
+                        "last": "Yang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Haotian",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jimmy",
+                        "middle": [],
+                        "last": "Lin",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2019,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Wei Yang, Haotian Zhang, and Jimmy Lin. 2019b. Simple Applications of BERT for Ad Hoc Docu- ment Retrieval. CoRR, abs/1903.10972.",
+                "links": null
+            },
+            "BIBREF47": {
+                "ref_id": "b47",
+                "title": "HotpotQA: A dataset for diverse, explainable multi-hop question answering",
+                "authors": [
+                    {
+                        "first": "Zhilin",
+                        "middle": [],
+                        "last": "Yang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Peng",
+                        "middle": [],
+                        "last": "Qi",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Saizheng",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Yoshua",
+                        "middle": [],
+                        "last": "Bengio",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "William",
+                        "middle": [],
+                        "last": "Cohen",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Ruslan",
+                        "middle": [],
+                        "last": "Salakhutdinov",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Christopher",
+                        "middle": [
+                            "D"
+                        ],
+                        "last": "Manning",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2018,
+                "venue": "Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing",
+                "volume": "",
+                "issue": "",
+                "pages": "2369--2380",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Zhilin Yang, Peng Qi, Saizheng Zhang, Yoshua Bengio, William Cohen, Ruslan Salakhutdinov, and Christo- pher D. Manning. 2018. HotpotQA: A dataset for diverse, explainable multi-hop question answering. In Proceedings of the 2018 Conference on Empiri- cal Methods in Natural Language Processing, pages 2369-2380, Brussels, Belgium.",
+                "links": null
+            },
+            "BIBREF48": {
+                "ref_id": "b48",
+                "title": "Hierarchical Attention Networks for Document Classification",
+                "authors": [
+                    {
+                        "first": "Zichao",
+                        "middle": [],
+                        "last": "Yang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Diyi",
+                        "middle": [],
+                        "last": "Yang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Chris",
+                        "middle": [],
+                        "last": "Dyer",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Xiaodong",
+                        "middle": [],
+                        "last": "He",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Alex",
+                        "middle": [],
+                        "last": "Smola",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Eduard",
+                        "middle": [],
+                        "last": "Hovy",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Proceedings of the 2016 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Zichao Yang, Diyi Yang, Chris Dyer, Xiaodong He, Alex Smola, and Eduard Hovy. 2016. Hierarchical Attention Networks for Document Classification. In Proceedings of the 2016 Conference of the North American Chapter of the Association for Computa- tional Linguistics: Human Language Technologies.",
+                "links": null
+            },
+            "BIBREF49": {
+                "ref_id": "b49",
+                "title": "ABCNN: Attention-based convolutional neural network for modeling sentence pairs",
+                "authors": [
+                    {
+                        "first": "Wenpeng",
+                        "middle": [],
+                        "last": "Yin",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hinrich",
+                        "middle": [],
+                        "last": "Sch\u00fctze",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Bing",
+                        "middle": [],
+                        "last": "Xiang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Bowen",
+                        "middle": [],
+                        "last": "Zhou",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2016,
+                "venue": "Transactions of the Association for Computational Linguistics",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Wenpeng Yin, Hinrich Sch\u00fctze, Bing Xiang, and Bowen Zhou. 2016. ABCNN: Attention-based con- volutional neural network for modeling sentence pairs. Transactions of the Association for Compu- tational Linguistics, 4.",
+                "links": null
+            },
+            "BIBREF50": {
+                "ref_id": "b50",
+                "title": "Retrospective reader for machine reading comprehension",
+                "authors": [
+                    {
+                        "first": "Zhuosheng",
+                        "middle": [],
+                        "last": "Zhang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Jun Jie",
+                        "middle": [],
+                        "last": "Yang",
+                        "suffix": ""
+                    },
+                    {
+                        "first": "Hai",
+                        "middle": [],
+                        "last": "Zhao",
+                        "suffix": ""
+                    }
+                ],
+                "year": 2020,
+                "venue": "",
+                "volume": "",
+                "issue": "",
+                "pages": "",
+                "other_ids": {},
+                "num": null,
+                "urls": [],
+                "raw_text": "Zhuosheng Zhang, Jun jie Yang, and Hai Zhao. 2020. Retrospective reader for machine reading compre- hension. ArXiv.",
+                "links": null
+            }
+        },
+        "ref_entries": {
+            "FIGREF0": {
+                "num": null,
+                "text": "Figure 1: PDRMM for document scoring. The same model (with different trained parameters) also scores sentences in the PDRMM+PDRMM pipeline and the joint JPDRMM model (adding the layers of Fig. 2).",
+                "uris": null,
+                "fig_num": "1",
+                "type_str": "figure"
+            },
+            "FIGREF1": {
+                "num": null,
+                "text": "Figure 2: Final layers of JPDRMM and JBERT. The input sentence scores are generated by PDRMM (Fig. 1) or BERT (Fig. 3) now applied to document sentences. The document's score is obtained from the score of its best sentence and external features, and is also used to revise the sentence scores. Training jointly minimizes document and sentence loss.",
+                "uris": null,
+                "fig_num": "2",
+                "type_str": "figure"
+            },
+            "FIGREF2": {
+                "num": null,
+                "text": "Figure 3: Document scoring with BERT. The same model scores sentences in JBERT (adding the layers of Fig. 2), but with an MLP replacing the final dense layer.",
+                "uris": null,
+                "fig_num": "3",
+                "type_str": "figure"
+            },
+            "FIGREF3": {
+                "num": null,
+                "text": "Data and Experimental Setup BioASQ data and setup Following McDonald et al. (2018) and Brokos et al. (",
+                "uris": null,
+                "fig_num": "1",
+                "type_str": "figure"
+            },
+            "TABREF1": {
+                "content": "<table><tr><td>Method</td><td>Params</td><td colspan=\"2\">Doc. MAP (%) Snip. MAP (%)</td><td colspan=\"2\">Doc. Recall@10(%) Snip. Recall@10(%)</td></tr><tr><td>BM25 +BM25</td><td>4</td><td>6.86</td><td>4.29</td><td>48.65</td><td>4.93</td></tr><tr><td>PDRMM+BCNN</td><td>21.83k</td><td>7.47</td><td>5.67</td><td>52.97</td><td>12.43</td></tr><tr><td>PDRMM+PDRMM</td><td>11.39k</td><td>7.47</td><td>9.16</td><td>52.97</td><td>18.43</td></tr><tr><td>JPDRMM</td><td>5.79k</td><td>6.69</td><td>15.72</td><td>53.68</td><td>18.83</td></tr><tr><td>BERT+BCNN</td><td>109.5M</td><td>8.79</td><td>6.07</td><td>55.73</td><td>13.05</td></tr><tr><td>BERT+PDRMM</td><td>109.5M</td><td>8.79</td><td>9.63</td><td>55.73</td><td>19.30</td></tr><tr><td>BJPDRMM</td><td>88.5M</td><td>7.59</td><td>16.82</td><td>52.21</td><td>19.57</td></tr><tr><td>BJPDRMM-ADAPT</td><td>88.5M</td><td>6.93</td><td>15.70</td><td>48.77</td><td>19.38</td></tr><tr><td>BJPDRMM-NF</td><td>3.5M</td><td>6.84</td><td>15.77</td><td>48.81</td><td>17.95</td></tr><tr><td>BJPDRMM-ADAPT-NF</td><td>3.5M</td><td>7.42</td><td>17.35</td><td>52.12</td><td>19.66</td></tr><tr><td>JBERT</td><td>85M</td><td>7.93</td><td>16.29</td><td>53.44</td><td>19.87</td></tr><tr><td>JBERT-ADAPT</td><td>85M</td><td>7.81</td><td>15.99</td><td>52.94</td><td>19.87</td></tr><tr><td>JBERT-NF</td><td>6.3K</td><td>7.90</td><td>15.99</td><td>52.78</td><td>19.64</td></tr><tr><td>JBERT-ADAPT-NF</td><td>6.3K</td><td>7.84</td><td>16.53</td><td>53.18</td><td>19.64</td></tr><tr><td>Oracle</td><td>0</td><td>19.24</td><td>25.18</td><td>72.67</td><td>41.14</td></tr><tr><td>Sentence PDRMM</td><td>5.68K</td><td>6.39</td><td>8.73</td><td>48.60</td><td>18.57</td></tr></table>",
+                "type_str": "table",
+                "text": "The Oracle re-ranks the N Parameters learned, document and snippet MAP on BIOASQ 7, test batches 1-5, before expert inspection. Systems in the 2nd (or 3rd) zone use (or not) BERT.",
+                "html": null,
+                "num": null
+            },
+            "TABREF2": {
+                "content": "<table><tr><td/><td/><td colspan=\"2\">Before expert inspection</td><td/><td/><td colspan=\"2\">After expert inspection</td></tr><tr><td>Method</td><td colspan=\"4\">Document MAP Snippet MAP</td><td colspan=\"3\">Document MAP Snippet MAP</td></tr><tr><td>BERT+PDRMM</td><td/><td>7.29</td><td>7.58</td><td/><td/><td>14.86</td><td>15.61</td></tr><tr><td>JPDRMM</td><td/><td>5.16</td><td>12.45</td><td/><td/><td>16.55</td><td>21.98</td></tr><tr><td>BJPDRMM-NF</td><td/><td>6.18</td><td>13.89</td><td/><td/><td>14.65</td><td>23.96</td></tr><tr><td>Best BIOASQ 7 competitor</td><td/><td>n/a</td><td>n/a</td><td/><td/><td>13.18</td><td>14.98</td></tr><tr><td/><td/><td colspan=\"2\">Document Retrieval</td><td/><td/><td colspan=\"2\">Snippet Retrieval</td></tr><tr><td>Method</td><td colspan=\"7\">MRR Recall@1 Recall@2 MRR Recall@1 Recall@2</td></tr><tr><td>BM25+BM25</td><td>30.18</td><td>16.50</td><td>29.75</td><td colspan=\"2\">8.19</td><td>3.75</td><td>7.13</td></tr><tr><td>PDRMM+PDRMM</td><td>40.33</td><td>28.25</td><td>38.50</td><td colspan=\"2\">22.86</td><td>13.75</td><td>22.75</td></tr><tr><td>JPDRMM</td><td>36.50</td><td>24.50</td><td>36.00</td><td colspan=\"2\">26.92</td><td>19.00</td><td>25.25</td></tr></table>",
+                "type_str": "table",
+                "text": "with complex neu-Document and snippet MAP (%) on BIOASQ 7 test batches 4 and 5 before and after post-contest expert inspection of system responses, for methods that participated in BIOASQ 7. We also show the results (after inspection) of the best other participants of BIOASQ 7 for the same batches.",
+                "html": null,
+                "num": null
+            },
+            "TABREF3": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "MRR (%) and recall at top 1 and 2 (%) on the modified Natural Questions dataset.",
+                "html": null,
+                "num": null
+            },
+            "TABREF5": {
+                "content": "<table/>",
+                "type_str": "table",
+                "text": "JPDRMM results on BIOASQ 7 data for tuned weights of the two losses, with and without the extra sentence and document features. The 4th row (in italics) corresponds to the JPDRMM configuration of Table 1, but the results here are slightly different, because we used a 10-fold cross-validation on the training and development data. The MAP scores are averaged over the 10 folds. We also report standard deviations (\u00b1).",
+                "html": null,
+                "num": null
+            }
+        }
+    }
+}
